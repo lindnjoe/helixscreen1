@@ -107,6 +107,31 @@ void ui_panel_home_setup_observers(lv_obj_t* panel) {
         return;
     }
 
+    // Set responsive printer image size based on screen dimensions
+    lv_obj_t* printer_image = lv_obj_find_by_name(home_panel, "printer_image");
+    if (printer_image) {
+        lv_display_t* display = lv_display_get_default();
+        int32_t screen_height = lv_display_get_vertical_resolution(display);
+        int32_t printer_size;
+
+        // Calculate printer image size based on screen height
+        if (screen_height <= UI_SCREEN_TINY_H) {
+            printer_size = 150;  // Tiny screens (480x320)
+        } else if (screen_height <= UI_SCREEN_SMALL_H) {
+            printer_size = 250;  // Small screens (800x480)
+        } else if (screen_height <= UI_SCREEN_MEDIUM_H) {
+            printer_size = 300;  // Medium screens (1024x600)
+        } else {
+            printer_size = 400;  // Large screens (1280x720+)
+        }
+
+        lv_obj_set_width(printer_image, printer_size);
+        lv_obj_set_height(printer_image, printer_size);
+        LV_LOG_USER("Set printer image size to %dpx for screen height %d", printer_size, screen_height);
+    } else {
+        LV_LOG_WARN("Printer image not found - size not adjusted");
+    }
+
     // Add observers to watch subjects and update widgets
     lv_subject_add_observer(&network_icon_subject, network_observer_cb, nullptr);
     lv_subject_add_observer(&network_label_subject, network_observer_cb, nullptr);
