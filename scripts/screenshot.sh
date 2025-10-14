@@ -5,7 +5,7 @@
 #   binary_name: Name of binary to run (default: guppy-ui-proto)
 #   output_name: Name for output file (default: timestamp)
 #   panel_name:  Panel to display (default: home)
-#   Additional args: Forwarded to binary (e.g., -s 800, --size 480)
+#   Additional args: Forwarded to binary (e.g., -s small, --size large)
 #                Options: home, controls, filament, settings, advanced, print-select
 
 set -e

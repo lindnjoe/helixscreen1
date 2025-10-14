@@ -148,10 +148,11 @@ ui_panel_controls_extrusion_set_limits(extruder.min_temp, extruder.max_temp);
 ```
 
 **Enhanced Command-Line Interface:**
-- Added `-s / --size <size>` - Set screen size (480, 800, 1024, 1280)
+- Added `-s / --size <size>` - Set screen size (tiny, small, medium, large)
 - Added `-p / --panel <panel>` - Select initial panel
 - Added `-h / --help` - Show usage information
 - Updated `scripts/screenshot.sh` to forward extra arguments
+- Screen sizes use constants from ui_theme.h (tiny=480x320, small=800x480, medium=1024x600, large=1280x720)
 
 **Files Modified:**
 - `ui_xml/globals.xml` - Responsive card constants
@@ -195,7 +196,7 @@ ui_panel_controls_extrusion_set_limits(extruder.min_temp, extruder.max_temp);
 - All keypad button sizes - Touch target requirements
 
 **Benefits:**
-- Automatically adapts to different display sizes (800x480, 1024x600, 1280x800)
+- Automatically adapts to different display sizes (small, medium, large)
 - File card grid wraps naturally (4 columns on 1024px, 3 on smaller displays)
 - Overlay panels scale proportionally while maintaining usability
 - No need for multiple resolution-specific XML files

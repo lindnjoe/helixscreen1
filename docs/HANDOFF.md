@@ -252,23 +252,23 @@ static CardLayout get_card_layout() {
 
 **New Arguments:**
 ```bash
--s, --size <size>    Screen size: 480, 800, 1024, 1280 (default: 1024)
+-s, --size <size>    Screen size: tiny, small, medium, large (default: medium)
 -p, --panel <panel>  Initial panel (default: home)
 -h, --help           Show usage information
 ```
 
 **Usage Examples:**
 ```bash
-./build/bin/guppy-ui-proto -s 480 -p print-select   # Test tiny screen
-./build/bin/guppy-ui-proto --size 1280              # Test large screen
+./build/bin/guppy-ui-proto -s tiny -p print-select  # Test tiny screen (480x320)
+./build/bin/guppy-ui-proto --size large             # Test large screen (1280x720)
 ./build/bin/guppy-ui-proto --help                   # Show all options
 ```
 
-**Screen Size Mappings:**
-- `480` = 480x800 (tiny - 3 column cards)
-- `800` = 800x600 (medium - 4 column cards)
-- `1024` = 1024x800 (standard - 5 column cards)
-- `1280` = 1280x720 (large - 5 column cards)
+**Screen Size Mappings (from ui_theme.h):**
+- `tiny` = 480x320
+- `small` = 800x480
+- `medium` = 1024x600 (default)
+- `large` = 1280x720
 
 **Files Modified:**
 - `src/main.cpp` (138-250) - Argument parsing, screen size configuration
@@ -319,7 +319,7 @@ static CardLayout get_card_layout() {
 - ✅ Print Select - 22% cards in flexible grid
 
 **Architecture Decision:**
-Single responsive codebase supports 800x480, 1024x600, 1280x800 without duplication.
+Single responsive codebase supports tiny, small, medium, and large screen sizes without duplication.
 
 #### 2. Print Status Panel Implementation ✅
 
@@ -770,7 +770,7 @@ ui_panel_controls_wire_events(panels[UI_PANEL_CONTROLS]);
 ```
 
 **Benefits:**
-- Single codebase supports 800x480, 1024x600, 1280x800 displays
+- Single codebase supports tiny, small, medium, and large displays
 - File card grids wrap automatically (4→3→2 columns)
 - Overlay panels scale proportionally
 - Touch targets remain usable across all sizes

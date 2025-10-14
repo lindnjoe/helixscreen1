@@ -149,21 +149,21 @@ int main(int argc, char** argv) {
         if (strcmp(argv[i], "-s") == 0 || strcmp(argv[i], "--size") == 0) {
             if (i + 1 < argc) {
                 const char* size_arg = argv[++i];
-                if (strcmp(size_arg, "480") == 0) {
-                    SCREEN_WIDTH = 480;
-                    SCREEN_HEIGHT = 800;
-                } else if (strcmp(size_arg, "800") == 0) {
-                    SCREEN_WIDTH = 800;
-                    SCREEN_HEIGHT = 600;
-                } else if (strcmp(size_arg, "1024") == 0) {
-                    SCREEN_WIDTH = 1024;
-                    SCREEN_HEIGHT = 800;
-                } else if (strcmp(size_arg, "1280") == 0) {
-                    SCREEN_WIDTH = 1280;
-                    SCREEN_HEIGHT = 720;
+                if (strcmp(size_arg, "tiny") == 0) {
+                    SCREEN_WIDTH = UI_SCREEN_TINY_W;
+                    SCREEN_HEIGHT = UI_SCREEN_TINY_H;
+                } else if (strcmp(size_arg, "small") == 0) {
+                    SCREEN_WIDTH = UI_SCREEN_SMALL_W;
+                    SCREEN_HEIGHT = UI_SCREEN_SMALL_H;
+                } else if (strcmp(size_arg, "medium") == 0) {
+                    SCREEN_WIDTH = UI_SCREEN_MEDIUM_W;
+                    SCREEN_HEIGHT = UI_SCREEN_MEDIUM_H;
+                } else if (strcmp(size_arg, "large") == 0) {
+                    SCREEN_WIDTH = UI_SCREEN_LARGE_W;
+                    SCREEN_HEIGHT = UI_SCREEN_LARGE_H;
                 } else {
                     printf("Unknown screen size: %s\n", size_arg);
-                    printf("Available sizes: 480, 800, 1024, 1280\n");
+                    printf("Available sizes: tiny, small, medium, large\n");
                     return 1;
                 }
             } else {
@@ -211,17 +211,17 @@ int main(int argc, char** argv) {
         } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
             printf("Usage: %s [options]\n", argv[0]);
             printf("Options:\n");
-            printf("  -s, --size <size>    Screen size: 480, 800, 1024, 1280 (default: 1024)\n");
+            printf("  -s, --size <size>    Screen size: tiny, small, medium, large (default: medium)\n");
             printf("  -p, --panel <panel>  Initial panel (default: home)\n");
             printf("  -h, --help           Show this help message\n");
             printf("\nAvailable panels:\n");
             printf("  home, controls, motion, nozzle-temp, bed-temp, extrusion,\n");
             printf("  print-status, filament, settings, advanced, print-select\n");
             printf("\nScreen sizes:\n");
-            printf("  480   = 480x800   (tiny - 3 column cards)\n");
-            printf("  800   = 800x600   (medium - 4 column cards)\n");
-            printf("  1024  = 1024x800  (standard - 5 column cards)\n");
-            printf("  1280  = 1280x720  (large - 5 column cards)\n");
+            printf("  tiny   = %dx%d\n", UI_SCREEN_TINY_W, UI_SCREEN_TINY_H);
+            printf("  small  = %dx%d\n", UI_SCREEN_SMALL_W, UI_SCREEN_SMALL_H);
+            printf("  medium = %dx%d (default)\n", UI_SCREEN_MEDIUM_W, UI_SCREEN_MEDIUM_H);
+            printf("  large  = %dx%d\n", UI_SCREEN_LARGE_W, UI_SCREEN_LARGE_H);
             return 0;
         } else {
             // Legacy support: first positional arg is panel name

@@ -49,11 +49,11 @@
 #define UI_SCREEN_LARGE_W      1280
 #define UI_SCREEN_LARGE_H      720
 #define UI_SCREEN_MEDIUM_W     1024
-#define UI_SCREEN_MEDIUM_H     800
+#define UI_SCREEN_MEDIUM_H     600
 #define UI_SCREEN_SMALL_W      800
 #define UI_SCREEN_SMALL_H      480
 #define UI_SCREEN_TINY_W       480
-#define UI_SCREEN_TINY_H       400
+#define UI_SCREEN_TINY_H       320
 
 // Calculate nav width based on actual screen
 #define UI_NAV_WIDTH(screen_w) ((screen_w) / 10)
