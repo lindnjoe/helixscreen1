@@ -23,9 +23,23 @@
   <!-- Extrusion Sub-Screen -->
   <!-- Extrude/Retract controls with safety checks -->
 
-  <view extends="lv_obj" name="extrusion_panel" width="#overlay_panel_width" height="100%" align="right_mid" style_bg_color="#panel_bg" style_border_width="0" style_pad_all="0" flag_scrollable="false" flex_flow="column">
-    <!-- Header Bar -->
-    <header_bar name="extrusion_header" title="Extrude / Retract"/>
+  <!-- Full-screen backdrop with semi-transparent overlay -->
+  <view extends="lv_obj"
+        name="extrusion_panel_backdrop"
+        width="100%"
+        height="100%"
+        style_bg_color="0x000000"
+        style_bg_opa="180"
+        style_border_width="0"
+        style_pad_all="0"
+        style_radius="0"
+        align="center"
+        flag_clickable="true">
+
+    <!-- Extrusion panel content (docked right edge) -->
+    <lv_obj name="extrusion_panel" width="#overlay_panel_width" height="100%" align="right_mid" style_bg_color="#panel_bg" style_border_width="0" style_pad_all="0" flag_scrollable="false" flex_flow="column">
+      <!-- Header Bar -->
+      <header_bar name="extrusion_header" title="Extrude / Retract"/>
 
     <!-- Content Area: Two Columns -->
     <lv_obj name="extrusion_content" flex_grow="1" width="100%"
@@ -135,6 +149,7 @@
                     style_text_align="left"/>
         </lv_obj>
       </lv_obj>
+    </lv_obj>
     </lv_obj>
   </view>
 </component>

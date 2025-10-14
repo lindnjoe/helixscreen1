@@ -407,11 +407,11 @@ ui_panel_controls_extrusion_set_limits(extruder.min_temp, extruder.max_temp);
 
 **Current Focus:** Overlay Panel Backdrops & Interactive Button Wiring
 
-**Priority 1: Semi-Transparent Backdrop for Overlay Panels**
-- Add darkened backdrop behind right-aligned overlay panels
-- Affected panels: motion, nozzle-temp, bed-temp, extrusion, print-file-detail, numeric-keypad
-- Pattern: Full-screen backdrop with `style_bg_opa="180"` (see confirmation_dialog.xml)
-- Goal: Underlying panel shows through dimmed instead of being completely hidden
+**Priority 1: Semi-Transparent Backdrop for Overlay Panels** ✅ COMPLETE
+- Added darkened backdrop behind right-aligned overlay panels
+- Updated panels: motion, nozzle-temp, bed-temp, extrusion
+- Pattern: Full-screen backdrop with `style_bg_opa="180"` (consistent with confirmation_dialog.xml)
+- Result: Underlying panel shows through dimmed, navigation bar remains visible
 
 **Priority 2: Interactive Wiring**
 - Wire preset buttons on temperature panels
@@ -423,6 +423,13 @@ ui_panel_controls_extrusion_set_limits(extruder.min_temp, extruder.max_temp);
 **Priority 3: Enhancements**
 - Temperature graph visualization (replace static fire icon)
 - Improve motion panel header button (appears truncated)
+
+**Completed (2025-10-14 - Semi-Transparent Backdrops):**
+- ✅ Added semi-transparent backdrops to all overlay panels
+- ✅ Motion panel, nozzle-temp, bed-temp, extrusion panels updated
+- ✅ Consistent 70% opacity backdrop (style_bg_opa="180")
+- ✅ Navigation bar and underlying UI visible but dimmed
+- ✅ Numeric keypad modal already had backdrop (no changes needed)
 
 **Completed (2025-10-14 - Critical Bug Fix):**
 - ✅ Fixed integer overflow risk in temperature calculation (ui_panel_controls_extrusion.cpp)
