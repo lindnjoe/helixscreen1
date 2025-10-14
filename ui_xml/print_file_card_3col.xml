@@ -19,8 +19,9 @@
 -->
 
 <component>
-	<!-- Print File Card Component
-	     Displays a single print file with thumbnail, filename, and metadata
+	<!-- Print File Card Component - 3 Column Layout
+	     For 480 screens: 107px wide, 83px thumbnails
+	     Compact layout with smaller fonts for tiny screens
 	-->
 
 	<api>
@@ -31,12 +32,12 @@
 	</api>
 
 	<view extends="lv_obj"
-	      width="205"
-	      height="280"
+	      width="#print_file_card_width_3col"
+	      height="#print_file_card_height_3col"
 	      style_bg_color="#card_bg"
 	      style_radius="#card_radius"
 	      style_border_width="0"
-	      style_pad_all="#file_card_padding"
+	      style_pad_all="8"
 	      flex_flow="column"
 	      flex_align="start,start,start"
 	      flag_clickable="true"
@@ -45,54 +46,54 @@
 		<!-- Thumbnail image (square, responsive width) -->
 		<lv_image src="$thumbnail_src"
 		          width="100%"
-		          height="#file_card_thumbnail_size"
-		          style_radius="6"
+		          height="#print_file_card_thumb_3col"
+		          style_radius="4"
 		          inner_align="center"
-		          style_bg_color="#file_card_thumbnail_bg"
+		          style_bg_color="#print_file_card_thumbnail_bg"
 		          name="thumbnail"/>
 
 		<!-- Filename label (single line, truncated with ...) -->
 		<lv_label text="$filename"
 		          width="100%"
-		          height="20"
+		          height="16"
 		          long_mode="dots"
 		          flex_grow="0"
 		          style_text_color="#text_primary"
-		          style_text_font="montserrat_16"
-		          style_pad_top="#file_card_spacing"
+		          style_text_font="montserrat_14"
+		          style_pad_top="6"
 		          style_pad_all="0"
 		          name="filename_label"/>
 
-		<!-- Metadata row (time + filament) -->
+		<!-- Metadata row (time + filament, stacked vertically on tiny screens) -->
 		<lv_obj width="100%"
-		        height="24"
+		        height="40"
 		        style_bg_opa="0%"
 		        style_border_width="0"
 		        style_pad_all="0"
 		        style_pad_top="4"
-		        flex_flow="row"
-		        flex_align="start,center,center"
-		        style_pad_gap="8"
+		        flex_flow="column"
+		        flex_align="start,start,start"
+		        style_pad_gap="4"
 		        name="metadata_row">
 
 			<!-- Print time (icon + text) -->
-			<lv_obj width="85"
-			        height="20"
+			<lv_obj width="100%"
+			        height="16"
 			        style_bg_opa="0%"
 			        style_border_width="0"
 			        style_pad_all="0"
 			        flex_flow="row"
-			        style_pad_gap="4"
+			        style_pad_gap="3"
 			        flex_align="start,center,center">
 				<lv_label text="#icon_clock"
-				          width="16"
-				          height="20"
+				          width="12"
+				          height="16"
 				          style_text_color="#primary_color"
 				          style_text_font="fa_icons_16"
 				          style_pad_all="0"/>
 				<lv_label text="$print_time"
-				          width="65"
-				          height="20"
+				          width="70"
+				          height="16"
 				          style_text_color="#text_secondary"
 				          style_text_font="montserrat_14"
 				          style_pad_all="0"
@@ -101,23 +102,23 @@
 			</lv_obj>
 
 			<!-- Filament weight (icon + text) -->
-			<lv_obj width="75"
-			        height="20"
+			<lv_obj width="100%"
+			        height="16"
 			        style_bg_opa="0%"
 			        style_border_width="0"
 			        style_pad_all="0"
 			        flex_flow="row"
-			        style_pad_gap="4"
+			        style_pad_gap="3"
 			        flex_align="start,center,center">
 				<lv_label text="#icon_leaf"
-				          width="16"
-				          height="20"
+				          width="12"
+				          height="16"
 				          style_text_color="#primary_color"
 				          style_text_font="fa_icons_16"
 				          style_pad_all="0"/>
 				<lv_label text="$filament_weight"
-				          width="55"
-				          height="20"
+				          width="70"
+				          height="16"
 				          style_text_color="#text_secondary"
 				          style_text_font="montserrat_14"
 				          style_pad_all="0"

@@ -26,7 +26,8 @@
 	<!-- API Properties -->
 	<api>
 		<prop type="string" name="title"/>
-		<prop type="string" name="right_button_text" default=""/>  <!-- Empty = no button shown -->
+		<prop type="string" name="right_button_text" default=""/>
+		<prop type="bool" name="show_right_button" default="false"/>  <!-- Controls button visibility -->
 	</api>
 
 	<view extends="lv_obj"
@@ -80,7 +81,8 @@
 		           style_radius="8"
 		           style_border_width="0"
 		           style_shadow_width="0"
-		           flag_scrollable="false">
+		           flag_scrollable="false"
+		           flag_hidden="true">
 			<lv_label name="right_button_label"
 			          text="$right_button_text"
 			          align="center"

@@ -1,18 +1,348 @@
 # Session Handoff Document
 
-**Last Session:** 2025-10-13 Evening
-**Session Focus:** Comprehensive Code & UI Review (Phases 5.2-5.5)
-**Status:** All 5 control sub-screens complete, 1 critical bug identified, ready for interactive wiring
+**Last Session:** 2025-10-14
+**Session Focus:** Bug Fixes + Responsive Card Layout + Dynamic Temperature Limits
+**Status:** 6 critical bugs fixed, responsive multi-screen card system complete, dynamic temperature validation implemented, ready for overlay backdrop implementation
 
 ---
 
 ## Session Summary
 
-Successfully completed **comprehensive code and UI review** of Phases 5.2 through 5.5, covering all Controls Panel sub-screens. Discovered that Phase 5.5 (Extrusion Panel) was already implemented. Review found excellent code quality (9/10) with one critical integer overflow bug that needs fixing. All 5 sub-screens validated visually and architecturally.
+Successfully completed **three major improvements**:
+1. Fixed **6 critical UI bugs** in the print select panel
+2. Implemented **fully responsive card layout system** with screen-size adaptive components
+3. Added **dynamic temperature validation** with Moonraker-ready API
+
+All layout decisions remain in XML with minimal C++ logic. Temperature limits are now configurable and ready for Moonraker heater configuration integration. Enhanced command-line interface with screen size selection for testing. One remaining task: semi-transparent backdrop for overlay panels.
+
+---
+
+## What Needs to be Done Next
+
+### Priority 1: Semi-Transparent Backdrop for Overlay Panels ⏳ IN PROGRESS
+
+**Objective:** Add a darkened backdrop behind right-aligned overlay panels so the underlying panel shows through (instead of being completely replaced).
+
+**Affected Components:**
+- `print_file_detail.xml` - File detail overlay
+- `numeric_keypad_modal.xml` - Numeric input
+- `motion_panel.xml` - Motion controls
+- `nozzle_temp_panel.xml` - Nozzle temperature
+- `bed_temp_panel.xml` - Bed temperature
+- `extrusion_panel.xml` - Extrusion controls
+
+**Reference Pattern (from confirmation_dialog.xml):**
+```xml
+<!-- Full-screen backdrop with semi-transparent black -->
+<lv_obj width="100%" height="100%"
+        style_bg_color="0x000000"
+        style_bg_opa="180"
+        style_border_width="0">
+
+  <!-- Actual content card sits on top -->
+  <lv_obj width="500" height="300"
+          align="center"
+          style_bg_color="#card_bg"
+          style_bg_opa="255">
+    <!-- Card content here -->
+  </lv_obj>
+</lv_obj>
+```
+
+**Implementation Strategy:**
+1. Wrap each overlay panel's root `<lv_obj>` with a full-screen backdrop container
+2. Backdrop: `width="100%" height="100%"`, `style_bg_color="0x000000"`, `style_bg_opa="180"`
+3. Move existing panel content inside as child with `align="right_mid"` for right-aligned overlays
+4. Verify click-through doesn't affect functionality (backdrop should not be clickable)
+
+**Testing:**
+```bash
+# Test motion panel with backdrop
+./build/bin/guppy-ui-proto -p motion
+
+# Test temperature panels
+./build/bin/guppy-ui-proto -p nozzle-temp
+
+# Test file detail overlay (requires clicking on a file card)
+./build/bin/guppy-ui-proto -p print-select
+```
+
+**Expected Behavior:**
+- Overlay panels appear as cards floating over a darkened background
+- Underlying panel content visible but dimmed
+- Right-aligned panels stay aligned to right edge
+- No impact on existing functionality
+
+---
+
+### What Was Accomplished (Current Session)
+
+#### 1. Dynamic Temperature Limits & Safety ✅
+
+**Objective:** Make temperature validation robust and ready for Moonraker integration.
+
+**Changes Made:**
+- Added dynamic temperature limit variables with safe defaults
+- Created public API for configuring limits from Moonraker
+- Updated all validation to use dynamic limits with improved error messages
+- All invalid sensor readings now clamped and logged
+
+**New API Functions:**
+```cpp
+// Temperature Panel (ui_panel_controls_temp.h)
+void ui_panel_controls_temp_set_nozzle_limits(int min_temp, int max_temp);
+void ui_panel_controls_temp_set_bed_limits(int min_temp, int max_temp);
+
+// Extrusion Panel (ui_panel_controls_extrusion.h)
+void ui_panel_controls_extrusion_set_limits(int min_temp, int max_temp);
+```
+
+**Default Safe Limits:**
+- Nozzle: 0-500°C (covers all hotends including high-temp)
+- Bed: 0-150°C (covers all heatbeds including high-temp)
+
+**Moonraker Integration Path:**
+```cpp
+// On startup, query heater config from Moonraker:
+// GET /printer/objects/query?heater_bed&extruder
+// Response: { "extruder": { "min_temp": 0, "max_temp": 300 }, ... }
+
+// Then configure UI components with actual printer limits:
+ui_panel_controls_temp_set_nozzle_limits(0, 300);
+ui_panel_controls_temp_set_bed_limits(0, 120);
+ui_panel_controls_extrusion_set_limits(0, 300);
+```
+
+**Benefits:**
+- Prevents undefined behavior from sensor errors
+- Ready for per-printer dynamic configuration
+- Clear warning messages for debugging
+- Safe defaults until Moonraker connected
+
+**Files Modified:**
+- `include/ui_panel_controls_temp.h` - API declarations (2 functions)
+- `src/ui_panel_controls_temp.cpp` - Implementation with dynamic validation
+- `include/ui_panel_controls_extrusion.h` - API declaration (1 function)
+- `src/ui_panel_controls_extrusion.cpp` - Implementation with dynamic validation
+
+#### 2. Print Select Panel Bug Fixes ✅
+
+**Fixed 6 Issues:**
+
+1. **Toggle view icon scrollbars** - Changed `lv_obj` → `lv_button` with `style_shadow_width="0"` (print_select_panel.xml:46-58)
+2. **File list header shadows** - Added `style_shadow_width="0"` to all 4 column headers (lines 109, 128, 147, 166)
+3. **Empty green button in header_bar** - Added `flag_hidden="true"` default, created reusable helper functions
+4. **Delete confirmation dialog text** - Dynamic filename interpolation in message (ui_panel_print_select.cpp:527-534)
+5. **Delete confirmation dialog z-order** - Dialog created as screen child instead of panel child (line 567)
+6. **Horizontal scrollbar on cards** - Replaced with responsive multi-layout component system (see below)
+
+**New Reusable Pattern - Header Bar Helpers:**
+```cpp
+// ui_utils.h - New public API
+bool ui_header_bar_show_right_button(lv_obj_t* header_bar_widget);
+bool ui_header_bar_hide_right_button(lv_obj_t* header_bar_widget);
+bool ui_header_bar_set_right_button_text(lv_obj_t* header_bar_widget, const char* text);
+```
+
+**Usage Example:**
+```cpp
+lv_obj_t* header = lv_obj_find_by_name(panel, "nozzle_temp_header");
+if (header && ui_header_bar_show_right_button(header)) {
+    lv_obj_t* confirm_btn = lv_obj_find_by_name(header, "right_button");
+    lv_obj_add_event_cb(confirm_btn, callback, LV_EVENT_CLICKED, nullptr);
+}
+```
+
+**Files Modified:**
+- `ui_xml/print_select_panel.xml` - Toggle button, header shadows
+- `ui_xml/header_bar.xml` - Default hidden button
+- `src/ui_utils.h/cpp` - New helper functions (3 functions, 50 lines)
+- `src/ui_panel_print_select.cpp` - Dialog z-order, dynamic message
+- `src/ui_panel_controls_temp.cpp` - Use header helpers
+- `include/ui_panel_print_select.h` - Added parent_screen param
+
+#### 3. Responsive Card Layout System ✅
+
+**Architecture: Separation of Concerns**
+- Layout decisions in XML (3 separate components)
+- C++ only detects screen size and selects component
+- All constants defined in globals.xml with `print_file_card_` prefix
+
+**Component Variants:**
+```
+print_file_card_5col.xml - 1280 & 1024 screens
+  • 205px cards, 180px thumbnails
+  • 20px gaps, 5 columns
+  • montserrat_16 labels
+
+print_file_card_4col.xml - 800 screens
+  • 151px cards, 127px thumbnails
+  • 20px gaps, 4 columns
+  • montserrat_14 labels
+
+print_file_card_3col.xml - 480 screens
+  • 107px cards, 83px thumbnails
+  • 12px gaps, 3 columns
+  • Vertical metadata layout (space-constrained)
+  • montserrat_14 labels, 8px padding
+```
+
+**Constants in globals.xml:**
+```xml
+<!-- Shared constants -->
+<px name="print_file_card_padding" value="12"/>
+<px name="print_file_card_spacing" value="8"/>
+<color name="print_file_card_thumbnail_bg" value="0x2a2a2a"/>
+
+<!-- 5-column layout -->
+<px name="print_file_card_width_5col" value="205"/>
+<px name="print_file_card_height_5col" value="280"/>
+<px name="print_file_card_thumb_5col" value="180"/>
+<px name="print_file_card_gap_5col" value="20"/>
+
+<!-- 4-column layout -->
+<px name="print_file_card_width_4col" value="151"/>
+<px name="print_file_card_height_4col" value="280"/>
+<px name="print_file_card_thumb_4col" value="127"/>
+<px name="print_file_card_gap_4col" value="20"/>
+
+<!-- 3-column layout -->
+<px name="print_file_card_width_3col" value="107"/>
+<px name="print_file_card_height_3col" value="200"/>
+<px name="print_file_card_thumb_3col" value="83"/>
+<px name="print_file_card_gap_3col" value="12"/>
+```
+
+**C++ Implementation (ui_panel_print_select.cpp:59-79):**
+```cpp
+struct CardLayout {
+    const char* component_name;
+    int gap;
+};
+
+static CardLayout get_card_layout() {
+    lv_coord_t screen_width = lv_display_get_horizontal_resolution(lv_display_get_default());
+
+    if (screen_width >= 1024) {
+        return {"print_file_card_5col", 20};
+    } else if (screen_width >= 700) {
+        return {"print_file_card_4col", 20};
+    } else {
+        return {"print_file_card_3col", 12};
+    }
+}
+```
+
+**Files Created:**
+- `ui_xml/print_file_card_5col.xml` (129 lines) - Large screen layout
+- `ui_xml/print_file_card_4col.xml` (129 lines) - Medium screen layout
+- `ui_xml/print_file_card_3col.xml` (140 lines) - Tiny screen layout (vertical metadata)
+
+**Files Modified:**
+- `ui_xml/globals.xml` - Added 12 new responsive constants
+- `src/ui_panel_print_select.cpp` - Screen detection, component selection
+- `src/main.cpp` - Component registration (lines 224-226)
+
+#### 4. Enhanced Command-Line Interface ✅
+
+**New Arguments:**
+```bash
+-s, --size <size>    Screen size: 480, 800, 1024, 1280 (default: 1024)
+-p, --panel <panel>  Initial panel (default: home)
+-h, --help           Show usage information
+```
+
+**Usage Examples:**
+```bash
+./build/bin/guppy-ui-proto -s 480 -p print-select   # Test tiny screen
+./build/bin/guppy-ui-proto --size 1280              # Test large screen
+./build/bin/guppy-ui-proto --help                   # Show all options
+```
+
+**Screen Size Mappings:**
+- `480` = 480x800 (tiny - 3 column cards)
+- `800` = 800x600 (medium - 4 column cards)
+- `1024` = 1024x800 (standard - 5 column cards)
+- `1280` = 1280x720 (large - 5 column cards)
+
+**Files Modified:**
+- `src/main.cpp` (138-250) - Argument parsing, screen size configuration
+- `scripts/screenshot.sh` (26-27, 39) - Forward extra args to binary
+
+**Legacy Support:** First positional arg still works as panel name for backward compatibility.
+
+---
+
+## What Was Accomplished (Previous Session 2025-10-14)
 
 ### What Was Accomplished
 
-#### 1. Comprehensive Code Review ✅
+#### 1. Responsive Design System Refactoring ✅
+
+**Converted Fixed Pixels → Responsive Percentages:**
+- Overlay panels: `700px → 68%`, `850px → 83%`
+- File card grid: `204px → 22%` (enables flexible 4→3→2 column layouts)
+- Removed fixed card heights from print status panel
+
+**Changes Made:**
+```xml
+<!-- globals.xml - Before -->
+<px name="overlay_panel_width" value="700"/>
+<px name="overlay_panel_width_large" value="850"/>
+<px name="file_card_width" value="204"/>
+
+<!-- globals.xml - After -->
+<percent name="overlay_panel_width" value="68%"/>
+<percent name="overlay_panel_width_large" value="83%"/>
+<percent name="file_card_width" value="22%"/>
+```
+
+**Files Modified:**
+- `ui_xml/globals.xml` - Converted 3 constants from px to percent
+- `ui_xml/numeric_keypad_modal.xml` - Uses overlay_panel_width constant
+- `ui_xml/print_status_panel.xml` - Removed fixed card heights
+
+**What Stays Fixed (By Design):**
+- Button heights (48-58px) - Precise touch targets
+- Padding/gaps (6-20px) - Visual consistency
+- Header height, nav width, border radius
+
+**Verification:**
+- ✅ Print Status Panel - All content visible, no clipping
+- ✅ Motion Panel - 83% overlay, all buttons visible
+- ✅ Temp Panels - 68% overlay, proper proportions
+- ✅ Print Select - 22% cards in flexible grid
+
+**Architecture Decision:**
+Single responsive codebase supports 800x480, 1024x600, 1280x800 without duplication.
+
+#### 2. Print Status Panel Implementation ✅
+
+**Features:**
+- Full-screen panel with scrollable content
+- Progress card: Large percentage (48pt font), progress bar, layer count
+- Time card: Elapsed / Remaining times
+- Stats card: Nozzle temp, Bed temp, Speed, Flow
+- Action buttons: Pause (orange), Tune (gray), Cancel (red)
+
+**Mock Print Simulation:**
+- 3-hour print (10,800 seconds)
+- 250 layers
+- Ticks every second updating progress
+- Temperatures: Nozzle 214/215°C, Bed 58/60°C
+- Speed: 100%, Flow: 100%
+
+**Files Created:**
+- `ui_xml/print_status_panel.xml` (95 lines) - Panel layout
+- `src/ui_panel_print_status.cpp` (410 lines) - Mock simulation logic
+- `include/ui_panel_print_status.h` (41 lines) - Public API
+
+**Integration:**
+- Wired into main.cpp with timer tick (1 second intervals)
+- Navigation bar integration
+- Back button returns to print select
+
+#### 3. Comprehensive Code Review ✅ (Previous Session 2025-10-13)
 
 **Scope:** 16 files, 2,259 lines across 4 phases
 - Phase 5.4: Temperature Sub-Screens (Nozzle + Bed)
@@ -210,33 +540,7 @@ src/ui_component_keypad.cpp                  # Keypad component
 
 ---
 
-## Next Session: Critical Bug Fix & Interactive Wiring
-
-### REQUIRED: Fix Critical Integer Overflow Bug
-
-**Priority 1: Temperature Calculation Safety**
-- **File:** `src/ui_panel_controls_extrusion.cpp:79`
-- **Issue:** `abs(nozzle_current - nozzle_target)` can overflow with invalid sensor readings
-- **Risk:** Undefined behavior, potential crashes
-
-**Fix Option A (Safe Difference):**
-```cpp
-int temp_diff = nozzle_current - nozzle_target;
-if (nozzle_target > 0 && (temp_diff >= -5 && temp_diff <= 5)) {
-    status_icon = "✓";  // Ready
-}
-```
-
-**Fix Option B (Bounds Checking):**
-```cpp
-if (nozzle_current < 0 || nozzle_current > 500 ||
-    nozzle_target < 0 || nozzle_target > 500) {
-    LV_LOG_ERROR("Invalid temperature values detected");
-    status_icon = "✗";
-} else if (nozzle_target > 0 && abs(nozzle_current - nozzle_target) <= 5) {
-    status_icon = "✓";
-}
-```
+## Next Session: Interactive Wiring & Overlay Backdrops
 
 ### Recommended: Wire Interactive Buttons (All Sub-Screens Complete)
 
@@ -421,6 +725,59 @@ typedef enum {
 ui_panel_controls_init_subjects();
 ui_panel_controls_set(panels[UI_PANEL_CONTROLS]);
 ui_panel_controls_wire_events(panels[UI_PANEL_CONTROLS]);
+```
+
+### 5. Responsive Design System (NEW - 2025-10-14)
+
+**Philosophy:** Use responsive percentages for layout structure, keep fixed pixels for interactive elements.
+
+**What Should Be Responsive:**
+```xml
+<!-- Overlay panel widths (adapt to screen size) -->
+<percent name="overlay_panel_width" value="68%"/>       <!-- Standard: 700px on 1024 -->
+<percent name="overlay_panel_width_large" value="83%"/> <!-- Large: 850px on 1024 -->
+
+<!-- Card grid widths (enable flexible column counts) -->
+<percent name="file_card_width" value="22%"/>  <!-- 4 cols on 1024px, 3 on 800px -->
+
+<!-- Column layouts (proportional splits) -->
+<lv_obj name="left_column" width="65%" height="100%"/>
+<lv_obj name="right_column" width="35%" height="100%"/>
+```
+
+**What Should Stay Fixed:**
+```xml
+<!-- Button heights (precise touch targets) -->
+<px name="button_height_small" value="48"/>   <!-- Minimum 48px for usability -->
+<px name="button_height_normal" value="56"/>
+
+<!-- Padding and gaps (visual consistency) -->
+<px name="padding_normal" value="20"/>
+<px name="gap_normal" value="12"/>
+
+<!-- Header/component heights (standard UI elements) -->
+<px name="header_height" value="60"/>
+<px name="nav_width" value="102"/>
+
+<!-- Border radius (visual design) -->
+<px name="card_radius" value="8"/>
+<px name="card_radius_large" value="12"/>
+```
+
+**Benefits:**
+- Single codebase supports 800x480, 1024x600, 1280x800 displays
+- File card grids wrap automatically (4→3→2 columns)
+- Overlay panels scale proportionally
+- Touch targets remain usable across all sizes
+- No need for resolution-specific XML files
+
+**Key Pattern:** Remove fixed heights from cards, let flex layout size them naturally:
+```xml
+<!-- ❌ DON'T: Fixed heights cause clipping -->
+<lv_obj width="100%" height="160" flex_flow="column">
+
+<!-- ✓ DO: Let content determine height -->
+<lv_obj width="100%" flex_flow="column">
 ```
 
 ---

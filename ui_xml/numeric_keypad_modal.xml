@@ -45,7 +45,7 @@
 
 		<!-- Keypad modal (docked right edge) -->
 		<lv_obj name="keypad_modal"
-			width="#keypad_width"
+			width="#overlay_panel_width"
 			height="100%"
 			align="right_mid"
 			style_bg_color="#keypad_bg"

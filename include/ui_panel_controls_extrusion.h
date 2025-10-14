@@ -60,3 +60,11 @@ int ui_panel_controls_extrusion_get_amount();
  * @return true if nozzle >= 170°C, false otherwise
  */
 bool ui_panel_controls_extrusion_is_allowed();
+
+/**
+ * Set nozzle temperature limits (for validation).
+ * Call this after querying Moonraker for heater configuration.
+ * @param min_temp - Minimum safe nozzle temperature in °C (default: 0)
+ * @param max_temp - Maximum safe nozzle temperature in °C (default: 500)
+ */
+void ui_panel_controls_extrusion_set_limits(int min_temp, int max_temp);

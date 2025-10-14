@@ -43,18 +43,19 @@
 		        style_flex_cross_place="center">
 
 			<!-- View toggle button (icon-only) -->
-			<lv_obj name="view_toggle_btn"
-			        width="40"
-			        height="40"
-			        style_bg_opa="0"
-			        style_border_width="0"
-			        flag_clickable="true">
+			<lv_button name="view_toggle_btn"
+			           width="40"
+			           height="40"
+			           style_bg_opa="0"
+			           style_border_width="0"
+			           style_shadow_width="0"
+			           style_pad_all="0">
 				<lv_label name="view_toggle_icon"
 				          text="#icon_list"
 				          style_text_font="fa_icons_32"
 				          style_text_color="#text_primary"
 				          align="center"/>
-			</lv_obj>
+			</lv_button>
 		</lv_obj>
 
 		<!-- Card view container (default visible) -->
@@ -63,7 +64,7 @@
 		        height="100%"
 		        style_bg_color="#panel_bg"
 		        style_pad_all="16"
-		        style_pad_gap="20"
+		        style_pad_gap="#padding_normal"
 		        style_border_width="0"
 		        flex_flow="row_wrap"
 		        flag_scrollable="true"
@@ -105,13 +106,14 @@
 				          height="32"
 				          style_bg_opa="0"
 				          style_border_width="0"
+				          style_shadow_width="0"
 				          style_pad_all="0"
 				          flex_grow="1"
 				          flag_clickable="true">
-					<lv_label text="Filename ▼"
+					<lv_label text="Filename"
 					          width="510"
 					          height="24"
-					          style_text_font="montserrat_16"
+					          style_text_font="#font_body"
 					          style_text_color="#text_primary"
 					          style_text_align="left"
 					          align="left_mid"/>
@@ -123,13 +125,14 @@
 				          height="32"
 				          style_bg_opa="0"
 				          style_border_width="0"
+				          style_shadow_width="0"
 				          style_pad_all="0"
 				          flex_grow="0"
 				          flag_clickable="true">
 					<lv_label text="Size"
 					          width="80"
 					          height="24"
-					          style_text_font="montserrat_16"
+					          style_text_font="#font_body"
 					          style_text_color="#text_primary"
 					          style_text_align="right"
 					          align="center"/>
@@ -141,13 +144,14 @@
 				          height="32"
 				          style_bg_opa="0"
 				          style_border_width="0"
+				          style_shadow_width="0"
 				          style_pad_all="0"
 				          flex_grow="0"
 				          flag_clickable="true">
 					<lv_label text="Modified"
 					          width="130"
 					          height="24"
-					          style_text_font="montserrat_16"
+					          style_text_font="#font_body"
 					          style_text_color="#text_primary"
 					          style_text_align="right"
 					          align="center"/>
@@ -159,13 +163,14 @@
 				          height="32"
 				          style_bg_opa="0"
 				          style_border_width="0"
+				          style_shadow_width="0"
 				          style_pad_all="0"
 				          flex_grow="0"
 				          flag_clickable="true">
 					<lv_label text="Time"
 					          width="90"
 					          height="24"
-					          style_text_font="montserrat_16"
+					          style_text_font="#font_body"
 					          style_text_color="#text_primary"
 					          style_text_align="right"
 					          align="center"/>
@@ -215,7 +220,7 @@
 				<lv_label text="No files available for printing"
 				          width="400"
 				          height="32"
-				          style_text_font="montserrat_20"
+				          style_text_font="#font_heading"
 				          style_text_color="#text_primary"
 				          style_text_align="center"
 				          style_pad_all="0"/>
@@ -223,7 +228,7 @@
 				<lv_label text="Upload gcode files to get started"
 				          width="400"
 				          height="24"
-				          style_text_font="montserrat_16"
+				          style_text_font="#font_body"
 				          style_text_color="#text_secondary"
 				          style_text_align="center"
 				          style_pad_all="0"

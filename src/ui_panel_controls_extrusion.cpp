@@ -21,7 +21,6 @@
 #include "ui_panel_controls_extrusion.h"
 #include <stdio.h>
 #include <string.h>
-#include <cstdlib>  // for abs()
 
 // Temperature subjects (reactive data binding)
 static lv_subject_t temp_status_subject;
@@ -36,6 +35,10 @@ static int nozzle_current = 25;
 static int nozzle_target = 0;
 static int selected_amount = 10;  // Default: 10mm
 static const int MIN_EXTRUSION_TEMP = 170;
+
+// Temperature limits (can be updated from Moonraker heater config)
+static int nozzle_min_temp = 0;
+static int nozzle_max_temp = 500;  // Safe default for most hotends
 
 // Panel widgets
 static lv_obj_t* extrusion_panel = nullptr;
@@ -75,8 +78,10 @@ static void update_temp_status() {
     // Status indicator: ✓ (ready), ⚠ (heating), ✗ (too cold)
     const char* status_icon;
     if (nozzle_current >= MIN_EXTRUSION_TEMP) {
-        // Within 5°C of target and hot enough
-        if (nozzle_target > 0 && abs(nozzle_current - nozzle_target) <= 5) {
+        // Within 5°C of target and hot enough (safe range check without overflow)
+        if (nozzle_target > 0 &&
+            nozzle_current >= nozzle_target - 5 &&
+            nozzle_current <= nozzle_target + 5) {
             status_icon = "✓";  // Ready
         } else {
             status_icon = "✓";  // Hot enough
@@ -284,6 +289,18 @@ void ui_panel_controls_extrusion_setup(lv_obj_t* panel, lv_obj_t* parent_screen)
 }
 
 void ui_panel_controls_extrusion_set_temp(int current, int target) {
+    // Validate temperature ranges using dynamic limits
+    if (current < nozzle_min_temp || current > nozzle_max_temp) {
+        printf("[Extrusion] WARNING: Invalid nozzle current temperature %d°C (valid: %d-%d°C), clamping\n",
+               current, nozzle_min_temp, nozzle_max_temp);
+        current = (current < nozzle_min_temp) ? nozzle_min_temp : nozzle_max_temp;
+    }
+    if (target < nozzle_min_temp || target > nozzle_max_temp) {
+        printf("[Extrusion] WARNING: Invalid nozzle target temperature %d°C (valid: %d-%d°C), clamping\n",
+               target, nozzle_min_temp, nozzle_max_temp);
+        target = (target < nozzle_min_temp) ? nozzle_min_temp : nozzle_max_temp;
+    }
+
     nozzle_current = current;
     nozzle_target = target;
     update_temp_status();
@@ -297,4 +314,10 @@ int ui_panel_controls_extrusion_get_amount() {
 
 bool ui_panel_controls_extrusion_is_allowed() {
     return (nozzle_current >= MIN_EXTRUSION_TEMP);
+}
+
+void ui_panel_controls_extrusion_set_limits(int min_temp, int max_temp) {
+    nozzle_min_temp = min_temp;
+    nozzle_max_temp = max_temp;
+    printf("[Extrusion] Nozzle temperature limits updated: %d-%d°C\n", min_temp, max_temp);
 }

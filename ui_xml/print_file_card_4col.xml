@@ -19,7 +19,8 @@
 -->
 
 <component>
-	<!-- Print File Card Component
+	<!-- Print File Card Component - 4 Column Layout
+	     For 800 screens: 151px wide, 127px thumbnails
 	     Displays a single print file with thumbnail, filename, and metadata
 	-->
 
@@ -31,12 +32,12 @@
 	</api>
 
 	<view extends="lv_obj"
-	      width="205"
-	      height="280"
+	      width="#print_file_card_width_4col"
+	      height="#print_file_card_height_4col"
 	      style_bg_color="#card_bg"
 	      style_radius="#card_radius"
 	      style_border_width="0"
-	      style_pad_all="#file_card_padding"
+	      style_pad_all="#print_file_card_padding"
 	      flex_flow="column"
 	      flex_align="start,start,start"
 	      flag_clickable="true"
@@ -45,10 +46,10 @@
 		<!-- Thumbnail image (square, responsive width) -->
 		<lv_image src="$thumbnail_src"
 		          width="100%"
-		          height="#file_card_thumbnail_size"
+		          height="#print_file_card_thumb_4col"
 		          style_radius="6"
 		          inner_align="center"
-		          style_bg_color="#file_card_thumbnail_bg"
+		          style_bg_color="#print_file_card_thumbnail_bg"
 		          name="thumbnail"/>
 
 		<!-- Filename label (single line, truncated with ...) -->
@@ -58,8 +59,8 @@
 		          long_mode="dots"
 		          flex_grow="0"
 		          style_text_color="#text_primary"
-		          style_text_font="montserrat_16"
-		          style_pad_top="#file_card_spacing"
+		          style_text_font="montserrat_14"
+		          style_pad_top="#print_file_card_spacing"
 		          style_pad_all="0"
 		          name="filename_label"/>
 
@@ -72,26 +73,26 @@
 		        style_pad_top="4"
 		        flex_flow="row"
 		        flex_align="start,center,center"
-		        style_pad_gap="8"
+		        style_pad_gap="6"
 		        name="metadata_row">
 
 			<!-- Print time (icon + text) -->
-			<lv_obj width="85"
+			<lv_obj width="60"
 			        height="20"
 			        style_bg_opa="0%"
 			        style_border_width="0"
 			        style_pad_all="0"
 			        flex_flow="row"
-			        style_pad_gap="4"
+			        style_pad_gap="3"
 			        flex_align="start,center,center">
 				<lv_label text="#icon_clock"
-				          width="16"
+				          width="14"
 				          height="20"
 				          style_text_color="#primary_color"
 				          style_text_font="fa_icons_16"
 				          style_pad_all="0"/>
 				<lv_label text="$print_time"
-				          width="65"
+				          width="43"
 				          height="20"
 				          style_text_color="#text_secondary"
 				          style_text_font="montserrat_14"
@@ -101,22 +102,22 @@
 			</lv_obj>
 
 			<!-- Filament weight (icon + text) -->
-			<lv_obj width="75"
+			<lv_obj width="55"
 			        height="20"
 			        style_bg_opa="0%"
 			        style_border_width="0"
 			        style_pad_all="0"
 			        flex_flow="row"
-			        style_pad_gap="4"
+			        style_pad_gap="3"
 			        flex_align="start,center,center">
 				<lv_label text="#icon_leaf"
-				          width="16"
+				          width="14"
 				          height="20"
 				          style_text_color="#primary_color"
 				          style_text_font="fa_icons_16"
 				          style_pad_all="0"/>
 				<lv_label text="$filament_weight"
-				          width="55"
+				          width="38"
 				          height="20"
 				          style_text_color="#text_secondary"
 				          style_text_font="montserrat_14"

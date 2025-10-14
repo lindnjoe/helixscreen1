@@ -49,6 +49,36 @@ struct PrintFileData {
 };
 
 // ============================================================================
+// Screen size responsive card component selection
+// ============================================================================
+struct CardLayout {
+    const char* component_name;
+    int gap;
+};
+
+static CardLayout get_card_layout() {
+    lv_coord_t screen_width = lv_display_get_horizontal_resolution(lv_display_get_default());
+
+    CardLayout layout;
+
+    if (screen_width >= 1024) {
+        // 1280 & 1024: 5 columns, large thumbnails (defined in print_file_card_5col.xml)
+        layout.component_name = "print_file_card_5col";
+        layout.gap = 20;
+    } else if (screen_width >= 700) {
+        // 800: 4 columns, medium thumbnails (defined in print_file_card_4col.xml)
+        layout.component_name = "print_file_card_4col";
+        layout.gap = 20;
+    } else {
+        // 480: 3 columns, small thumbnails (defined in print_file_card_3col.xml)
+        layout.component_name = "print_file_card_3col";
+        layout.gap = 12;
+    }
+
+    return layout;
+}
+
+// ============================================================================
 // Static state
 // ============================================================================
 static std::vector<PrintFileData> file_list;
@@ -58,6 +88,7 @@ static PrintSelectSortDirection current_sort_direction = PrintSelectSortDirectio
 
 // Widget references
 static lv_obj_t* panel_root_widget = nullptr;
+static lv_obj_t* parent_screen_widget = nullptr;
 static lv_obj_t* card_view_container = nullptr;
 static lv_obj_t* list_view_container = nullptr;
 static lv_obj_t* list_rows_container = nullptr;
@@ -126,13 +157,14 @@ void ui_panel_print_select_init_subjects() {
 // ============================================================================
 // Panel setup (call after XML creation)
 // ============================================================================
-void ui_panel_print_select_setup(lv_obj_t* panel_root) {
+void ui_panel_print_select_setup(lv_obj_t* panel_root, lv_obj_t* parent_screen) {
     if (!panel_root) {
         LV_LOG_ERROR("Cannot setup print select panel: panel_root is null");
         return;
     }
 
     panel_root_widget = panel_root;
+    parent_screen_widget = parent_screen;
 
     // Find widget references
     card_view_container = lv_obj_find_by_name(panel_root, "card_view_container");
@@ -360,6 +392,12 @@ static void populate_card_view() {
     // Clear existing cards
     lv_obj_clean(card_view_container);
 
+    // Get responsive layout for current screen size
+    CardLayout layout = get_card_layout();
+
+    // Update container gap
+    lv_obj_set_style_pad_gap(card_view_container, layout.gap, LV_PART_MAIN);
+
     for (const auto& file : file_list) {
         // Create XML attributes array
         const char* attrs[] = {
@@ -369,8 +407,8 @@ static void populate_card_view() {
             NULL
         };
 
-        // Create card from XML component
-        lv_obj_t* card = (lv_obj_t*)lv_xml_create(card_view_container, "print_file_card", attrs);
+        // Create card from appropriate responsive component (5col, 4col, or 3col)
+        lv_obj_t* card = (lv_obj_t*)lv_xml_create(card_view_container, layout.component_name, attrs);
 
         // Attach click handler
         if (card) {
@@ -524,6 +562,15 @@ void ui_panel_print_select_show_delete_confirmation() {
         return;
     }
 
+    // Update dialog message with current filename
+    lv_obj_t* message_label = lv_obj_find_by_name(confirmation_dialog_widget, "dialog_message");
+    if (message_label) {
+        char msg_buf[256];
+        snprintf(msg_buf, sizeof(msg_buf), "Are you sure you want to delete '%s'? This action cannot be undone.",
+                 selected_filename_buffer);
+        lv_label_set_text(message_label, msg_buf);
+    }
+
     lv_obj_remove_flag(confirmation_dialog_widget, LV_OBJ_FLAG_HIDDEN);
     lv_obj_move_foreground(confirmation_dialog_widget);
     LV_LOG_USER("Delete confirmation dialog shown");
@@ -536,8 +583,8 @@ static void hide_delete_confirmation() {
 }
 
 static void create_confirmation_dialog() {
-    if (!panel_root_widget) {
-        LV_LOG_ERROR("Cannot create confirmation dialog: panel_root_widget is null");
+    if (!parent_screen_widget) {
+        LV_LOG_ERROR("Cannot create confirmation dialog: parent_screen_widget is null");
         return;
     }
 
@@ -546,14 +593,14 @@ static void create_confirmation_dialog() {
         return;
     }
 
-    // Create confirmation dialog from XML component
+    // Create confirmation dialog from XML component (as child of screen for correct z-order)
     const char* attrs[] = {
         "title", "Delete File?",
         "message", "Are you sure you want to delete this file? This action cannot be undone.",
         NULL
     };
 
-    confirmation_dialog_widget = (lv_obj_t*)lv_xml_create(panel_root_widget, "confirmation_dialog", attrs);
+    confirmation_dialog_widget = (lv_obj_t*)lv_xml_create(parent_screen_widget, "confirmation_dialog", attrs);
 
     if (!confirmation_dialog_widget) {
         LV_LOG_ERROR("Failed to create confirmation dialog from XML");

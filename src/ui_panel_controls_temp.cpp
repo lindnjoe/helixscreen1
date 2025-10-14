@@ -20,6 +20,7 @@
 
 #include "ui_panel_controls_temp.h"
 #include "ui_component_keypad.h"
+#include "ui_utils.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -44,6 +45,12 @@ static int nozzle_current = 25;
 static int nozzle_target = 0;
 static int bed_current = 25;
 static int bed_target = 0;
+
+// Temperature limits (can be updated from Moonraker heater config)
+static int nozzle_min_temp = 0;
+static int nozzle_max_temp = 500;  // Safe default for most hotends
+static int bed_min_temp = 0;
+static int bed_max_temp = 150;     // Safe default for most heatbeds
 
 // Panel widgets
 static lv_obj_t* nozzle_panel = nullptr;
@@ -191,11 +198,14 @@ void ui_panel_controls_temp_nozzle_setup(lv_obj_t* panel, lv_obj_t* parent_scree
         printf("[Temp]   ✓ Back button\n");
     }
 
-    // Confirm button
-    lv_obj_t* confirm_btn = lv_obj_find_by_name(panel, "right_button");
-    if (confirm_btn) {
-        lv_obj_add_event_cb(confirm_btn, nozzle_confirm_button_cb, LV_EVENT_CLICKED, nullptr);
-        printf("[Temp]   ✓ Confirm button\n");
+    // Show and wire confirm button
+    lv_obj_t* header = lv_obj_find_by_name(panel, "nozzle_temp_header");
+    if (header && ui_header_bar_show_right_button(header)) {
+        lv_obj_t* confirm_btn = lv_obj_find_by_name(header, "right_button");
+        if (confirm_btn) {
+            lv_obj_add_event_cb(confirm_btn, nozzle_confirm_button_cb, LV_EVENT_CLICKED, nullptr);
+            printf("[Temp]   ✓ Confirm button\n");
+        }
     }
 
     // Preset buttons
@@ -315,11 +325,14 @@ void ui_panel_controls_temp_bed_setup(lv_obj_t* panel, lv_obj_t* parent_screen) 
         printf("[Temp]   ✓ Back button\n");
     }
 
-    // Confirm button
-    lv_obj_t* confirm_btn = lv_obj_find_by_name(panel, "right_button");
-    if (confirm_btn) {
-        lv_obj_add_event_cb(confirm_btn, bed_confirm_button_cb, LV_EVENT_CLICKED, nullptr);
-        printf("[Temp]   ✓ Confirm button\n");
+    // Show and wire confirm button
+    lv_obj_t* header = lv_obj_find_by_name(panel, "bed_temp_header");
+    if (header && ui_header_bar_show_right_button(header)) {
+        lv_obj_t* confirm_btn = lv_obj_find_by_name(header, "right_button");
+        if (confirm_btn) {
+            lv_obj_add_event_cb(confirm_btn, bed_confirm_button_cb, LV_EVENT_CLICKED, nullptr);
+            printf("[Temp]   ✓ Confirm button\n");
+        }
     }
 
     // Preset buttons
@@ -347,12 +360,36 @@ void ui_panel_controls_temp_bed_setup(lv_obj_t* panel, lv_obj_t* parent_screen) 
 // ============================================================================
 
 void ui_panel_controls_temp_set_nozzle(int current, int target) {
+    // Validate temperature ranges using dynamic limits
+    if (current < nozzle_min_temp || current > nozzle_max_temp) {
+        printf("[Temp] WARNING: Invalid nozzle current temperature %d°C (valid: %d-%d°C), clamping\n",
+               current, nozzle_min_temp, nozzle_max_temp);
+        current = (current < nozzle_min_temp) ? nozzle_min_temp : nozzle_max_temp;
+    }
+    if (target < nozzle_min_temp || target > nozzle_max_temp) {
+        printf("[Temp] WARNING: Invalid nozzle target temperature %d°C (valid: %d-%d°C), clamping\n",
+               target, nozzle_min_temp, nozzle_max_temp);
+        target = (target < nozzle_min_temp) ? nozzle_min_temp : nozzle_max_temp;
+    }
+
     nozzle_current = current;
     nozzle_target = target;
     update_nozzle_display();
 }
 
 void ui_panel_controls_temp_set_bed(int current, int target) {
+    // Validate temperature ranges using dynamic limits
+    if (current < bed_min_temp || current > bed_max_temp) {
+        printf("[Temp] WARNING: Invalid bed current temperature %d°C (valid: %d-%d°C), clamping\n",
+               current, bed_min_temp, bed_max_temp);
+        current = (current < bed_min_temp) ? bed_min_temp : bed_max_temp;
+    }
+    if (target < bed_min_temp || target > bed_max_temp) {
+        printf("[Temp] WARNING: Invalid bed target temperature %d°C (valid: %d-%d°C), clamping\n",
+               target, bed_min_temp, bed_max_temp);
+        target = (target < bed_min_temp) ? bed_min_temp : bed_max_temp;
+    }
+
     bed_current = current;
     bed_target = target;
     update_bed_display();
@@ -364,4 +401,16 @@ int ui_panel_controls_temp_get_nozzle_target() {
 
 int ui_panel_controls_temp_get_bed_target() {
     return bed_target;
+}
+
+void ui_panel_controls_temp_set_nozzle_limits(int min_temp, int max_temp) {
+    nozzle_min_temp = min_temp;
+    nozzle_max_temp = max_temp;
+    printf("[Temp] Nozzle temperature limits updated: %d-%d°C\n", min_temp, max_temp);
+}
+
+void ui_panel_controls_temp_set_bed_limits(int min_temp, int max_temp) {
+    bed_min_temp = min_temp;
+    bed_max_temp = max_temp;
+    printf("[Temp] Bed temperature limits updated: %d-%d°C\n", min_temp, max_temp);
 }

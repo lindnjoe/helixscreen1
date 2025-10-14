@@ -74,3 +74,19 @@ int ui_panel_controls_temp_get_nozzle_target();
  * @return Target temperature in °C
  */
 int ui_panel_controls_temp_get_bed_target();
+
+/**
+ * Set nozzle temperature limits (for validation).
+ * Call this after querying Moonraker for heater configuration.
+ * @param min_temp - Minimum safe nozzle temperature in °C (default: 0)
+ * @param max_temp - Maximum safe nozzle temperature in °C (default: 500)
+ */
+void ui_panel_controls_temp_set_nozzle_limits(int min_temp, int max_temp);
+
+/**
+ * Set bed temperature limits (for validation).
+ * Call this after querying Moonraker for heater configuration.
+ * @param min_temp - Minimum safe bed temperature in °C (default: 0)
+ * @param max_temp - Maximum safe bed temperature in °C (default: 150)
+ */
+void ui_panel_controls_temp_set_bed_limits(int min_temp, int max_temp);

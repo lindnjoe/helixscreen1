@@ -59,8 +59,9 @@ void ui_panel_print_select_init_subjects();
  * Setup print select panel after XML creation
  * Wires up event handlers and creates detail view
  * @param panel_root The root print select panel widget
+ * @param parent_screen The parent screen (for creating overlays at correct z-level)
  */
-void ui_panel_print_select_setup(lv_obj_t* panel_root);
+void ui_panel_print_select_setup(lv_obj_t* panel_root, lv_obj_t* parent_screen);
 
 /**
  * Populate print select panel with test print files

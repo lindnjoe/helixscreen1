@@ -1,6 +1,221 @@
 # Project Status - LVGL 9 UI Prototype
 
-**Last Updated:** 2025-10-13 (Code Review Complete - Phases 5.2-5.5)
+**Last Updated:** 2025-10-14 (Dynamic Temperature Limits & Safety Improvements)
+
+## Recent Updates (2025-10-14)
+
+### Dynamic Temperature Limits & Safety Improvements ✅ COMPLETE
+
+**Objective:** Add robust temperature validation with dynamic limits ready for Moonraker integration.
+
+**Problem Identified:**
+- Temperature setter functions accepted any input values without validation
+- Risk of undefined behavior with invalid sensor readings (negative, overflow, sensor errors)
+- Fixed limits (500°C nozzle, 150°C bed) hardcoded in validation logic
+
+**Solution Implemented:**
+- Added dynamic temperature limit variables with safe defaults
+- Created public API for updating limits from Moonraker heater config
+- Updated all validation code to use dynamic limits with improved error messages
+- All invalid values now clamped and logged with clear warnings
+
+**API Added:**
+```cpp
+// Temperature Panel API (ui_panel_controls_temp.h)
+void ui_panel_controls_temp_set_nozzle_limits(int min_temp, int max_temp);
+void ui_panel_controls_temp_set_bed_limits(int min_temp, int max_temp);
+
+// Extrusion Panel API (ui_panel_controls_extrusion.h)
+void ui_panel_controls_extrusion_set_limits(int min_temp, int max_temp);
+```
+
+**Default Limits (Conservative Safe Values):**
+- Nozzle: 0-500°C (safe for all hotends including high-temp)
+- Bed: 0-150°C (safe for all heatbeds including high-temp)
+- Extrusion minimum: 170°C (safety threshold for filament extrusion)
+
+**Validation Behavior:**
+```cpp
+// Before: Hardcoded validation
+if (current < 0 || current > 500) { /* clamp */ }
+
+// After: Dynamic validation with detailed logging
+if (current < nozzle_min_temp || current > nozzle_max_temp) {
+    printf("[Temp] WARNING: Invalid nozzle current temperature %d°C (valid: %d-%d°C), clamping\n",
+           current, nozzle_min_temp, nozzle_max_temp);
+    current = (current < nozzle_min_temp) ? nozzle_min_temp : nozzle_max_temp;
+}
+```
+
+**Future Moonraker Integration:**
+When connecting to Moonraker, query heater configuration on startup:
+
+```bash
+# Query printer heater config
+GET /printer/objects/query?heater_bed&extruder
+
+# Response includes min_temp and max_temp for each heater
+{
+  "extruder": {
+    "min_temp": 0,
+    "max_temp": 300,  // E.g., standard E3D V6 hotend
+    ...
+  },
+  "heater_bed": {
+    "min_temp": 0,
+    "max_temp": 120,  // E.g., standard heated bed
+    ...
+  }
+}
+
+# Then call setter functions with actual printer limits:
+ui_panel_controls_temp_set_nozzle_limits(extruder.min_temp, extruder.max_temp);
+ui_panel_controls_temp_set_bed_limits(heater_bed.min_temp, heater_bed.max_temp);
+ui_panel_controls_extrusion_set_limits(extruder.min_temp, extruder.max_temp);
+```
+
+**Benefits:**
+- ✅ Prevents undefined behavior from invalid sensor readings
+- ✅ Ready for dynamic configuration from Moonraker
+- ✅ Clear error messages aid debugging
+- ✅ Safe defaults work for all printers until Moonraker integration
+- ✅ Consistent validation across all temperature-related components
+
+**Files Modified:**
+- `include/ui_panel_controls_temp.h` - Added limit setter API (2 functions)
+- `src/ui_panel_controls_temp.cpp` - Dynamic limits + validation (6 variables, 2 setters)
+- `include/ui_panel_controls_extrusion.h` - Added limit setter API (1 function)
+- `src/ui_panel_controls_extrusion.cpp` - Dynamic limits + validation (2 variables, 1 setter)
+
+**Previously Completed (Earlier Today):**
+
+### Bug Fixes & UI Refinements ✅ COMPLETE
+
+**Fixed 6 Critical UI Issues:**
+
+1. **Toggle view icon scrollbars** - Changed from `lv_obj` to `lv_button` with `style_shadow_width="0"`
+2. **File list header shadows** - Added `style_shadow_width="0"` to all column header buttons
+3. **Empty green button in header_bar** - Implemented hidden-by-default with reusable helper functions
+4. **Delete confirmation dialog text** - Now includes filename dynamically
+5. **Delete confirmation dialog z-order** - Created as child of screen for proper overlay layering
+6. **Horizontal scrollbar on cards** - Replaced with fully responsive multi-layout system
+
+**New Reusable Patterns:**
+- `ui_header_bar_show_right_button()` - Show optional action button
+- `ui_header_bar_hide_right_button()` - Hide action button
+- `ui_header_bar_set_right_button_text()` - Update button text dynamically
+
+**Files Modified:**
+- `ui_xml/print_select_panel.xml` - Toggle button, header buttons cleanup
+- `ui_xml/header_bar.xml` - Added `flag_hidden="true"` default for right button
+- `ui_xml/confirmation_dialog.xml` - No changes (already correct)
+- `src/ui_panel_print_select.cpp` - Dynamic message, screen-level dialog creation
+- `src/ui_panel_controls_temp.cpp` - Use header_bar helpers
+- `src/ui_utils.h/cpp` - New header_bar helper functions
+- `include/ui_panel_print_select.h` - Added parent_screen parameter
+
+### Responsive Card Layout System ✅ COMPLETE
+
+**Implemented Screen-Size Adaptive Card Layouts:**
+- Created 3 separate card component variants (separation of concerns)
+- All layout decisions in XML, minimal C++ logic (just component selection)
+- Screen size detection via `lv_display_get_horizontal_resolution()`
+
+**Component Variants:**
+- `print_file_card_5col.xml` - 1280 & 1024 screens (205px cards, 180px thumbs, 5 columns)
+- `print_file_card_4col.xml` - 800 screens (151px cards, 127px thumbs, 4 columns)
+- `print_file_card_3col.xml` - 480 screens (107px cards, 83px thumbs, 3 columns, vertical metadata)
+
+**Constants in globals.xml:**
+```xml
+<!-- Shared constants -->
+<px name="print_file_card_padding" value="12"/>
+<px name="print_file_card_spacing" value="8"/>
+
+<!-- 5-column layout (1280 & 1024) -->
+<px name="print_file_card_width_5col" value="205"/>
+<px name="print_file_card_thumb_5col" value="180"/>
+<px name="print_file_card_gap_5col" value="20"/>
+
+<!-- 4-column layout (800) -->
+<px name="print_file_card_width_4col" value="151"/>
+<px name="print_file_card_thumb_4col" value="127"/>
+
+<!-- 3-column layout (480) -->
+<px name="print_file_card_width_3col" value="107"/>
+<px name="print_file_card_thumb_3col" value="83"/>
+<px name="print_file_card_gap_3col" value="12"/>
+```
+
+**Enhanced Command-Line Interface:**
+- Added `-s / --size <size>` - Set screen size (480, 800, 1024, 1280)
+- Added `-p / --panel <panel>` - Select initial panel
+- Added `-h / --help` - Show usage information
+- Updated `scripts/screenshot.sh` to forward extra arguments
+
+**Files Modified:**
+- `ui_xml/globals.xml` - Responsive card constants
+- `ui_xml/print_file_card_5col.xml` - NEW (large screens)
+- `ui_xml/print_file_card_4col.xml` - NEW (medium screens)
+- `ui_xml/print_file_card_3col.xml` - NEW (tiny screens)
+- `src/ui_panel_print_select.cpp` - Screen detection & component selection
+- `src/main.cpp` - Command-line argument parsing, screen size configuration
+- `scripts/screenshot.sh` - Forward additional args to binary
+
+## Recent Updates (2025-10-14) [EARLIER]
+
+### Responsive Design System Refactoring ✅ COMPLETE
+
+**Converted Fixed Pixel Values to Responsive Percentages:**
+- Overlay panels: 700px → 68%, 850px → 83%
+- File card grid: 204px → 22% (enables flexible column counts)
+- Removed fixed card heights from print status panel
+- All layouts now adapt to different screen resolutions
+
+**Changes in globals.xml:**
+```xml
+<!-- BEFORE: Fixed pixels for 1024x600 display -->
+<px name="overlay_panel_width" value="700"/>
+<px name="overlay_panel_width_large" value="850"/>
+<px name="file_card_width" value="204"/>
+
+<!-- AFTER: Responsive percentages -->
+<percent name="overlay_panel_width" value="68%"/>
+<percent name="overlay_panel_width_large" value="83%"/>
+<percent name="file_card_width" value="22%"/>
+```
+
+**What Remains Fixed (By Design):**
+- Button heights (48-58px) - Precise touch targets for usability
+- Padding/gaps (6-20px) - Visual consistency across resolutions
+- Header height (60px) - Standard navigation bar height
+- Border radius (8-12px) - Visual design consistency
+- Navigation bar width (102px) - Fixed sidebar
+- All motion panel button sizes - Touch target requirements
+- All keypad button sizes - Touch target requirements
+
+**Benefits:**
+- Automatically adapts to different display sizes (800x480, 1024x600, 1280x800)
+- File card grid wraps naturally (4 columns on 1024px, 3 on smaller displays)
+- Overlay panels scale proportionally while maintaining usability
+- No need for multiple resolution-specific XML files
+
+**Files Modified:**
+- `ui_xml/globals.xml` - Converted 3 constants from px to percent
+- `ui_xml/numeric_keypad_modal.xml` - Uses overlay_panel_width constant
+- `ui_xml/print_status_panel.xml` - Removed fixed card heights (already done)
+
+**Verified Panels:**
+- ✅ Print Status Panel - All cards show full content, no clipping
+- ✅ Motion Panel - 83% overlay, all buttons visible
+- ✅ Nozzle/Bed Temp Panels - 68% overlay, proper proportions
+- ✅ Print Select Panel - 22% cards in flexible 4-column grid
+
+**Architecture Decision:**
+- Use responsive percentages for layout structure (columns, overlays)
+- Keep fixed pixels for interactive elements (buttons, touch targets)
+- Maintain semantic constants system for easy theme adjustments
+- Single codebase supports multiple resolutions without duplication
 
 ## Recent Updates (2025-10-13)
 
@@ -190,12 +405,13 @@
 
 ### Active Development
 
-**Current Focus:** Interactive Button Wiring & Bug Fixes
+**Current Focus:** Overlay Panel Backdrops & Interactive Button Wiring
 
-**Priority 1: Critical Bug Fix**
-- ⚠️ Integer overflow in temperature calculation (`ui_panel_controls_extrusion.cpp:79`)
-- Risk: Undefined behavior with invalid sensor readings
-- Fix: Use safe difference calculation or add bounds checking
+**Priority 1: Semi-Transparent Backdrop for Overlay Panels**
+- Add darkened backdrop behind right-aligned overlay panels
+- Affected panels: motion, nozzle-temp, bed-temp, extrusion, print-file-detail, numeric-keypad
+- Pattern: Full-screen backdrop with `style_bg_opa="180"` (see confirmation_dialog.xml)
+- Goal: Underlying panel shows through dimmed instead of being completely hidden
 
 **Priority 2: Interactive Wiring**
 - Wire preset buttons on temperature panels
@@ -207,7 +423,12 @@
 **Priority 3: Enhancements**
 - Temperature graph visualization (replace static fire icon)
 - Improve motion panel header button (appears truncated)
-- Add temperature bounds validation utility
+
+**Completed (2025-10-14 - Critical Bug Fix):**
+- ✅ Fixed integer overflow risk in temperature calculation (ui_panel_controls_extrusion.cpp)
+- ✅ Added dynamic temperature limits with safe defaults (0-500°C nozzle, 0-150°C bed)
+- ✅ Created API for Moonraker heater configuration integration
+- ✅ Added validation with clear warning messages for invalid sensor readings
 
 **Completed (2025-10-13 Evening - Temperature Panels):**
 - ✅ Created nozzle and bed temperature panel XML layouts

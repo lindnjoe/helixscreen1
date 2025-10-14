@@ -29,6 +29,7 @@
 #include "ui_panel_motion.h"
 #include "ui_panel_controls_temp.h"
 #include "ui_panel_controls_extrusion.h"
+#include "ui_panel_print_status.h"
 #include "ui_component_keypad.h"
 #include <SDL.h>
 #include <cstdio>
@@ -39,9 +40,9 @@
 static lv_display_t* display = nullptr;
 static lv_indev_t* indev_mouse = nullptr;
 
-// Screen dimensions (default to medium size)
-static const int SCREEN_WIDTH = UI_SCREEN_MEDIUM_W;
-static const int SCREEN_HEIGHT = UI_SCREEN_MEDIUM_H;
+// Screen dimensions (configurable via command line, default to medium size)
+static int SCREEN_WIDTH = UI_SCREEN_MEDIUM_W;
+static int SCREEN_HEIGHT = UI_SCREEN_MEDIUM_H;
 
 // Initialize LVGL with SDL
 static bool init_lvgl() {
@@ -135,44 +136,116 @@ static void save_screenshot() {
 
 // Main application
 int main(int argc, char** argv) {
-    // Parse command-line arguments for panel selection
+    // Parse command-line arguments
     int initial_panel = UI_PANEL_HOME;  // Default to home panel
     bool show_motion = false;  // Special flag for motion sub-screen
     bool show_nozzle_temp = false;  // Special flag for nozzle temp sub-screen
     bool show_bed_temp = false;  // Special flag for bed temp sub-screen
     bool show_extrusion = false;  // Special flag for extrusion sub-screen
+    bool show_print_status = false;  // Special flag for print status screen
 
-    if (argc > 1) {
-        const char* panel_arg = argv[1];
-        if (strcmp(panel_arg, "home") == 0) {
-            initial_panel = UI_PANEL_HOME;
-        } else if (strcmp(panel_arg, "controls") == 0) {
-            initial_panel = UI_PANEL_CONTROLS;
-        } else if (strcmp(panel_arg, "motion") == 0) {
-            initial_panel = UI_PANEL_CONTROLS;
-            show_motion = true;
-        } else if (strcmp(panel_arg, "nozzle-temp") == 0) {
-            initial_panel = UI_PANEL_CONTROLS;
-            show_nozzle_temp = true;
-        } else if (strcmp(panel_arg, "bed-temp") == 0) {
-            initial_panel = UI_PANEL_CONTROLS;
-            show_bed_temp = true;
-        } else if (strcmp(panel_arg, "extrusion") == 0) {
-            initial_panel = UI_PANEL_CONTROLS;
-            show_extrusion = true;
-        } else if (strcmp(panel_arg, "filament") == 0) {
-            initial_panel = UI_PANEL_FILAMENT;
-        } else if (strcmp(panel_arg, "settings") == 0) {
-            initial_panel = UI_PANEL_SETTINGS;
-        } else if (strcmp(panel_arg, "advanced") == 0) {
-            initial_panel = UI_PANEL_ADVANCED;
-        } else if (strcmp(panel_arg, "print-select") == 0 || strcmp(panel_arg, "print_select") == 0) {
-            initial_panel = UI_PANEL_PRINT_SELECT;
+    // Parse arguments
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-s") == 0 || strcmp(argv[i], "--size") == 0) {
+            if (i + 1 < argc) {
+                const char* size_arg = argv[++i];
+                if (strcmp(size_arg, "480") == 0) {
+                    SCREEN_WIDTH = 480;
+                    SCREEN_HEIGHT = 800;
+                } else if (strcmp(size_arg, "800") == 0) {
+                    SCREEN_WIDTH = 800;
+                    SCREEN_HEIGHT = 600;
+                } else if (strcmp(size_arg, "1024") == 0) {
+                    SCREEN_WIDTH = 1024;
+                    SCREEN_HEIGHT = 800;
+                } else if (strcmp(size_arg, "1280") == 0) {
+                    SCREEN_WIDTH = 1280;
+                    SCREEN_HEIGHT = 720;
+                } else {
+                    printf("Unknown screen size: %s\n", size_arg);
+                    printf("Available sizes: 480, 800, 1024, 1280\n");
+                    return 1;
+                }
+            } else {
+                printf("Error: -s/--size requires an argument\n");
+                return 1;
+            }
+        } else if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--panel") == 0) {
+            if (i + 1 < argc) {
+                const char* panel_arg = argv[++i];
+                if (strcmp(panel_arg, "home") == 0) {
+                    initial_panel = UI_PANEL_HOME;
+                } else if (strcmp(panel_arg, "controls") == 0) {
+                    initial_panel = UI_PANEL_CONTROLS;
+                } else if (strcmp(panel_arg, "motion") == 0) {
+                    initial_panel = UI_PANEL_CONTROLS;
+                    show_motion = true;
+                } else if (strcmp(panel_arg, "nozzle-temp") == 0) {
+                    initial_panel = UI_PANEL_CONTROLS;
+                    show_nozzle_temp = true;
+                } else if (strcmp(panel_arg, "bed-temp") == 0) {
+                    initial_panel = UI_PANEL_CONTROLS;
+                    show_bed_temp = true;
+                } else if (strcmp(panel_arg, "extrusion") == 0) {
+                    initial_panel = UI_PANEL_CONTROLS;
+                    show_extrusion = true;
+                } else if (strcmp(panel_arg, "print-status") == 0 || strcmp(panel_arg, "printing") == 0) {
+                    show_print_status = true;
+                } else if (strcmp(panel_arg, "filament") == 0) {
+                    initial_panel = UI_PANEL_FILAMENT;
+                } else if (strcmp(panel_arg, "settings") == 0) {
+                    initial_panel = UI_PANEL_SETTINGS;
+                } else if (strcmp(panel_arg, "advanced") == 0) {
+                    initial_panel = UI_PANEL_ADVANCED;
+                } else if (strcmp(panel_arg, "print-select") == 0 || strcmp(panel_arg, "print_select") == 0) {
+                    initial_panel = UI_PANEL_PRINT_SELECT;
+                } else {
+                    printf("Unknown panel: %s\n", panel_arg);
+                    printf("Available panels: home, controls, motion, nozzle-temp, bed-temp, extrusion, print-status, filament, settings, advanced, print-select\n");
+                    return 1;
+                }
+            } else {
+                printf("Error: -p/--panel requires an argument\n");
+                return 1;
+            }
+        } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+            printf("Usage: %s [options]\n", argv[0]);
+            printf("Options:\n");
+            printf("  -s, --size <size>    Screen size: 480, 800, 1024, 1280 (default: 1024)\n");
+            printf("  -p, --panel <panel>  Initial panel (default: home)\n");
+            printf("  -h, --help           Show this help message\n");
+            printf("\nAvailable panels:\n");
+            printf("  home, controls, motion, nozzle-temp, bed-temp, extrusion,\n");
+            printf("  print-status, filament, settings, advanced, print-select\n");
+            printf("\nScreen sizes:\n");
+            printf("  480   = 480x800   (tiny - 3 column cards)\n");
+            printf("  800   = 800x600   (medium - 4 column cards)\n");
+            printf("  1024  = 1024x800  (standard - 5 column cards)\n");
+            printf("  1280  = 1280x720  (large - 5 column cards)\n");
+            return 0;
         } else {
-            printf("Unknown panel: %s\n", panel_arg);
-            printf("Usage: %s [panel_name]\n", argv[0]);
-            printf("Available panels: home, controls, motion, nozzle-temp, bed-temp, extrusion, filament, settings, advanced, print-select\n");
-            return 1;
+            // Legacy support: first positional arg is panel name
+            if (i == 1 && argv[i][0] != '-') {
+                const char* panel_arg = argv[i];
+                if (strcmp(panel_arg, "home") == 0) {
+                    initial_panel = UI_PANEL_HOME;
+                } else if (strcmp(panel_arg, "controls") == 0) {
+                    initial_panel = UI_PANEL_CONTROLS;
+                } else if (strcmp(panel_arg, "motion") == 0) {
+                    initial_panel = UI_PANEL_CONTROLS;
+                    show_motion = true;
+                } else if (strcmp(panel_arg, "print-select") == 0 || strcmp(panel_arg, "print_select") == 0) {
+                    initial_panel = UI_PANEL_PRINT_SELECT;
+                } else {
+                    printf("Unknown argument: %s\n", argv[i]);
+                    printf("Use --help for usage information\n");
+                    return 1;
+                }
+            } else {
+                printf("Unknown argument: %s\n", argv[i]);
+                printf("Use --help for usage information\n");
+                return 1;
+            }
         }
     }
 
@@ -217,7 +290,9 @@ int main(int argc, char** argv) {
     lv_xml_component_register_from_file("A:ui_xml/header_bar.xml");
     lv_xml_component_register_from_file("A:ui_xml/confirmation_dialog.xml");
     lv_xml_component_register_from_file("A:ui_xml/numeric_keypad_modal.xml");
-    lv_xml_component_register_from_file("A:ui_xml/print_file_card.xml");
+    lv_xml_component_register_from_file("A:ui_xml/print_file_card_5col.xml");
+    lv_xml_component_register_from_file("A:ui_xml/print_file_card_4col.xml");
+    lv_xml_component_register_from_file("A:ui_xml/print_file_card_3col.xml");
     lv_xml_component_register_from_file("A:ui_xml/print_file_list_row.xml");
     lv_xml_component_register_from_file("A:ui_xml/print_file_detail.xml");
     lv_xml_component_register_from_file("A:ui_xml/navigation_bar.xml");
@@ -227,6 +302,7 @@ int main(int argc, char** argv) {
     lv_xml_component_register_from_file("A:ui_xml/nozzle_temp_panel.xml");
     lv_xml_component_register_from_file("A:ui_xml/bed_temp_panel.xml");
     lv_xml_component_register_from_file("A:ui_xml/extrusion_panel.xml");
+    lv_xml_component_register_from_file("A:ui_xml/print_status_panel.xml");
     lv_xml_component_register_from_file("A:ui_xml/filament_panel.xml");
     lv_xml_component_register_from_file("A:ui_xml/settings_panel.xml");
     lv_xml_component_register_from_file("A:ui_xml/advanced_panel.xml");
@@ -242,6 +318,7 @@ int main(int argc, char** argv) {
     ui_panel_motion_init_subjects();  // Motion sub-screen position display
     ui_panel_controls_temp_init_subjects();  // Temperature sub-screens
     ui_panel_controls_extrusion_init_subjects();  // Extrusion sub-screen
+    ui_panel_print_status_init_subjects();  // Print status screen
 
     // Create entire UI from XML (single component contains everything)
     lv_obj_t* app_layout = (lv_obj_t*)lv_xml_create(screen, "app_layout", NULL);
@@ -271,7 +348,7 @@ int main(int argc, char** argv) {
     ui_panel_controls_wire_events(panels[UI_PANEL_CONTROLS]);
 
     // Setup print select panel (wires up events, creates overlays, populates data)
-    ui_panel_print_select_setup(panels[UI_PANEL_PRINT_SELECT]);
+    ui_panel_print_select_setup(panels[UI_PANEL_PRINT_SELECT], screen);
     ui_panel_print_select_populate_test_data(panels[UI_PANEL_PRINT_SELECT]);
 
     // Initialize numeric keypad modal component (creates reusable keypad widget)
@@ -369,9 +446,33 @@ int main(int argc, char** argv) {
         }
     }
 
+    // Special case: Show print status screen if requested
+    if (show_print_status) {
+        printf("Creating and showing print status screen...\n");
+
+        // Create print status panel
+        lv_obj_t* print_status_panel = (lv_obj_t*)lv_xml_create(screen, "print_status_panel", nullptr);
+        if (print_status_panel) {
+            ui_panel_print_status_setup(print_status_panel, screen);
+
+            // Hide all navigation panels
+            for (int i = 0; i < UI_PANEL_COUNT; i++) {
+                lv_obj_add_flag(panels[i], LV_OBJ_FLAG_HIDDEN);
+            }
+
+            // Start mock print simulation (3-hour print, 250 layers)
+            ui_panel_print_status_start_mock_print("awesome_benchy.gcode", 250, 10800);
+
+            printf("Print status panel displayed with mock print running\n");
+        }
+    }
+
     // Auto-screenshot timer (2 seconds after UI creation)
     uint32_t screenshot_time = SDL_GetTicks() + 2000;
     bool screenshot_taken = false;
+
+    // Mock print simulation timer (tick every second)
+    uint32_t last_tick_time = SDL_GetTicks();
 
     // Main event loop - Let LVGL handle SDL events internally via lv_timer_handler()
     // Loop continues while display exists (exits when window closed)
@@ -380,6 +481,13 @@ int main(int argc, char** argv) {
         if (!screenshot_taken && SDL_GetTicks() >= screenshot_time) {
             save_screenshot();
             screenshot_taken = true;
+        }
+
+        // Tick mock print simulation (once per second)
+        uint32_t current_time = SDL_GetTicks();
+        if (current_time - last_tick_time >= 1000) {
+            ui_panel_print_status_tick_mock_print();
+            last_tick_time = current_time;
         }
 
         // Run LVGL tasks - internally polls SDL events and processes input

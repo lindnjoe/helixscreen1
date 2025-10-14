@@ -52,19 +52,60 @@
 		<percent name="card_width" value="45%"/>
 		<percent name="card_height" value="80%"/>
 
-		<!-- Print file card dimensions -->
-		<!-- 4 columns on medium display (1024x600): 204*4 + 20*3 = 876px (fits in 890px available width) -->
-		<!-- 3 columns on smaller displays: future responsive layout work (Phase 7) -->
-		<px name="file_card_width" value="204"/>
-		<px name="file_card_height" value="280"/>  <!-- thumbnail + labels + padding + spacing + metadata -->
-		<px name="file_card_padding" value="12"/>
-		<px name="file_card_thumbnail_size" value="180"/>  <!-- card_width - (2 * padding) -->
-		<px name="file_card_spacing" value="8"/>
-		<color name="file_card_thumbnail_bg" value="0x2a2a2a"/>
+		<!-- Print file card dimensions - responsive layouts for different screen sizes -->
+		<!-- Shared constants -->
+		<px name="print_file_card_padding" value="12"/>
+		<px name="print_file_card_spacing" value="8"/>
+		<color name="print_file_card_thumbnail_bg" value="0x2a2a2a"/>
+
+		<!-- 5-column layout (1280 & 1024 screens) -->
+		<!-- Content: ~890-1146px, 5 cards with 20px gaps -->
+		<px name="print_file_card_width_5col" value="205"/>
+		<px name="print_file_card_height_5col" value="280"/>
+		<px name="print_file_card_thumb_5col" value="180"/>
+		<px name="print_file_card_gap_5col" value="20"/>
+
+		<!-- 4-column layout (800 screens) -->
+		<!-- Content: ~666px, 4 cards with 20px gaps -->
+		<px name="print_file_card_width_4col" value="151"/>
+		<px name="print_file_card_height_4col" value="280"/>
+		<px name="print_file_card_thumb_4col" value="127"/>
+		<px name="print_file_card_gap_4col" value="20"/>
+
+		<!-- 3-column layout (480 screens) -->
+		<!-- Content: ~346px, 3 cards with 12px gaps -->
+		<px name="print_file_card_width_3col" value="107"/>
+		<px name="print_file_card_height_3col" value="200"/>
+		<px name="print_file_card_thumb_3col" value="83"/>
+		<px name="print_file_card_gap_3col" value="12"/>
 
 		<!-- Button dimensions -->
 		<px name="button_height" value="50"/>
 		<px name="button_padding" value="12"/>
+		<px name="button_height_small" value="48"/>   <!-- Icon buttons, back buttons -->
+		<px name="button_height_normal" value="56"/>  <!-- Primary action buttons -->
+
+		<!-- Card styling -->
+		<px name="card_radius_large" value="12"/>     <!-- Larger radius for prominent cards -->
+		<px name="padding_card" value="16"/>          <!-- Standard internal card padding -->
+		<px name="padding_card_emphasis" value="20"/> <!-- Emphasis cards (progress, highlights) -->
+
+		<!-- Spacing and gaps -->
+		<px name="gap_normal" value="12"/>            <!-- Standard gap between flex items -->
+		<px name="gap_large" value="16"/>             <!-- Larger gap for major sections -->
+		<px name="gap_small" value="8"/>              <!-- Compact gap for tight layouts -->
+		<px name="gap_tiny" value="6"/>               <!-- Very tight gap for dense info -->
+
+		<!-- Typography -->
+		<str name="font_body" value="montserrat_16"/>      <!-- Standard body text -->
+		<str name="font_heading" value="montserrat_20"/>   <!-- Section headings -->
+		<str name="font_large" value="montserrat_48"/>     <!-- Large display text -->
+
+		<!-- Component dimensions -->
+		<px name="header_height" value="60"/>              <!-- Standard header bar height -->
+		<px name="progress_bar_height" value="16"/>        <!-- Progress indicator height -->
+		<px name="divider_height" value="1"/>              <!-- Separator line height -->
+		<opacity name="divider_opacity" value="30"/>       <!-- Separator line opacity -->
 
 		<!-- Detail view dimensions -->
 		<px name="detail_metadata_height" value="100"/>
@@ -86,11 +127,13 @@
 		<px name="z_controls_height" value="280"/>       <!-- Increased to accommodate taller Z buttons -->
 
 		<!-- Overlay/Modal Panel Dimensions -->
-		<!-- Used for numeric keypad, motion panel, and other overlay panels -->
-		<px name="overlay_panel_width" value="700"/>
+		<!-- Used for numeric keypad, temperature panels, and other overlay panels -->
+		<!-- Responsive percentages: 68% = standard overlays, 83% = complex 2-column layouts -->
+		<percent name="overlay_panel_width" value="68%"/>       <!-- Standard overlay width (temps, simple panels) -->
+		<percent name="overlay_panel_width_large" value="83%"/> <!-- Large overlay width (motion, complex 2-column panels) -->
 
 		<!-- Numeric Keypad Modal dimensions -->
-		<px name="keypad_width" value="700"/>  <!-- TODO: Migrate to overlay_panel_width -->
+		<!-- Now uses overlay_panel_width for consistency (68% responsive) -->
 		<px name="keypad_padding" value="40"/>
 		<px name="keypad_section_gap" value="40"/>
 		<px name="keypad_input_height" value="120"/>

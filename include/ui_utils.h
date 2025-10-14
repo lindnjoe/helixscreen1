@@ -22,6 +22,7 @@
 
 #include <string>
 #include <ctime>
+#include "lvgl/lvgl.h"
 
 /**
  * Format print time from minutes to human-readable string
@@ -54,3 +55,28 @@ std::string format_file_size(size_t bytes);
  * @return Formatted date/time string
  */
 std::string format_modified_date(time_t timestamp);
+
+/**
+ * Show the right button in a header_bar component
+ * This is useful when the button needs to be made visible at runtime
+ * after component creation (e.g., for dynamically added actions)
+ * @param header_bar_widget Pointer to the header_bar component root
+ * @return true if button was found and shown, false otherwise
+ */
+bool ui_header_bar_show_right_button(lv_obj_t* header_bar_widget);
+
+/**
+ * Hide the right button in a header_bar component
+ * @param header_bar_widget Pointer to the header_bar component root
+ * @return true if button was found and hidden, false otherwise
+ */
+bool ui_header_bar_hide_right_button(lv_obj_t* header_bar_widget);
+
+/**
+ * Set the text of the right button in a header_bar component
+ * Note: This does NOT automatically show the button - call ui_header_bar_show_right_button() separately
+ * @param header_bar_widget Pointer to the header_bar component root
+ * @param text New button text
+ * @return true if button was found and updated, false otherwise
+ */
+bool ui_header_bar_set_right_button_text(lv_obj_t* header_bar_widget, const char* text);
