@@ -28,8 +28,10 @@ LV_FONT_DECLARE(fa_icons_48);  // Status card icons (large displays)
 LV_FONT_DECLARE(fa_icons_32);  // Status card icons (small displays)
 LV_FONT_DECLARE(fa_icons_16);  // Metadata icons (small inline)
 
-// Bold arrows font (Unicode arrows from system font - size 40 for boldness)
-LV_FONT_DECLARE(diagonal_arrows_40);  // ←↑→↓↖↗↙↘ all 8 directions
+// Unicode arrows from Arial Unicode - multiple sizes
+LV_FONT_DECLARE(arrows_64);    // ←↑→↓↖↗↙↘ at 64px
+LV_FONT_DECLARE(arrows_48);    // ←↑→↓↖↗↙↘ at 48px
+LV_FONT_DECLARE(arrows_32);    // ←↑→↓↖↗↙↘ at 32px
 
 // Navigation icons (available in 64px)
 #define ICON_HOME              "\xEF\x80\x95"      // U+F015 house
@@ -65,7 +67,7 @@ LV_FONT_DECLARE(diagonal_arrows_40);  // ←↑→↓↖↗↙↘ all 8 directio
 #define ICON_FAN               "\xEF\xA1\xA3"      // U+F863 fan
 #define ICON_POWER_OFF         "\xEF\x80\x91"      // U+F011 power-off
 
-// Motion control icons - using Unicode arrows from diagonal_arrows_40 font
+// Motion control icons - using Unicode arrows (from separate arrows_XX fonts)
 #define ICON_ARROW_UP          "\xE2\x86\x91"      // U+2191 upwards arrow ↑
 #define ICON_ARROW_DOWN        "\xE2\x86\x93"      // U+2193 downwards arrow ↓
 #define ICON_ARROW_LEFT        "\xE2\x86\x90"      // U+2190 leftwards arrow ←

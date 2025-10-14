@@ -20,6 +20,7 @@
 
 #include "ui_nav.h"
 #include "ui_theme.h"
+#include "ui_fonts.h"
 #include "lvgl/lvgl.h"
 #include <cstdio>
 #include <cstdlib>  // for atoi
@@ -138,6 +139,22 @@ void ui_nav_wire_events(lv_obj_t* navbar) {
     // Ensure navbar container doesn't block clicks to children
     lv_obj_remove_flag(navbar, LV_OBJ_FLAG_CLICKABLE);
 
+    // Determine icon font size based on screen height using theme constants
+    lv_display_t* display = lv_display_get_default();
+    int32_t screen_height = lv_display_get_vertical_resolution(display);
+    const lv_font_t* icon_font;
+
+    if (screen_height <= UI_SCREEN_TINY_H) {
+        icon_font = &fa_icons_32;  // Tiny screens
+        LV_LOG_USER("Using 32px nav icons for screen height %d", screen_height);
+    } else if (screen_height <= UI_SCREEN_MEDIUM_H) {
+        icon_font = &fa_icons_48;  // Small and medium screens
+        LV_LOG_USER("Using 48px nav icons for screen height %d", screen_height);
+    } else {
+        icon_font = &fa_icons_64;  // Large screens
+        LV_LOG_USER("Using 64px nav icons for screen height %d", screen_height);
+    }
+
     // Name-based widget lookup for navigation buttons and icons (order matches ui_panel_id_t enum)
     const char* button_names[] = {"nav_btn_home", "nav_btn_print_select", "nav_btn_controls", "nav_btn_filament", "nav_btn_settings", "nav_btn_advanced"};
     const char* icon_names[] = {"nav_icon_home", "nav_icon_print_select", "nav_icon_controls", "nav_icon_filament", "nav_icon_settings", "nav_icon_advanced"};
@@ -157,7 +174,8 @@ void ui_nav_wire_events(lv_obj_t* navbar) {
             // Image widget - bind img_recolor to icon color subject
             lv_subject_add_observer_obj(&icon_color_subjects[i], icon_image_color_observer_cb, icon_widget, NULL);
         } else {
-            // Label widget - bind text_color to icon color subject
+            // Label widget - bind text_color to icon color subject and set responsive font size
+            lv_obj_set_style_text_font(icon_widget, icon_font, LV_PART_MAIN);
             lv_subject_add_observer_obj(&icon_color_subjects[i], icon_color_observer_cb, icon_widget, NULL);
         }
 

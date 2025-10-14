@@ -271,7 +271,9 @@ int main(int argc, char** argv) {
     lv_xml_register_font(NULL, "fa_icons_48", &fa_icons_48);
     lv_xml_register_font(NULL, "fa_icons_32", &fa_icons_32);
     lv_xml_register_font(NULL, "fa_icons_16", &fa_icons_16);
-    lv_xml_register_font(NULL, "diagonal_arrows_40", &diagonal_arrows_40);
+    lv_xml_register_font(NULL, "arrows_64", &arrows_64);
+    lv_xml_register_font(NULL, "arrows_48", &arrows_48);
+    lv_xml_register_font(NULL, "arrows_32", &arrows_32);
     lv_xml_register_font(NULL, "montserrat_14", &lv_font_montserrat_14);
     lv_xml_register_font(NULL, "montserrat_16", &lv_font_montserrat_16);
     lv_xml_register_font(NULL, "montserrat_20", &lv_font_montserrat_20);

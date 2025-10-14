@@ -69,15 +69,15 @@
                   style_bg_opa="0" style_border_width="0" style_border_opa="0" style_pad_all="0" style_pad_gap="#padding_medium">
             <lv_button name="jog_nw" width="#jog_button_size" height="#jog_button_size"
                     style_bg_color="#jog_button_bg" style_radius="8" style_border_width="0">
-              <lv_label text="#icon_arrow_up_left" style_text_font="diagonal_arrows_40" style_text_color="#text_primary" align="center"/>
+              <lv_label text="#icon_arrow_up_left" style_text_font="arrows_32" style_text_color="#text_primary" align="center"/>
             </lv_button>
             <lv_button name="jog_n" width="#jog_button_size" height="#jog_button_size"
                     style_bg_color="#jog_button_bg" style_radius="8" style_border_width="0">
-              <lv_label text="#icon_arrow_up" style_text_font="diagonal_arrows_40" style_text_color="#text_primary" align="center"/>
+              <lv_label text="#icon_arrow_up" style_text_font="arrows_32" style_text_color="#text_primary" align="center"/>
             </lv_button>
             <lv_button name="jog_ne" width="#jog_button_size" height="#jog_button_size"
                     style_bg_color="#jog_button_bg" style_radius="8" style_border_width="0">
-              <lv_label text="#icon_arrow_up_right" style_text_font="diagonal_arrows_40" style_text_color="#text_primary" align="center"/>
+              <lv_label text="#icon_arrow_up_right" style_text_font="arrows_32" style_text_color="#text_primary" align="center"/>
             </lv_button>
           </lv_obj>
 
@@ -88,7 +88,7 @@
                   style_bg_opa="0" style_border_width="0" style_border_opa="0" style_pad_all="0" style_pad_gap="#padding_medium">
             <lv_button name="jog_w" width="#jog_button_size" height="#jog_button_size"
                     style_bg_color="#jog_button_bg" style_radius="8" style_border_width="0">
-              <lv_label text="#icon_arrow_left" style_text_font="diagonal_arrows_40" style_text_color="#text_primary" align="center"/>
+              <lv_label text="#icon_arrow_left" style_text_font="arrows_32" style_text_color="#text_primary" align="center"/>
             </lv_button>
             <lv_button name="jog_home_xy" width="#jog_button_size" height="#jog_button_size"
                     style_bg_color="#primary_color" style_radius="8" style_border_width="0">
@@ -96,7 +96,7 @@
             </lv_button>
             <lv_button name="jog_e" width="#jog_button_size" height="#jog_button_size"
                     style_bg_color="#jog_button_bg" style_radius="8" style_border_width="0">
-              <lv_label text="#icon_arrow_right" style_text_font="diagonal_arrows_40" style_text_color="#text_primary" align="center"/>
+              <lv_label text="#icon_arrow_right" style_text_font="arrows_32" style_text_color="#text_primary" align="center"/>
             </lv_button>
           </lv_obj>
 
@@ -107,15 +107,15 @@
                   style_bg_opa="0" style_border_width="0" style_border_opa="0" style_pad_all="0" style_pad_gap="#padding_medium">
             <lv_button name="jog_sw" width="#jog_button_size" height="#jog_button_size"
                     style_bg_color="#jog_button_bg" style_radius="8" style_border_width="0">
-              <lv_label text="#icon_arrow_down_left" style_text_font="diagonal_arrows_40" style_text_color="#text_primary" align="center"/>
+              <lv_label text="#icon_arrow_down_left" style_text_font="arrows_32" style_text_color="#text_primary" align="center"/>
             </lv_button>
             <lv_button name="jog_s" width="#jog_button_size" height="#jog_button_size"
                     style_bg_color="#jog_button_bg" style_radius="8" style_border_width="0">
-              <lv_label text="#icon_arrow_down" style_text_font="diagonal_arrows_40" style_text_color="#text_primary" align="center"/>
+              <lv_label text="#icon_arrow_down" style_text_font="arrows_32" style_text_color="#text_primary" align="center"/>
             </lv_button>
             <lv_button name="jog_se" width="#jog_button_size" height="#jog_button_size"
                     style_bg_color="#jog_button_bg" style_radius="8" style_border_width="0">
-              <lv_label text="#icon_arrow_down_right" style_text_font="diagonal_arrows_40" style_text_color="#text_primary" align="center"/>
+              <lv_label text="#icon_arrow_down_right" style_text_font="arrows_32" style_text_color="#text_primary" align="center"/>
             </lv_button>
           </lv_obj>
         </lv_obj>
