@@ -176,7 +176,7 @@
 		<str name="icon_controls" value=""/>  <!-- U+F1DE sliders -->
 		<str name="icon_ethernet" value=""/>  <!-- U+F796 ethernet -->
 		<str name="icon_fan" value=""/>  <!-- U+F863 fan -->
-		<str name="icon_filament" value=""/>  <!-- U+F576 fill-drip -->
+		<str name="icon_filament" value=""/>  <!-- U+F008 film -->
 		<str name="icon_fire" value=""/>  <!-- U+F06D fire -->
 		<str name="icon_folder" value=""/>  <!-- U+F07C folder-open -->
 		<str name="icon_home" value=""/>  <!-- U+F015 house -->

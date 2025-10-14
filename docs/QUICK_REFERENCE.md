@@ -193,9 +193,94 @@ include/
   └── ui_panel_home_xml.h   # Header for C++ wrapper
 
 scripts/
-  ├── screenshot.sh          # Build, run, capture screenshot
-  └── generate-icon-consts.py # Generate icon constants
+  ├── screenshot.sh                    # Build, run, capture screenshot
+  ├── generate-icon-consts.py          # Generate FontAwesome icon constants
+  ├── convert-material-icons-lvgl9.sh  # Convert Material SVGs to LVGL 9
+  └── LVGLImage.py                     # Official LVGL PNG→C converter
 ```
+
+## Icon & Image Assets
+
+### Material Design Icons (Navigation)
+
+Convert SVG icons to LVGL 9 image format:
+
+```bash
+# Automated workflow: SVG → PNG → LVGL 9 C array
+./scripts/convert-material-icons-lvgl9.sh
+
+# Manual conversion (if needed):
+# 1. SVG to PNG with Inkscape (preserves alpha)
+inkscape icon.svg --export-type=png --export-filename=icon.png -w 64 -h 64
+
+# 2. PNG to LVGL 9 C array with LVGLImage.py
+.venv/bin/python3 scripts/LVGLImage.py \
+  --ofmt C --cf RGB565A8 --compress NONE \
+  -o assets/images/material icon.png
+```
+
+**Critical Requirements:**
+- **Use Inkscape** (not ImageMagick) - ImageMagick loses alpha transparency
+- **RGB565A8 format** - 16-bit RGB + 8-bit alpha, works with `lv_obj_set_style_img_recolor()`
+- **Alpha channel** - Without proper transparency, icons render as solid squares
+
+**Registration Pattern:**
+```cpp
+// Header (material_icons.h)
+LV_IMG_DECLARE(home);
+LV_IMG_DECLARE(print);
+
+// Registration (material_icons.cpp)
+void material_icons_register() {
+    lv_xml_register_image(NULL, "mat_home", &home);
+    lv_xml_register_image(NULL, "mat_print", &print);
+}
+
+// Usage in XML
+<lv_image src="mat_home" align="center"/>
+```
+
+**Dynamic Scaling & Recoloring:**
+```cpp
+// Responsive scaling (in ui_nav.cpp)
+lv_image_set_scale(icon, 128);  // 50% (32px) for tiny screens
+lv_image_set_scale(icon, 192);  // 75% (48px) for medium screens
+lv_image_set_scale(icon, 256);  // 100% (64px) for large screens
+
+// Dynamic recoloring (active = red, inactive = gray)
+lv_obj_set_style_img_recolor(icon, UI_COLOR_PRIMARY, LV_PART_MAIN);
+lv_obj_set_style_img_recolor_opa(icon, 255, LV_PART_MAIN);
+```
+
+### FontAwesome Icons (UI Content)
+
+Generate icon constants for use in `globals.xml`:
+
+```bash
+# Regenerate icon constants after adding new icons
+python3 scripts/generate-icon-consts.py
+
+# This updates ui_xml/globals.xml with UTF-8 byte sequences
+```
+
+**Adding New FontAwesome Icons:**
+1. Edit `package.json` to add Unicode codepoint to font range
+2. Run `npm run convert-font-XX` (XX = 16/32/48/64)
+3. Run `python3 scripts/generate-icon-consts.py`
+4. Rebuild: `make`
+
+**Usage in XML:**
+```xml
+<!-- globals.xml defines constants -->
+<str name="icon_temperature" value=""/>  <!-- UTF-8 bytes -->
+
+<!-- Use in components -->
+<lv_label text="#icon_temperature" style_text_font="fa_icons_48"/>
+```
+
+**When to Use Which:**
+- **Material Design Images**: Navigation, primary actions, needs recoloring
+- **FontAwesome Fonts**: UI content, inline icons, text-based rendering
 
 ## Debugging
 

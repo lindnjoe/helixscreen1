@@ -63,17 +63,11 @@ static void active_panel_observer_cb(lv_observer_t* /*observer*/, lv_subject_t* 
     }
 }
 
-// Observer callback for icon color changes - updates label style
-static void icon_color_observer_cb(lv_observer_t* observer, lv_subject_t* subject) {
-    lv_obj_t* label = (lv_obj_t*)lv_observer_get_target(observer);
-    lv_color_t color = lv_subject_get_color(subject);
-    lv_obj_set_style_text_color(label, color, LV_PART_MAIN);
-}
-
 // Observer callback for icon color changes - updates image recolor style
 static void icon_image_color_observer_cb(lv_observer_t* observer, lv_subject_t* subject) {
     lv_obj_t* image = (lv_obj_t*)lv_observer_get_target(observer);
     lv_color_t color = lv_subject_get_color(subject);
+    // Material Design icons are white - use recolor to tint them red/gray
     lv_obj_set_style_img_recolor(image, color, LV_PART_MAIN);
     lv_obj_set_style_img_recolor_opa(image, 255, LV_PART_MAIN);
 }
@@ -139,20 +133,21 @@ void ui_nav_wire_events(lv_obj_t* navbar) {
     // Ensure navbar container doesn't block clicks to children
     lv_obj_remove_flag(navbar, LV_OBJ_FLAG_CLICKABLE);
 
-    // Determine icon font size based on screen height using theme constants
+    // Determine icon scale based on screen height using theme constants
+    // Material icons are 64x64, scale them down for smaller screens
     lv_display_t* display = lv_display_get_default();
     int32_t screen_height = lv_display_get_vertical_resolution(display);
-    const lv_font_t* icon_font;
+    uint16_t icon_scale;  // 256 = 100%, 128 = 50%, etc.
 
-    if (screen_height <= UI_SCREEN_TINY_H) {
-        icon_font = &fa_icons_32;  // Tiny screens
-        LV_LOG_USER("Using 32px nav icons for screen height %d", screen_height);
+    if (screen_height <= UI_SCREEN_SMALL_H) {
+        icon_scale = 128;  // Tiny and small screens: 50% scale (64px → 32px)
+        LV_LOG_USER("Using 50%% nav icon scale for screen height %d", screen_height);
     } else if (screen_height <= UI_SCREEN_MEDIUM_H) {
-        icon_font = &fa_icons_48;  // Small and medium screens
-        LV_LOG_USER("Using 48px nav icons for screen height %d", screen_height);
+        icon_scale = 192;  // Medium screens: 75% scale (64px → 48px)
+        LV_LOG_USER("Using 75%% nav icon scale for screen height %d", screen_height);
     } else {
-        icon_font = &fa_icons_64;  // Large screens
-        LV_LOG_USER("Using 64px nav icons for screen height %d", screen_height);
+        icon_scale = 256;  // Large screens: 100% scale (64px)
+        LV_LOG_USER("Using 100%% nav icon scale for screen height %d", screen_height);
     }
 
     // Name-based widget lookup for navigation buttons and icons (order matches ui_panel_id_t enum)
@@ -169,15 +164,17 @@ void ui_nav_wire_events(lv_obj_t* navbar) {
             continue;
         }
 
-        // Check if it's an image or label and use appropriate observer
-        if (lv_obj_check_type(icon_widget, &lv_image_class)) {
-            // Image widget - bind img_recolor to icon color subject
-            lv_subject_add_observer_obj(&icon_color_subjects[i], icon_image_color_observer_cb, icon_widget, NULL);
-        } else {
-            // Label widget - bind text_color to icon color subject and set responsive font size
-            lv_obj_set_style_text_font(icon_widget, icon_font, LV_PART_MAIN);
-            lv_subject_add_observer_obj(&icon_color_subjects[i], icon_color_observer_cb, icon_widget, NULL);
+        // All navigation icons are now Material Design images
+        if (!lv_obj_check_type(icon_widget, &lv_image_class)) {
+            LV_LOG_ERROR("Nav icon %d is not an image widget!", i);
+            continue;
         }
+
+        // Apply responsive scaling to Material Design image
+        lv_image_set_scale(icon_widget, icon_scale);
+
+        // Bind img_recolor to icon color subject
+        lv_subject_add_observer_obj(&icon_color_subjects[i], icon_image_color_observer_cb, icon_widget, NULL);
 
         // Make icon widget non-clickable so clicks pass through to button
         lv_obj_add_flag(icon_widget, LV_OBJ_FLAG_EVENT_BUBBLE);

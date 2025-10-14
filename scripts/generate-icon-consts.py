@@ -23,7 +23,7 @@ ICONS = {
     # Navigation icons
     'icon_home': (0xF015, 'house'),
     'icon_controls': (0xF1DE, 'sliders'),
-    'icon_filament': (0xF576, 'fill-drip'),
+    'icon_filament': (0xF008, 'film'),
     'icon_settings': (0xF013, 'gear'),
     'icon_advanced': (0xF142, 'ellipsis-vertical'),
     'icon_folder': (0xF07C, 'folder-open'),

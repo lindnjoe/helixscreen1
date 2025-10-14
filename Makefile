@@ -29,8 +29,12 @@ APP_SRCS := $(filter-out $(SRC_DIR)/test_dynamic_cards.cpp,$(wildcard $(SRC_DIR)
 APP_OBJS := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(APP_SRCS))
 
 # Fonts
-FONT_SRCS := assets/fonts/fa_icons_64.c assets/fonts/fa_icons_48.c assets/fonts/fa_icons_32.c assets/fonts/fa_icons_16.c assets/fonts/arrows_64.c assets/fonts/arrows_48.c assets/fonts/arrows_32.c
+FONT_SRCS := assets/fonts/fa_icons_64.c assets/fonts/fa_icons_48.c assets/fonts/fa_icons_32.c assets/fonts/fa_icons_24.c assets/fonts/fa_icons_16.c assets/fonts/arrows_64.c assets/fonts/arrows_48.c assets/fonts/arrows_32.c
 FONT_OBJS := $(patsubst %.c,$(OBJ_DIR)/%.o,$(FONT_SRCS))
+
+# Material Design Icons
+MATERIAL_ICON_SRCS := $(wildcard assets/images/material/*.c)
+MATERIAL_ICON_OBJS := $(patsubst %.c,$(OBJ_DIR)/%.o,$(MATERIAL_ICON_SRCS))
 
 # SDL2
 SDL2_CFLAGS := $(shell sdl2-config --cflags)
@@ -64,7 +68,7 @@ TEST_OBJS := $(patsubst $(TEST_UNIT_DIR)/%.cpp,$(OBJ_DIR)/tests/%.o,$(TEST_SRCS)
 all: $(TARGET)
 
 # Link binary
-$(TARGET): $(APP_OBJS) $(LVGL_OBJS) $(FONT_OBJS)
+$(TARGET): $(APP_OBJS) $(LVGL_OBJS) $(FONT_OBJS) $(MATERIAL_ICON_OBJS)
 	@mkdir -p $(BIN_DIR)
 	@echo "Linking $@..."
 	@$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
@@ -86,6 +90,12 @@ $(OBJ_DIR)/lvgl/%.o: $(LVGL_DIR)/%.c
 $(OBJ_DIR)/assets/fonts/%.o: assets/fonts/%.c
 	@mkdir -p $(dir $@)
 	@echo "Compiling font: $<..."
+	@$(CC) $(CFLAGS) $(INCLUDES) $(LV_CONF) -c $< -o $@
+
+# Compile Material Design icon sources
+$(OBJ_DIR)/assets/images/material/%.o: assets/images/material/%.c
+	@mkdir -p $(dir $@)
+	@echo "Compiling Material icon: $<..."
 	@$(CC) $(CFLAGS) $(INCLUDES) $(LV_CONF) -c $< -o $@
 
 # Run the prototype

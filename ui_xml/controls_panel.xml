@@ -45,9 +45,10 @@
 				        style_border_width="0">
 
 					<!-- Icon -->
-					<lv_label text="#icon_controls"
-					          style_text_font="fa_icons_64"
-					          style_text_color="#primary_color"
+					<lv_image src="mat_move"
+					          align="center"
+					          style_img_recolor="#primary_color"
+					          style_img_recolor_opa="100%"
 					          style_pad_bottom="16"/>
 
 					<!-- Label -->
@@ -74,9 +75,10 @@
 				        style_border_width="0">
 
 					<!-- Icon -->
-					<lv_label text="#icon_fire"
-					          style_text_font="fa_icons_64"
-					          style_text_color="#primary_color"
+					<lv_image src="mat_heater"
+					          align="center"
+					          style_img_recolor="#primary_color"
+					          style_img_recolor_opa="100%"
 					          style_pad_bottom="16"/>
 
 					<!-- Label -->
@@ -103,9 +105,10 @@
 				        style_border_width="0">
 
 					<!-- Icon -->
-					<lv_label text="#icon_fire"
-					          style_text_font="fa_icons_64"
-					          style_text_color="#primary_color"
+					<lv_image src="mat_bed"
+					          align="center"
+					          style_img_recolor="#primary_color"
+					          style_img_recolor_opa="100%"
 					          style_pad_bottom="16"/>
 
 					<!-- Label -->
@@ -132,9 +135,10 @@
 				        style_border_width="0">
 
 					<!-- Icon -->
-					<lv_label text="#icon_filament"
-					          style_text_font="fa_icons_64"
-					          style_text_color="#primary_color"
+					<lv_image src="mat_extrude"
+					          align="center"
+					          style_img_recolor="#primary_color"
+					          style_img_recolor_opa="100%"
 					          style_pad_bottom="16"/>
 
 					<!-- Label -->
@@ -162,9 +166,10 @@
 				        style_opa="128">  <!-- Disabled appearance -->
 
 					<!-- Icon -->
-					<lv_label text="#icon_settings"
-					          style_text_font="fa_icons_64"
-					          style_text_color="#text_secondary"
+					<lv_image src="mat_fan"
+					          align="center"
+					          style_img_recolor="#text_secondary"
+					          style_img_recolor_opa="100%"
 					          style_pad_bottom="16"/>
 
 					<!-- Label -->
@@ -191,9 +196,10 @@
 				        style_border_width="0">
 
 					<!-- Icon -->
-					<lv_label text="#icon_advanced"
-					          style_text_font="fa_icons_64"
-					          style_text_color="#primary_color"
+					<lv_image src="mat_motor_off"
+					          align="center"
+					          style_img_recolor="#primary_color"
+					          style_img_recolor_opa="100%"
 					          style_pad_bottom="16"/>
 
 					<!-- Label -->

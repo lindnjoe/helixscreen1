@@ -59,10 +59,11 @@
 			           style_border_width="0"
 			           style_shadow_width="0"
 			           flag_scrollable="false">
-				<lv_label text="#icon_chevron_left"
+				<lv_image src="mat_back"
 				          align="center"
-				          style_text_font="fa_icons_32"
-				          style_text_color="#text_primary"/>
+				          zoom="128"
+				          style_img_recolor="#text_primary"
+				          style_img_recolor_opa="100%"/>
 			</lv_button>
 
 			<lv_label name="header_title"

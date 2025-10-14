@@ -107,30 +107,67 @@ void ui_panel_home_setup_observers(lv_obj_t* panel) {
         return;
     }
 
-    // Set responsive printer image size based on screen dimensions
+    // Get screen dimensions for responsive sizing
+    lv_display_t* display = lv_display_get_default();
+    int32_t screen_height = lv_display_get_vertical_resolution(display);
+
+    // 1. Set responsive printer image size and SCALE (not just crop/pad)
     lv_obj_t* printer_image = lv_obj_find_by_name(home_panel, "printer_image");
     if (printer_image) {
-        lv_display_t* display = lv_display_get_default();
-        int32_t screen_height = lv_display_get_vertical_resolution(display);
         int32_t printer_size;
+        uint16_t zoom_level;  // 256 = 100%, 128 = 50%, 512 = 200%
 
-        // Calculate printer image size based on screen height
+        // Calculate printer image size and zoom based on screen height
         if (screen_height <= UI_SCREEN_TINY_H) {
             printer_size = 150;  // Tiny screens (480x320)
+            zoom_level = 96;     // 37.5% zoom to scale 400px -> 150px
         } else if (screen_height <= UI_SCREEN_SMALL_H) {
             printer_size = 250;  // Small screens (800x480)
+            zoom_level = 160;    // 62.5% zoom to scale 400px -> 250px
         } else if (screen_height <= UI_SCREEN_MEDIUM_H) {
             printer_size = 300;  // Medium screens (1024x600)
+            zoom_level = 192;    // 75% zoom to scale 400px -> 300px
         } else {
             printer_size = 400;  // Large screens (1280x720+)
+            zoom_level = 256;    // 100% zoom (original size)
         }
 
         lv_obj_set_width(printer_image, printer_size);
         lv_obj_set_height(printer_image, printer_size);
-        LV_LOG_USER("Set printer image size to %dpx for screen height %d", printer_size, screen_height);
+        lv_image_set_scale(printer_image, zoom_level);  // Actually scale the image
+        LV_LOG_USER("Set printer image: size=%dpx, zoom=%d (%d%%) for screen height %d",
+                    printer_size, zoom_level, (zoom_level * 100) / 256, screen_height);
     } else {
         LV_LOG_WARN("Printer image not found - size not adjusted");
     }
+
+    // 2. Set responsive info card icon sizes
+    const lv_font_t* info_icon_font;
+    if (screen_height <= UI_SCREEN_TINY_H) {
+        info_icon_font = &fa_icons_24;  // Tiny: 24px icons
+    } else if (screen_height <= UI_SCREEN_SMALL_H) {
+        info_icon_font = &fa_icons_24;  // Small: 24px icons
+    } else {
+        info_icon_font = &fa_icons_48;  // Medium/Large: 48px icons
+    }
+
+    lv_obj_t* temp_icon = lv_obj_find_by_name(home_panel, "temp_icon");
+    if (temp_icon) lv_obj_set_style_text_font(temp_icon, info_icon_font, 0);
+
+    if (network_icon_label) lv_obj_set_style_text_font(network_icon_label, info_icon_font, 0);
+    if (light_icon_label) lv_obj_set_style_text_font(light_icon_label, info_icon_font, 0);
+
+    // 3. Set responsive status text font for tiny screens
+    if (screen_height <= UI_SCREEN_TINY_H) {
+        lv_obj_t* status_text = lv_obj_find_by_name(home_panel, "status_text_label");
+        if (status_text) {
+            lv_obj_set_style_text_font(status_text, &lv_font_montserrat_20, 0);  // Smaller font for tiny
+            LV_LOG_USER("Set status text to montserrat_20 for tiny screen");
+        }
+    }
+
+    int icon_size = (info_icon_font == &fa_icons_24) ? 24 : (info_icon_font == &fa_icons_32) ? 32 : 48;
+    LV_LOG_USER("Set info card icons to %dpx for screen height %d", icon_size, screen_height);
 
     // Add observers to watch subjects and update widgets
     lv_subject_add_observer(&network_icon_subject, network_observer_cb, nullptr);

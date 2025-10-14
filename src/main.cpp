@@ -23,6 +23,7 @@
 #include "ui_nav.h"
 #include "ui_theme.h"
 #include "ui_fonts.h"
+#include "material_icons.h"
 #include "ui_panel_home.h"
 #include "ui_panel_print_select.h"
 #include "ui_panel_controls.h"
@@ -270,6 +271,7 @@ int main(int argc, char** argv) {
     lv_xml_register_font(NULL, "fa_icons_64", &fa_icons_64);
     lv_xml_register_font(NULL, "fa_icons_48", &fa_icons_48);
     lv_xml_register_font(NULL, "fa_icons_32", &fa_icons_32);
+    lv_xml_register_font(NULL, "fa_icons_24", &fa_icons_24);
     lv_xml_register_font(NULL, "fa_icons_16", &fa_icons_16);
     lv_xml_register_font(NULL, "arrows_64", &arrows_64);
     lv_xml_register_font(NULL, "arrows_48", &arrows_48);
@@ -285,6 +287,9 @@ int main(int argc, char** argv) {
                           "A:assets/images/filament_spool.png");
     lv_xml_register_image(NULL, "A:assets/images/placeholder_thumb_centered.png",
                           "A:assets/images/placeholder_thumb_centered.png");
+
+    // Register Material Design icons (64x64, scalable)
+    material_icons_register();
 
     // Register XML components (globals first to make constants available)
     LV_LOG_USER("Registering XML components...");

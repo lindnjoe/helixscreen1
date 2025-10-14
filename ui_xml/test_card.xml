@@ -25,9 +25,13 @@
 		<lv_obj flex_flow="row" style_pad_gap="#padding_medium" style_pad_top="4">
 			<!-- Print time -->
 			<lv_obj flex_flow="row" style_pad_gap="4">
-				<lv_label text="#icon_clock"
-				          style_text_font="fa_icons_16"
-				          style_text_color="#primary_color"/>
+				<lv_image src="mat_clock"
+				          width="16"
+				          height="16"
+				          zoom="64"
+				          style_img_recolor="#primary_color"
+				          style_img_recolor_opa="100%"
+				          align="center"/>
 				<lv_label name="card_print_time"
 				          text="0m"
 				          style_text_font="montserrat_16"
@@ -36,9 +40,13 @@
 
 			<!-- Filament weight -->
 			<lv_obj flex_flow="row" style_pad_gap="4">
-				<lv_label text="#icon_leaf"
-				          style_text_font="fa_icons_16"
-				          style_text_color="#primary_color"/>
+				<lv_image src="mat_spoolman"
+				          width="16"
+				          height="16"
+				          zoom="64"
+				          style_img_recolor="#primary_color"
+				          style_img_recolor_opa="100%"
+				          align="center"/>
 				<lv_label name="card_filament"
 				          text="0g"
 				          style_text_font="montserrat_16"

@@ -26,6 +26,7 @@
 LV_FONT_DECLARE(fa_icons_64);  // Navigation bar icons
 LV_FONT_DECLARE(fa_icons_48);  // Status card icons (large displays)
 LV_FONT_DECLARE(fa_icons_32);  // Status card icons (small displays)
+LV_FONT_DECLARE(fa_icons_24);  // General UI icons (tiny displays)
 LV_FONT_DECLARE(fa_icons_16);  // Metadata icons (small inline)
 
 // Unicode arrows from Arial Unicode - multiple sizes
@@ -36,7 +37,7 @@ LV_FONT_DECLARE(arrows_32);    // ←↑→↓↖↗↙↘ at 32px
 // Navigation icons (available in 64px)
 #define ICON_HOME              "\xEF\x80\x95"      // U+F015 house
 #define ICON_CONTROLS          "\xEF\x87\x9E"      // U+F1DE sliders
-#define ICON_FILAMENT          "\xEF\x95\xB6"      // U+F576 fill-drip
+#define ICON_FILAMENT          "\xEF\x80\x88"      // U+F008 film
 #define ICON_SETTINGS          "\xEF\x80\x93"      // U+F013 gear
 #define ICON_ADVANCED          "\xEF\x85\x82"      // U+F142 ellipsis-vertical
 #define ICON_FOLDER            "\xEF\x81\xBC"      // U+F07C folder-open

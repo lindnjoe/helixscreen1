@@ -1,26 +1,104 @@
 # Session Handoff Document
 
 **Last Session:** 2025-10-14
-**Session Focus:** Complete Responsive Design System Implementation
-**Status:** All UI elements fully responsive, semantic screen size naming, no hardcoded dimensions, ready for interactive button wiring
+**Session Focus:** Material Design Icon Migration (FontAwesome Replacement)
+**Status:** ~60% Complete - Major UI panels converted, remaining: print file cards, keypad, minor components
 
 ---
 
 ## Session Summary
 
-Successfully completed **responsive design system overhaul**:
-1. **Navigation bar responsive design** - Dynamic height, responsive icon sizing (32/48/64px)
-2. **Screen size argument refactoring** - Semantic names (tiny/small/medium/large) using ui_theme.h constants
-3. **Printer image responsive sizing** - Dynamic scaling (150/250/300/400px)
-4. **Complete font coverage** - All icons available in all sizes, separate arrow fonts
-5. **Semi-transparent backdrops** - All overlay panels with professional dimming effect
-6. **Eliminated all hardcoded dimensions** - Single source of truth in ui_theme.h
+Successfully migrated **major UI panels from FontAwesome fonts to Material Design images**:
 
-All layout decisions remain in XML with minimal C++ logic. Temperature limits are configurable and ready for Moonraker heater configuration integration. Enhanced command-line interface with semantic screen size names (tiny/small/medium/large). Complete responsive design system using ui_theme.h constants - all UI elements scale dynamically across all screen sizes.
+1. **Navigation Bar** - All 6 icons using Material Design with dynamic recoloring (active=red, inactive=white)
+2. **Icon Conversion System** - Automated SVG→PNG→LVGL 9 workflow using Inkscape + LVGLImage.py
+3. **Critical Bug Fix** - Discovered ImageMagick loses alpha channel; switched to Inkscape for proper transparency
+4. **Major Panels Converted** - Home, Controls, Temperature (Nozzle/Bed), Motion, Extrusion, Header Bar
+5. **Documentation** - Comprehensive icon system docs in HANDOFF.md and QUICK_REFERENCE.md
+
+**Key Achievement:** All 56 Material Design icons successfully converted to LVGL 9 RGB565A8 format with proper alpha transparency. Icons render crisp and clean across all screen sizes with dynamic recoloring.
+
+**Technical Stack:**
+- **Inkscape:** SVG→PNG conversion (preserves alpha transparency)
+- **LVGLImage.py:** PNG→LVGL 9 C array (RGB565A8 format)
+- **Format:** 16-bit RGB565 color + 8-bit alpha channel
+- **Recoloring:** `lv_obj_set_style_img_recolor()` for dynamic icon colors
 
 ---
 
 ## What Needs to be Done Next
+
+### Priority 1: Complete FontAwesome Icon Replacement 🔄 IN PROGRESS
+
+**Objective:** Replace remaining 71 FontAwesome icon occurrences with Material Design equivalents.
+
+**Status:** ~60% Complete - Major panels done, remaining: print file cards, numeric keypad, minor UI components
+
+**Completed Files (8 of 18):**
+- ✅ `navigation_bar.xml` - All nav icons
+- ✅ `home_panel.xml` - Heater, network, light icons
+- ✅ `controls_panel.xml` - All 6 launcher card icons
+- ✅ `nozzle_temp_panel.xml` - Heater icon
+- ✅ `bed_temp_panel.xml` - Bed icon
+- ✅ `motion_panel.xml` - Home button, Z-axis arrows
+- ✅ `extrusion_panel.xml` - Extrude icon
+- ✅ `header_bar.xml` - Back button
+
+**Remaining Files (10 of 18) - Needs Icon Mapping Verification:**
+
+**IMPORTANT:** Before replacing, verify Material Design equivalents exist and match semantically:
+
+1. **`numeric_keypad_modal.xml` (2 icons):**
+   - `#icon_chevron_left` → `mat_back` ✓ (already verified for header_bar)
+   - `#icon_backspace` → Need Material equivalent (delete icon? backspace icon?)
+
+2. **`print_select_panel.xml` (1 icon):**
+   - `#icon_list` → Need Material equivalent (list view icon?)
+
+3. **`print_status_panel.xml` (1 icon):**
+   - `#icon_chevron_left` → `mat_back` ✓
+
+4. **Print File Cards (5 files × 2 icons each = 10 icons):**
+   - `print_file_card.xml`
+   - `print_file_card_3col.xml`
+   - `print_file_card_4col.xml`
+   - `print_file_card_5col.xml`
+   - `print_file_detail.xml`
+
+   Icons in each:
+   - `#icon_clock` → `mat_clock` ✓ (exists in material_icons.cpp)
+   - `#icon_leaf` → Need Material equivalent (eco/sustainability icon? filament spool icon?)
+
+5. **`test_card.xml` (2 icons):**
+   - Same as print file cards (clock, leaf)
+
+**Icon Mapping Questions to Resolve:**
+- **Backspace:** Which Material icon? (`mat_delete`? Need new icon?)
+- **List:** Which Material icon? (Need list/menu icon?)
+- **Leaf (eco/material):** Which Material icon? (`mat_filament`? Something else?)
+
+**Next Steps (For Fresh Session):**
+1. **Verify Icon Mappings:** Review available Material icons, confirm semantic matches
+2. **Replace Verified Icons:** Clock, back chevrons (already mapped)
+3. **Decide on Missing Icons:** Backspace, list, leaf equivalents
+4. **Update Remaining XML Files:** Print cards, keypad, minor components
+5. **Remove FontAwesome:** Delete font files, registration code
+6. **Update Build System:** Remove from Makefile, package.json
+7. **Test All Panels:** Verify icons render correctly across screen sizes
+8. **Final Documentation:** Update with complete migration details
+
+**Material Icons Available (from material_icons.cpp):**
+```
+mat_clock ✓, mat_delete ✓, mat_sd ✓, mat_refresh ✓, mat_filament ✓,
+mat_back ✓, mat_home ✓, mat_print ✓, mat_move ✓, mat_heater ✓,
+mat_bed ✓, mat_extrude ✓, mat_fan ✓, mat_light ✓, mat_network ✓,
+mat_arrow_up ✓, mat_arrow_down ✓, mat_arrow_left ✓, mat_arrow_right ✓,
+... (56 total)
+```
+
+---
+
+## Previous Session Tasks
 
 ### Priority 1: Semi-Transparent Backdrop for Overlay Panels ✅ COMPLETE
 
@@ -645,11 +723,71 @@ Left column (280×320px) currently shows static fire icon. **Planned enhancement
 - Could reuse for both nozzle and bed panels
 
 ### Icon System Status
-All required icons now properly compiled and rendering:
+
+**Two Icon Systems in Use:**
+
+1. **Material Design Images** - Navigation bar icons (56 total)
+2. **FontAwesome Fonts** - UI content icons (temperature, motion, etc.)
+
+#### Material Design Icons (Navigation Bar)
+
+**Status:** ✅ Complete - All navigation icons rendering with dynamic recoloring
+
+**Icons Used:**
+- Home, Print, Controls (Move), Filament, Settings (Tune), Advanced (Server)
+- Source: `/Users/pbrown/Code/Printing/guppyscreen/assets/material_svg/` (64x64 SVG)
+- Output: `assets/images/material/*.c` (LVGL 9 C arrays)
+
+**Conversion Workflow:**
+```bash
+# Automated conversion: SVG → PNG → LVGL 9 C array
+./scripts/convert-material-icons-lvgl9.sh
+
+# What it does:
+# 1. Inkscape: SVG → PNG (preserves alpha transparency)
+# 2. LVGLImage.py: PNG → RGB565A8 C array (16-bit RGB + 8-bit alpha)
+```
+
+**Critical Tooling:**
+- **Inkscape (REQUIRED)**: ImageMagick loses alpha channel, causing icons to render as solid squares
+- **LVGLImage.py**: Official LVGL Python script (`.venv/bin/python3 scripts/LVGLImage.py`)
+- **RGB565A8 format**: Works with LVGL's `lv_obj_set_style_img_recolor()` for dynamic coloring
+
+**Responsive Scaling:**
+- Tiny/Small screens (≤480px): 50% scale (32px) - `lv_image_set_scale(icon, 128)`
+- Medium screens (≤768px): 75% scale (48px) - `lv_image_set_scale(icon, 192)`
+- Large screens (>768px): 100% scale (64px) - `lv_image_set_scale(icon, 256)`
+
+**Dynamic Recoloring:**
+```cpp
+// Active icon: red (UI_COLOR_PRIMARY)
+lv_obj_set_style_img_recolor(icon, UI_COLOR_PRIMARY, LV_PART_MAIN);
+lv_obj_set_style_img_recolor_opa(icon, 255, LV_PART_MAIN);
+
+// Inactive icon: gray (UI_COLOR_NAV_INACTIVE)
+lv_obj_set_style_img_recolor(icon, UI_COLOR_NAV_INACTIVE, LV_PART_MAIN);
+```
+
+**Files:**
+- `scripts/convert-material-icons-lvgl9.sh` - Automated conversion script
+- `scripts/LVGLImage.py` - Official LVGL PNG→C converter
+- `include/material_icons.h` - Icon declarations (56 icons)
+- `src/material_icons.cpp` - Icon registration for XML
+- `src/ui_nav.cpp` - Navigation icon rendering and recoloring
+
+#### FontAwesome Icons (UI Content)
+
+**Status:** ✅ All required icons compiled and rendering
+
+**Icons Used:**
 - ✅ Fire icons (fa-fire) on temperature cards
 - ✅ Motion icons (custom diagonal arrows font)
 - ✅ Backspace icon in keypad (fa-delete-left)
 - ✅ All FontAwesome sizes available (64px, 48px, 32px, 16px)
+
+**When to Use Which:**
+- **Material Design Images**: Navigation, primary actions, consistent icon set
+- **FontAwesome Fonts**: UI content, inline icons, text-based rendering
 
 ### Overlay Panel Width
 - All sub-panels use `#overlay_panel_width` constant (700px)
