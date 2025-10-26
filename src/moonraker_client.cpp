@@ -37,9 +37,9 @@ int MoonrakerClient::connect(const char* url,
   spdlog::debug("Moonraker WebSocket connecting to {}", url);
 
   // Connection opened callback
-  onopen = [this, on_connected]() {
+  onopen = [this, on_connected, url]() {
     const HttpResponsePtr& resp = getHttpResponse();
-    spdlog::info("Moonraker WebSocket connected: {}", resp->body.c_str());
+    spdlog::info("Moonraker WebSocket connected to {}: {}", url, resp->body.c_str());
     on_connected();
   };
 
