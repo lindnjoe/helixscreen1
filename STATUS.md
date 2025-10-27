@@ -1,8 +1,155 @@
 # Project Status - LVGL 9 UI Prototype
 
-**Last Updated:** 2025-10-26 (Temperature Panel Refactoring)
+**Last Updated:** 2025-10-26 (Testing Infrastructure & Wizard Fixes)
 
-## Recent Updates (2025-10-26 Late Night - Session 9)
+## Recent Updates (2025-10-26 Evening - Session 10)
+
+### Testing Infrastructure & Wizard Connection Fixes ✅ COMPLETE
+
+**Objective:** Fix wizard connection bugs and establish comprehensive testing framework
+
+**Implementation:**
+
+**Commits:**
+- Wizard connection refactoring with subject bindings
+- Testing infrastructure with Catch2 v3 and validation tests
+
+#### 1. Wizard Connection Bug Fixes
+
+**Files:** `src/ui_wizard.cpp`, `ui_xml/wizard_connection.xml`, `include/wizard_validation.h`, `src/wizard_validation.cpp`
+
+**Fixed Issues:**
+1. **WebSocket connection warning on successful test** - Config now updated immediately on success, connection maintained
+2. **No timeout on failed connections** - Added 10-second timeout with timer-based checking
+3. **Config not updated on test success** - Now saves host/port immediately when connection succeeds
+4. **Direct widget manipulation** - Refactored to use LVGL subjects for reactive UI
+
+**Subject-Based Reactive UI Migration:**
+- Added subjects: `connection_ip`, `connection_port`, `connection_status` (lines 52-59)
+- XML bindings: `bind_text="connection_ip"`, `bind_text="connection_port"`, `bind_text="connection_status"`
+- Removed widget references (`connection_ip_input`, `connection_port_input`, `connection_status_label`)
+- All UI updates use `lv_subject_copy_string()` for thread-safe reactive updates
+
+**Connection Timeout Implementation:**
+- `check_connection_timeout()` timer callback (lines 481-496)
+- Runs every 1 second, checks for 10-second timeout
+- Updates status via subject: `"Failed: Connection timeout"`
+- Timer created in `ui_wizard_create()` (line 202)
+
+**Input Validation:**
+- Extracted to `wizard_validation.h/.cpp` for testability
+- `is_valid_ip_or_hostname()` - Validates IPv4 (0-255.0-255.0-255.0-255) or hostname (alphanumeric, dots, hyphens, underscores)
+- `is_valid_port()` - Validates port range 1-65535, numeric only
+- Clear validation errors: "Error: Invalid IP address or hostname", "Error: Invalid port (1-65535)"
+
+#### 2. Testing Infrastructure with Catch2 v3
+
+**Files:** `tests/catch_amalgamated.{hpp,cpp}`, `tests/test_main.cpp`, `tests/unit/test_wizard_validation.cpp`, `Makefile`
+
+**Framework Setup:**
+- Downloaded Catch2 v3.5.1 single-header amalgamation (499KB header + 399KB source)
+- Created test directory structure: `tests/{unit,integration,ui,mocks,fixtures}`
+- Test runner compiles Catch2 once for fast test builds
+
+**Test Coverage - 47 Passing Tests:**
+
+**IP/Hostname Validation (23 tests):**
+- Valid IPv4: `192.168.1.1`, `10.0.0.1`, `127.0.0.1`, `255.255.255.255`, `0.0.0.0`
+- Invalid IPv4: `999.1.1.1`, `192.168.1.256`, `192.168.1` (missing octet), `192.168..1` (empty segment), `.192.168.1.1` (leading dot)
+- Valid hostnames: `printer`, `printer.local`, `my-printer`, `PRINTER123`, `voron-2.4`, `k1.local`, `192.168.1.1a` (ambiguous but valid)
+- Invalid hostnames: empty string, `-printer` (starts with hyphen), `!invalid`, `print@r`, `print er` (space)
+
+**Port Validation (17 tests):**
+- Valid: `1` (minimum), `80`, `443`, `7125` (Moonraker), `8080`, `65535` (maximum)
+- Invalid: empty, `0`, `65536`, `99999`, `-1`, `abc`, `12.34` (decimal), `80a`, ` 80` (space)
+
+**Edge Cases (7 tests):**
+- Common hostnames: `localhost`, `raspberrypi`, `mainsailos`
+- Boundary values: `1`, `65535`
+
+**Makefile Integration:**
+- `make test-wizard` - Build and run wizard validation tests
+- Colorized output with pass/fail indicators
+- Test binary: `build/bin/test_wizard_validation`
+- Separate from old tests (to be migrated later)
+
+**Validation Logic Behavior:**
+- **IP-first detection:** If string contains only digits and dots, validate as IPv4
+- **Strict IP validation:** `999.1.1.1` rejected (octet > 255), not treated as hostname
+- **Hostname fallback:** Mixed alphanumeric treated as hostname (e.g., `192.168.1.1a`)
+- **Clear error messages:** Users get specific feedback on what's wrong
+
+**Impact:**
+- Solid foundation for TDD workflow
+- Wizard bugs fixed with comprehensive test coverage
+- Input validation prevents bad configuration
+- Reactive UI eliminates race conditions
+- 10-second timeout prevents hanging on bad IPs
+
+**Test Framework Documentation:**
+
+**Running Tests:**
+```bash
+# Run wizard validation tests (47 tests)
+make test-wizard
+
+# Run specific test tags
+./build/bin/test_wizard_validation "[ip]"           # IP validation tests only
+./build/bin/test_wizard_validation "[port]"         # Port validation tests only
+./build/bin/test_wizard_validation "[validation]"   # All validation tests
+
+# List all tests
+./build/bin/test_wizard_validation --list-tests
+
+# Verbose output
+./build/bin/test_wizard_validation -s
+```
+
+**Adding New Tests:**
+
+1. **Create test file** in `tests/unit/test_your_feature.cpp`:
+```cpp
+#include "../catch_amalgamated.hpp"
+#include "your_module.h"
+
+TEST_CASE("Feature: behavior", "[feature][tag]") {
+    REQUIRE(your_function(input) == expected);
+    REQUIRE(other_function() == true);
+}
+```
+
+2. **Extract testable logic** to separate module:
+   - Create `include/your_module.h` with function declarations
+   - Create `src/your_module.cpp` with implementation
+   - Include in main source files
+
+3. **Update Makefile** if needed (auto-discovers `tests/unit/*.cpp`)
+
+4. **Run tests:**
+```bash
+make test-wizard   # Compiles and runs all unit tests
+```
+
+**Test Organization:**
+- `tests/unit/` - Pure logic tests (no LVGL/UI dependencies)
+- `tests/integration/` - Multi-component tests (future)
+- `tests/ui/` - Visual regression tests (future)
+- `tests/mocks/` - Mock objects for dependencies (future)
+
+**Catch2 Best Practices:**
+- Use descriptive test names: `TEST_CASE("Feature: specific behavior", "[tag]")`
+- Add tags for filtering: `[wizard]`, `[validation]`, `[ip]`, `[port]`
+- Use `SECTION()` for test variations within a case
+- Use `REQUIRE()` for critical assertions, `CHECK()` for non-fatal
+
+**Next Steps:**
+1. Test wizard with `--wizard -s small` flag
+2. Fix Next button crash (investigate in next session)
+3. Write integration tests for full wizard flow
+4. Add MoonrakerClient mocking for connection testing
+5. Migrate old tests (`test_navigation.cpp`, `test_temp_graph.cpp`) to Catch2 v3
+
+## Previous Updates (2025-10-26 Late Night - Session 9)
 
 ### Temperature Panel Consolidation & LVGL 9 API Migration ✅ COMPLETE
 

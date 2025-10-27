@@ -1,28 +1,45 @@
 # Session Handoff Document
 
-**Last Updated:** 2025-10-26 Late Night
-**Current Focus:** Temperature panel refactoring complete and committed
+**Last Updated:** 2025-10-26 Evening
+**Current Focus:** Testing infrastructure established, wizard connection bugs fixed
 
 ---
 
 ## 🎯 Active Work & Next Priorities
 
-**Status:** Temperature panel consolidation complete - LVGL 9 API migration finished, Y-axis labels added, code duplication eliminated
+**Status:** Testing framework complete with Catch2 v3, wizard connection refactored with reactive subjects and input validation
 
 **Completed This Session:**
-- ✅ Refactored temperature graph to use LVGL 9 public API (minimized private header usage)
-- ✅ Added Y-axis temperature labels to both nozzle and bed panels
-- ✅ Consolidated duplicate code using heater config structs and common helpers
-- ✅ Fixed visual issues: 2px line thickness, hidden point circles, removed rounded corners
-- ✅ Enabled montserrat_10 font for axis labels
-- ✅ Commit: `204cf2f` - refactor(temp): consolidate panels and refactor graph to use LVGL 9 public API
+- ✅ Fixed wizard connection bugs (timeout, config update, websocket warning)
+- ✅ Refactored wizard to use reactive subjects instead of direct widget manipulation
+- ✅ Added comprehensive input validation (IP/hostname, port) with clear error messages
+- ✅ Established testing infrastructure with Catch2 v3 (47 passing tests)
+- ✅ Extracted validation logic to testable modules (`wizard_validation.h/.cpp`)
+- ✅ Created test framework documentation in STATUS.md
 
-**Next Steps (when ready):**
-1. X-axis time labels for temperature graphs (optional enhancement)
-2. Gradient fill implementation using LVGL 9 draw task system (future work - requires deep dive into new API)
-3. Interactive keyboard testing with wizard screens
-4. Wizard hardware detection/mapping screens implementation
-5. Moonraker WebSocket integration for live printer communication
+**Next Steps (Priority Order):**
+1. **Test wizard interactively:** `./build/bin/helix-ui-proto --wizard -s small`
+   - Verify input validation (bad IP, invalid port, timeout)
+   - **Fix Next button crash** (currently crashes, needs investigation)
+   - Test successful connection flow and config save
+
+2. **Write integration tests** for wizard flow:
+   - Full wizard step progression
+   - Button click simulation with `lv_event_send()`
+   - State transition verification
+
+3. **MoonrakerClient mocking** for connection tests:
+   - Mock successful connection
+   - Mock failed connection
+   - Mock timeout scenarios
+
+4. **Migrate old tests** to Catch2 v3:
+   - `tests/unit/test_navigation.cpp` (navigation system)
+   - `tests/unit/test_temp_graph.cpp` (temperature graph widget)
+
+5. **Future wizard work:**
+   - Hardware detection/mapping screens
+   - Moonraker WebSocket integration for live printer communication
 
 ---
 
@@ -141,9 +158,57 @@ spdlog::error("Critical failure: {}", error);
 
 **Reference:** `docs/LVGL9_XML_GUIDE.md:1241-1329` (comprehensive guide)
 
+### Pattern #8: Testing with Catch2 v3
+
+**Extract logic to testable modules:**
+
+```cpp
+// include/my_module.h
+bool validate_input(const std::string& input);
+
+// src/my_module.cpp
+bool validate_input(const std::string& input) {
+    // Pure logic, no LVGL dependencies
+    return !input.empty();
+}
+
+// tests/unit/test_my_module.cpp
+#include "../catch_amalgamated.hpp"
+#include "my_module.h"
+
+TEST_CASE("Input validation", "[module][validation]") {
+    REQUIRE(validate_input("valid") == true);
+    REQUIRE(validate_input("") == false);
+}
+```
+
+**Run tests:**
+```bash
+make test-wizard              # Run all unit tests
+./build/bin/test_wizard_validation "[tag]"  # Run specific tests
+```
+
+**Best practices:**
+- Keep logic separate from UI code (enables pure unit tests)
+- Use descriptive test names and tags
+- `REQUIRE()` for critical checks, `CHECK()` for non-fatal
+- See STATUS.md for complete test framework documentation
+
+**Files:** `tests/unit/test_wizard_validation.cpp`, `Makefile:350-384`, `STATUS.md:89-150`
+
 ---
 
 ## 🔧 Known Issues & Gotchas
+
+### Wizard Next Button Crash ⚠️ ACTIVE BUG
+
+**Problem:** Clicking "Next" button in wizard connection screen crashes the UI
+
+**Status:** Needs investigation - likely accessing null widgets in next step
+
+**Priority:** High - blocks wizard testing
+
+**Next session:** Debug with `--wizard -s small`, add error handling for missing widgets
 
 ### LVGL 9 XML Flag Syntax ✅ FIXED
 
