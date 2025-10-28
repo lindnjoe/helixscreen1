@@ -76,6 +76,7 @@ lv_obj_clear_flag(controls, LV_OBJ_FLAG_HIDDEN);
 - `src` - Material icon name (default: `"mat_home"`)
 - `size` - Semantic size string: `xs`, `sm`, `md`, `lg`, `xl` (default: `"xl"`)
 - `variant` - Color variant string: `primary`, `secondary`, `accent`, `disabled`, `none` (default: no recoloring)
+- `color` - Custom color override (hex format: `"0xFF0000"` or `"#FF0000"`) - overrides `variant`
 
 ```xml
 <!-- Basic usage with defaults (mat_home, 64px, no recolor) -->
@@ -88,6 +89,10 @@ lv_obj_clear_flag(controls, LV_OBJ_FLAG_HIDDEN);
 <icon src="mat_heater" size="lg" variant="primary"/>
 <icon src="mat_back" size="md" variant="secondary"/>
 <icon src="mat_pause" size="sm" variant="disabled"/>
+
+<!-- Custom color overrides variant -->
+<icon src="mat_warning" size="lg" color="0xFFFF00"/>
+<icon src="mat_error" size="md" color="#FF0000"/>
 
 <!-- All properties specified -->
 <icon src="mat_delete" size="xl" variant="accent" align="center"/>
@@ -123,6 +128,21 @@ lv_obj_clear_flag(controls, LV_OBJ_FLAG_HIDDEN);
 material_icons_register();
 ui_icon_register_widget();  // Must be before icon.xml registration
 lv_xml_component_register_from_file("A:ui_xml/icon.xml");
+```
+
+**C++ Runtime API:**
+```cpp
+// Change icon source dynamically
+ui_icon_set_source(icon_widget, "mat_wifi_strength_4");
+
+// Change icon size at runtime
+ui_icon_set_size(icon_widget, "lg");  // xs/sm/md/lg/xl
+
+// Change color variant at runtime
+ui_icon_set_variant(icon_widget, "accent");  // primary/secondary/accent/disabled/none
+
+// Set custom color with opacity
+ui_icon_set_color(icon_widget, lv_color_hex(0xFF0000), LV_OPA_COVER);
 ```
 
 **Material Icon Names:**
@@ -300,6 +320,24 @@ style_flex_track_place="start|end|center|space_between|space_evenly|space_around
 ./scripts/screenshot.sh test_nav navbar    # test_nav, navbar.png
 ./scripts/screenshot.sh test_home_panel hp # test_home_panel, hp.png
 ```
+
+### Test Panel (Development Scratchpad)
+
+The test panel provides a development scratchpad for testing new features without modifying production panels.
+
+**Access:**
+```bash
+./build/bin/helix-ui-proto --panel test -s small
+# OR: ./build/bin/helix-ui-proto -p test
+```
+
+**Features:**
+- Not accessible from navigation bar
+- Standalone panel (hides app layout)
+- Skips wizard on startup
+- Currently contains icon variant tests
+
+**Location:** `ui_xml/test_panel.xml`
 
 ## File Structure
 
