@@ -205,11 +205,15 @@ static bool write_bmp(const char* filename, const uint8_t* data, int width, int 
     uint32_t dib_size = 40;
     uint16_t planes = 1;
     uint16_t bpp = 32;
+    uint32_t reserved = 0;
+    uint32_t compression = 0;
+    uint32_t ppm = 2835;  // pixels per meter
+    uint32_t colors = 0;
 
     // BMP file header (14 bytes)
     fputc('B', f.get()); fputc('M', f.get());            // Signature
     fwrite(&file_size, 4, 1, f.get());                   // File size
-    fwrite((uint32_t[]){0}, 4, 1, f.get());              // Reserved
+    fwrite(&reserved, 4, 1, f.get());                    // Reserved
     fwrite(&pixel_offset, 4, 1, f.get());                // Pixel data offset
 
     // DIB header (40 bytes)
@@ -218,13 +222,13 @@ static bool write_bmp(const char* filename, const uint8_t* data, int width, int 
     fwrite(&height, 4, 1, f.get());                      // Height
     fwrite(&planes, 2, 1, f.get());                      // Planes
     fwrite(&bpp, 2, 1, f.get());                         // Bits per pixel
-    fwrite((uint32_t[]){0}, 4, 1, f.get());              // Compression (none)
+    fwrite(&compression, 4, 1, f.get());                 // Compression (none)
     uint32_t image_size = width * height * 4;
     fwrite(&image_size, 4, 1, f.get());                  // Image size
-    fwrite((uint32_t[]){2835}, 4, 1, f.get());           // X pixels per meter
-    fwrite((uint32_t[]){2835}, 4, 1, f.get());           // Y pixels per meter
-    fwrite((uint32_t[]){0}, 4, 1, f.get());              // Colors in palette
-    fwrite((uint32_t[]){0}, 4, 1, f.get());              // Important colors
+    fwrite(&ppm, 4, 1, f.get());                         // X pixels per meter
+    fwrite(&ppm, 4, 1, f.get());                         // Y pixels per meter
+    fwrite(&colors, 4, 1, f.get());                      // Colors in palette
+    fwrite(&colors, 4, 1, f.get());                      // Important colors
 
     // Write pixel data (BMP is bottom-up, so flip rows)
     for (int y = height - 1; y >= 0; y--) {

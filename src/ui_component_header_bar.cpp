@@ -21,6 +21,7 @@
 #include "ui_component_header_bar.h"
 #include "ui_utils.h"
 #include "ui_theme.h"
+#include <algorithm>
 #include <stdio.h>
 #include <vector>
 
