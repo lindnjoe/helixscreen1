@@ -84,6 +84,19 @@ static lv_obj_t* network_list_container = nullptr;
 static lv_obj_t* wifi_toggle_switch = nullptr;
 static lv_timer_t* wifi_scan_delay_timer = nullptr;
 
+// WiFi password modal
+static lv_obj_t* wifi_password_modal = nullptr;
+static lv_obj_t* password_input = nullptr;
+static lv_obj_t* modal_ssid_label = nullptr;
+static lv_obj_t* modal_status_label = nullptr;
+
+// Network info for click handler (persists across UI updates)
+struct NetworkInfo {
+    std::string ssid;
+    bool is_secured;
+};
+static std::vector<NetworkInfo> network_info_list;
+
 // Printer identification widgets
 static lv_obj_t* printer_name_input = nullptr;
 static lv_obj_t* printer_type_roller = nullptr;
@@ -131,6 +144,11 @@ static void populate_network_list(const std::vector<WiFiNetwork>& networks);
 static void on_wifi_toggle_changed(lv_event_t* e);
 static void wifi_scan_delay_callback(lv_timer_t* timer);
 static void on_network_item_clicked(lv_event_t* e);
+static void show_wifi_password_modal(const std::string& ssid, bool is_secured);
+static void hide_wifi_password_modal();
+static void on_modal_cancel_clicked(lv_event_t* e);
+static void on_modal_connect_clicked(lv_event_t* e);
+static void on_wifi_connection_complete(bool success, const std::string& error);
 
 void ui_wizard_init_subjects() {
     if (subjects_initialized) {
@@ -278,6 +296,34 @@ void ui_wizard_goto_step(WizardStep step) {
                     // Find and store widget references
                     network_list_container = lv_obj_find_by_name(wifi_setup_screen, "network_list_container");
                     wifi_toggle_switch = lv_obj_find_by_name(wifi_setup_screen, "wifi_toggle");
+                    wifi_password_modal = lv_obj_find_by_name(wifi_setup_screen, "wifi_password_modal");
+
+                    // Find modal child widgets
+                    if (wifi_password_modal) {
+                        password_input = lv_obj_find_by_name(wifi_password_modal, "password_input");
+                        modal_ssid_label = lv_obj_find_by_name(wifi_password_modal, "modal_ssid");
+                        modal_status_label = lv_obj_find_by_name(wifi_password_modal, "modal_status");
+
+                        // Wire up modal button handlers
+                        lv_obj_t* cancel_btn = lv_obj_find_by_name(wifi_password_modal, "modal_cancel_btn");
+                        lv_obj_t* connect_btn = lv_obj_find_by_name(wifi_password_modal, "modal_connect_btn");
+
+                        if (cancel_btn) {
+                            lv_obj_add_event_cb(cancel_btn, on_modal_cancel_clicked, LV_EVENT_CLICKED, nullptr);
+                        }
+                        if (connect_btn) {
+                            lv_obj_add_event_cb(connect_btn, on_modal_connect_clicked, LV_EVENT_CLICKED, nullptr);
+                        }
+
+                        // Register password input with global keyboard
+                        if (password_input) {
+                            ui_keyboard_register_textarea(password_input);
+                        }
+
+                        spdlog::info("[Wizard] WiFi password modal widgets initialized");
+                    } else {
+                        spdlog::error("[Wizard] WiFi password modal not found");
+                    }
 
                     // Dim network list container initially (WiFi starts disabled)
                     if (network_list_container) {
@@ -638,6 +684,10 @@ static void populate_network_list(const std::vector<WiFiNetwork>& networks) {
     clear_network_list();
     spdlog::debug("[WiFi] Network list cleared successfully");
 
+    // Clear and rebuild network info list
+    network_info_list.clear();
+    network_info_list.reserve(networks.size());
+
     // Hide placeholder if we have networks
     lv_obj_t* placeholder = lv_obj_find_by_name(network_list_container, "network_list_placeholder");
     if (placeholder) {
@@ -653,6 +703,9 @@ static void populate_network_list(const std::vector<WiFiNetwork>& networks) {
     for (size_t i = 0; i < networks.size(); i++) {
         const auto& network = networks[i];
         spdlog::debug("[WiFi] Creating item {} for network: {}", i, network.ssid);
+
+        // Store network info for click handler
+        network_info_list.push_back({network.ssid, network.is_secured});
 
         lv_obj_t* item = (lv_obj_t*)lv_xml_create(network_list_container, "network_list_item", nullptr);
         if (!item) {
@@ -689,19 +742,32 @@ static void populate_network_list(const std::vector<WiFiNetwork>& networks) {
             }
         }
 
-        // Add click handler
-        lv_obj_add_event_cb(item, on_network_item_clicked, LV_EVENT_CLICKED, (void*)network.ssid.c_str());
+        // Add click handler (pass network index)
+        lv_obj_add_event_cb(item, on_network_item_clicked, LV_EVENT_CLICKED, (void*)(uintptr_t)i);
     }
 
     spdlog::info("[WiFi] Populated {} networks in list", networks.size());
 }
 
 static void on_network_item_clicked(lv_event_t* e) {
-    const char* ssid = (const char*)lv_event_get_user_data(e);
-    spdlog::info("[WiFi] Network clicked: {}", ssid ? ssid : "unknown");
+    size_t index = (size_t)lv_event_get_user_data(e);
 
-    // TODO: Show password modal for encrypted networks
-    // TODO: Implement connection flow
+    if (index >= network_info_list.size()) {
+        spdlog::error("[WiFi] Invalid network index: {}", index);
+        return;
+    }
+
+    const NetworkInfo& info = network_info_list[index];
+    spdlog::info("[WiFi] Network clicked: {} (secured: {})", info.ssid, info.is_secured);
+
+    if (info.is_secured) {
+        // Show password modal for secured networks
+        show_wifi_password_modal(info.ssid, info.is_secured);
+    } else {
+        // Connect directly to open network
+        spdlog::info("[WiFi] Connecting to open network: {}", info.ssid);
+        WiFiManager::connect(info.ssid, "", on_wifi_connection_complete);
+    }
 }
 
 static void wifi_scan_delay_callback(lv_timer_t* timer) {
@@ -1389,4 +1455,121 @@ static void detect_printer_type() {
 
         spdlog::info("Printer detection complete: {} (confidence: {})", detected_type, confidence);
     });
+}
+
+// ============================================================================
+// WiFi Password Modal Functions
+// ============================================================================
+
+static void show_wifi_password_modal(const std::string& ssid, bool is_secured) {
+    (void)is_secured;  // Reserved for future use (may show different UI for open networks)
+
+    if (!wifi_password_modal) {
+        spdlog::error("[WiFi] Password modal not found");
+        return;
+    }
+
+    spdlog::info("[WiFi] Showing password modal for: {}", ssid);
+
+    // Update modal labels
+    if (modal_ssid_label) {
+        lv_label_set_text(modal_ssid_label, ssid.c_str());
+    }
+
+    // Clear password input
+    if (password_input) {
+        lv_textarea_set_text(password_input, "");
+    }
+
+    // Hide status message
+    if (modal_status_label) {
+        lv_obj_add_flag(modal_status_label, LV_OBJ_FLAG_HIDDEN);
+    }
+
+    // Show modal
+    lv_obj_remove_flag(wifi_password_modal, LV_OBJ_FLAG_HIDDEN);
+}
+
+static void hide_wifi_password_modal() {
+    if (!wifi_password_modal) {
+        return;
+    }
+
+    spdlog::info("[WiFi] Hiding password modal");
+
+    // Hide modal
+    lv_obj_add_flag(wifi_password_modal, LV_OBJ_FLAG_HIDDEN);
+
+    // Clear password input
+    if (password_input) {
+        lv_textarea_set_text(password_input, "");
+    }
+
+    // Hide keyboard if visible
+    if (ui_keyboard_is_visible()) {
+        ui_keyboard_hide();
+    }
+}
+
+static void on_modal_cancel_clicked(lv_event_t* e) {
+    (void)e;
+    spdlog::info("[WiFi] Password modal cancelled");
+    hide_wifi_password_modal();
+}
+
+static void on_modal_connect_clicked(lv_event_t* e) {
+    (void)e;
+
+    if (!password_input || !modal_ssid_label) {
+        spdlog::error("[WiFi] Modal widgets not found");
+        return;
+    }
+
+    // Get SSID and password
+    const char* ssid = lv_label_get_text(modal_ssid_label);
+    const char* password = lv_textarea_get_text(password_input);
+
+    if (!ssid || !password) {
+        spdlog::error("[WiFi] Invalid SSID or password");
+        return;
+    }
+
+    spdlog::info("[WiFi] Connecting to: {} with password", ssid);
+
+    // Hide status message (will show on error)
+    if (modal_status_label) {
+        lv_obj_add_flag(modal_status_label, LV_OBJ_FLAG_HIDDEN);
+    }
+
+    // TODO: Show connecting spinner/status
+
+    // Attempt connection
+    WiFiManager::connect(ssid, password, on_wifi_connection_complete);
+}
+
+static void on_wifi_connection_complete(bool success, const std::string& error) {
+    spdlog::info("[WiFi] Connection result: {} (error: {})", success ? "success" : "failed", error);
+
+    if (success) {
+        // Hide modal on success
+        hide_wifi_password_modal();
+
+        // Update WiFi status subject
+        std::string status = "Connected: " + WiFiManager::get_connected_ssid();
+        lv_subject_copy_string(&wifi_status, status.c_str());
+
+        spdlog::info("[WiFi] Successfully connected to: {}", WiFiManager::get_connected_ssid());
+    } else {
+        // Show error in modal
+        if (modal_status_label) {
+            std::string error_msg = "Connection failed";
+            if (!error.empty()) {
+                error_msg += ": " + error;
+            }
+            lv_label_set_text(modal_status_label, error_msg.c_str());
+            lv_obj_remove_flag(modal_status_label, LV_OBJ_FLAG_HIDDEN);
+        }
+
+        spdlog::error("[WiFi] Connection failed: {}", error);
+    }
 }

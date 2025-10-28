@@ -138,6 +138,28 @@ void ui_keyboard_show(lv_obj_t* textarea)
 
     // Show keyboard
     lv_obj_remove_flag(g_keyboard, LV_OBJ_FLAG_HIDDEN);
+
+    // Auto-scroll textarea to be visible above keyboard
+    if (textarea) {
+        // Force layout update to get accurate keyboard position
+        lv_obj_update_layout(lv_screen_active());
+
+        // Get keyboard height and position
+        int32_t kb_y = lv_obj_get_y(g_keyboard);
+        int32_t textarea_y = lv_obj_get_y(textarea);
+        int32_t textarea_h = lv_obj_get_height(textarea);
+
+        // Calculate if textarea is obscured by keyboard
+        // (textarea bottom is below keyboard top)
+        if (textarea_y + textarea_h > kb_y) {
+            spdlog::debug("[Keyboard] Textarea obscured by keyboard - scrolling into view");
+
+            // Scroll with smooth animation
+            lv_obj_scroll_to_view_recursive(textarea, LV_ANIM_ON);
+        } else {
+            spdlog::debug("[Keyboard] Textarea already visible above keyboard");
+        }
+    }
 }
 
 void ui_keyboard_hide()
@@ -149,11 +171,20 @@ void ui_keyboard_hide()
 
     spdlog::debug("[Keyboard] Hiding keyboard");
 
+    // Get current textarea before clearing (for scroll-back)
+    lv_obj_t* textarea = lv_keyboard_get_textarea(g_keyboard);
+
     // Clear textarea assignment
     lv_keyboard_set_textarea(g_keyboard, NULL);
 
     // Hide keyboard
     lv_obj_add_flag(g_keyboard, LV_OBJ_FLAG_HIDDEN);
+
+    // Scroll textarea back with smooth animation (if it was scrolled)
+    if (textarea) {
+        lv_obj_scroll_to_view_recursive(textarea, LV_ANIM_ON);
+        spdlog::debug("[Keyboard] Scrolled textarea back after hide");
+    }
 }
 
 bool ui_keyboard_is_visible()
