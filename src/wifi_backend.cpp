@@ -40,9 +40,10 @@ std::unique_ptr<WifiBackend> WifiBackend::create() {
         return backend;
     }
 
-    // Fallback to mock
+    // Fallback to mock (leave disabled - wizard will enable via toggle)
     spdlog::warn("[WifiBackend] CoreWLAN backend failed: {} - falling back to mock",
                 start_result.technical_msg);
+    spdlog::info("[WifiBackend] Mock backend created");
     return std::make_unique<WifiBackendMock>();
 #else
     // Linux: Try wpa_supplicant backend first, fallback to mock if unavailable
@@ -55,9 +56,10 @@ std::unique_ptr<WifiBackend> WifiBackend::create() {
         return backend;
     }
 
-    // Fallback to mock
+    // Fallback to mock (leave disabled - wizard will enable via toggle)
     spdlog::warn("[WifiBackend] wpa_supplicant backend failed: {} - falling back to mock",
                 start_result.technical_msg);
+    spdlog::info("[WifiBackend] Mock backend created");
     return std::make_unique<WifiBackendMock>();
 #endif
 }
