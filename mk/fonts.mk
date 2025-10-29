@@ -92,7 +92,7 @@ else
 endif
 	$(ECHO) "$(CYAN)  [1/6] Cropping logo to circular icon...$(RESET)"
 	$(Q)magick assets/images/helixscreen-logo.png \
-		-crop 1024x640+0+40 +repage \
+		-crop 700x580+162+100 +repage \
 		-gravity center -background none -extent 680x680 \
 		assets/images/helix-icon.png
 	$(ECHO) "$(CYAN)  [2/6] Generating 64x64 icon for window...$(RESET)"
