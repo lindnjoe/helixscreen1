@@ -64,9 +64,9 @@
 static lv_display_t* display = nullptr;
 static lv_indev_t* indev_mouse = nullptr;
 
-// Screen dimensions (configurable via command line, default to medium size)
-static int SCREEN_WIDTH = UI_SCREEN_MEDIUM_W;
-static int SCREEN_HEIGHT = UI_SCREEN_MEDIUM_H;
+// Screen dimensions (configurable via command line, default to small size)
+static int SCREEN_WIDTH = UI_SCREEN_SMALL_W;
+static int SCREEN_HEIGHT = UI_SCREEN_SMALL_H;
 
 // Printer state management
 static PrinterState printer_state;
@@ -86,6 +86,383 @@ struct OverlayPanels {
 
 // Forward declarations
 static void save_screenshot();
+
+// Parse command-line arguments
+// Returns true on success, false if help was shown or error occurred
+static bool parse_command_line_args(int argc, char** argv,
+                                    int& initial_panel,
+                                    bool& show_motion,
+                                    bool& show_nozzle_temp,
+                                    bool& show_bed_temp,
+                                    bool& show_extrusion,
+                                    bool& show_print_status,
+                                    bool& show_file_detail,
+                                    bool& show_keypad,
+                                    bool& show_step_test,
+                                    bool& show_test_panel,
+                                    bool& force_wizard,
+                                    int& wizard_step,
+                                    bool& panel_requested,
+                                    int& display_num,
+                                    int& x_pos,
+                                    int& y_pos,
+                                    bool& screenshot_enabled,
+                                    int& screenshot_delay_sec,
+                                    int& timeout_sec,
+                                    int& verbosity,
+                                    bool& dark_mode,
+                                    bool& theme_requested) {
+    // Parse arguments
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-s") == 0 || strcmp(argv[i], "--size") == 0) {
+            if (i + 1 < argc) {
+                const char* size_arg = argv[++i];
+                if (strcmp(size_arg, "tiny") == 0) {
+                    SCREEN_WIDTH = UI_SCREEN_TINY_W;
+                    SCREEN_HEIGHT = UI_SCREEN_TINY_H;
+                } else if (strcmp(size_arg, "small") == 0) {
+                    SCREEN_WIDTH = UI_SCREEN_SMALL_W;
+                    SCREEN_HEIGHT = UI_SCREEN_SMALL_H;
+                } else if (strcmp(size_arg, "medium") == 0) {
+                    SCREEN_WIDTH = UI_SCREEN_MEDIUM_W;
+                    SCREEN_HEIGHT = UI_SCREEN_MEDIUM_H;
+                } else if (strcmp(size_arg, "large") == 0) {
+                    SCREEN_WIDTH = UI_SCREEN_LARGE_W;
+                    SCREEN_HEIGHT = UI_SCREEN_LARGE_H;
+                } else {
+                    printf("Unknown screen size: %s\n", size_arg);
+                    printf("Available sizes: tiny, small, medium, large\n");
+                    return false;
+                }
+            } else {
+                printf("Error: -s/--size requires an argument\n");
+                return false;
+            }
+        } else if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--panel") == 0) {
+            if (i + 1 < argc) {
+                const char* panel_arg = argv[++i];
+                panel_requested = true;  // User explicitly requested a panel
+                if (strcmp(panel_arg, "home") == 0) {
+                    initial_panel = UI_PANEL_HOME;
+                } else if (strcmp(panel_arg, "controls") == 0) {
+                    initial_panel = UI_PANEL_CONTROLS;
+                } else if (strcmp(panel_arg, "motion") == 0) {
+                    initial_panel = UI_PANEL_CONTROLS;
+                    show_motion = true;
+                } else if (strcmp(panel_arg, "nozzle-temp") == 0) {
+                    initial_panel = UI_PANEL_CONTROLS;
+                    show_nozzle_temp = true;
+                } else if (strcmp(panel_arg, "bed-temp") == 0) {
+                    initial_panel = UI_PANEL_CONTROLS;
+                    show_bed_temp = true;
+                } else if (strcmp(panel_arg, "extrusion") == 0) {
+                    initial_panel = UI_PANEL_CONTROLS;
+                    show_extrusion = true;
+                } else if (strcmp(panel_arg, "print-status") == 0 || strcmp(panel_arg, "printing") == 0) {
+                    show_print_status = true;
+                } else if (strcmp(panel_arg, "filament") == 0) {
+                    initial_panel = UI_PANEL_FILAMENT;
+                } else if (strcmp(panel_arg, "settings") == 0) {
+                    initial_panel = UI_PANEL_SETTINGS;
+                } else if (strcmp(panel_arg, "advanced") == 0) {
+                    initial_panel = UI_PANEL_ADVANCED;
+                } else if (strcmp(panel_arg, "print-select") == 0 || strcmp(panel_arg, "print_select") == 0) {
+                    initial_panel = UI_PANEL_PRINT_SELECT;
+                } else if (strcmp(panel_arg, "file-detail") == 0 || strcmp(panel_arg, "print-file-detail") == 0) {
+                    initial_panel = UI_PANEL_PRINT_SELECT;
+                    show_file_detail = true;
+                } else if (strcmp(panel_arg, "step-test") == 0 || strcmp(panel_arg, "step_test") == 0) {
+                    show_step_test = true;
+                } else if (strcmp(panel_arg, "test") == 0) {
+                    show_test_panel = true;
+                } else {
+                    printf("Unknown panel: %s\n", panel_arg);
+                    printf("Available panels: home, controls, motion, nozzle-temp, bed-temp, extrusion, print-status, filament, settings, advanced, print-select, step-test, test\n");
+                    return false;
+                }
+            } else {
+                printf("Error: -p/--panel requires an argument\n");
+                return false;
+            }
+        } else if (strcmp(argv[i], "-k") == 0 || strcmp(argv[i], "--keypad") == 0) {
+            show_keypad = true;
+        } else if (strcmp(argv[i], "-w") == 0 || strcmp(argv[i], "--wizard") == 0) {
+            force_wizard = true;
+        } else if (strcmp(argv[i], "--wizard-step") == 0) {
+            if (i + 1 < argc) {
+                wizard_step = atoi(argv[++i]);
+                force_wizard = true;
+                if (wizard_step < 1 || wizard_step > 7) {
+                    printf("Error: wizard step must be 1-7\n");
+                    return false;
+                }
+            } else {
+                printf("Error: --wizard-step requires an argument (1-7)\n");
+                return false;
+            }
+        } else if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--display") == 0) {
+            if (i + 1 < argc) {
+                char* endptr;
+                long val = strtol(argv[++i], &endptr, 10);
+                if (*endptr != '\0' || val < 0 || val > 10) {
+                    printf("Error: invalid display number (must be 0-10): %s\n", argv[i]);
+                    return false;
+                }
+                display_num = (int)val;
+            } else {
+                printf("Error: -d/--display requires a number argument\n");
+                return false;
+            }
+        } else if (strcmp(argv[i], "-x") == 0 || strcmp(argv[i], "--x-pos") == 0) {
+            if (i + 1 < argc) {
+                char* endptr;
+                long val = strtol(argv[++i], &endptr, 10);
+                if (*endptr != '\0' || val < 0 || val > 10000) {
+                    printf("Error: invalid x position (must be 0-10000): %s\n", argv[i]);
+                    return false;
+                }
+                x_pos = (int)val;
+            } else {
+                printf("Error: -x/--x-pos requires a number argument\n");
+                return false;
+            }
+        } else if (strcmp(argv[i], "-y") == 0 || strcmp(argv[i], "--y-pos") == 0) {
+            if (i + 1 < argc) {
+                char* endptr;
+                long val = strtol(argv[++i], &endptr, 10);
+                if (*endptr != '\0' || val < 0 || val > 10000) {
+                    printf("Error: invalid y position (must be 0-10000): %s\n", argv[i]);
+                    return false;
+                }
+                y_pos = (int)val;
+            } else {
+                printf("Error: -y/--y-pos requires a number argument\n");
+                return false;
+            }
+        } else if (strcmp(argv[i], "--screenshot") == 0) {
+            screenshot_enabled = true;
+            // Check if next arg is a number (delay in seconds)
+            if (i + 1 < argc) {
+                char* endptr;
+                long val = strtol(argv[i + 1], &endptr, 10);
+                // If next arg is a valid number, use it as delay
+                if (*endptr == '\0' && val > 0 && val <= 60) {
+                    screenshot_delay_sec = (int)val;
+                    i++;  // Consume the delay argument
+                }
+                // Otherwise, use default delay (next arg is probably a different flag)
+            }
+        } else if (strcmp(argv[i], "--timeout") == 0 || strcmp(argv[i], "-t") == 0) {
+            if (i + 1 < argc) {
+                char* endptr;
+                long val = strtol(argv[++i], &endptr, 10);
+                if (*endptr != '\0' || val < 1 || val > 3600) {
+                    printf("Error: invalid timeout (must be 1-3600 seconds): %s\n", argv[i]);
+                    return false;
+                }
+                timeout_sec = (int)val;
+            } else {
+                printf("Error: --timeout/-t requires a number argument\n");
+                return false;
+            }
+        } else if (strcmp(argv[i], "--dark") == 0) {
+            dark_mode = true;
+            theme_requested = true;
+        } else if (strcmp(argv[i], "--light") == 0) {
+            dark_mode = false;
+            theme_requested = true;
+        } else if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "-vv") == 0 || strcmp(argv[i], "-vvv") == 0) {
+            // Count the number of 'v' characters for verbosity level
+            const char* p = argv[i];
+            while (*p == '-') p++;  // Skip leading dashes
+            while (*p == 'v') {
+                verbosity++;
+                p++;
+            }
+        } else if (strcmp(argv[i], "--verbose") == 0) {
+            verbosity++;
+        } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+            printf("Usage: %s [options]\n", argv[0]);
+            printf("Options:\n");
+            printf("  -s, --size <size>    Screen size: tiny, small, medium, large (default: medium)\n");
+            printf("  -p, --panel <panel>  Initial panel (default: home)\n");
+            printf("  -k, --keypad         Show numeric keypad for testing\n");
+            printf("  -w, --wizard         Force first-run configuration wizard\n");
+            printf("  --wizard-step <step> Jump to specific wizard step for testing\n");
+            printf("  -d, --display <n>    Display number for window placement (0, 1, 2...)\n");
+            printf("  -x, --x-pos <n>      X coordinate for window position\n");
+            printf("  -y, --y-pos <n>      Y coordinate for window position\n");
+            printf("  --screenshot [sec]   Take screenshot after delay (default: 2 seconds)\n");
+            printf("  -t, --timeout <sec>  Auto-quit after specified seconds (1-3600)\n");
+            printf("  --dark               Use dark theme (default)\n");
+            printf("  --light              Use light theme\n");
+            printf("  -v, --verbose        Increase verbosity (-v=info, -vv=debug, -vvv=trace)\n");
+            printf("  -h, --help           Show this help message\n");
+            printf("\nAvailable panels:\n");
+            printf("  home, controls, motion, nozzle-temp, bed-temp, extrusion,\n");
+            printf("  print-status, filament, settings, advanced, print-select\n");
+            printf("\nScreen sizes:\n");
+            printf("  tiny   = %dx%d\n", UI_SCREEN_TINY_W, UI_SCREEN_TINY_H);
+            printf("  small  = %dx%d\n", UI_SCREEN_SMALL_W, UI_SCREEN_SMALL_H);
+            printf("  medium = %dx%d (default)\n", UI_SCREEN_MEDIUM_W, UI_SCREEN_MEDIUM_H);
+            printf("  large  = %dx%d\n", UI_SCREEN_LARGE_W, UI_SCREEN_LARGE_H);
+            printf("\nWizard steps:\n");
+            printf("  wifi, connection, printer-identify, bed, hotend, fan, led, summary\n");
+            printf("\nWindow placement:\n");
+            printf("  Use -d to center window on specific display\n");
+            printf("  Use -x/-y for exact pixel coordinates (both required)\n");
+            printf("  Examples:\n");
+            printf("    %s --display 1        # Center on display 1\n", argv[0]);
+            printf("    %s -x 100 -y 200      # Position at (100, 200)\n", argv[0]);
+            return false;
+        } else {
+            // Legacy support: first positional arg is panel name
+            if (i == 1 && argv[i][0] != '-') {
+                const char* panel_arg = argv[i];
+                panel_requested = true;  // User explicitly requested a panel
+                if (strcmp(panel_arg, "home") == 0) {
+                    initial_panel = UI_PANEL_HOME;
+                } else if (strcmp(panel_arg, "controls") == 0) {
+                    initial_panel = UI_PANEL_CONTROLS;
+                } else if (strcmp(panel_arg, "motion") == 0) {
+                    initial_panel = UI_PANEL_CONTROLS;
+                    show_motion = true;
+                } else if (strcmp(panel_arg, "print-select") == 0 || strcmp(panel_arg, "print_select") == 0) {
+                    initial_panel = UI_PANEL_PRINT_SELECT;
+                } else if (strcmp(panel_arg, "step-test") == 0 || strcmp(panel_arg, "step_test") == 0) {
+                    show_step_test = true;
+                } else {
+                    printf("Unknown argument: %s\n", argv[i]);
+                    printf("Use --help for usage information\n");
+                    return false;
+                }
+            } else {
+                printf("Unknown argument: %s\n", argv[i]);
+                printf("Use --help for usage information\n");
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+// Register fonts and images for XML component system
+static void register_fonts_and_images() {
+    spdlog::debug("Registering fonts and images...");
+    lv_xml_register_font(NULL, "fa_icons_64", &fa_icons_64);
+    lv_xml_register_font(NULL, "fa_icons_48", &fa_icons_48);
+    lv_xml_register_font(NULL, "fa_icons_32", &fa_icons_32);
+    lv_xml_register_font(NULL, "fa_icons_24", &fa_icons_24);
+    lv_xml_register_font(NULL, "fa_icons_16", &fa_icons_16);
+    lv_xml_register_font(NULL, "arrows_64", &arrows_64);
+    lv_xml_register_font(NULL, "arrows_48", &arrows_48);
+    lv_xml_register_font(NULL, "arrows_32", &arrows_32);
+    lv_xml_register_font(NULL, "montserrat_10", &lv_font_montserrat_10);
+    lv_xml_register_font(NULL, "montserrat_12", &lv_font_montserrat_12);
+    lv_xml_register_font(NULL, "montserrat_14", &lv_font_montserrat_14);
+    lv_xml_register_font(NULL, "montserrat_16", &lv_font_montserrat_16);
+    lv_xml_register_font(NULL, "montserrat_20", &lv_font_montserrat_20);
+    lv_xml_register_font(NULL, "montserrat_28", &lv_font_montserrat_28);
+    lv_xml_register_image(NULL, "A:assets/images/printer_400.png",
+                          "A:assets/images/printer_400.png");
+    lv_xml_register_image(NULL, "filament_spool",
+                          "A:assets/images/filament_spool.png");
+    lv_xml_register_image(NULL, "A:assets/images/placeholder_thumb_centered.png",
+                          "A:assets/images/placeholder_thumb_centered.png");
+    lv_xml_register_image(NULL, "A:assets/images/thumbnail-gradient-bg.png",
+                          "A:assets/images/thumbnail-gradient-bg.png");
+    lv_xml_register_image(NULL, "A:assets/images/thumbnail-placeholder.png",
+                          "A:assets/images/thumbnail-placeholder.png");
+    lv_xml_register_image(NULL, "A:assets/images/large-extruder-icon.svg",
+                          "A:assets/images/large-extruder-icon.svg");
+}
+
+// Register XML components from ui_xml/ directory
+static void register_xml_components() {
+    spdlog::debug("Registering remaining XML components...");
+
+    // Register responsive constants (AFTER globals, BEFORE components that use them)
+    ui_switch_register_responsive_constants();
+
+    // Register semantic text widgets (AFTER theme init, BEFORE components that use them)
+    ui_text_init();
+
+    lv_xml_register_component_from_file("A:ui_xml/icon.xml");
+    lv_xml_register_component_from_file("A:ui_xml/header_bar.xml");
+    lv_xml_register_component_from_file("A:ui_xml/confirmation_dialog.xml");
+    lv_xml_register_component_from_file("A:ui_xml/tip_detail_dialog.xml");
+    lv_xml_register_component_from_file("A:ui_xml/numeric_keypad_modal.xml");
+    lv_xml_register_component_from_file("A:ui_xml/print_file_card.xml");
+    lv_xml_register_component_from_file("A:ui_xml/print_file_list_row.xml");
+    lv_xml_register_component_from_file("A:ui_xml/print_file_detail.xml");
+    lv_xml_register_component_from_file("A:ui_xml/navigation_bar.xml");
+    lv_xml_register_component_from_file("A:ui_xml/home_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/controls_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/motion_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/nozzle_temp_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/bed_temp_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/extrusion_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/print_status_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/filament_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/settings_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/advanced_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/test_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/print_select_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/step_progress_test.xml");
+    lv_xml_register_component_from_file("A:ui_xml/app_layout.xml");
+    lv_xml_register_component_from_file("A:ui_xml/wizard_container.xml");
+    lv_xml_register_component_from_file("A:ui_xml/network_list_item.xml");
+    lv_xml_register_component_from_file("A:ui_xml/wifi_password_modal.xml");
+    lv_xml_register_component_from_file("A:ui_xml/wizard_wifi_setup.xml");
+    lv_xml_register_component_from_file("A:ui_xml/wizard_connection.xml");
+    lv_xml_register_component_from_file("A:ui_xml/wizard_printer_identify.xml");
+    lv_xml_register_component_from_file("A:ui_xml/wizard_bed_select.xml");
+    lv_xml_register_component_from_file("A:ui_xml/wizard_hotend_select.xml");
+    lv_xml_register_component_from_file("A:ui_xml/wizard_fan_select.xml");
+    lv_xml_register_component_from_file("A:ui_xml/wizard_led_select.xml");
+    lv_xml_register_component_from_file("A:ui_xml/wizard_summary.xml");
+}
+
+// Initialize all reactive subjects for data binding
+static void initialize_subjects() {
+    spdlog::debug("Initializing reactive subjects...");
+    ui_nav_init();  // Navigation system (icon colors, active panel)
+    ui_panel_home_init_subjects();  // Home panel data bindings
+    ui_panel_print_select_init_subjects();  // Print select panel (none yet)
+    ui_panel_controls_init_subjects();  // Controls panel launcher
+    ui_panel_motion_init_subjects();  // Motion sub-screen position display
+    ui_panel_controls_temp_init_subjects();  // Temperature sub-screens
+    ui_panel_controls_extrusion_init_subjects();  // Extrusion sub-screen
+    ui_panel_filament_init_subjects();  // Filament panel
+    ui_panel_print_status_init_subjects();  // Print status screen
+    ui_wizard_init_subjects();  // Wizard subjects (for first-run config)
+    printer_state.init_subjects();  // Printer state subjects (CRITICAL: must be before XML creation)
+}
+
+// Create and setup overlay panel
+// Returns the created panel, or nullptr on failure
+static lv_obj_t* create_overlay_panel(lv_obj_t* screen,
+                                       const char* xml_name,
+                                       const char* debug_name,
+                                       lv_obj_t** panels,
+                                       void (*setup_fn)(lv_obj_t*, lv_obj_t*)) {
+    spdlog::debug("Creating and showing {} sub-screen...\n", debug_name);
+
+    lv_obj_t* panel = (lv_obj_t*)lv_xml_create(screen, xml_name, nullptr);
+    if (panel) {
+        setup_fn(panel, screen);
+
+        // Hide controls launcher, show overlay panel
+        lv_obj_add_flag(panels[UI_PANEL_CONTROLS], LV_OBJ_FLAG_HIDDEN);
+
+        spdlog::debug("{} panel displayed\n", debug_name);
+    } else {
+        spdlog::error("Failed to create {} panel", debug_name);
+    }
+
+    return panel;
+}
 
 // Initialize LVGL with SDL
 static bool init_lvgl() {
@@ -343,236 +720,14 @@ int main(int argc, char** argv) {
     bool dark_mode = true;  // Theme mode (true=dark, false=light, default until loaded from config)
     bool theme_requested = false;  // Track if user explicitly set theme via CLI
 
-    // Parse arguments
-    for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "-s") == 0 || strcmp(argv[i], "--size") == 0) {
-            if (i + 1 < argc) {
-                const char* size_arg = argv[++i];
-                if (strcmp(size_arg, "tiny") == 0) {
-                    SCREEN_WIDTH = UI_SCREEN_TINY_W;
-                    SCREEN_HEIGHT = UI_SCREEN_TINY_H;
-                } else if (strcmp(size_arg, "small") == 0) {
-                    SCREEN_WIDTH = UI_SCREEN_SMALL_W;
-                    SCREEN_HEIGHT = UI_SCREEN_SMALL_H;
-                } else if (strcmp(size_arg, "medium") == 0) {
-                    SCREEN_WIDTH = UI_SCREEN_MEDIUM_W;
-                    SCREEN_HEIGHT = UI_SCREEN_MEDIUM_H;
-                } else if (strcmp(size_arg, "large") == 0) {
-                    SCREEN_WIDTH = UI_SCREEN_LARGE_W;
-                    SCREEN_HEIGHT = UI_SCREEN_LARGE_H;
-                } else {
-                    printf("Unknown screen size: %s\n", size_arg);
-                    printf("Available sizes: tiny, small, medium, large\n");
-                    return 1;
-                }
-            } else {
-                printf("Error: -s/--size requires an argument\n");
-                return 1;
-            }
-        } else if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--panel") == 0) {
-            if (i + 1 < argc) {
-                const char* panel_arg = argv[++i];
-                panel_requested = true;  // User explicitly requested a panel
-                if (strcmp(panel_arg, "home") == 0) {
-                    initial_panel = UI_PANEL_HOME;
-                } else if (strcmp(panel_arg, "controls") == 0) {
-                    initial_panel = UI_PANEL_CONTROLS;
-                } else if (strcmp(panel_arg, "motion") == 0) {
-                    initial_panel = UI_PANEL_CONTROLS;
-                    show_motion = true;
-                } else if (strcmp(panel_arg, "nozzle-temp") == 0) {
-                    initial_panel = UI_PANEL_CONTROLS;
-                    show_nozzle_temp = true;
-                } else if (strcmp(panel_arg, "bed-temp") == 0) {
-                    initial_panel = UI_PANEL_CONTROLS;
-                    show_bed_temp = true;
-                } else if (strcmp(panel_arg, "extrusion") == 0) {
-                    initial_panel = UI_PANEL_CONTROLS;
-                    show_extrusion = true;
-                } else if (strcmp(panel_arg, "print-status") == 0 || strcmp(panel_arg, "printing") == 0) {
-                    show_print_status = true;
-                } else if (strcmp(panel_arg, "filament") == 0) {
-                    initial_panel = UI_PANEL_FILAMENT;
-                } else if (strcmp(panel_arg, "settings") == 0) {
-                    initial_panel = UI_PANEL_SETTINGS;
-                } else if (strcmp(panel_arg, "advanced") == 0) {
-                    initial_panel = UI_PANEL_ADVANCED;
-                } else if (strcmp(panel_arg, "print-select") == 0 || strcmp(panel_arg, "print_select") == 0) {
-                    initial_panel = UI_PANEL_PRINT_SELECT;
-                } else if (strcmp(panel_arg, "file-detail") == 0 || strcmp(panel_arg, "print-file-detail") == 0) {
-                    initial_panel = UI_PANEL_PRINT_SELECT;
-                    show_file_detail = true;
-                } else if (strcmp(panel_arg, "step-test") == 0 || strcmp(panel_arg, "step_test") == 0) {
-                    show_step_test = true;
-                } else if (strcmp(panel_arg, "test") == 0) {
-                    show_test_panel = true;
-                } else {
-                    printf("Unknown panel: %s\n", panel_arg);
-                    printf("Available panels: home, controls, motion, nozzle-temp, bed-temp, extrusion, print-status, filament, settings, advanced, print-select, step-test, test\n");
-                    return 1;
-                }
-            } else {
-                printf("Error: -p/--panel requires an argument\n");
-                return 1;
-            }
-        } else if (strcmp(argv[i], "-k") == 0 || strcmp(argv[i], "--keypad") == 0) {
-            show_keypad = true;
-        } else if (strcmp(argv[i], "-w") == 0 || strcmp(argv[i], "--wizard") == 0) {
-            force_wizard = true;
-        } else if (strcmp(argv[i], "--wizard-step") == 0) {
-            if (i + 1 < argc) {
-                wizard_step = atoi(argv[++i]);
-                force_wizard = true;
-                if (wizard_step < 1 || wizard_step > 7) {
-                    printf("Error: wizard step must be 1-7\n");
-                    return 1;
-                }
-            } else {
-                printf("Error: --wizard-step requires an argument (1-7)\n");
-                return 1;
-            }
-        } else if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--display") == 0) {
-            if (i + 1 < argc) {
-                char* endptr;
-                long val = strtol(argv[++i], &endptr, 10);
-                if (*endptr != '\0' || val < 0 || val > 10) {
-                    printf("Error: invalid display number (must be 0-10): %s\n", argv[i]);
-                    return 1;
-                }
-                display_num = (int)val;
-            } else {
-                printf("Error: -d/--display requires a number argument\n");
-                return 1;
-            }
-        } else if (strcmp(argv[i], "-x") == 0 || strcmp(argv[i], "--x-pos") == 0) {
-            if (i + 1 < argc) {
-                char* endptr;
-                long val = strtol(argv[++i], &endptr, 10);
-                if (*endptr != '\0' || val < 0 || val > 10000) {
-                    printf("Error: invalid x position (must be 0-10000): %s\n", argv[i]);
-                    return 1;
-                }
-                x_pos = (int)val;
-            } else {
-                printf("Error: -x/--x-pos requires a number argument\n");
-                return 1;
-            }
-        } else if (strcmp(argv[i], "-y") == 0 || strcmp(argv[i], "--y-pos") == 0) {
-            if (i + 1 < argc) {
-                char* endptr;
-                long val = strtol(argv[++i], &endptr, 10);
-                if (*endptr != '\0' || val < 0 || val > 10000) {
-                    printf("Error: invalid y position (must be 0-10000): %s\n", argv[i]);
-                    return 1;
-                }
-                y_pos = (int)val;
-            } else {
-                printf("Error: -y/--y-pos requires a number argument\n");
-                return 1;
-            }
-        } else if (strcmp(argv[i], "--screenshot") == 0) {
-            screenshot_enabled = true;
-            // Check if next arg is a number (delay in seconds)
-            if (i + 1 < argc) {
-                char* endptr;
-                long val = strtol(argv[i + 1], &endptr, 10);
-                // If next arg is a valid number, use it as delay
-                if (*endptr == '\0' && val > 0 && val <= 60) {
-                    screenshot_delay_sec = (int)val;
-                    i++;  // Consume the delay argument
-                }
-                // Otherwise, use default delay (next arg is probably a different flag)
-            }
-        } else if (strcmp(argv[i], "--timeout") == 0 || strcmp(argv[i], "-t") == 0) {
-            if (i + 1 < argc) {
-                char* endptr;
-                long val = strtol(argv[++i], &endptr, 10);
-                if (*endptr != '\0' || val < 1 || val > 3600) {
-                    printf("Error: invalid timeout (must be 1-3600 seconds): %s\n", argv[i]);
-                    return 1;
-                }
-                timeout_sec = (int)val;
-            } else {
-                printf("Error: --timeout/-t requires a number argument\n");
-                return 1;
-            }
-        } else if (strcmp(argv[i], "--dark") == 0) {
-            dark_mode = true;
-            theme_requested = true;
-        } else if (strcmp(argv[i], "--light") == 0) {
-            dark_mode = false;
-            theme_requested = true;
-        } else if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "-vv") == 0 || strcmp(argv[i], "-vvv") == 0) {
-            // Count the number of 'v' characters for verbosity level
-            const char* p = argv[i];
-            while (*p == '-') p++;  // Skip leading dashes
-            while (*p == 'v') {
-                verbosity++;
-                p++;
-            }
-        } else if (strcmp(argv[i], "--verbose") == 0) {
-            verbosity++;
-        } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
-            printf("Usage: %s [options]\n", argv[0]);
-            printf("Options:\n");
-            printf("  -s, --size <size>    Screen size: tiny, small, medium, large (default: medium)\n");
-            printf("  -p, --panel <panel>  Initial panel (default: home)\n");
-            printf("  -k, --keypad         Show numeric keypad for testing\n");
-            printf("  -w, --wizard         Force first-run configuration wizard\n");
-            printf("  --wizard-step <step> Jump to specific wizard step for testing\n");
-            printf("  -d, --display <n>    Display number for window placement (0, 1, 2...)\n");
-            printf("  -x, --x-pos <n>      X coordinate for window position\n");
-            printf("  -y, --y-pos <n>      Y coordinate for window position\n");
-            printf("  --screenshot [sec]   Take screenshot after delay (default: 2 seconds)\n");
-            printf("  -t, --timeout <sec>  Auto-quit after specified seconds (1-3600)\n");
-            printf("  --dark               Use dark theme (default)\n");
-            printf("  --light              Use light theme\n");
-            printf("  -v, --verbose        Increase verbosity (-v=info, -vv=debug, -vvv=trace)\n");
-            printf("  -h, --help           Show this help message\n");
-            printf("\nAvailable panels:\n");
-            printf("  home, controls, motion, nozzle-temp, bed-temp, extrusion,\n");
-            printf("  print-status, filament, settings, advanced, print-select\n");
-            printf("\nScreen sizes:\n");
-            printf("  tiny   = %dx%d\n", UI_SCREEN_TINY_W, UI_SCREEN_TINY_H);
-            printf("  small  = %dx%d\n", UI_SCREEN_SMALL_W, UI_SCREEN_SMALL_H);
-            printf("  medium = %dx%d (default)\n", UI_SCREEN_MEDIUM_W, UI_SCREEN_MEDIUM_H);
-            printf("  large  = %dx%d\n", UI_SCREEN_LARGE_W, UI_SCREEN_LARGE_H);
-            printf("\nWizard steps:\n");
-            printf("  wifi, connection, printer-identify, bed, hotend, fan, led, summary\n");
-            printf("\nWindow placement:\n");
-            printf("  Use -d to center window on specific display\n");
-            printf("  Use -x/-y for exact pixel coordinates (both required)\n");
-            printf("  Examples:\n");
-            printf("    %s --display 1        # Center on display 1\n", argv[0]);
-            printf("    %s -x 100 -y 200      # Position at (100, 200)\n", argv[0]);
-            return 0;
-        } else {
-            // Legacy support: first positional arg is panel name
-            if (i == 1 && argv[i][0] != '-') {
-                const char* panel_arg = argv[i];
-                panel_requested = true;  // User explicitly requested a panel
-                if (strcmp(panel_arg, "home") == 0) {
-                    initial_panel = UI_PANEL_HOME;
-                } else if (strcmp(panel_arg, "controls") == 0) {
-                    initial_panel = UI_PANEL_CONTROLS;
-                } else if (strcmp(panel_arg, "motion") == 0) {
-                    initial_panel = UI_PANEL_CONTROLS;
-                    show_motion = true;
-                } else if (strcmp(panel_arg, "print-select") == 0 || strcmp(panel_arg, "print_select") == 0) {
-                    initial_panel = UI_PANEL_PRINT_SELECT;
-                } else if (strcmp(panel_arg, "step-test") == 0 || strcmp(panel_arg, "step_test") == 0) {
-                    show_step_test = true;
-                } else {
-                    printf("Unknown argument: %s\n", argv[i]);
-                    printf("Use --help for usage information\n");
-                    return 1;
-                }
-            } else {
-                printf("Unknown argument: %s\n", argv[i]);
-                printf("Use --help for usage information\n");
-                return 1;
-            }
-        }
+    // Parse command-line arguments (returns false for help/error)
+    if (!parse_command_line_args(argc, argv, initial_panel, show_motion, show_nozzle_temp,
+                                  show_bed_temp, show_extrusion, show_print_status, show_file_detail,
+                                  show_keypad, show_step_test, show_test_panel, force_wizard,
+                                  wizard_step, panel_requested, display_num, x_pos, y_pos,
+                                  screenshot_enabled, screenshot_delay_sec, timeout_sec,
+                                  verbosity, dark_mode, theme_requested)) {
+        return 0;  // Help shown or parse error
     }
 
     // Set spdlog log level based on verbosity flags
@@ -657,33 +812,7 @@ int main(int argc, char** argv) {
     }
 
     // Register fonts and images for XML (must be done BEFORE globals.xml for theme init)
-    spdlog::debug("Registering fonts and images...");
-    lv_xml_register_font(NULL, "fa_icons_64", &fa_icons_64);
-    lv_xml_register_font(NULL, "fa_icons_48", &fa_icons_48);
-    lv_xml_register_font(NULL, "fa_icons_32", &fa_icons_32);
-    lv_xml_register_font(NULL, "fa_icons_24", &fa_icons_24);
-    lv_xml_register_font(NULL, "fa_icons_16", &fa_icons_16);
-    lv_xml_register_font(NULL, "arrows_64", &arrows_64);
-    lv_xml_register_font(NULL, "arrows_48", &arrows_48);
-    lv_xml_register_font(NULL, "arrows_32", &arrows_32);
-    lv_xml_register_font(NULL, "montserrat_10", &lv_font_montserrat_10);
-    lv_xml_register_font(NULL, "montserrat_12", &lv_font_montserrat_12);
-    lv_xml_register_font(NULL, "montserrat_14", &lv_font_montserrat_14);
-    lv_xml_register_font(NULL, "montserrat_16", &lv_font_montserrat_16);
-    lv_xml_register_font(NULL, "montserrat_20", &lv_font_montserrat_20);
-    lv_xml_register_font(NULL, "montserrat_28", &lv_font_montserrat_28);
-    lv_xml_register_image(NULL, "A:assets/images/printer_400.png",
-                          "A:assets/images/printer_400.png");
-    lv_xml_register_image(NULL, "filament_spool",
-                          "A:assets/images/filament_spool.png");
-    lv_xml_register_image(NULL, "A:assets/images/placeholder_thumb_centered.png",
-                          "A:assets/images/placeholder_thumb_centered.png");
-    lv_xml_register_image(NULL, "A:assets/images/thumbnail-gradient-bg.png",
-                          "A:assets/images/thumbnail-gradient-bg.png");
-    lv_xml_register_image(NULL, "A:assets/images/thumbnail-placeholder.png",
-                          "A:assets/images/thumbnail-placeholder.png");
-    lv_xml_register_image(NULL, "A:assets/images/large-extruder-icon.svg",
-                          "A:assets/images/large-extruder-icon.svg");
+    register_fonts_and_images();
 
     // Register XML components (globals first to make constants available)
     spdlog::debug("Registering XML components...");
@@ -715,62 +844,10 @@ int main(int argc, char** argv) {
     SDL_Delay(100);
 
     // Register remaining XML components (globals already registered for theme init)
-    spdlog::debug("Registering remaining XML components...");
-
-    // Register responsive constants (AFTER globals, BEFORE components that use them)
-    ui_switch_register_responsive_constants();
-
-    // Register semantic text widgets (AFTER theme init, BEFORE components that use them)
-    ui_text_init();
-
-    lv_xml_register_component_from_file("A:ui_xml/icon.xml");
-    lv_xml_register_component_from_file("A:ui_xml/header_bar.xml");
-    lv_xml_register_component_from_file("A:ui_xml/confirmation_dialog.xml");
-    lv_xml_register_component_from_file("A:ui_xml/tip_detail_dialog.xml");
-    lv_xml_register_component_from_file("A:ui_xml/numeric_keypad_modal.xml");
-    lv_xml_register_component_from_file("A:ui_xml/print_file_card.xml");
-    lv_xml_register_component_from_file("A:ui_xml/print_file_list_row.xml");
-    lv_xml_register_component_from_file("A:ui_xml/print_file_detail.xml");
-    lv_xml_register_component_from_file("A:ui_xml/navigation_bar.xml");
-    lv_xml_register_component_from_file("A:ui_xml/home_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/controls_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/motion_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/nozzle_temp_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/bed_temp_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/extrusion_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/print_status_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/filament_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/settings_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/advanced_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/test_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/print_select_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/step_progress_test.xml");
-    lv_xml_register_component_from_file("A:ui_xml/app_layout.xml");
-    lv_xml_register_component_from_file("A:ui_xml/wizard_container.xml");
-    lv_xml_register_component_from_file("A:ui_xml/network_list_item.xml");
-    lv_xml_register_component_from_file("A:ui_xml/wifi_password_modal.xml");
-    lv_xml_register_component_from_file("A:ui_xml/wizard_wifi_setup.xml");
-    lv_xml_register_component_from_file("A:ui_xml/wizard_connection.xml");
-    lv_xml_register_component_from_file("A:ui_xml/wizard_printer_identify.xml");
-    lv_xml_register_component_from_file("A:ui_xml/wizard_bed_select.xml");
-    lv_xml_register_component_from_file("A:ui_xml/wizard_hotend_select.xml");
-    lv_xml_register_component_from_file("A:ui_xml/wizard_fan_select.xml");
-    lv_xml_register_component_from_file("A:ui_xml/wizard_led_select.xml");
-    lv_xml_register_component_from_file("A:ui_xml/wizard_summary.xml");
+    register_xml_components();
 
     // Initialize reactive subjects BEFORE creating XML
-    spdlog::debug("Initializing reactive subjects...");
-    ui_nav_init();  // Navigation system (icon colors, active panel)
-    ui_panel_home_init_subjects();  // Home panel data bindings
-    ui_panel_print_select_init_subjects();  // Print select panel (none yet)
-    ui_panel_controls_init_subjects();  // Controls panel launcher
-    ui_panel_motion_init_subjects();  // Motion sub-screen position display
-    ui_panel_controls_temp_init_subjects();  // Temperature sub-screens
-    ui_panel_controls_extrusion_init_subjects();  // Extrusion sub-screen
-    ui_panel_filament_init_subjects();  // Filament panel
-    ui_panel_print_status_init_subjects();  // Print status screen
-    ui_wizard_init_subjects();  // Wizard subjects (for first-run config)
-    printer_state.init_subjects();  // Printer state subjects (CRITICAL: must be before XML creation)
+    initialize_subjects();
 
     // Create entire UI from XML (single component contains everything)
     lv_obj_t* app_layout = (lv_obj_t*)lv_xml_create(screen, "app_layout", NULL);
@@ -885,77 +962,41 @@ int main(int argc, char** argv) {
 
     // Special case: Show motion panel if requested
     if (show_motion) {
-        spdlog::debug("Creating and showing motion sub-screen...\n");
-
-        // Create motion panel (tracked for cleanup)
-        overlay_panels.motion = (lv_obj_t*)lv_xml_create(screen, "motion_panel", nullptr);
+        overlay_panels.motion = create_overlay_panel(screen, "motion_panel", "motion",
+                                                      panels, ui_panel_motion_setup);
         if (overlay_panels.motion) {
-            ui_panel_motion_setup(overlay_panels.motion, screen);
-
-            // Hide controls launcher, show motion panel
-            lv_obj_add_flag(panels[UI_PANEL_CONTROLS], LV_OBJ_FLAG_HIDDEN);
-
             // Set mock position data
             ui_panel_motion_set_position(120.5f, 105.2f, 15.8f);
-
-            spdlog::debug("Motion panel displayed\n");
         }
     }
 
     // Special case: Show nozzle temp panel if requested
     if (show_nozzle_temp) {
-        spdlog::debug("Creating and showing nozzle temperature sub-screen...\n");
-
-        // Create nozzle temp panel (tracked for cleanup)
-        overlay_panels.nozzle_temp = (lv_obj_t*)lv_xml_create(screen, "nozzle_temp_panel", nullptr);
+        overlay_panels.nozzle_temp = create_overlay_panel(screen, "nozzle_temp_panel", "nozzle temperature",
+                                                           panels, ui_panel_controls_temp_nozzle_setup);
         if (overlay_panels.nozzle_temp) {
-            ui_panel_controls_temp_nozzle_setup(overlay_panels.nozzle_temp, screen);
-
-            // Hide controls launcher, show nozzle temp panel
-            lv_obj_add_flag(panels[UI_PANEL_CONTROLS], LV_OBJ_FLAG_HIDDEN);
-
             // Set mock temperature data
             ui_panel_controls_temp_set_nozzle(25, 0);
-
-            spdlog::debug("Nozzle temp panel displayed\n");
         }
     }
 
     // Special case: Show bed temp panel if requested
     if (show_bed_temp) {
-        spdlog::debug("Creating and showing bed temperature sub-screen...\n");
-
-        // Create bed temp panel (tracked for cleanup)
-        overlay_panels.bed_temp = (lv_obj_t*)lv_xml_create(screen, "bed_temp_panel", nullptr);
+        overlay_panels.bed_temp = create_overlay_panel(screen, "bed_temp_panel", "bed temperature",
+                                                        panels, ui_panel_controls_temp_bed_setup);
         if (overlay_panels.bed_temp) {
-            ui_panel_controls_temp_bed_setup(overlay_panels.bed_temp, screen);
-
-            // Hide controls launcher, show bed temp panel
-            lv_obj_add_flag(panels[UI_PANEL_CONTROLS], LV_OBJ_FLAG_HIDDEN);
-
             // Set mock temperature data
             ui_panel_controls_temp_set_bed(25, 0);
-
-            spdlog::debug("Bed temp panel displayed\n");
         }
     }
 
     // Special case: Show extrusion panel if requested
     if (show_extrusion) {
-        spdlog::debug("Creating and showing extrusion sub-screen...\n");
-
-        // Create extrusion panel (tracked for cleanup)
-        overlay_panels.extrusion = (lv_obj_t*)lv_xml_create(screen, "extrusion_panel", nullptr);
+        overlay_panels.extrusion = create_overlay_panel(screen, "extrusion_panel", "extrusion",
+                                                         panels, ui_panel_controls_extrusion_setup);
         if (overlay_panels.extrusion) {
-            ui_panel_controls_extrusion_setup(overlay_panels.extrusion, screen);
-
-            // Hide controls launcher, show extrusion panel
-            lv_obj_add_flag(panels[UI_PANEL_CONTROLS], LV_OBJ_FLAG_HIDDEN);
-
             // Set mock temperature data (nozzle at room temp)
             ui_panel_controls_extrusion_set_temp(25, 0);
-
-            spdlog::debug("Extrusion panel displayed\n");
         }
     }
 
