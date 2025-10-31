@@ -73,12 +73,33 @@ make build
 # Run after building
 ./build/bin/helix-ui-proto
 
+# Run with specific theme mode
+./build/bin/helix-ui-proto --dark    # Force dark mode
+./build/bin/helix-ui-proto --light   # Force light mode
+
 # Generate IDE support (one-time setup)
 make compile_commands
 
 # Clean rebuild (only when needed)
 make clean && make -j
 ```
+
+### Theme Mode Control
+
+The UI supports dark and light themes:
+
+```bash
+# Use stored preference from config file (default)
+./build/bin/helix-ui-proto
+
+# Override with dark mode
+./build/bin/helix-ui-proto --dark
+
+# Override with light mode
+./build/bin/helix-ui-proto --light
+```
+
+Theme preference is saved to `helixconfig.json` and persists across launches unless overridden by command-line flags.
 
 ### Build System Features
 

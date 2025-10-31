@@ -24,7 +24,6 @@
 	<consts>
 		<int name="button_radius" value="8"/>
 		<int name="header_padding" value="6"/>
-        <int name="button_font" value="montserrat_20"/>
 	</consts>
 
 	<!-- API Properties -->
@@ -162,17 +161,17 @@
 
 					<lv_button name="btn_7" flex_grow="1" height="100%"
 						style_radius="#button_radius" style_border_width="0">
-						<lv_label text="7" style_text_font="#button_font" style_text_color="#text_primary" align="center"/>
+						<lv_label text="7" style_text_font="#font_body" style_text_color="#text_primary" align="center"/>
 					</lv_button>
 
 					<lv_button name="btn_8" flex_grow="1" height="100%"
 						style_radius="#button_radius" style_border_width="0">
-						<lv_label text="8" style_text_font="#button_font" style_text_color="#text_primary" align="center"/>
+						<lv_label text="8" style_text_font="#font_body" style_text_color="#text_primary" align="center"/>
 					</lv_button>
 
 					<lv_button name="btn_9" flex_grow="1" height="100%"
 						style_radius="#button_radius" style_border_width="0">
-						<lv_label text="9" style_text_font="#button_font" style_text_color="#text_primary" align="center"/>
+						<lv_label text="9" style_text_font="#font_body" style_text_color="#text_primary" align="center"/>
 					</lv_button>
 				</lv_obj>
 
@@ -189,17 +188,17 @@
 
 					<lv_button name="btn_4" flex_grow="1" height="100%"
 						style_radius="#button_radius" style_border_width="0">
-						<lv_label text="4" style_text_font="#button_font" style_text_color="#text_primary" align="center"/>
+						<lv_label text="4" style_text_font="#font_body" style_text_color="#text_primary" align="center"/>
 					</lv_button>
 
 					<lv_button name="btn_5" flex_grow="1" height="100%"
 						style_radius="#button_radius" style_border_width="0">
-						<lv_label text="5" style_text_font="#button_font" style_text_color="#text_primary" align="center"/>
+						<lv_label text="5" style_text_font="#font_body" style_text_color="#text_primary" align="center"/>
 					</lv_button>
 
 					<lv_button name="btn_6" flex_grow="1" height="100%"
 						style_radius="#button_radius" style_border_width="0">
-						<lv_label text="6" style_text_font="#button_font" style_text_color="#text_primary" align="center"/>
+						<lv_label text="6" style_text_font="#font_body" style_text_color="#text_primary" align="center"/>
 					</lv_button>
 				</lv_obj>
 
@@ -216,17 +215,17 @@
 
 					<lv_button name="btn_1" flex_grow="1" height="100%"
 						style_radius="#button_radius" style_border_width="0">
-						<lv_label text="1" style_text_font="#button_font" style_text_color="#text_primary" align="center"/>
+						<lv_label text="1" style_text_font="#font_body" style_text_color="#text_primary" align="center"/>
 					</lv_button>
 
 					<lv_button name="btn_2" flex_grow="1" height="100%"
 						style_radius="#button_radius" style_border_width="0">
-						<lv_label text="2" style_text_font="#button_font" style_text_color="#text_primary" align="center"/>
+						<lv_label text="2" style_text_font="#font_body" style_text_color="#text_primary" align="center"/>
 					</lv_button>
 
 					<lv_button name="btn_3" flex_grow="1" height="100%"
 						style_radius="#button_radius" style_border_width="0">
-						<lv_label text="3" style_text_font="#button_font" style_text_color="#text_primary" align="center"/>
+						<lv_label text="3" style_text_font="#font_body" style_text_color="#text_primary" align="center"/>
 					</lv_button>
 				</lv_obj>
 
@@ -247,7 +246,7 @@
 
 					<lv_button name="btn_0" flex_grow="1" height="100%"
 						style_radius="#button_radius" style_border_width="0">
-						<lv_label text="0" style_text_font="#button_font" style_text_color="#text_primary" align="center"/>
+						<lv_label text="0" style_text_font="#font_body" style_text_color="#text_primary" align="center"/>
 					</lv_button>
 
 					<lv_button name="btn_backspace" flex_grow="1" height="100%"

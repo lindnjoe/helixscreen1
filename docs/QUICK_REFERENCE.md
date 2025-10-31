@@ -286,15 +286,32 @@ ui_step_progress_set_current(progress, 2);  // Now on step 3
 ```xml
 <!-- globals.xml -->
 <consts>
-    <color name="bg_dark" value="0x1a1a1a"/>
-    <px name="width" value="102"/>
-    <percent name="card" value="45%"/>
-    <str name="icon" value=""/>  <!-- UTF-8 char -->
+    <!-- Theme colors (read by C++ theme system) -->
+    <color name="primary_color" value="..."/>
+    <color name="secondary_color" value="..."/>
+    <color name="text_primary" value="..."/>
+    <color name="text_secondary" value="..."/>
+
+    <!-- Semantic fonts (for manual widget styling) -->
+    <str name="font_heading" value="montserrat_20"/>
+    <str name="font_body" value="montserrat_16"/>
+    <str name="font_small" value="montserrat_12"/>
+
+    <!-- Layout constants -->
+    <px name="nav_width" value="102"/>
+    <px name="padding_normal" value="20"/>
+
+    <!-- Icons -->
+    <str name="icon_home" value=""/>  <!-- UTF-8 char -->
 </consts>
 
-<!-- Usage -->
-<lv_obj style_bg_color="#bg_dark" width="#width"/>
+<!-- Usage in XML -->
+<lv_obj style_bg_color="#primary_color"/>
+<lv_label style_text_font="#font_heading" style_text_color="#text_primary"/>
 ```
+
+**Theme Constants:**
+The `primary_color`, `secondary_color`, `text_primary`, and `text_secondary` constants are read by the C++ theme initialization system (`ui_theme_init()`) to configure LVGL's default theme. Edit these values in `globals.xml` to customize the theme without recompilation.
 
 ## Subject Types
 

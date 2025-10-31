@@ -22,24 +22,14 @@
 
 #include "lvgl/lvgl.h"
 
-// Color scheme constants
-#define UI_COLOR_NAV_BG          lv_color_hex(0x242424)     // rgb(36, 36, 36) - Nav bar background
+// Theme colors - only essential colors used by code that needs explicit control
+// (Most colors provided automatically by LVGL theme system)
 #define UI_COLOR_PRIMARY         lv_color_hex(0xFF4444)     // rgb(255, 68, 68) - Primary/Active color (red)
 #define UI_COLOR_SECONDARY       lv_color_hex(0x00AAFF)     // rgb(0, 170, 255) - Secondary accent (blue)
-#define UI_COLOR_ACCENT          UI_COLOR_PRIMARY           // Accent color for status indicators
-#define UI_COLOR_PANEL_BG        lv_color_hex(0x141414)     // rgb(20, 20, 20) - Main panel background
 
 // Text colors
 #define UI_COLOR_TEXT_PRIMARY    lv_color_hex(0xFFFFFF)     // rgb(255, 255, 255) - White text
 #define UI_COLOR_TEXT_SECONDARY  lv_color_hex(0xAAAAAA)     // rgb(170, 170, 170) - Gray text
-#define UI_COLOR_TEXT_MUTED      lv_color_hex(0xAFAFAF)     // rgb(175, 175, 175) - Muted text
-
-// Navigation colors
-#define UI_COLOR_NAV_INACTIVE    lv_color_hex(0xC8C8C8)     // rgb(200, 200, 200) - Inactive nav icons
-
-// Button colors
-#define UI_COLOR_BUTTON_PRIMARY   UI_COLOR_PRIMARY          // Primary button (same as active nav)
-#define UI_COLOR_BUTTON_SECONDARY lv_color_hex(0x4B4B4B)   // rgb(75, 75, 75) - Secondary button
 
 // Layout constants
 #define UI_NAV_WIDTH_PERCENT   10                          // Nav bar is 1/10th of screen width
@@ -101,10 +91,12 @@ extern const lv_font_t lv_font_montserrat_20;
 extern const lv_font_t lv_font_montserrat_28;
 
 // Semantic font constants (matching globals.xml)
-#define UI_FONT_BODY              (&lv_font_montserrat_16)  // Standard body text
-#define UI_FONT_HEADING           (&lv_font_montserrat_20)  // Section headings
-#define UI_FONT_MODAL_TITLE       (&lv_font_montserrat_16)  // Modal dialog titles
-#define UI_FONT_LARGE             (&lv_font_montserrat_20)  // Large text (same as heading for now)
-#define UI_FONT_MEDIUM            (&lv_font_montserrat_14)  // Medium text (secondary info, step indicators)
-#define UI_FONT_SMALL             (&lv_font_montserrat_12)  // Small text (hints, helpers, warnings)
-#define UI_FONT_TINY              (&lv_font_montserrat_10)  // Tiny text (chart axis labels, metadata)
+#define UI_FONT_HEADING           (&lv_font_montserrat_20)  // Section headings, large text
+#define UI_FONT_BODY              (&lv_font_montserrat_16)  // Standard body text, medium text
+#define UI_FONT_SMALL             (&lv_font_montserrat_12)  // Small text (hints, helpers, warnings, chart labels)
+
+// Theme initialization and control
+void ui_theme_init(lv_display_t* display, bool dark_mode);
+void ui_theme_toggle_dark_mode();
+bool ui_theme_is_dark_mode();
+lv_color_t ui_theme_parse_color(const char* hex_str);

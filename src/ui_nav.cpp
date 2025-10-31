@@ -33,6 +33,9 @@ static ui_panel_id_t active_panel = UI_PANEL_HOME;
 // Icon color subjects (one per navbar button)
 static lv_subject_t icon_color_subjects[UI_PANEL_COUNT];
 
+// Icon opacity subjects (one per navbar button) - used to dim inactive icons
+static lv_subject_t icon_opacity_subjects[UI_PANEL_COUNT];
+
 // Panel widget tracking for show/hide
 static lv_obj_t* panel_widgets[UI_PANEL_COUNT] = {nullptr};
 
@@ -51,12 +54,15 @@ static std::vector<lv_obj_t*> panel_stack;
 static void active_panel_observer_cb(lv_observer_t* /*observer*/, lv_subject_t* subject) {
     int32_t new_active_panel = lv_subject_get_int(subject);
 
-    // Update all icon color subjects based on which panel is active
+    // Update all icon color and opacity subjects based on which panel is active
     for (int i = 0; i < UI_PANEL_COUNT; i++) {
+        // All icons use primary color
+        lv_subject_set_color(&icon_color_subjects[i], UI_COLOR_PRIMARY);
+
         if (i == new_active_panel) {
-            lv_subject_set_color(&icon_color_subjects[i], UI_COLOR_PRIMARY);
+            lv_subject_set_int(&icon_opacity_subjects[i], LV_OPA_COVER);  // 100% opacity (active)
         } else {
-            lv_subject_set_color(&icon_color_subjects[i], UI_COLOR_NAV_INACTIVE);
+            lv_subject_set_int(&icon_opacity_subjects[i], LV_OPA_50);     // 50% opacity (inactive)
         }
     }
 
@@ -76,9 +82,16 @@ static void active_panel_observer_cb(lv_observer_t* /*observer*/, lv_subject_t* 
 static void icon_image_color_observer_cb(lv_observer_t* observer, lv_subject_t* subject) {
     lv_obj_t* image = (lv_obj_t*)lv_observer_get_target(observer);
     lv_color_t color = lv_subject_get_color(subject);
-    // Material Design icons are white - use recolor to tint them red/gray
+    // Material Design icons are white - use recolor to tint them
     lv_obj_set_style_img_recolor(image, color, LV_PART_MAIN);
-    lv_obj_set_style_img_recolor_opa(image, 255, LV_PART_MAIN);
+    lv_obj_set_style_img_recolor_opa(image, LV_OPA_COVER, LV_PART_MAIN);
+}
+
+// Observer callback for icon opacity changes - updates image opacity
+static void icon_image_opacity_observer_cb(lv_observer_t* observer, lv_subject_t* subject) {
+    lv_obj_t* image = (lv_obj_t*)lv_observer_get_target(observer);
+    int32_t opacity = lv_subject_get_int(subject);
+    lv_obj_set_style_opa(image, opacity, LV_PART_MAIN);
 }
 
 // Button click event handler - switches active panel
@@ -154,12 +167,16 @@ void ui_nav_init() {
     // Initialize active panel subject (starts at home)
     lv_subject_init_int(&active_panel_subject, UI_PANEL_HOME);
 
-    // Initialize icon color subjects (all inactive except home)
+    // Initialize icon color and opacity subjects
     for (int i = 0; i < UI_PANEL_COUNT; i++) {
+        // All icons use primary color
+        lv_subject_init_color(&icon_color_subjects[i], UI_COLOR_PRIMARY);
+
+        // Home icon starts active (100% opacity), others inactive (50% opacity)
         if (i == UI_PANEL_HOME) {
-            lv_subject_init_color(&icon_color_subjects[i], UI_COLOR_PRIMARY);
+            lv_subject_init_int(&icon_opacity_subjects[i], LV_OPA_COVER);  // Active: 100%
         } else {
-            lv_subject_init_color(&icon_color_subjects[i], UI_COLOR_NAV_INACTIVE);
+            lv_subject_init_int(&icon_opacity_subjects[i], LV_OPA_50);     // Inactive: 50%
         }
     }
 
@@ -171,6 +188,14 @@ void ui_nav_init() {
     lv_xml_register_subject(NULL, "nav_icon_3_color", &icon_color_subjects[3]);
     lv_xml_register_subject(NULL, "nav_icon_4_color", &icon_color_subjects[4]);
     lv_xml_register_subject(NULL, "nav_icon_5_color", &icon_color_subjects[5]);
+
+    // Register opacity subjects (not used in XML, but available if needed)
+    lv_xml_register_subject(NULL, "nav_icon_0_opacity", &icon_opacity_subjects[0]);
+    lv_xml_register_subject(NULL, "nav_icon_1_opacity", &icon_opacity_subjects[1]);
+    lv_xml_register_subject(NULL, "nav_icon_2_opacity", &icon_opacity_subjects[2]);
+    lv_xml_register_subject(NULL, "nav_icon_3_opacity", &icon_opacity_subjects[3]);
+    lv_xml_register_subject(NULL, "nav_icon_4_opacity", &icon_opacity_subjects[4]);
+    lv_xml_register_subject(NULL, "nav_icon_5_opacity", &icon_opacity_subjects[5]);
 
     // Add observer to active panel subject to update icon colors
     lv_subject_add_observer(&active_panel_subject, active_panel_observer_cb, NULL);
@@ -276,6 +301,9 @@ void ui_nav_wire_events(lv_obj_t* navbar) {
         // Bind img_recolor to icon color subject
         lv_subject_add_observer_obj(&icon_color_subjects[i], icon_image_color_observer_cb, icon_widget, NULL);
 
+        // Bind opacity to icon opacity subject
+        lv_subject_add_observer_obj(&icon_opacity_subjects[i], icon_image_opacity_observer_cb, icon_widget, NULL);
+
         // Make icon widget non-clickable so clicks pass through to button
         lv_obj_add_flag(icon_widget, LV_OBJ_FLAG_EVENT_BUBBLE);
         lv_obj_remove_flag(icon_widget, LV_OBJ_FLAG_CLICKABLE);
@@ -285,12 +313,15 @@ void ui_nav_wire_events(lv_obj_t* navbar) {
         lv_obj_add_event_cb(btn, nav_button_clicked_cb, LV_EVENT_CLICKED, (void*)(uintptr_t)i);
     }
 
-    // Force update all icon color subjects now that bindings exist
+    // Force update all icon color and opacity subjects now that bindings exist
     for (int i = 0; i < UI_PANEL_COUNT; i++) {
+        // All icons use primary color
+        lv_subject_set_color(&icon_color_subjects[i], UI_COLOR_PRIMARY);
+
         if (i == active_panel) {
-            lv_subject_set_color(&icon_color_subjects[i], UI_COLOR_PRIMARY);
+            lv_subject_set_int(&icon_opacity_subjects[i], LV_OPA_COVER);  // Active: 100%
         } else {
-            lv_subject_set_color(&icon_color_subjects[i], UI_COLOR_NAV_INACTIVE);
+            lv_subject_set_int(&icon_opacity_subjects[i], LV_OPA_50);     // Inactive: 50%
         }
     }
 }

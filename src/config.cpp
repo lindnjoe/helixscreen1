@@ -64,6 +64,7 @@ void Config::init(const std::string &config_path) {
       {"log_path", "/tmp/helixscreen.log"},
       {"display_sleep_sec", 600},
       {"display_rotate", 0},
+      {"dark_mode", true},  // Theme preference: true=dark, false=light
       {"default_printer", "default_printer"},
       {"printers", {
         {"default_printer", {

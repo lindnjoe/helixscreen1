@@ -245,11 +245,20 @@ spdlog::info("Panel initialized");
 
 ```
 XML Components (ui_xml/*.xml)
-    ↓ bind_text/bind_value/bind_flag
+    ↓ Theme constants + bind_text/bind_value/bind_flag
+LVGL Theme System (ui_theme.cpp)
+    ↓ Reads XML constants, initializes theme
 Subjects (reactive data)
     ↓ lv_subject_set_*/copy_*
 C++ Wrappers (src/ui_*.cpp)
 ```
+
+**Theme System:**
+- `globals.xml` defines theme colors (`primary_color`, `secondary_color`, `text_primary`, `text_secondary`) and semantic fonts (`font_heading`, `font_body`, `font_small`)
+- `ui_theme.cpp` reads these constants at runtime and initializes LVGL's default theme
+- Supports dark/light mode via `--dark`/`--light` command-line flags
+- Theme preference persisted in `helixconfig.json` and restored on next launch
+- **No recompilation needed** - edit `globals.xml` to change theme colors
 
 **Component Hierarchy:**
 ```

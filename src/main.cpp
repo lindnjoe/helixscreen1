@@ -61,8 +61,6 @@
 // LVGL display and input
 static lv_display_t* display = nullptr;
 static lv_indev_t* indev_mouse = nullptr;
-static lv_theme_t* current_theme = nullptr;
-static bool dark_mode_enabled = true;  // Start in dark mode
 
 // Screen dimensions (configurable via command line, default to medium size)
 static int SCREEN_WIDTH = UI_SCREEN_MEDIUM_W;
@@ -113,49 +111,6 @@ static bool init_lvgl() {
     lv_svg_decoder_init();
 
     return true;
-}
-
-// Initialize LVGL default theme with custom colors
-static void init_theme(bool dark_mode) {
-    dark_mode_enabled = dark_mode;
-
-    // Use colors from ui_theme.h (single source of truth)
-    lv_color_t primary_color = UI_COLOR_PRIMARY;      // Red accent
-    lv_color_t secondary_color = UI_COLOR_SECONDARY;  // Blue accent
-
-    // Initialize default theme with custom colors
-    // LVGL 9.4 API takes single font parameter (uses it as base, auto-scales for headings)
-    current_theme = lv_theme_default_init(
-        display,
-        primary_color,
-        secondary_color,
-        dark_mode,
-        UI_FONT_BODY   // Base font (16px body text) from ui_theme.h
-    );
-
-    if (current_theme) {
-        lv_display_set_theme(display, current_theme);
-        spdlog::info("LVGL theme initialized: {} mode", dark_mode ? "dark" : "light");
-    } else {
-        spdlog::error("Failed to initialize LVGL theme");
-    }
-}
-
-// Toggle between dark and light modes
-static void toggle_dark_mode() {
-    bool new_dark_mode = !dark_mode_enabled;
-    spdlog::info("Toggling theme: {} → {} mode",
-                dark_mode_enabled ? "dark" : "light",
-                new_dark_mode ? "dark" : "light");
-
-    // Reinitialize theme with new mode
-    init_theme(new_dark_mode);
-
-    // Force redraw of entire screen to apply new theme
-    lv_obj_t* screen = lv_screen_active();
-    lv_obj_invalidate(screen);
-
-    spdlog::info("Theme toggled to {} mode", new_dark_mode ? "dark" : "light");
 }
 
 // Show splash screen with HelixScreen logo
@@ -383,6 +338,8 @@ int main(int argc, char** argv) {
     int screenshot_delay_sec = 2;  // Screenshot delay in seconds (default: 2)
     int timeout_sec = 0;  // Auto-quit timeout in seconds (0 = disabled)
     int verbosity = 0;  // Verbosity level (0=warn, 1=info, 2=debug, 3=trace)
+    bool dark_mode = true;  // Theme mode (true=dark, false=light, default until loaded from config)
+    bool theme_requested = false;  // Track if user explicitly set theme via CLI
 
     // Parse arguments
     for (int i = 1; i < argc; i++) {
@@ -537,6 +494,12 @@ int main(int argc, char** argv) {
                 printf("Error: --timeout/-t requires a number argument\n");
                 return 1;
             }
+        } else if (strcmp(argv[i], "--dark") == 0) {
+            dark_mode = true;
+            theme_requested = true;
+        } else if (strcmp(argv[i], "--light") == 0) {
+            dark_mode = false;
+            theme_requested = true;
         } else if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "-vv") == 0 || strcmp(argv[i], "-vvv") == 0) {
             // Count the number of 'v' characters for verbosity level
             const char* p = argv[i];
@@ -560,6 +523,8 @@ int main(int argc, char** argv) {
             printf("  -y, --y-pos <n>      Y coordinate for window position\n");
             printf("  --screenshot [sec]   Take screenshot after delay (default: 2 seconds)\n");
             printf("  -t, --timeout <sec>  Auto-quit after specified seconds (1-3600)\n");
+            printf("  --dark               Use dark theme (default)\n");
+            printf("  --light              Use light theme\n");
             printf("  -v, --verbose        Increase verbosity (-v=info, -vv=debug, -vvv=trace)\n");
             printf("  -h, --help           Show this help message\n");
             printf("\nAvailable panels:\n");
@@ -635,6 +600,12 @@ int main(int argc, char** argv) {
     Config* config = Config::get_instance();
     config->init("helixconfig.json");
 
+    // Load theme preference from config if not set by command-line
+    if (!theme_requested) {
+        dark_mode = config->get<bool>("/dark_mode", true);  // Default to dark if not in config
+        spdlog::debug("Loaded theme preference from config: {}", dark_mode ? "dark" : "light");
+    }
+
     // Set window position environment variables for LVGL SDL driver
     if (display_num >= 0) {
         char display_str[32];
@@ -663,9 +634,6 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    // Initialize LVGL theme with dark mode (auto-applies to all widgets)
-    init_theme(true);  // Start in dark mode
-
     // Show splash screen (DISABLED for faster dev iteration)
     // show_splash_screen();
 
@@ -686,7 +654,7 @@ int main(int argc, char** argv) {
         spdlog::info("Loaded {} tips (version: {})", tips_mgr->get_total_tips(), tips_mgr->get_version());
     }
 
-    // Register fonts and images for XML (must be done before loading components)
+    // Register fonts and images for XML (must be done BEFORE globals.xml for theme init)
     LV_LOG_USER("Registering fonts and images...");
     lv_xml_register_font(NULL, "fa_icons_64", &fa_icons_64);
     lv_xml_register_font(NULL, "fa_icons_48", &fa_icons_48);
@@ -715,6 +683,17 @@ int main(int argc, char** argv) {
     lv_xml_register_image(NULL, "A:assets/images/large-extruder-icon.svg",
                           "A:assets/images/large-extruder-icon.svg");
 
+    // Register XML components (globals first to make constants available)
+    LV_LOG_USER("Registering XML components...");
+    lv_xml_register_component_from_file("A:ui_xml/globals.xml");
+
+    // Initialize LVGL theme from globals.xml constants (after fonts and globals are registered)
+    ui_theme_init(display, dark_mode);  // dark_mode from command-line args (--dark/--light) or config
+
+    // Save theme preference to config for next launch
+    config->set<bool>("/dark_mode", dark_mode);
+    config->save();
+
     // Register Material Design icons (64x64, scalable)
     material_icons_register();
 
@@ -729,9 +708,8 @@ int main(int argc, char** argv) {
     // Prevents race condition between SDL2 and LVGL 9 XML component registration
     SDL_Delay(100);
 
-    // Register XML components (globals first to make constants available)
-    LV_LOG_USER("Registering XML components...");
-    lv_xml_register_component_from_file("A:ui_xml/globals.xml");
+    // Register remaining XML components (globals already registered for theme init)
+    LV_LOG_USER("Registering remaining XML components...");
 
     // Register responsive constants (AFTER globals, BEFORE components that use them)
     ui_switch_register_responsive_constants();

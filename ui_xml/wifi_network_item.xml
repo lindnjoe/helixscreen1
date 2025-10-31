@@ -63,7 +63,7 @@
 			<lv_label name="security_label"
 			          width="100%"
 			          style_text_font="montserrat_12"
-			          style_text_color="#text_muted"/>
+			          style_text_color="#text_secondary"/>
 		</lv_obj>
 
 		<!-- Lock icon (right) - shown for secured networks -->

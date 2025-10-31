@@ -19,6 +19,11 @@
 -->
 
 <component>
+	<!-- Local Constants -->
+	<consts>
+		<color name="success_color" value="#00FF00"/>
+	</consts>
+
 	<!-- Test panel for step progress widget demonstrations -->
 	<view extends="lv_obj"
 	      width="100%"
@@ -94,7 +99,6 @@
 			<lv_button name="btn_prev"
 			           width="140"
 			           height="#button_height_normal"
-			           style_bg_color="#button_secondary_bg"
 			           style_radius="#card_radius">
 				<lv_label text="Previous" align="center"/>
 			</lv_button>

@@ -141,6 +141,12 @@
 	<string name="font_body" value="montserrat_16" />
 	<string name="font_small" value="montserrat_10" />
 
+	<!-- Theme colors -->
+	<color name="primary_color" value="#FF4444" />
+	<color name="secondary_color" value="#00AAFF" />
+	<color name="text_primary" value="#FFFFFF" />
+	<color name="text_secondary" value="#AAAAAA" />
+
 	<!-- Component dimensions -->
 	<px name="header_height" value="60" />
 	<!-- Standard header bar height -->

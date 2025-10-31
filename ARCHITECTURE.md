@@ -54,19 +54,57 @@ ui_panel_nozzle_update(210);  // All bound widgets update automatically
 - One update propagates to multiple UI elements
 - Clean separation between data and presentation
 
-### 3. Global Theme System
+### 3. LVGL Theme Integration
 
-All styling constants are defined centrally in `ui_xml/globals.xml`:
+HelixScreen uses LVGL 9's built-in theme system for automatic widget styling:
+
+**Architecture:** XML → C++ → LVGL Theme
 
 ```xml
+<!-- ui_xml/globals.xml - Single source of truth for theme values -->
 <consts>
-  <color name="primary_color" value="0xff4444"/>
-  <color name="bg_dark" value="0x1a1a1a"/>
-  <px name="nav_width" value="102"/>
+  <color name="primary_color" value="..."/>
+  <color name="secondary_color" value="..."/>
+  <color name="text_primary" value="..."/>
+  <color name="text_secondary" value="..."/>
+  <str name="font_body" value="..."/>
+  <str name="font_heading" value="..."/>
+  <str name="font_small" value="..."/>
 </consts>
 ```
 
-Referenced throughout XML files with `#name` syntax. Change the entire UI theme by editing one file.
+```cpp
+// src/ui_theme.cpp - Reads XML constants at runtime
+void ui_theme_init(lv_display_t* display, bool dark_mode) {
+    // Read colors from globals.xml
+    const char* primary_str = lv_xml_get_const(NULL, "primary_color");
+    lv_color_t primary_color = ui_theme_parse_color(primary_str);
+
+    // Initialize LVGL default theme
+    lv_theme_default_init(display, primary_color, secondary_color, dark_mode, base_font);
+}
+```
+
+**Benefits:**
+- ✅ **No recompilation needed** - Edit `globals.xml` to change theme colors
+- ✅ **Automatic styling** - Widgets inherit coordinated styles from theme
+- ✅ **Dark/Light mode** - Runtime theme switching support
+- ✅ **Responsive padding** - Theme auto-adjusts spacing based on screen resolution
+- ✅ **State-based styling** - Automatic pressed/disabled/checked states
+
+**Theme Customization:**
+- **Colors:** `primary_color`, `secondary_color`, `text_primary`, `text_secondary` defined in globals.xml
+- **Fonts:** `font_heading`, `font_body`, `font_small` for manual widget styling when needed
+- **Mode:** Dark/light mode controlled via config file or command-line flags
+
+**Config Persistence:**
+Theme preference saved to `helixconfig.json` and restored on next launch:
+```json
+{
+  "dark_mode": true,
+  ...
+}
+```
 
 ## Component Hierarchy
 

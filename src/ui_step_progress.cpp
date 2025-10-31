@@ -258,14 +258,14 @@ lv_obj_t* ui_step_progress_create(lv_obj_t* parent,
         snprintf(num_buf, sizeof(num_buf), "%d", i + 1);  // 1-indexed step numbers
         lv_label_set_text(step_number, num_buf);
         lv_obj_align(step_number, LV_ALIGN_CENTER, 0, 0);
-        lv_obj_set_style_text_font(step_number, UI_FONT_MEDIUM, 0);
+        lv_obj_set_style_text_font(step_number, UI_FONT_BODY, 0);
         lv_obj_set_style_text_color(step_number, lv_color_hex(0xffffff), 0);
 
         // Create checkmark label (shown for COMPLETED state)
         lv_obj_t* checkmark = lv_label_create(circle);
         lv_label_set_text(checkmark, LV_SYMBOL_OK);  // LVGL built-in checkmark symbol
         lv_obj_align(checkmark, LV_ALIGN_CENTER, 0, 0);
-        lv_obj_set_style_text_font(checkmark, UI_FONT_MEDIUM, 0);
+        lv_obj_set_style_text_font(checkmark, UI_FONT_BODY, 0);
         lv_obj_set_style_text_color(checkmark, lv_color_hex(0xffffff), 0);
         lv_obj_add_flag(checkmark, LV_OBJ_FLAG_HIDDEN);  // Hidden by default
 

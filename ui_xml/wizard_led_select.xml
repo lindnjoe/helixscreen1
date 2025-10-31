@@ -70,7 +70,7 @@
 		<lv_label text="This is optional - you can configure LEDs later"
 		          width="100%"
 		          style_text_font="montserrat_16"
-		          style_text_color="#text_muted"
+		          style_text_color="#text_secondary"
 		          style_pad_top="#gap_normal"/>
 
 	</view>
