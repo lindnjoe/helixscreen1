@@ -25,7 +25,8 @@ using namespace hv;
 
 MoonrakerClient::MoonrakerClient(EventLoopPtr loop)
     : WebSocketClient(loop)
-    , request_id_(0) {
+    , request_id_(0)
+    , was_connected_(false) {
 }
 
 MoonrakerClient::~MoonrakerClient() {
@@ -40,6 +41,7 @@ int MoonrakerClient::connect(const char* url,
   onopen = [this, on_connected, url]() {
     const HttpResponsePtr& resp = getHttpResponse();
     spdlog::info("Moonraker WebSocket connected to {}: {}", url, resp->body.c_str());
+    was_connected_ = true;
     on_connected();
   };
 
@@ -102,9 +104,15 @@ int MoonrakerClient::connect(const char* url,
   };
 
   // Connection closed callback
-  onclose = [on_disconnected]() {
-    spdlog::warn("Moonraker WebSocket connection closed");
-    on_disconnected();
+  onclose = [this, on_disconnected]() {
+    if (was_connected_) {
+      spdlog::warn("Moonraker WebSocket connection closed");
+      was_connected_ = false;
+      on_disconnected();
+    } else {
+      spdlog::debug("Moonraker WebSocket connection failed (printer not available)");
+      // Don't call on_disconnected() - we were never connected in the first place
+    }
   };
 
   // WebSocket ping (keepalive)

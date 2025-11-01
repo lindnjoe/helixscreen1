@@ -97,7 +97,6 @@ void ui_wizard_container_register_responsive_constants() {
     int32_t greater_res = LV_MAX(hor_res, ver_res);
 
     // 2. Determine responsive values based on breakpoint
-    const char* list_item_padding;
     const char* header_height;
     const char* footer_height;
     const char* button_width;
@@ -106,13 +105,10 @@ void ui_wizard_container_register_responsive_constants() {
     const char* wifi_card_height;
     const char* wifi_ethernet_height;
     const char* wifi_toggle_height;
-    const char* network_title_font;
-    const char* network_item_height;
     const char* network_icon_size;
     const char* size_label;
 
     if (greater_res <= UI_BREAKPOINT_SMALL_MAX) {  // ≤480: 480x320
-        list_item_padding = "4";
         header_height = "32";
         footer_height = "72";  // header + 40
         button_width = "110";
@@ -121,12 +117,9 @@ void ui_wizard_container_register_responsive_constants() {
         wifi_card_height = "80";
         wifi_ethernet_height = "70";
         wifi_toggle_height = "32";
-        network_title_font = "montserrat_14";
-        network_item_height = "60";
         network_icon_size = "20";
         size_label = "SMALL";
     } else if (greater_res <= UI_BREAKPOINT_MEDIUM_MAX) {  // 481-800: 800x480
-        list_item_padding = "6";
         header_height = "42";
         footer_height = "82";  // header + 40
         button_width = "140";
@@ -135,12 +128,9 @@ void ui_wizard_container_register_responsive_constants() {
         wifi_card_height = "120";
         wifi_ethernet_height = "100";
         wifi_toggle_height = "48";
-        network_title_font = "montserrat_16";
-        network_item_height = "80";
         network_icon_size = "24";
         size_label = "MEDIUM";
     } else {  // >800: 1024x600+
-        list_item_padding = "8";
         header_height = "48";
         footer_height = "88";  // header + 40
         button_width = "160";
@@ -149,8 +139,6 @@ void ui_wizard_container_register_responsive_constants() {
         wifi_card_height = "140";
         wifi_ethernet_height = "120";
         wifi_toggle_height = "64";
-        network_title_font = lv_xml_get_const(NULL, "font_body");
-        network_item_height = "100";
         network_icon_size = "32";
         size_label = "LARGE";
     }
@@ -166,7 +154,6 @@ void ui_wizard_container_register_responsive_constants() {
         // Layout dimensions
         {"wizard_padding", padding_value},
         {"wizard_gap", gap_value},
-        {"list_item_padding", list_item_padding},
         {"wizard_header_height", header_height},
         {"wizard_footer_height", footer_height},
         {"wizard_button_width", button_width},
@@ -177,9 +164,7 @@ void ui_wizard_container_register_responsive_constants() {
         {"wifi_toggle_height", wifi_toggle_height},
         {"wifi_card_height", wifi_card_height},
         {"wifi_ethernet_height", wifi_ethernet_height},
-        {"network_item_height", network_item_height},
         {"network_icon_size", network_icon_size},
-        {"wifi_network_title_font", network_title_font},
         {NULL, NULL}  // Sentinel
     };
 
@@ -188,6 +173,8 @@ void ui_wizard_container_register_responsive_constants() {
     register_constants_to_scope(parent_scope, constants);
 
     // 6. Define child components that inherit these constants
+    // Note: WiFi network list constants (list_item_padding, list_item_height, list_item_font)
+    //       are registered separately by ui_wizard_wifi_register_responsive_constants()
     const char* children[] = {
         "wizard_wifi_setup",
         "wizard_connection",
@@ -210,7 +197,7 @@ void ui_wizard_container_register_responsive_constants() {
         }
     }
 
-    spdlog::info("[Wizard] Registered 14 constants to wizard_container and propagated to {} children", child_count);
+    spdlog::info("[Wizard] Registered 11 constants to wizard_container and propagated to {} child components", child_count);
     spdlog::debug("[Wizard] Values: padding={}, gap={}, header_h={}, footer_h={}, button_w={}",
                   padding_value, gap_value, header_height, footer_height, button_width);
 }

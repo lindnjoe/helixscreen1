@@ -170,6 +170,9 @@ private:
   // Auto-incrementing JSON-RPC request ID
   std::atomic_uint64_t request_id_;
 
+  // Connection state tracking
+  std::atomic_bool was_connected_;
+
   // Auto-discovered printer objects
   std::vector<std::string> heaters_;   // Controllable heaters (extruders, bed, etc.)
   std::vector<std::string> sensors_;   // Read-only temperature sensors

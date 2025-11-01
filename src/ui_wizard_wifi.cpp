@@ -33,6 +33,21 @@
 // Static Data & Subjects
 // ============================================================================
 
+// Helper type for constant name/value pairs
+struct WifiConstant {
+    const char* name;
+    const char* value;
+};
+
+// Helper: Register array of constants to a scope
+static void register_wifi_constants_to_scope(lv_xml_component_scope_t* scope,
+                                             const WifiConstant* constants) {
+    if (!scope) return;
+    for (int i = 0; constants[i].name != NULL; i++) {
+        lv_xml_register_const(scope, constants[i].name, constants[i].value);
+    }
+}
+
 // Subject declarations (module scope)
 static lv_subject_t wifi_enabled;
 static lv_subject_t wifi_status;
@@ -139,12 +154,91 @@ void ui_wizard_wifi_register_callbacks() {
     spdlog::info("[WiFi Screen] Callbacks registered");
 }
 
+void ui_wizard_wifi_register_responsive_constants() {
+    spdlog::debug("[WiFi Screen] Registering responsive constants to WiFi network list scopes");
+
+    // 1. Detect screen size using custom breakpoints
+    lv_display_t* display = lv_display_get_default();
+    int32_t hor_res = lv_display_get_horizontal_resolution(display);
+    int32_t ver_res = lv_display_get_vertical_resolution(display);
+    int32_t greater_res = LV_MAX(hor_res, ver_res);
+
+    // 2. Determine responsive values based on breakpoint
+    const char* list_item_padding;
+    const char* list_item_font;
+    const char* size_label;
+
+    // Buffer for calculated height value (static for persistence beyond this scope)
+    static char list_item_height_buf[16];
+
+    if (greater_res <= UI_BREAKPOINT_SMALL_MAX) {  // ≤480: 480x320
+        list_item_padding = "4";
+        list_item_font = "montserrat_14";
+        size_label = "SMALL";
+    } else if (greater_res <= UI_BREAKPOINT_MEDIUM_MAX) {  // 481-800: 800x480
+        list_item_padding = "6";
+        list_item_font = "montserrat_16";
+        size_label = "MEDIUM";
+    } else {  // >800: 1024x600+
+        list_item_padding = "8";
+        list_item_font = lv_xml_get_const(NULL, "font_body");
+        size_label = "LARGE";
+    }
+
+    // Calculate list_item_height based on font height (1:1 ratio)
+    // Padding (list_item_padding) provides vertical spacing between items
+    const lv_font_t* item_font_ptr = lv_xml_get_font(NULL, list_item_font);
+    if (item_font_ptr) {
+        int32_t font_height = ui_theme_get_font_height(item_font_ptr);
+        snprintf(list_item_height_buf, sizeof(list_item_height_buf), "%d", font_height);
+        spdlog::debug("[WiFi Screen] Calculated list_item_height={}px from font_height ({})",
+                      font_height, list_item_font);
+    } else {
+        // Fallback to hardcoded values if font not found
+        const char* fallback_height = (greater_res <= UI_BREAKPOINT_SMALL_MAX) ? "60" :
+                                      (greater_res <= UI_BREAKPOINT_MEDIUM_MAX) ? "80" : "100";
+        snprintf(list_item_height_buf, sizeof(list_item_height_buf), "%s", fallback_height);
+        spdlog::warn("[WiFi Screen] Failed to get font '{}', using fallback list_item_height={}",
+                     list_item_font, fallback_height);
+    }
+    const char* list_item_height = list_item_height_buf;
+
+    // 3. Define WiFi-specific constants in array
+    WifiConstant constants[] = {
+        {"list_item_padding", list_item_padding},
+        {"list_item_height", list_item_height},
+        {"list_item_font", list_item_font},
+        {NULL, NULL}  // Sentinel
+    };
+
+    // 4. Register to wifi_network_item scope
+    lv_xml_component_scope_t* item_scope = lv_xml_component_get_scope("wifi_network_item");
+    register_wifi_constants_to_scope(item_scope, constants);
+
+    // 5. Register to wizard_wifi_setup scope (for network_list_container)
+    lv_xml_component_scope_t* wifi_setup_scope = lv_xml_component_get_scope("wizard_wifi_setup");
+    register_wifi_constants_to_scope(wifi_setup_scope, constants);
+
+    spdlog::info("[WiFi Screen] Registered 3 constants to wifi_network_item and wizard_wifi_setup scopes ({})",
+                 size_label);
+    spdlog::debug("[WiFi Screen] Values: list_item_padding={}, list_item_height={}, list_item_font={}",
+                  list_item_padding, list_item_height, list_item_font);
+}
+
 lv_obj_t* ui_wizard_wifi_create(lv_obj_t* parent) {
     spdlog::debug("[WiFi Screen] Creating WiFi setup screen");
 
     if (!parent) {
         spdlog::error("[WiFi Screen] Cannot create: null parent");
         return nullptr;
+    }
+
+    // Register wifi_network_item component FIRST (needed for constant registration)
+    static bool network_item_registered = false;
+    if (!network_item_registered) {
+        lv_xml_register_component_from_file("A:ui_xml/wifi_network_item.xml");
+        network_item_registered = true;
+        spdlog::debug("[WiFi Screen] Registered wifi_network_item component");
     }
 
     // Create WiFi screen from XML
@@ -154,6 +248,10 @@ lv_obj_t* ui_wizard_wifi_create(lv_obj_t* parent) {
         spdlog::error("[WiFi Screen] Failed to create wizard_wifi_setup from XML");
         return nullptr;
     }
+
+    // Register responsive constants for WiFi network list
+    // Must be done AFTER components are registered but before creating network items
+    ui_wizard_wifi_register_responsive_constants();
 
     // Find password modal (hidden by default in XML)
     password_modal = lv_obj_find_by_name(wifi_screen_root, "wifi_password_modal");
@@ -496,13 +594,6 @@ static void populate_network_list(const std::vector<WiFiNetwork>& networks) {
     if (!network_list_container) {
         spdlog::error("[WiFi Screen] Network list container not found");
         return;
-    }
-
-    // Register wifi_network_item component if not already registered
-    static bool component_registered = false;
-    if (!component_registered) {
-        lv_xml_register_component_from_file("A:ui_xml/wifi_network_item.xml");
-        component_registered = true;
     }
 
     // Clear existing network items

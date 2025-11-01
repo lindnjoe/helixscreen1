@@ -70,6 +70,22 @@ void ui_wizard_wifi_init_subjects();
 void ui_wizard_wifi_register_callbacks();
 
 /**
+ * Register responsive constants for WiFi network list
+ *
+ * Detects screen size and registers WiFi-specific constants:
+ * - list_item_padding (vertical spacing between network items)
+ * - list_item_height (calculated from font height using ui_theme_get_font_height())
+ * - list_item_font (responsive font for network SSID labels)
+ *
+ * Constants are registered to wifi_network_item and wizard_wifi_setup scopes only,
+ * keeping WiFi-specific values isolated from wizard_container scope.
+ *
+ * MUST be called AFTER wizard_wifi_setup.xml is loaded (during ui_wizard_wifi_create())
+ * but BEFORE creating dynamic network items.
+ */
+void ui_wizard_wifi_register_responsive_constants();
+
+/**
  * Create WiFi setup screen
  *
  * Creates the WiFi UI from wizard_wifi_setup.xml.
