@@ -76,6 +76,10 @@ static std::unique_ptr<EthernetManager> ethernet_manager = nullptr;
 static char current_ssid[64] = "";
 static bool current_secured = false;
 
+// Theme-aware colors (loaded from component-local XML constants)
+static lv_color_t wifi_item_bg_color;
+static lv_color_t wifi_item_text_color;
+
 // Per-instance network item data (reactive approach)
 // Each network item gets its own subject set for reactive UI updates
 struct NetworkItemData {
@@ -142,6 +146,37 @@ static const char* get_wifi_signal_icon(int signal_strength, bool is_secured) {
 }
 
 /**
+ * @brief Initialize theme-aware colors from component scope
+ *
+ * Loads WiFi network item colors from wifi_network_item.xml component-local constants.
+ * Supports light/dark mode with graceful fallback to defaults.
+ */
+static void init_wifi_item_colors() {
+    lv_xml_component_scope_t* scope = lv_xml_component_get_scope("wifi_network_item");
+    if (scope) {
+        bool use_dark_mode = ui_theme_is_dark_mode();
+
+        // Load background color
+        const char* bg_str = lv_xml_get_const(scope, use_dark_mode ? "wifi_item_bg_dark" : "wifi_item_bg_light");
+        wifi_item_bg_color = bg_str ? ui_theme_parse_color(bg_str) : lv_color_hex(0x262626);
+
+        // Load text color
+        const char* text_str = lv_xml_get_const(scope, use_dark_mode ? "wifi_item_text_dark" : "wifi_item_text_light");
+        wifi_item_text_color = text_str ? ui_theme_parse_color(text_str) : lv_color_hex(0xE3E3E3);
+
+        spdlog::debug("[WiFi] Item colors loaded: bg={}, text={} ({})",
+                     bg_str ? bg_str : "default",
+                     text_str ? text_str : "default",
+                     use_dark_mode ? "dark" : "light");
+    } else {
+        // Fallback to defaults if scope not found
+        wifi_item_bg_color = lv_color_hex(0x262626);
+        wifi_item_text_color = lv_color_hex(0xE3E3E3);
+        spdlog::warn("[WiFi] Failed to get wifi_network_item component scope, using defaults");
+    }
+}
+
+/**
  * @brief Apply visual highlight to connected network item
  * @param item The network item widget to highlight
  *
@@ -156,16 +191,14 @@ static void apply_connected_network_highlight(lv_obj_t* item) {
     lv_color_t accent = ui_theme_get_color("primary_color");
     lv_obj_set_style_border_color(item, accent, LV_PART_MAIN);
 
-    // Slightly lighter background for card-like effect
-    lv_color_t bg = lv_color_hex(0x262626);  // Lighter than card_bg_dark (#131313)
-    lv_obj_set_style_bg_color(item, bg, LV_PART_MAIN);
+    // Slightly lighter background for card-like effect (theme-aware)
+    lv_obj_set_style_bg_color(item, wifi_item_bg_color, LV_PART_MAIN);
     lv_obj_set_style_bg_opa(item, LV_OPA_COVER, LV_PART_MAIN);
 
-    // Brighter text for SSID
+    // Brighter text for SSID (theme-aware)
     lv_obj_t* ssid_label = lv_obj_find_by_name(item, "ssid_label");
     if (ssid_label) {
-        lv_color_t bright_text = lv_color_hex(0xE3E3E3);  // Brighter than text_primary
-        lv_obj_set_style_text_color(ssid_label, bright_text, LV_PART_MAIN);
+        lv_obj_set_style_text_color(ssid_label, wifi_item_text_color, LV_PART_MAIN);
     }
 
     spdlog::trace("[WiFi Screen] Applied connected network highlight");
@@ -193,6 +226,9 @@ void ui_wizard_wifi_init_subjects() {
     lv_xml_register_subject(nullptr, "wifi_status", &wifi_status);
     lv_xml_register_subject(nullptr, "ethernet_status", &ethernet_status);
     lv_xml_register_subject(nullptr, "wifi_scanning", &wifi_scanning);
+
+    // Initialize theme-aware colors for WiFi network items
+    init_wifi_item_colors();
 
     spdlog::info("[WiFi Screen] Subjects initialized");
 }

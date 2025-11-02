@@ -23,6 +23,17 @@
 	<!-- Displays network SSID, signal strength icon, and security status -->
 	<!-- Subjects are created per-instance in C++ and bound programmatically -->
 
+	<!-- Component-local constants for theme-aware colors -->
+	<consts>
+		<!-- WiFi list item background color (slightly lighter than card background) -->
+		<const name="wifi_item_bg_light" value="#F5F5F5"/>
+		<const name="wifi_item_bg_dark" value="#262626"/>
+
+		<!-- WiFi list item text color (brighter than default text) -->
+		<const name="wifi_item_text_light" value="#1A1A1A"/>
+		<const name="wifi_item_text_dark" value="#E3E3E3"/>
+	</consts>
+
 	<view extends="lv_button"
 	      width="100%"
 	      scrollable="false"
