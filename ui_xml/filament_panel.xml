@@ -23,6 +23,15 @@
   <!-- Filament Management Panel -->
   <!-- Two-column layout: left (visualization + status), right (controls) -->
 
+  <!-- Component-local constants for label sizing -->
+  <consts>
+    <!-- Generic label heights for consistent text sizing in status displays -->
+    <px name="label_height_xs" value="16"/>
+    <px name="label_height_sm" value="20"/>
+    <px name="label_height_md" value="24"/>
+    <px name="label_height_lg" value="32"/>
+  </consts>
+
   <view extends="lv_obj"
         name="filament_panel"
         width="100%"

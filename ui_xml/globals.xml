@@ -52,11 +52,11 @@
 
 	<!-- Non-responsive padding (static across all screen sizes) -->
 	<px name="padding_medium" value="12" />  <!-- Medium padding for buttons/flex items -->
-	
-	<px name="printer_img_size" value="400" />
-	<px name="accent_bar_width" value="4" />
+
+	<!-- printer_img_size moved to home_panel.xml -->
+	<!-- accent_bar_width moved to home_panel.xml -->
 	<px name="accent_bar_height" value="28" />
-	<px name="accent_bar_gap" value="18" />
+	<!-- accent_bar_gap moved to home_panel.xml -->
 	<percentage name="card_width" value="45%" />
 	<percentage name="card_height" value="80%" />
 
@@ -86,12 +86,7 @@
 	<px name="print_file_card_thumb_3col" value="83" />
 	<px name="print_file_card_gap_3col" value="12" />
 
-	<!-- Generic label heights for consistent text sizing -->
-	<!-- TODO: Refactor panels to use these instead of hardcoded heights -->
-	<px name="label_height_xs" value="16" />
-	<px name="label_height_sm" value="20" />
-	<px name="label_height_md" value="24" />
-	<px name="label_height_lg" value="32" />
+	<!-- label_height_* moved to filament_panel.xml -->
 
 	<!-- Button dimensions -->
 	<px name="button_height" value="50" />
