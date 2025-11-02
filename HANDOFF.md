@@ -54,9 +54,15 @@
 **Globals cleanup:**
 - ui_xml/globals.xml - 27 constants moved/deleted
 
+**Milestone 8: Extracted Jog Pad Widget (commit 1c2a281)**
+- Created reusable ui_jog_pad.h/.cpp widget (759 lines)
+- Reduced motion_panel.cpp from ~890 to ~400 lines (-55%)
+- Widget API: callbacks, distance control, theme-aware colors
+- Two-zone design: inner/outer rings for 1mm/10mm jogs
+- 8 directional zones + center home button
+
 ### Remaining Refactoring Tasks
 
-- Extract jog pad to separate reusable widget
 - Refactor keypad to button matrix (260→40 lines)
 - Test all changes with --dark/--light on all screen sizes
 
