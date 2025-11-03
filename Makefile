@@ -159,13 +159,13 @@ ifeq ($(UNAME_S),Darwin)
 
     CFLAGS += $(MACOS_DEPLOYMENT_TARGET)
     CXXFLAGS += $(MACOS_DEPLOYMENT_TARGET)
-    LDFLAGS := $(SDL2_LIBS) $(LIBHV_LIB) -lm -lpthread -framework Foundation -framework CoreFoundation -framework Security -framework CoreWLAN -framework CoreLocation
+    LDFLAGS := $(SDL2_LIBS) -lm -lpthread -framework Foundation -framework CoreFoundation -framework Security -framework CoreWLAN -framework CoreLocation
     PLATFORM := macOS
     WPA_DEPS :=
 else
     # Linux - Include libwpa_client.a for WiFi control
     NPROC := $(shell nproc 2>/dev/null || echo 4)
-    LDFLAGS := $(SDL2_LIBS) $(LIBHV_LIB) $(WPA_CLIENT_LIB) -lm -lpthread
+    LDFLAGS := $(SDL2_LIBS) $(WPA_CLIENT_LIB) -lm -lpthread
     PLATFORM := Linux
     WPA_DEPS := $(WPA_CLIENT_LIB)
 endif

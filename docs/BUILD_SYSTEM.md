@@ -91,10 +91,11 @@ This **interactively installs** missing dependencies:
 4. Asks for confirmation before proceeding
 5. Installs system packages via brew/apt/dnf
 6. Runs `npm install` for lv_font_conv/lv_img_conv
-7. Builds libhv if needed
-8. Initializes git submodules if needed
+7. Initializes git submodules if needed
 
 **Smart Canvas Detection**: Uses `pkg-config` to detect exactly which canvas libraries are missing and only installs what's needed.
+
+**Automatic Builds**: Git submodules (libhv, wpa_supplicant, spdlog) are built automatically by the main build system when missing - no manual intervention needed.
 
 ### Test Harness
 
@@ -491,9 +492,7 @@ Before building, the system automatically checks for required dependencies:
 **Required:**
 - `clang` / `clang++` - C/C++ compiler with C++17 support
 - `sdl2-config` - SDL2 development libraries
-- `libhv` - WebSocket client library (symlinked from parent repo)
-- `spdlog` - Logging library (symlinked from parent repo)
-- LVGL submodule
+- Git submodules: `lvgl`, `libhv`, `spdlog`, `wpa_supplicant` (auto-built by build system)
 
 **Optional:**
 - `bear` - For generating `compile_commands.json`
@@ -527,11 +526,12 @@ If dependencies are missing, the check provides installation instructions.
 
 The project uses git submodules for external dependencies:
 
-- `lvgl` - LVGL 9.3 graphics library (with patches)
-- `libhv` - HTTP/WebSocket client (symlinked from parent repo)
-- `spdlog` - Logging library (symlinked from parent repo)
+- `lvgl` - LVGL 9.4 graphics library (with automatic patches)
+- `libhv` - HTTP/WebSocket client library (auto-built)
+- `spdlog` - Logging library
+- `wpa_supplicant` - WiFi control (Linux only, auto-built)
 
-**Important**: Submodule patches are applied automatically by the build system. Never commit changes directly to submodules - always create patches instead.
+**Automatic handling**: Submodule dependencies are built automatically when missing. Patches are applied automatically before builds. Never commit changes directly to submodules - always create patches instead.
 
 ### SDL2
 
