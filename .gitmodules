@@ -1,0 +1,13 @@
+[submodule "lvgl"]
+	path = lvgl
+	url = https://github.com/lvgl/lvgl.git
+[submodule "libhv"]
+	path = libhv
+	url = https://github.com/ithewei/libhv.git
+[submodule "wpa_supplicant"]
+	path = wpa_supplicant
+	url = git://w1.fi/hostap.git
+[submodule "spdlog"]
+	path = spdlog
+	url = https://github.com/gabime/spdlog.git
+	branch = fmt-11.2.0
