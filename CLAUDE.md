@@ -185,21 +185,33 @@ This is the **LVGL 9 UI Prototype** for HelixScreen - a declarative XML-based to
 **Build & Run**:
 
 ```bash
-make -j                          # Parallel build
+make -j                          # Parallel incremental build (daily development)
+make build                       # Clean parallel build with progress/timing
 ./build/bin/helix-ui-proto       # Run (default: home panel, small screen)
 ./build/bin/helix-ui-proto -p motion -s large  # Specific panel/size
 ```
 
 **Common commands**:
-- `make -j` - Parallel build (auto-detects cores)
-- `make build` - Clean build
+- `make -j` - Parallel incremental build (auto-detects cores)
+- `make build` - Clean build from scratch
 - `make help` - Show all targets
 - **NEVER invoke compilers directly** - always use `make`
 
 **Binary**: `build/bin/helix-ui-proto`
 **Panels**: home, controls, motion, nozzle-temp, bed-temp, extrusion, filament, settings, advanced, print-select
 
-**Screenshots**: Use `./scripts/screenshot.sh helix-ui-proto output [panel_name]` (see DEVELOPMENT.md)
+**Screenshots**:
+```bash
+# Interactive: Press 'S' in running UI
+./build/bin/helix-ui-proto
+
+# Automated: Script takes screenshot after 2s, quits after 3s
+./scripts/screenshot.sh helix-ui-proto output-name [panel_name]
+./scripts/screenshot.sh helix-ui-proto home home
+./scripts/screenshot.sh helix-ui-proto motion motion -s small
+```
+
+See **DEVELOPMENT.md** section "Screenshot Workflow" for complete details.
 
 ## Architecture
 
