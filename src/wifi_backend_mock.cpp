@@ -215,10 +215,10 @@ WiFiError WifiBackendMock::connect_network(const std::string& ssid, const std::s
     connecting_ssid_ = ssid;
     connecting_password_ = password;
 
-    // Clean up any existing connect thread
+    // Cancel any existing connect thread (non-blocking)
     connect_active_ = false;
     if (connect_thread_.joinable()) {
-        connect_thread_.join();
+        connect_thread_.detach();  // Don't block - let old thread finish on its own
     }
 
     // Launch async connect thread (simulates 2-3 second delay)

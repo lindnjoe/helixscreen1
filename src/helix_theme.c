@@ -28,6 +28,7 @@ typedef struct {
     lv_theme_t base;            // Base LVGL theme structure (MUST be first)
     lv_theme_t* default_theme;  // LVGL default theme to delegate to
     lv_style_t input_bg_style;  // Custom style for input widget backgrounds
+    lv_style_t disabled_style;  // Global disabled state style (50% opacity)
     bool is_dark_mode;          // Track theme mode for context
 } helix_theme_t;
 
@@ -78,6 +79,9 @@ static void helix_theme_apply(lv_theme_t* theme, lv_obj_t* obj) {
         helix->default_theme->apply_cb(helix->default_theme, obj);
     }
 
+    // Apply global disabled state styling (50% opacity for all widgets)
+    lv_obj_add_style(obj, &helix->disabled_style, LV_PART_MAIN | LV_STATE_DISABLED);
+
     // Now override input widgets to use our custom background color
 #if LV_USE_TEXTAREA
     if (lv_obj_check_type(obj, &lv_textarea_class)) {
@@ -123,6 +127,7 @@ lv_theme_t* helix_theme_init(
     // Clean up previous theme instance if exists
     if (helix_theme_instance) {
         lv_style_reset(&helix_theme_instance->input_bg_style);
+        lv_style_reset(&helix_theme_instance->disabled_style);
         free(helix_theme_instance);
         helix_theme_instance = NULL;
     }
@@ -170,6 +175,10 @@ lv_theme_t* helix_theme_init(
     lv_style_init(&helix_theme_instance->input_bg_style);
     lv_style_set_bg_color(&helix_theme_instance->input_bg_style, input_bg);
     lv_style_set_bg_opa(&helix_theme_instance->input_bg_style, LV_OPA_COVER);
+
+    // Initialize global disabled state style (50% opacity)
+    lv_style_init(&helix_theme_instance->disabled_style);
+    lv_style_set_opa(&helix_theme_instance->disabled_style, LV_OPA_50);
 
     // CRITICAL: Now we need to patch the default theme's color fields
     // This is necessary because LVGL's default theme bakes colors into pre-computed

@@ -55,6 +55,8 @@ static lv_subject_t wifi_enabled;
 static lv_subject_t wifi_status;
 static lv_subject_t ethernet_status;
 static lv_subject_t wifi_scanning;  // 0=not scanning, 1=scanning
+static lv_subject_t wifi_password_modal_visible;  // 0=hidden, 1=visible (reactive modal control)
+static lv_subject_t wifi_connecting;  // 0=idle, 1=connecting (disables Connect button)
 
 // String buffers (must be persistent)
 static char wifi_status_buffer[64];
@@ -126,6 +128,28 @@ static void clear_network_list();
 // ============================================================================
 // Helper Functions
 // ============================================================================
+
+/**
+ * @brief Get WiFi status text from XML enum
+ * @param status_name Enum name (e.g., "enabled", "disabled", "scanning")
+ * @return Status text from XML enum, or fallback string if not found
+ */
+static const char* get_status_text(const char* status_name) {
+    static char enum_key[64];
+    snprintf(enum_key, sizeof(enum_key), "wifi_status.%s", status_name);
+
+    // Get the wizard_wifi_setup component scope
+    lv_xml_component_scope_t* scope = lv_xml_component_get_scope("wizard_wifi_setup");
+    const char* text = lv_xml_get_const(scope, enum_key);
+
+    if (!text) {
+        spdlog::warn("[WiFi Screen] Enum constant '{}' not found, using fallback", enum_key);
+        return status_name;
+    }
+
+    spdlog::debug("[WiFi Screen] Enum '{}' = '{}'", enum_key, text);
+    return text;
+}
 
 /**
  * @brief Map WiFi signal strength percentage to Material icon name
@@ -214,9 +238,11 @@ void ui_wizard_wifi_init_subjects() {
     // Initialize subjects with defaults
     lv_subject_init_int(&wifi_enabled, 0);   // WiFi off by default
     lv_subject_init_int(&wifi_scanning, 0);  // Not scanning by default
+    lv_subject_init_int(&wifi_password_modal_visible, 0);  // Modal hidden by default
+    lv_subject_init_int(&wifi_connecting, 0);  // Not connecting by default
 
     lv_subject_init_string(&wifi_status, wifi_status_buffer, nullptr,
-                           sizeof(wifi_status_buffer), "WiFi Disabled");
+                           sizeof(wifi_status_buffer), get_status_text("disabled"));
 
     lv_subject_init_string(&ethernet_status, ethernet_status_buffer, nullptr,
                            sizeof(ethernet_status_buffer), "Checking...");
@@ -226,6 +252,8 @@ void ui_wizard_wifi_init_subjects() {
     lv_xml_register_subject(nullptr, "wifi_status", &wifi_status);
     lv_xml_register_subject(nullptr, "ethernet_status", &ethernet_status);
     lv_xml_register_subject(nullptr, "wifi_scanning", &wifi_scanning);
+    lv_xml_register_subject(nullptr, "wifi_password_modal_visible", &wifi_password_modal_visible);
+    lv_xml_register_subject(nullptr, "wifi_connecting", &wifi_connecting);
 
     spdlog::info("[WiFi Screen] Subjects initialized");
 }
@@ -446,14 +474,22 @@ void ui_wizard_wifi_show_password_modal(const char* ssid) {
         return;
     }
 
+    // Show modal reactively (sets subject to trigger bind_flag_if_eq)
+    lv_subject_set_int(&wifi_password_modal_visible, 1);
+
     // Find password input and register keyboard
     lv_obj_t* password_input = lv_obj_find_by_name(password_modal, "password_input");
     if (password_input) {
         lv_textarea_set_text(password_input, "");
         // Register with modal keyboard system (handles automatic positioning)
         ui_modal_register_keyboard(password_modal, password_input);
-        // Focus textarea to trigger keyboard
-        lv_obj_add_state(password_input, LV_STATE_FOCUSED);
+
+        // Focus textarea to trigger keyboard (must use group focus, not just add state)
+        lv_group_t* group = lv_group_get_default();
+        if (group) {
+            lv_group_focus_obj(password_input);
+            spdlog::debug("[WiFi Screen] Focused password input via group");
+        }
     }
 
     // Wire up cancel button
@@ -477,6 +513,10 @@ void ui_wizard_wifi_hide_password_modal() {
     }
 
     spdlog::debug("[WiFi Screen] Hiding password modal");
+
+    // Hide modal reactively (sets subject to trigger bind_flag_if_eq)
+    lv_subject_set_int(&wifi_password_modal_visible, 0);
+
     ui_modal_hide(password_modal);
     password_modal = nullptr;
 }
@@ -501,11 +541,11 @@ static void on_wifi_toggle_changed(lv_event_t* e) {
 
     if (checked) {
         // Enable WiFi
-        update_wifi_status("Enabling WiFi...");
+        update_wifi_status(get_status_text("enabled"));
 
         if (wifi_manager) {
             wifi_manager->set_enabled(true);
-            update_wifi_status("WiFi Enabled");
+            update_wifi_status(get_status_text("enabled"));
 
             // Show scanning indicator
             lv_subject_set_int(&wifi_scanning, 1);
@@ -528,7 +568,7 @@ static void on_wifi_toggle_changed(lv_event_t* e) {
         }
     } else {
         // Disable WiFi
-        update_wifi_status("WiFi Disabled");
+        update_wifi_status(get_status_text("disabled"));
         lv_subject_set_int(&wifi_scanning, 0);  // Stop scanning indicator
         clear_network_list();
 
@@ -560,9 +600,9 @@ static void on_network_item_clicked(lv_event_t* e) {
     current_ssid[sizeof(current_ssid) - 1] = '\0';
     current_secured = network.is_secured;
 
-    // Update WiFi status
+    // Update WiFi status (read base text from XML enum, append SSID)
     char status_buf[128];
-    snprintf(status_buf, sizeof(status_buf), "Connecting to %s...", network.ssid.c_str());
+    snprintf(status_buf, sizeof(status_buf), "%s%s", get_status_text("connecting"), network.ssid.c_str());
     update_wifi_status(status_buf);
 
     if (network.is_secured) {
@@ -574,7 +614,7 @@ static void on_network_item_clicked(lv_event_t* e) {
             wifi_manager->connect(network.ssid, "", [](bool success, const std::string& error) {
                 if (success) {
                     char msg[128];
-                    snprintf(msg, sizeof(msg), "Connected to %s", current_ssid);
+                    snprintf(msg, sizeof(msg), "%s%s", get_status_text("connected"), current_ssid);
                     update_wifi_status(msg);
                     spdlog::info("[WiFi Screen] Connected to {}", current_ssid);
                 } else {
@@ -593,7 +633,18 @@ static void on_network_item_clicked(lv_event_t* e) {
 
 static void on_modal_cancel_clicked(lv_event_t* e) {
     (void)e;
-    spdlog::debug("[WiFi Screen] Password modal cancel clicked");
+    spdlog::debug("[WiFi Screen] Password modal cancel clicked - canceling connection");
+
+    // Cancel the connection attempt
+    if (wifi_manager) {
+        wifi_manager->disconnect();
+        spdlog::info("[WiFi Screen] Disconnecting from '{}'", current_ssid);
+    }
+
+    // Reset status to idle (read from XML enum)
+    update_wifi_status(get_status_text("enabled"));
+
+    // Hide modal
     ui_wizard_wifi_hide_password_modal();
 }
 
@@ -626,6 +677,15 @@ static void on_modal_connect_clicked(lv_event_t* e) {
 
     spdlog::debug("[WiFi Screen] Attempting to connect to {} with password", current_ssid);
 
+    // Disable Connect button while connecting
+    lv_subject_set_int(&wifi_connecting, 1);
+
+    // Disable button while connecting (theme applies 50% opacity automatically)
+    lv_obj_t* connect_btn = lv_obj_find_by_name(password_modal, "modal_connect_btn");
+    if (connect_btn) {
+        lv_obj_add_state(connect_btn, LV_STATE_DISABLED);
+    }
+
     // Update WiFi status
     char status_buf[128];
     snprintf(status_buf, sizeof(status_buf), "Connecting to %s...", current_ssid);
@@ -634,12 +694,21 @@ static void on_modal_connect_clicked(lv_event_t* e) {
     // Attempt connection
     if (wifi_manager) {
         wifi_manager->connect(current_ssid, password, [](bool success, const std::string& error) {
+            // Re-enable Connect button
+            lv_subject_set_int(&wifi_connecting, 0);
+
+            // Re-enable the button
+            lv_obj_t* connect_btn = lv_obj_find_by_name(password_modal, "modal_connect_btn");
+            if (connect_btn) {
+                lv_obj_remove_state(connect_btn, LV_STATE_DISABLED);
+            }
+
             if (success) {
                 // Connection successful - hide modal and update status
                 ui_wizard_wifi_hide_password_modal();
 
                 char msg[128];
-                snprintf(msg, sizeof(msg), "Connected to %s", current_ssid);
+                snprintf(msg, sizeof(msg), "%s%s", get_status_text("connected"), current_ssid);
                 update_wifi_status(msg);
                 spdlog::info("[WiFi Screen] Connected to {}", current_ssid);
             } else {
