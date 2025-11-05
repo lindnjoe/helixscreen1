@@ -30,6 +30,7 @@ typedef struct {
     lv_style_t input_bg_style;  // Custom style for input widget backgrounds
     lv_style_t disabled_style;  // Global disabled state style (50% opacity)
     lv_style_t pressed_style;   // Global pressed state style (preserve radius)
+    lv_style_t button_style;    // Default button style (grey background)
     bool is_dark_mode;          // Track theme mode for context
 } helix_theme_t;
 
@@ -83,10 +84,12 @@ static void helix_theme_apply(lv_theme_t* theme, lv_obj_t* obj) {
     // Apply global disabled state styling (50% opacity for all widgets)
     lv_obj_add_style(obj, &helix->disabled_style, LV_PART_MAIN | LV_STATE_DISABLED);
 
-    // Apply radius preservation for buttons (both default and pressed states)
+    // Apply button styling (grey background + radius preservation)
 #if LV_USE_BUTTON
     if (lv_obj_check_type(obj, &lv_button_class)) {
-        lv_obj_add_style(obj, &helix->pressed_style, LV_PART_MAIN);
+        // Default button style: grey background
+        lv_obj_add_style(obj, &helix->button_style, LV_PART_MAIN);
+        // Preserve radius on press
         lv_obj_add_style(obj, &helix->pressed_style, LV_PART_MAIN | LV_STATE_PRESSED);
     }
 #endif
@@ -138,6 +141,7 @@ lv_theme_t* helix_theme_init(
         lv_style_reset(&helix_theme_instance->input_bg_style);
         lv_style_reset(&helix_theme_instance->disabled_style);
         lv_style_reset(&helix_theme_instance->pressed_style);
+        lv_style_reset(&helix_theme_instance->button_style);
         free(helix_theme_instance);
         helix_theme_instance = NULL;
     }
@@ -193,6 +197,12 @@ lv_theme_t* helix_theme_init(
     // Initialize global pressed state style (preserve radius=8 for buttons)
     lv_style_init(&helix_theme_instance->pressed_style);
     lv_style_set_radius(&helix_theme_instance->pressed_style, 8);
+
+    // Initialize default button style (grey background, radius=8)
+    lv_style_init(&helix_theme_instance->button_style);
+    lv_style_set_bg_color(&helix_theme_instance->button_style, theme_grey);
+    lv_style_set_bg_opa(&helix_theme_instance->button_style, LV_OPA_COVER);
+    lv_style_set_radius(&helix_theme_instance->button_style, 8);
 
     // CRITICAL: Now we need to patch the default theme's color fields
     // This is necessary because LVGL's default theme bakes colors into pre-computed

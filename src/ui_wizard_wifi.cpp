@@ -56,11 +56,13 @@ static lv_subject_t wifi_status;
 static lv_subject_t ethernet_status;
 static lv_subject_t wifi_scanning;  // 0=not scanning, 1=scanning
 static lv_subject_t wifi_password_modal_visible;  // 0=hidden, 1=visible (reactive modal control)
+static lv_subject_t wifi_password_modal_ssid;  // SSID for password modal (reactive)
 static lv_subject_t wifi_connecting;  // 0=idle, 1=connecting (disables Connect button)
 
 // String buffers (must be persistent)
 static char wifi_status_buffer[64];
 static char ethernet_status_buffer[64];
+static char wifi_password_modal_ssid_buffer[64];
 
 // WiFi screen instance
 static lv_obj_t* wifi_screen_root = nullptr;
@@ -241,6 +243,8 @@ void ui_wizard_wifi_init_subjects() {
     lv_subject_init_int(&wifi_password_modal_visible, 0);  // Modal hidden by default
     lv_subject_init_int(&wifi_connecting, 0);  // Not connecting by default
 
+    lv_subject_init_string(&wifi_password_modal_ssid, wifi_password_modal_ssid_buffer, nullptr,
+                          sizeof(wifi_password_modal_ssid_buffer), "");  // SSID for password modal
     lv_subject_init_string(&wifi_status, wifi_status_buffer, nullptr,
                            sizeof(wifi_status_buffer), get_status_text("disabled"));
 
@@ -253,6 +257,7 @@ void ui_wizard_wifi_init_subjects() {
     lv_xml_register_subject(nullptr, "ethernet_status", &ethernet_status);
     lv_xml_register_subject(nullptr, "wifi_scanning", &wifi_scanning);
     lv_xml_register_subject(nullptr, "wifi_password_modal_visible", &wifi_password_modal_visible);
+    lv_xml_register_subject(nullptr, "wifi_password_modal_ssid", &wifi_password_modal_ssid);
     lv_xml_register_subject(nullptr, "wifi_connecting", &wifi_connecting);
 
     spdlog::info("[WiFi Screen] Subjects initialized");
@@ -473,6 +478,9 @@ void ui_wizard_wifi_show_password_modal(const char* ssid) {
         spdlog::error("[WiFi Screen] Failed to create password modal");
         return;
     }
+
+    // Set SSID reactively (bind_text in XML will update modal_ssid label)
+    lv_subject_copy_string(&wifi_password_modal_ssid, ssid);
 
     // Show modal reactively (sets subject to trigger bind_flag_if_eq)
     lv_subject_set_int(&wifi_password_modal_visible, 1);
