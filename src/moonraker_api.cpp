@@ -187,7 +187,7 @@ void MoonrakerAPI::list_files(const std::string& root,
                               ErrorCallback on_error) {
     // Validate root parameter
     if (!is_safe_identifier(root)) {
-        spdlog::error("Invalid root name: {}", root);
+        spdlog::error("[Moonraker API] Invalid root name: {}", root);
         if (on_error) {
             MoonrakerError err;
             err.type = MoonrakerErrorType::VALIDATION_ERROR;
@@ -200,7 +200,7 @@ void MoonrakerAPI::list_files(const std::string& root,
 
     // Validate path if provided
     if (!path.empty() && !is_safe_path(path)) {
-        spdlog::error("Invalid path: {}", path);
+        spdlog::error("[Moonraker API] Invalid path: {}", path);
         if (on_error) {
             MoonrakerError err;
             err.type = MoonrakerErrorType::VALIDATION_ERROR;
@@ -223,16 +223,16 @@ void MoonrakerAPI::list_files(const std::string& root,
         params["extended"] = true;
     }
 
-    spdlog::debug("Listing files in {}/{}", root, path);
+    spdlog::debug("[Moonraker API] Listing files in {}/{}", root, path);
 
     client_.send_jsonrpc("server.files.list", params,
         [this, on_success](json response) {
             try {
                 std::vector<FileInfo> files = parse_file_list(response);
-                spdlog::debug("Found {} files", files.size());
+                spdlog::debug("[Moonraker API] Found {} files", files.size());
                 on_success(files);
             } catch (const std::exception& e) {
-                spdlog::error("Failed to parse file list: {}", e.what());
+                spdlog::error("[Moonraker API] Failed to parse file list: {}", e.what());
                 on_success(std::vector<FileInfo>{});  // Return empty list on parse error
             }
         },
@@ -245,7 +245,7 @@ void MoonrakerAPI::get_file_metadata(const std::string& filename,
                                      ErrorCallback on_error) {
     // Validate filename path
     if (!is_safe_path(filename)) {
-        spdlog::error("Invalid filename: {}", filename);
+        spdlog::error("[Moonraker API] Invalid filename: {}", filename);
         if (on_error) {
             MoonrakerError err;
             err.type = MoonrakerErrorType::VALIDATION_ERROR;
@@ -260,7 +260,7 @@ void MoonrakerAPI::get_file_metadata(const std::string& filename,
         {"filename", filename}
     };
 
-    spdlog::debug("Getting metadata for file: {}", filename);
+    spdlog::debug("[Moonraker API] Getting metadata for file: {}", filename);
 
     client_.send_jsonrpc("server.files.metadata", params,
         [this, on_success](json response) {
@@ -268,7 +268,7 @@ void MoonrakerAPI::get_file_metadata(const std::string& filename,
                 FileMetadata metadata = parse_file_metadata(response);
                 on_success(metadata);
             } catch (const std::exception& e) {
-                spdlog::error("Failed to parse file metadata: {}", e.what());
+                spdlog::error("[Moonraker API] Failed to parse file metadata: {}", e.what());
                 FileMetadata empty;
                 on_success(empty);
             }
@@ -282,7 +282,7 @@ void MoonrakerAPI::delete_file(const std::string& filename,
                                ErrorCallback on_error) {
     // Validate filename path
     if (!is_safe_path(filename)) {
-        spdlog::error("Invalid filename: {}", filename);
+        spdlog::error("[Moonraker API] Invalid filename: {}", filename);
         if (on_error) {
             MoonrakerError err;
             err.type = MoonrakerErrorType::VALIDATION_ERROR;
@@ -297,11 +297,11 @@ void MoonrakerAPI::delete_file(const std::string& filename,
         {"path", filename}
     };
 
-    spdlog::info("Deleting file: {}", filename);
+    spdlog::info("[Moonraker API] Deleting file: {}", filename);
 
     client_.send_jsonrpc("server.files.delete_file", params,
         [on_success](json) {
-            spdlog::info("File deleted successfully");
+            spdlog::info("[Moonraker API] File deleted successfully");
             on_success();
         },
         on_error
@@ -314,7 +314,7 @@ void MoonrakerAPI::move_file(const std::string& source,
                              ErrorCallback on_error) {
     // Validate source path
     if (!is_safe_path(source)) {
-        spdlog::error("Invalid source path: {}", source);
+        spdlog::error("[Moonraker API] Invalid source path: {}", source);
         if (on_error) {
             MoonrakerError err;
             err.type = MoonrakerErrorType::VALIDATION_ERROR;
@@ -327,7 +327,7 @@ void MoonrakerAPI::move_file(const std::string& source,
 
     // Validate destination path
     if (!is_safe_path(dest)) {
-        spdlog::error("Invalid destination path: {}", dest);
+        spdlog::error("[Moonraker API] Invalid destination path: {}", dest);
         if (on_error) {
             MoonrakerError err;
             err.type = MoonrakerErrorType::VALIDATION_ERROR;
@@ -338,7 +338,7 @@ void MoonrakerAPI::move_file(const std::string& source,
         return;
     }
 
-    spdlog::info("Moving file from {} to {}", source, dest);
+    spdlog::info("[Moonraker API] Moving file from {} to {}", source, dest);
 
     json params = {
         {"source", source},
@@ -347,7 +347,7 @@ void MoonrakerAPI::move_file(const std::string& source,
 
     client_.send_jsonrpc("server.files.move", params,
         [on_success](json) {
-            spdlog::info("File moved successfully");
+            spdlog::info("[Moonraker API] File moved successfully");
             on_success();
         },
         on_error
@@ -360,7 +360,7 @@ void MoonrakerAPI::copy_file(const std::string& source,
                              ErrorCallback on_error) {
     // Validate source path
     if (!is_safe_path(source)) {
-        spdlog::error("Invalid source path: {}", source);
+        spdlog::error("[Moonraker API] Invalid source path: {}", source);
         if (on_error) {
             MoonrakerError err;
             err.type = MoonrakerErrorType::VALIDATION_ERROR;
@@ -373,7 +373,7 @@ void MoonrakerAPI::copy_file(const std::string& source,
 
     // Validate destination path
     if (!is_safe_path(dest)) {
-        spdlog::error("Invalid destination path: {}", dest);
+        spdlog::error("[Moonraker API] Invalid destination path: {}", dest);
         if (on_error) {
             MoonrakerError err;
             err.type = MoonrakerErrorType::VALIDATION_ERROR;
@@ -384,7 +384,7 @@ void MoonrakerAPI::copy_file(const std::string& source,
         return;
     }
 
-    spdlog::info("Copying file from {} to {}", source, dest);
+    spdlog::info("[Moonraker API] Copying file from {} to {}", source, dest);
 
     json params = {
         {"source", source},
@@ -393,7 +393,7 @@ void MoonrakerAPI::copy_file(const std::string& source,
 
     client_.send_jsonrpc("server.files.copy", params,
         [on_success](json) {
-            spdlog::info("File copied successfully");
+            spdlog::info("[Moonraker API] File copied successfully");
             on_success();
         },
         on_error
@@ -405,7 +405,7 @@ void MoonrakerAPI::create_directory(const std::string& path,
                                     ErrorCallback on_error) {
     // Validate path
     if (!is_safe_path(path)) {
-        spdlog::error("Invalid directory path: {}", path);
+        spdlog::error("[Moonraker API] Invalid directory path: {}", path);
         if (on_error) {
             MoonrakerError err;
             err.type = MoonrakerErrorType::VALIDATION_ERROR;
@@ -416,7 +416,7 @@ void MoonrakerAPI::create_directory(const std::string& path,
         return;
     }
 
-    spdlog::info("Creating directory: {}", path);
+    spdlog::info("[Moonraker API] Creating directory: {}", path);
 
     json params = {
         {"path", path}
@@ -424,7 +424,7 @@ void MoonrakerAPI::create_directory(const std::string& path,
 
     client_.send_jsonrpc("server.files.post_directory", params,
         [on_success](json) {
-            spdlog::info("Directory created successfully");
+            spdlog::info("[Moonraker API] Directory created successfully");
             on_success();
         },
         on_error
@@ -437,7 +437,7 @@ void MoonrakerAPI::delete_directory(const std::string& path,
                                     ErrorCallback on_error) {
     // Validate path
     if (!is_safe_path(path)) {
-        spdlog::error("Invalid directory path: {}", path);
+        spdlog::error("[Moonraker API] Invalid directory path: {}", path);
         if (on_error) {
             MoonrakerError err;
             err.type = MoonrakerErrorType::VALIDATION_ERROR;
@@ -448,7 +448,7 @@ void MoonrakerAPI::delete_directory(const std::string& path,
         return;
     }
 
-    spdlog::info("Deleting directory: {} (force: {})", path, force);
+    spdlog::info("[Moonraker API] Deleting directory: {} (force: {})", path, force);
 
     json params = {
         {"path", path},
@@ -457,7 +457,7 @@ void MoonrakerAPI::delete_directory(const std::string& path,
 
     client_.send_jsonrpc("server.files.delete_directory", params,
         [on_success](json) {
-            spdlog::info("Directory deleted successfully");
+            spdlog::info("[Moonraker API] Directory deleted successfully");
             on_success();
         },
         on_error
@@ -473,7 +473,7 @@ void MoonrakerAPI::start_print(const std::string& filename,
                                ErrorCallback on_error) {
     // Validate filename path
     if (!is_safe_path(filename)) {
-        spdlog::error("Invalid filename: {}", filename);
+        spdlog::error("[Moonraker API] Invalid filename: {}", filename);
         if (on_error) {
             MoonrakerError err;
             err.type = MoonrakerErrorType::VALIDATION_ERROR;
@@ -488,11 +488,11 @@ void MoonrakerAPI::start_print(const std::string& filename,
         {"filename", filename}
     };
 
-    spdlog::info("Starting print: {}", filename);
+    spdlog::info("[Moonraker API] Starting print: {}", filename);
 
     client_.send_jsonrpc("printer.print.start", params,
         [on_success](json) {
-            spdlog::info("Print started successfully");
+            spdlog::info("[Moonraker API] Print started successfully");
             on_success();
         },
         on_error
@@ -501,11 +501,11 @@ void MoonrakerAPI::start_print(const std::string& filename,
 
 void MoonrakerAPI::pause_print(SuccessCallback on_success,
                                ErrorCallback on_error) {
-    spdlog::info("Pausing print");
+    spdlog::info("[Moonraker API] Pausing print");
 
     client_.send_jsonrpc("printer.print.pause", json::object(),
         [on_success](json) {
-            spdlog::info("Print paused successfully");
+            spdlog::info("[Moonraker API] Print paused successfully");
             on_success();
         },
         on_error
@@ -514,11 +514,11 @@ void MoonrakerAPI::pause_print(SuccessCallback on_success,
 
 void MoonrakerAPI::resume_print(SuccessCallback on_success,
                                 ErrorCallback on_error) {
-    spdlog::info("Resuming print");
+    spdlog::info("[Moonraker API] Resuming print");
 
     client_.send_jsonrpc("printer.print.resume", json::object(),
         [on_success](json) {
-            spdlog::info("Print resumed successfully");
+            spdlog::info("[Moonraker API] Print resumed successfully");
             on_success();
         },
         on_error
@@ -527,11 +527,11 @@ void MoonrakerAPI::resume_print(SuccessCallback on_success,
 
 void MoonrakerAPI::cancel_print(SuccessCallback on_success,
                                 ErrorCallback on_error) {
-    spdlog::info("Canceling print");
+    spdlog::info("[Moonraker API] Canceling print");
 
     client_.send_jsonrpc("printer.print.cancel", json::object(),
         [on_success](json) {
-            spdlog::info("Print canceled successfully");
+            spdlog::info("[Moonraker API] Print canceled successfully");
             on_success();
         },
         on_error
@@ -549,7 +549,7 @@ void MoonrakerAPI::home_axes(const std::string& axes,
     if (!axes.empty()) {
         for (char axis : axes) {
             if (!is_valid_axis(axis)) {
-                spdlog::error("Invalid axis in homing command: {}", axis);
+                spdlog::error("[Moonraker API] Invalid axis in homing command: {}", axis);
                 if (on_error) {
                     MoonrakerError err;
                     err.type = MoonrakerErrorType::VALIDATION_ERROR;
@@ -563,7 +563,7 @@ void MoonrakerAPI::home_axes(const std::string& axes,
     }
 
     std::string gcode = generate_home_gcode(axes);
-    spdlog::info("Homing axes: {} (G-code: {})", axes.empty() ? "all" : axes, gcode);
+    spdlog::info("[Moonraker API] Homing axes: {} (G-code: {})", axes.empty() ? "all" : axes, gcode);
 
     execute_gcode(gcode, on_success, on_error);
 }
@@ -575,7 +575,7 @@ void MoonrakerAPI::move_axis(char axis,
                              ErrorCallback on_error) {
     // Validate axis
     if (!is_valid_axis(axis)) {
-        spdlog::error("Invalid axis: {}", axis);
+        spdlog::error("[Moonraker API] Invalid axis: {}", axis);
         if (on_error) {
             MoonrakerError err;
             err.type = MoonrakerErrorType::VALIDATION_ERROR;
@@ -588,7 +588,7 @@ void MoonrakerAPI::move_axis(char axis,
 
     // Validate distance is within safety limits
     if (!is_safe_distance(distance, safety_limits_)) {
-        spdlog::error("Distance {}mm exceeds safety limits ({} to {}mm)",
+        spdlog::error("[Moonraker API] Distance {}mm exceeds safety limits ({} to {}mm)",
                       distance, safety_limits_.min_relative_distance_mm,
                       safety_limits_.max_relative_distance_mm);
         if (on_error) {
@@ -605,7 +605,7 @@ void MoonrakerAPI::move_axis(char axis,
 
     // Validate feedrate if specified (0 means use default, negative is invalid)
     if (feedrate != 0 && !is_safe_feedrate(feedrate, safety_limits_)) {
-        spdlog::error("Feedrate {}mm/min exceeds safety limits ({} to {}mm/min)",
+        spdlog::error("[Moonraker API] Feedrate {}mm/min exceeds safety limits ({} to {}mm/min)",
                       feedrate, safety_limits_.min_feedrate_mm_min,
                       safety_limits_.max_feedrate_mm_min);
         if (on_error) {
@@ -621,7 +621,7 @@ void MoonrakerAPI::move_axis(char axis,
     }
 
     std::string gcode = generate_move_gcode(axis, distance, feedrate);
-    spdlog::info("Moving axis {} by {}mm (G-code: {})", axis, distance, gcode);
+    spdlog::info("[Moonraker API] Moving axis {} by {}mm (G-code: {})", axis, distance, gcode);
 
     execute_gcode(gcode, on_success, on_error);
 }
@@ -633,7 +633,7 @@ void MoonrakerAPI::move_to_position(char axis,
                                     ErrorCallback on_error) {
     // Validate axis
     if (!is_valid_axis(axis)) {
-        spdlog::error("Invalid axis: {}", axis);
+        spdlog::error("[Moonraker API] Invalid axis: {}", axis);
         if (on_error) {
             MoonrakerError err;
             err.type = MoonrakerErrorType::VALIDATION_ERROR;
@@ -646,7 +646,7 @@ void MoonrakerAPI::move_to_position(char axis,
 
     // Validate position is within safety limits
     if (!is_safe_position(position, safety_limits_)) {
-        spdlog::error("Position {}mm exceeds safety limits ({} to {}mm)",
+        spdlog::error("[Moonraker API] Position {}mm exceeds safety limits ({} to {}mm)",
                       position, safety_limits_.min_absolute_position_mm,
                       safety_limits_.max_absolute_position_mm);
         if (on_error) {
@@ -663,7 +663,7 @@ void MoonrakerAPI::move_to_position(char axis,
 
     // Validate feedrate if specified (0 means use default, negative is invalid)
     if (feedrate != 0 && !is_safe_feedrate(feedrate, safety_limits_)) {
-        spdlog::error("Feedrate {}mm/min exceeds safety limits ({} to {}mm/min)",
+        spdlog::error("[Moonraker API] Feedrate {}mm/min exceeds safety limits ({} to {}mm/min)",
                       feedrate, safety_limits_.min_feedrate_mm_min,
                       safety_limits_.max_feedrate_mm_min);
         if (on_error) {
@@ -679,7 +679,7 @@ void MoonrakerAPI::move_to_position(char axis,
     }
 
     std::string gcode = generate_absolute_move_gcode(axis, position, feedrate);
-    spdlog::info("Moving axis {} to {}mm (G-code: {})", axis, position, gcode);
+    spdlog::info("[Moonraker API] Moving axis {} to {}mm (G-code: {})", axis, position, gcode);
 
     execute_gcode(gcode, on_success, on_error);
 }
@@ -694,7 +694,7 @@ void MoonrakerAPI::set_temperature(const std::string& heater,
                                    ErrorCallback on_error) {
     // Validate heater name
     if (!is_safe_identifier(heater)) {
-        spdlog::error("Invalid heater name: {}", heater);
+        spdlog::error("[Moonraker API] Invalid heater name: {}", heater);
         if (on_error) {
             MoonrakerError err;
             err.type = MoonrakerErrorType::VALIDATION_ERROR;
@@ -707,7 +707,7 @@ void MoonrakerAPI::set_temperature(const std::string& heater,
 
     // Validate temperature range
     if (!is_safe_temperature(temperature, safety_limits_)) {
-        spdlog::error("Temperature {}°C exceeds safety limits ({} to {}°C)",
+        spdlog::error("[Moonraker API] Temperature {}°C exceeds safety limits ({} to {}°C)",
                       temperature, safety_limits_.min_temperature_celsius,
                       safety_limits_.max_temperature_celsius);
         if (on_error) {
@@ -726,7 +726,7 @@ void MoonrakerAPI::set_temperature(const std::string& heater,
     std::ostringstream gcode;
     gcode << "SET_HEATER_TEMPERATURE HEATER=" << heater << " TARGET=" << temperature;
 
-    spdlog::info("Setting {} temperature to {}°C", heater, temperature);
+    spdlog::info("[Moonraker API] Setting {} temperature to {}°C", heater, temperature);
 
     execute_gcode(gcode.str(), on_success, on_error);
 }
@@ -737,7 +737,7 @@ void MoonrakerAPI::set_fan_speed(const std::string& fan,
                                  ErrorCallback on_error) {
     // Validate fan name
     if (!is_safe_identifier(fan)) {
-        spdlog::error("Invalid fan name: {}", fan);
+        spdlog::error("[Moonraker API] Invalid fan name: {}", fan);
         if (on_error) {
             MoonrakerError err;
             err.type = MoonrakerErrorType::VALIDATION_ERROR;
@@ -750,7 +750,7 @@ void MoonrakerAPI::set_fan_speed(const std::string& fan,
 
     // Validate speed percentage
     if (!is_safe_fan_speed(speed, safety_limits_)) {
-        spdlog::error("Fan speed {}% exceeds safety limits ({} to {}%)",
+        spdlog::error("[Moonraker API] Fan speed {}% exceeds safety limits ({} to {}%)",
                       speed, safety_limits_.min_fan_speed_percent,
                       safety_limits_.max_fan_speed_percent);
         if (on_error) {
@@ -778,7 +778,7 @@ void MoonrakerAPI::set_fan_speed(const std::string& fan,
         gcode << "SET_FAN_SPEED FAN=" << fan << " SPEED=" << (speed / 100.0);
     }
 
-    spdlog::info("Setting {} speed to {}%", fan, speed);
+    spdlog::info("[Moonraker API] Setting {} speed to {}%", fan, speed);
 
     execute_gcode(gcode.str(), on_success, on_error);
 }
@@ -794,7 +794,7 @@ void MoonrakerAPI::execute_gcode(const std::string& gcode,
         {"script", gcode}
     };
 
-    spdlog::debug("Executing G-code: {}", gcode);
+    spdlog::debug("[Moonraker API] Executing G-code: {}", gcode);
 
     client_.send_jsonrpc("printer.gcode.script", params,
         [on_success](json) {
@@ -806,11 +806,11 @@ void MoonrakerAPI::execute_gcode(const std::string& gcode,
 
 void MoonrakerAPI::emergency_stop(SuccessCallback on_success,
                                   ErrorCallback on_error) {
-    spdlog::warn("Emergency stop requested!");
+    spdlog::warn("[Moonraker API] Emergency stop requested!");
 
     client_.send_jsonrpc("printer.emergency_stop", json::object(),
         [on_success](json) {
-            spdlog::info("Emergency stop executed");
+            spdlog::info("[Moonraker API] Emergency stop executed");
             on_success();
         },
         on_error
@@ -819,11 +819,11 @@ void MoonrakerAPI::emergency_stop(SuccessCallback on_success,
 
 void MoonrakerAPI::restart_firmware(SuccessCallback on_success,
                                     ErrorCallback on_error) {
-    spdlog::info("Restarting firmware");
+    spdlog::info("[Moonraker API] Restarting firmware");
 
     client_.send_jsonrpc("printer.firmware_restart", json::object(),
         [on_success](json) {
-            spdlog::info("Firmware restart initiated");
+            spdlog::info("[Moonraker API] Firmware restart initiated");
             on_success();
         },
         on_error
@@ -832,11 +832,11 @@ void MoonrakerAPI::restart_firmware(SuccessCallback on_success,
 
 void MoonrakerAPI::restart_klipper(SuccessCallback on_success,
                                    ErrorCallback on_error) {
-    spdlog::info("Restarting Klipper");
+    spdlog::info("[Moonraker API] Restarting Klipper");
 
     client_.send_jsonrpc("printer.restart", json::object(),
         [on_success](json) {
-            spdlog::info("Klipper restart initiated");
+            spdlog::info("[Moonraker API] Klipper restart initiated");
             on_success();
         },
         on_error
@@ -889,7 +889,7 @@ void MoonrakerAPI::update_safety_limits_from_printer(SuccessCallback on_success,
                                                      ErrorCallback on_error) {
     // Only update if limits haven't been explicitly set
     if (limits_explicitly_set_) {
-        spdlog::debug("Safety limits explicitly configured, skipping Moonraker auto-detection");
+        spdlog::debug("[Moonraker API] Safety limits explicitly configured, skipping Moonraker auto-detection");
         if (on_success) {
             on_success();
         }
@@ -910,7 +910,7 @@ void MoonrakerAPI::update_safety_limits_from_printer(SuccessCallback on_success,
                     !response["result"].contains("status") ||
                     !response["result"]["status"].contains("configfile") ||
                     !response["result"]["status"]["configfile"].contains("settings")) {
-                    spdlog::warn("Printer configuration not available, using default safety limits");
+                    spdlog::warn("[Moonraker API] Printer configuration not available, using default safety limits");
                     if (on_success) {
                         on_success();
                     }
@@ -925,7 +925,7 @@ void MoonrakerAPI::update_safety_limits_from_printer(SuccessCallback on_success,
                     double max_velocity_mm_s = settings["printer"]["max_velocity"].get<double>();
                     safety_limits_.max_feedrate_mm_min = max_velocity_mm_s * 60.0;
                     updated = true;
-                    spdlog::info("Updated max_feedrate from printer config: {} mm/min",
+                    spdlog::info("[Moonraker API] Updated max_feedrate from printer config: {} mm/min",
                                  safety_limits_.max_feedrate_mm_min);
                 }
 
@@ -976,25 +976,25 @@ void MoonrakerAPI::update_safety_limits_from_printer(SuccessCallback on_success,
                 }
 
                 if (updated) {
-                    spdlog::info("Updated safety limits from printer configuration:");
-                    spdlog::info("  Temperature: {} to {}°C",
+                    spdlog::info("[Moonraker API] Updated safety limits from printer configuration:");
+                    spdlog::info("[Moonraker API]   Temperature: {} to {}°C",
                                  safety_limits_.min_temperature_celsius,
                                  safety_limits_.max_temperature_celsius);
-                    spdlog::info("  Position: {} to {}mm",
+                    spdlog::info("[Moonraker API]   Position: {} to {}mm",
                                  safety_limits_.min_absolute_position_mm,
                                  safety_limits_.max_absolute_position_mm);
-                    spdlog::info("  Feedrate: {} to {} mm/min",
+                    spdlog::info("[Moonraker API]   Feedrate: {} to {} mm/min",
                                  safety_limits_.min_feedrate_mm_min,
                                  safety_limits_.max_feedrate_mm_min);
                 } else {
-                    spdlog::debug("No safety limit overrides found in printer config, using defaults");
+                    spdlog::debug("[Moonraker API] No safety limit overrides found in printer config, using defaults");
                 }
 
                 if (on_success) {
                     on_success();
                 }
             } catch (const std::exception& e) {
-                spdlog::error("Failed to parse printer configuration for safety limits: {}", e.what());
+                spdlog::error("[Moonraker API] Failed to parse printer configuration for safety limits: {}", e.what());
                 if (on_success) {
                     on_success();  // Continue with defaults on parse error
                 }

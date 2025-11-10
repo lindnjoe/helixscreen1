@@ -37,7 +37,7 @@ MoonrakerClient::MoonrakerClient(EventLoopPtr loop)
 
 MoonrakerClient::~MoonrakerClient() {
   // Cleanup any pending requests before destruction
-  spdlog::debug("MoonrakerClient destructor: {} pending requests", pending_requests_.size());
+  spdlog::debug("[Moonraker Client] Destructor: {} pending requests", pending_requests_.size());
   cleanup_pending_requests();
 }
 
@@ -46,7 +46,7 @@ void MoonrakerClient::set_connection_state(ConnectionState new_state) {
 
   if (old_state != new_state) {
     const char* state_names[] = {"DISCONNECTED", "CONNECTING", "CONNECTED", "RECONNECTING", "FAILED"};
-    spdlog::debug("Connection state: {} -> {}",
+    spdlog::debug("[Moonraker Client] Connection state: {} -> {}",
                   state_names[static_cast<int>(old_state)],
                   state_names[static_cast<int>(new_state)]);
 
@@ -54,7 +54,7 @@ void MoonrakerClient::set_connection_state(ConnectionState new_state) {
     if (new_state == ConnectionState::RECONNECTING) {
       reconnect_attempts_++;
       if (max_reconnect_attempts_ > 0 && reconnect_attempts_ >= max_reconnect_attempts_) {
-        spdlog::error("Max reconnect attempts ({}) exceeded", max_reconnect_attempts_);
+        spdlog::error("[Moonraker Client] Max reconnect attempts ({}) exceeded", max_reconnect_attempts_);
         set_connection_state(ConnectionState::FAILED);
         return;
       }
@@ -67,9 +67,9 @@ void MoonrakerClient::set_connection_state(ConnectionState new_state) {
       try {
         state_change_callback_(old_state, new_state);
       } catch (const std::exception& e) {
-        spdlog::error("State change callback threw exception: {}", e.what());
+        spdlog::error("[Moonraker Client] State change callback threw exception: {}", e.what());
       } catch (...) {
-        spdlog::error("State change callback threw unknown exception");
+        spdlog::error("[Moonraker Client] State change callback threw unknown exception");
       }
     }
   }
@@ -78,13 +78,13 @@ void MoonrakerClient::set_connection_state(ConnectionState new_state) {
 int MoonrakerClient::connect(const char* url,
                                std::function<void()> on_connected,
                                std::function<void()> on_disconnected) {
-  spdlog::debug("Moonraker WebSocket connecting to {}", url);
+  spdlog::debug("[Moonraker Client] WebSocket connecting to {}", url);
   set_connection_state(ConnectionState::CONNECTING);
 
   // Connection opened callback
   onopen = [this, on_connected, url]() {
     const HttpResponsePtr& resp = getHttpResponse();
-    spdlog::info("Moonraker WebSocket connected to {}: {}", url, resp->body.c_str());
+    spdlog::info("[Moonraker Client] WebSocket connected to {}: {}", url, resp->body.c_str());
     was_connected_ = true;
     set_connection_state(ConnectionState::CONNECTED);
     on_connected();
@@ -97,7 +97,7 @@ int MoonrakerClient::connect(const char* url,
     try {
       j = json::parse(msg);
     } catch (const json::parse_error& e) {
-      spdlog::error("JSON parse error: {}", e.what());
+      spdlog::error("[Moonraker Client] JSON parse error: {}", e.what());
       return;
     }
 
@@ -134,7 +134,7 @@ int MoonrakerClient::connect(const char* url,
 
       // Invoke callbacks outside the lock to avoid deadlock
       if (has_error) {
-        spdlog::error("Request {} failed: {}", method_name, error.message);
+        spdlog::error("[Moonraker Client] Request {} failed: {}", method_name, error.message);
         if (error_cb) {
           error_cb(error);
         }
@@ -161,12 +161,12 @@ int MoonrakerClient::connect(const char* url,
       }
       // Klippy disconnected from Moonraker
       else if (method == "notify_klippy_disconnected") {
-        spdlog::warn("Klipper disconnected from Moonraker");
+        spdlog::warn("[Moonraker Client] Klipper disconnected from Moonraker");
         on_disconnected();
       }
       // Klippy reconnected to Moonraker
       else if (method == "notify_klippy_ready") {
-        spdlog::info("Klipper ready");
+        spdlog::info("[Moonraker Client] Klipper ready");
         on_connected();
       }
 
@@ -188,7 +188,7 @@ int MoonrakerClient::connect(const char* url,
     cleanup_pending_requests();
 
     if (was_connected_) {
-      spdlog::warn("Moonraker WebSocket connection closed");
+      spdlog::warn("[Moonraker Client] WebSocket connection closed");
       was_connected_ = false;
 
       // Check if this is a reconnection scenario
@@ -198,13 +198,17 @@ int MoonrakerClient::connect(const char* url,
 
       on_disconnected();
     } else {
-      spdlog::debug("Moonraker WebSocket connection failed (printer not available)");
+      spdlog::debug("[Moonraker Client] WebSocket connection failed (printer not available)");
 
       // Initial connection failed
       if (current == ConnectionState::CONNECTING) {
         set_connection_state(ConnectionState::DISCONNECTED);
       }
-      // Don't call on_disconnected() - we were never connected in the first place
+
+      // Call on_disconnected() to notify about connection failure
+      // Callers can use their own state tracking (e.g. connection_testing flag)
+      // to distinguish initial connection failures from reconnection scenarios
+      on_disconnected();
     }
   };
 
@@ -233,13 +237,13 @@ void MoonrakerClient::register_method_callback(const std::string& method,
                                                 std::function<void(json)> cb) {
   auto it = method_callbacks_.find(method);
   if (it == method_callbacks_.end()) {
-    spdlog::debug("Registering new method callback: {} (handler: {})",
+    spdlog::debug("[Moonraker Client] Registering new method callback: {} (handler: {})",
                   method, handler_name);
     std::map<std::string, std::function<void(json)>> handlers;
     handlers.insert({handler_name, cb});
     method_callbacks_.insert({method, handlers});
   } else {
-    spdlog::debug("Adding handler to existing method {}: {}",
+    spdlog::debug("[Moonraker Client] Adding handler to existing method {}: {}",
                   method, handler_name);
     it->second.insert({handler_name, cb});
   }
@@ -251,7 +255,7 @@ int MoonrakerClient::send_jsonrpc(const std::string& method) {
   rpc["method"] = method;
   rpc["id"] = request_id_++;
 
-  spdlog::debug("send_jsonrpc: {}", rpc.dump());
+  spdlog::debug("[Moonraker Client] send_jsonrpc: {}", rpc.dump());
   return send(rpc.dump());
 }
 
@@ -267,7 +271,7 @@ int MoonrakerClient::send_jsonrpc(const std::string& method, const json& params)
 
   rpc["id"] = request_id_++;
 
-  spdlog::debug("send_jsonrpc: {}", rpc.dump());
+  spdlog::debug("[Moonraker Client] send_jsonrpc: {}", rpc.dump());
   return send(rpc.dump());
 }
 
@@ -299,16 +303,16 @@ int MoonrakerClient::send_jsonrpc(const std::string& method,
     std::lock_guard<std::mutex> lock(requests_mutex_);
     auto it = pending_requests_.find(id);
     if (it != pending_requests_.end()) {
-      spdlog::warn("Request ID {} already has a registered callback", id);
+      spdlog::warn("[Moonraker Client] Request ID {} already has a registered callback", id);
       return -1;
     }
     pending_requests_.insert({id, request});
-    spdlog::debug("Registered request {} for method {}, total pending: {}", id, method, pending_requests_.size());
+    spdlog::debug("[Moonraker Client] Registered request {} for method {}, total pending: {}", id, method, pending_requests_.size());
   }
 
   // Send the request
   int result = send_jsonrpc(method, params);
-  spdlog::debug("send_jsonrpc({}) returned {}", method, result);
+  spdlog::debug("[Moonraker Client] send_jsonrpc({}) returned {}", method, result);
   return result;
 }
 
@@ -318,18 +322,18 @@ int MoonrakerClient::gcode_script(const std::string& gcode) {
 }
 
 void MoonrakerClient::discover_printer(std::function<void()> on_complete) {
-  spdlog::info("Starting printer auto-discovery");
+  spdlog::info("[Moonraker Client] Starting printer auto-discovery");
 
   // Step 1: Query available printer objects (no params required)
   send_jsonrpc("printer.objects.list", json(), [this, on_complete](json response) {
     // Debug: Log raw response
-    spdlog::debug("printer.objects.list response: {}", response.dump());
+    spdlog::debug("[Moonraker Client] printer.objects.list response: {}", response.dump());
 
     // Validate response
     if (!response.contains("result") || !response["result"].contains("objects")) {
-      spdlog::error("printer.objects.list failed: invalid response");
+      spdlog::error("[Moonraker Client] printer.objects.list failed: invalid response");
       if (response.contains("error")) {
-        spdlog::error("  Error details: {}", response["error"].dump());
+        spdlog::error("[Moonraker Client]   Error details: {}", response["error"].dump());
       }
       return;
     }
@@ -345,12 +349,12 @@ void MoonrakerClient::discover_printer(std::function<void()> on_complete) {
         std::string klippy_version = result.value("klippy_version", "unknown");
         std::string moonraker_version = result.value("moonraker_version", "unknown");
 
-        spdlog::info("Moonraker version: {}", moonraker_version);
-        spdlog::info("Klippy version: {}", klippy_version);
+        spdlog::info("[Moonraker Client] Moonraker version: {}", moonraker_version);
+        spdlog::info("[Moonraker Client] Klippy version: {}", klippy_version);
 
         if (result.contains("components")) {
           std::vector<std::string> components = result["components"].get<std::vector<std::string>>();
-          spdlog::debug("Server components: {}", json(components).dump());
+          spdlog::debug("[Moonraker Client] Server components: {}", json(components).dump());
         }
       }
 
@@ -362,10 +366,10 @@ void MoonrakerClient::discover_printer(std::function<void()> on_complete) {
           std::string software_version = result.value("software_version", "unknown");
           std::string state_message = result.value("state_message", "");
 
-          spdlog::info("Printer hostname: {}", hostname_);
-          spdlog::info("Klipper software version: {}", software_version);
+          spdlog::info("[Moonraker Client] Printer hostname: {}", hostname_);
+          spdlog::info("[Moonraker Client] Klipper software version: {}", software_version);
           if (!state_message.empty()) {
-            spdlog::info("Printer state: {}", state_message);
+            spdlog::info("[Moonraker Client] Printer state: {}", state_message);
           }
         }
 
@@ -405,10 +409,10 @@ void MoonrakerClient::discover_printer(std::function<void()> on_complete) {
         send_jsonrpc("printer.objects.subscribe", subscribe_params,
                      [on_complete, subscription_objects](json sub_response) {
           if (sub_response.contains("result")) {
-            spdlog::info("Subscription complete: {} objects subscribed",
+            spdlog::info("[Moonraker Client] Subscription complete: {} objects subscribed",
                          subscription_objects.size());
           } else if (sub_response.contains("error")) {
-            spdlog::error("Subscription failed: {}",
+            spdlog::error("[Moonraker Client] Subscription failed: {}",
                           sub_response["error"].dump());
           }
 
@@ -479,21 +483,21 @@ void MoonrakerClient::parse_objects(const json& objects) {
     }
   }
 
-  spdlog::info("Discovered: {} heaters, {} sensors, {} fans, {} LEDs",
+  spdlog::info("[Moonraker Client] Discovered: {} heaters, {} sensors, {} fans, {} LEDs",
                heaters_.size(), sensors_.size(), fans_.size(), leds_.size());
 
   // Debug output of discovered objects
   if (!heaters_.empty()) {
-    spdlog::debug("Heaters: {}", json(heaters_).dump());
+    spdlog::debug("[Moonraker Client] Heaters: {}", json(heaters_).dump());
   }
   if (!sensors_.empty()) {
-    spdlog::debug("Sensors: {}", json(sensors_).dump());
+    spdlog::debug("[Moonraker Client] Sensors: {}", json(sensors_).dump());
   }
   if (!fans_.empty()) {
-    spdlog::debug("Fans: {}", json(fans_).dump());
+    spdlog::debug("[Moonraker Client] Fans: {}", json(fans_).dump());
   }
   if (!leds_.empty()) {
-    spdlog::debug("LEDs: {}", json(leds_).dump());
+    spdlog::debug("[Moonraker Client] LEDs: {}", json(leds_).dump());
   }
 }
 
@@ -509,7 +513,7 @@ void MoonrakerClient::check_request_timeouts() {
 
     for (auto& [id, request] : pending_requests_) {
       if (request.is_timed_out()) {
-        spdlog::warn("Request {} ({}) timed out after {}ms",
+        spdlog::warn("[Moonraker Client] Request {} ({}) timed out after {}ms",
                      id, request.method, request.get_elapsed_ms());
 
         // Capture callback in lambda if present
@@ -521,9 +525,9 @@ void MoonrakerClient::check_request_timeouts() {
               try {
                 cb(error);
               } catch (const std::exception& e) {
-                spdlog::error("Timeout error callback for {} threw exception: {}", method_name, e.what());
+                spdlog::error("[Moonraker Client] Timeout error callback for {} threw exception: {}", method_name, e.what());
               } catch (...) {
-                spdlog::error("Timeout error callback for {} threw unknown exception", method_name);
+                spdlog::error("[Moonraker Client] Timeout error callback for {} threw unknown exception", method_name);
               }
             }
           );
@@ -555,7 +559,7 @@ void MoonrakerClient::cleanup_pending_requests() {
     std::lock_guard<std::mutex> lock(requests_mutex_);
 
     if (!pending_requests_.empty()) {
-      spdlog::debug("Cleaning up {} pending requests due to disconnect",
+      spdlog::debug("[Moonraker Client] Cleaning up {} pending requests due to disconnect",
                     pending_requests_.size());
 
       // Capture callbacks in lambdas
@@ -568,9 +572,9 @@ void MoonrakerClient::cleanup_pending_requests() {
               try {
                 cb(error);
               } catch (const std::exception& e) {
-                spdlog::error("Cleanup error callback for {} threw exception: {}", method_name, e.what());
+                spdlog::error("[Moonraker Client] Cleanup error callback for {} threw exception: {}", method_name, e.what());
               } catch (...) {
-                spdlog::error("Cleanup error callback for {} threw unknown exception", method_name);
+                spdlog::error("[Moonraker Client] Cleanup error callback for {} threw unknown exception", method_name);
               }
             }
           );
