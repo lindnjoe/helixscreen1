@@ -103,6 +103,9 @@ endif
 CFLAGS := -std=c11 -Wall -Wextra -O2 -g -D_GNU_SOURCE
 CXXFLAGS := -std=c++17 -Wall -Wextra -O2 -g
 
+# Platform detection (needed early for conditional compilation)
+UNAME_S := $(shell uname -s)
+
 # Directories
 SRC_DIR := src
 INC_DIR := include
@@ -207,8 +210,7 @@ WPA_INC := -I$(WPA_DIR)/src/common -I$(WPA_DIR)/src/utils
 # Include paths
 INCLUDES := -I. -I$(INC_DIR) $(LVGL_INC) $(LIBHV_INC) $(SPDLOG_INC) $(WPA_INC) $(SDL2_INC)
 
-# Platform detection and configuration
-UNAME_S := $(shell uname -s)
+# Platform-specific configuration
 ifeq ($(UNAME_S),Darwin)
     # macOS - Uses CoreWLAN framework for WiFi (with fallback to mock)
     NPROC := $(shell sysctl -n hw.ncpu 2>/dev/null || echo 4)
