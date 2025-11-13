@@ -137,9 +137,10 @@ static const char* g_alternatives = NULL; // Alternative chars for pressed key
 static lv_point_t g_press_point;          // Initial press coordinates
 
 // Shift key behavior tracking (iOS-style)
-static bool g_shift_just_pressed = false; // True if shift was just pressed (for detecting consecutive press)
-static bool g_one_shot_shift = false;      // Single-press: one uppercase letter then revert
-static bool g_caps_lock = false;           // Two consecutive presses: stay uppercase
+static bool g_shift_just_pressed =
+    false; // True if shift was just pressed (for detecting consecutive press)
+static bool g_one_shot_shift = false; // Single-press: one uppercase letter then revert
+static bool g_caps_lock = false;      // Two consecutive presses: stay uppercase
 
 // Forward declarations for long-press event handlers
 static void longpress_event_handler(lv_event_t* e);
@@ -187,9 +188,9 @@ static const lv_buttonmatrix_ctrl_t kb_ctrl_alpha_lc[] = {
     LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4),
     LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4),
     // Row 3: disabled spacer + a-l + disabled spacer (width 2 each spacer)
-    static_cast<lv_buttonmatrix_ctrl_t>(LV_BUTTONMATRIX_CTRL_DISABLED | 2),
+    static_cast<lv_buttonmatrix_ctrl_t>(LV_BUTTONMATRIX_CTRL_DISABLED | 2), LV_KB_BTN(4),
     LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4),
-    LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4),
+    LV_KB_BTN(4), LV_KB_BTN(4),
     static_cast<lv_buttonmatrix_ctrl_t>(LV_BUTTONMATRIX_CTRL_DISABLED | 2),
     // Row 4: Shift (wide) + z-m (regular) + Backspace (wide)
     static_cast<lv_buttonmatrix_ctrl_t>(LV_KEYBOARD_CTRL_BUTTON_FLAGS | 6), // Shift
@@ -197,10 +198,10 @@ static const lv_buttonmatrix_ctrl_t kb_ctrl_alpha_lc[] = {
     LV_KB_BTN(4),
     static_cast<lv_buttonmatrix_ctrl_t>(LV_BUTTONMATRIX_CTRL_CHECKED | 6), // Backspace
     // Row 5: ?123 + Space + Period + Enter (5 + 22 + 4 + 9 = 40)
-    static_cast<lv_buttonmatrix_ctrl_t>(LV_KEYBOARD_CTRL_BUTTON_FLAGS | 5),      // ?123
-    static_cast<lv_buttonmatrix_ctrl_t>(LV_BUTTONMATRIX_CTRL_NO_REPEAT | 22),    // Space
-    static_cast<lv_buttonmatrix_ctrl_t>(LV_BUTTONMATRIX_CTRL_NO_REPEAT | 4),     // Period
-    static_cast<lv_buttonmatrix_ctrl_t>(LV_KEYBOARD_CTRL_BUTTON_FLAGS | 9)       // Enter
+    static_cast<lv_buttonmatrix_ctrl_t>(LV_KEYBOARD_CTRL_BUTTON_FLAGS | 5),   // ?123
+    static_cast<lv_buttonmatrix_ctrl_t>(LV_BUTTONMATRIX_CTRL_NO_REPEAT | 22), // Space
+    static_cast<lv_buttonmatrix_ctrl_t>(LV_BUTTONMATRIX_CTRL_NO_REPEAT | 4),  // Period
+    static_cast<lv_buttonmatrix_ctrl_t>(LV_KEYBOARD_CTRL_BUTTON_FLAGS | 9)    // Enter
 };
 
 // Uppercase alphabet (caps lock mode - uses eject symbol)
@@ -237,9 +238,9 @@ static const lv_buttonmatrix_ctrl_t kb_ctrl_alpha_uc[] = {
     LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4),
     LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4),
     // Row 3: disabled spacer + A-L + disabled spacer (2 + 36 + 2 = 40)
-    static_cast<lv_buttonmatrix_ctrl_t>(LV_BUTTONMATRIX_CTRL_DISABLED | 2),
+    static_cast<lv_buttonmatrix_ctrl_t>(LV_BUTTONMATRIX_CTRL_DISABLED | 2), LV_KB_BTN(4),
     LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4),
-    LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4),
+    LV_KB_BTN(4), LV_KB_BTN(4),
     static_cast<lv_buttonmatrix_ctrl_t>(LV_BUTTONMATRIX_CTRL_DISABLED | 2),
     // Row 4: Shift (wide) + Z-M (regular) + Backspace (wide)
     static_cast<lv_buttonmatrix_ctrl_t>(LV_KEYBOARD_CTRL_BUTTON_FLAGS | 6), // Shift (active)
@@ -247,10 +248,10 @@ static const lv_buttonmatrix_ctrl_t kb_ctrl_alpha_uc[] = {
     LV_KB_BTN(4),
     static_cast<lv_buttonmatrix_ctrl_t>(LV_BUTTONMATRIX_CTRL_CHECKED | 6), // Backspace
     // Row 5: ?123 + Space + Period + Enter (5 + 22 + 4 + 9 = 40)
-    static_cast<lv_buttonmatrix_ctrl_t>(LV_KEYBOARD_CTRL_BUTTON_FLAGS | 5),      // ?123
-    static_cast<lv_buttonmatrix_ctrl_t>(LV_BUTTONMATRIX_CTRL_NO_REPEAT | 22),    // Space
-    static_cast<lv_buttonmatrix_ctrl_t>(LV_BUTTONMATRIX_CTRL_NO_REPEAT | 4),     // Period
-    static_cast<lv_buttonmatrix_ctrl_t>(LV_KEYBOARD_CTRL_BUTTON_FLAGS | 9)       // Enter
+    static_cast<lv_buttonmatrix_ctrl_t>(LV_KEYBOARD_CTRL_BUTTON_FLAGS | 5),   // ?123
+    static_cast<lv_buttonmatrix_ctrl_t>(LV_BUTTONMATRIX_CTRL_NO_REPEAT | 22), // Space
+    static_cast<lv_buttonmatrix_ctrl_t>(LV_BUTTONMATRIX_CTRL_NO_REPEAT | 4),  // Period
+    static_cast<lv_buttonmatrix_ctrl_t>(LV_KEYBOARD_CTRL_BUTTON_FLAGS | 9)    // Enter
 };
 
 // Numbers and symbols layout
@@ -275,19 +276,19 @@ static const lv_buttonmatrix_ctrl_t kb_ctrl_numbers_symbols[] = {
     LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4),
     LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4),
     // Row 3: disabled spacer + punctuation + disabled spacer (2 + 36 + 2 = 40)
-    static_cast<lv_buttonmatrix_ctrl_t>(LV_BUTTONMATRIX_CTRL_DISABLED | 2),
+    static_cast<lv_buttonmatrix_ctrl_t>(LV_BUTTONMATRIX_CTRL_DISABLED | 2), LV_KB_BTN(4),
     LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4),
-    LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4),
+    LV_KB_BTN(4), LV_KB_BTN(4),
     static_cast<lv_buttonmatrix_ctrl_t>(LV_BUTTONMATRIX_CTRL_DISABLED | 2),
     // Row 4: #+= (wide) + brackets/symbols (regular) + Backspace (extra wide) - 6+24+10=40
     static_cast<lv_buttonmatrix_ctrl_t>(LV_KEYBOARD_CTRL_BUTTON_FLAGS | 6), // #+=
     LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4), LV_KB_BTN(4),
     static_cast<lv_buttonmatrix_ctrl_t>(LV_BUTTONMATRIX_CTRL_CHECKED | 10), // Backspace
     // Row 5: ABC + Space + Period + Enter (5 + 22 + 4 + 9 = 40)
-    static_cast<lv_buttonmatrix_ctrl_t>(LV_KEYBOARD_CTRL_BUTTON_FLAGS | 5),      // ABC
-    static_cast<lv_buttonmatrix_ctrl_t>(LV_BUTTONMATRIX_CTRL_NO_REPEAT | 22),    // Space
-    static_cast<lv_buttonmatrix_ctrl_t>(LV_BUTTONMATRIX_CTRL_NO_REPEAT | 4),     // Period
-    static_cast<lv_buttonmatrix_ctrl_t>(LV_KEYBOARD_CTRL_BUTTON_FLAGS | 9)       // Enter
+    static_cast<lv_buttonmatrix_ctrl_t>(LV_KEYBOARD_CTRL_BUTTON_FLAGS | 5),   // ABC
+    static_cast<lv_buttonmatrix_ctrl_t>(LV_BUTTONMATRIX_CTRL_NO_REPEAT | 22), // Space
+    static_cast<lv_buttonmatrix_ctrl_t>(LV_BUTTONMATRIX_CTRL_NO_REPEAT | 4),  // Period
+    static_cast<lv_buttonmatrix_ctrl_t>(LV_KEYBOARD_CTRL_BUTTON_FLAGS | 9)    // Enter
 };
 
 // Improved numeric keyboard with PERIOD (critical for IPs and decimals)
@@ -614,7 +615,6 @@ static void apply_keyboard_mode() {
         spdlog::debug("[Keyboard] Switched to numbers/symbols");
         break;
     }
-
 }
 
 /**
@@ -670,9 +670,9 @@ static void keyboard_event_cb(lv_event_t* e) {
                 lv_textarea_delete_char(g_context_textarea);
             }
             spdlog::debug("[Keyboard] Mode switch: ABC -> alpha lowercase");
-        } else if (btn_text && (strcmp(btn_text, LV_SYMBOL_UP) == 0 ||
-                                strcmp(btn_text, LV_SYMBOL_EJECT) == 0 ||
-                                strcmp(btn_text, LV_SYMBOL_UPLOAD) == 0)) {
+        } else if (btn_text &&
+                   (strcmp(btn_text, LV_SYMBOL_UP) == 0 || strcmp(btn_text, LV_SYMBOL_EJECT) == 0 ||
+                    strcmp(btn_text, LV_SYMBOL_UPLOAD) == 0)) {
             // Shift key pressed - recognize all shift symbols (UP, UPLOAD, EJECT)
             if (g_shift_just_pressed && !g_caps_lock) {
                 // Second consecutive press -> activate caps lock
