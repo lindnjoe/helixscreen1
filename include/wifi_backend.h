@@ -23,89 +23,83 @@
 
 #pragma once
 
-#include <string>
 #include <functional>
-#include <vector>
 #include <memory>
+#include <string>
+#include <vector>
 
 /**
  * @brief WiFi operation result with detailed error information
  */
 enum class WiFiResult {
-    SUCCESS = 0,               ///< Operation succeeded
-    PERMISSION_DENIED,         ///< Insufficient permissions (socket access, etc.)
-    HARDWARE_NOT_AVAILABLE,    ///< No WiFi hardware detected
-    SERVICE_NOT_RUNNING,       ///< wpa_supplicant/network service not running
-    INTERFACE_DOWN,            ///< WiFi interface is down/disabled
-    RF_KILL_BLOCKED,           ///< WiFi blocked by RF-kill (hardware/software)
-    CONNECTION_FAILED,         ///< Failed to connect to wpa_supplicant/service
-    TIMEOUT,                   ///< Operation timed out
-    AUTHENTICATION_FAILED,     ///< Wrong password or authentication error
-    NETWORK_NOT_FOUND,         ///< Specified network not in range
-    INVALID_PARAMETERS,        ///< Invalid SSID, password, or other parameters
-    BACKEND_ERROR,             ///< Internal backend error
-    NOT_INITIALIZED,           ///< Backend not started/initialized
-    UNKNOWN_ERROR              ///< Unexpected error condition
+    SUCCESS = 0,            ///< Operation succeeded
+    PERMISSION_DENIED,      ///< Insufficient permissions (socket access, etc.)
+    HARDWARE_NOT_AVAILABLE, ///< No WiFi hardware detected
+    SERVICE_NOT_RUNNING,    ///< wpa_supplicant/network service not running
+    INTERFACE_DOWN,         ///< WiFi interface is down/disabled
+    RF_KILL_BLOCKED,        ///< WiFi blocked by RF-kill (hardware/software)
+    CONNECTION_FAILED,      ///< Failed to connect to wpa_supplicant/service
+    TIMEOUT,                ///< Operation timed out
+    AUTHENTICATION_FAILED,  ///< Wrong password or authentication error
+    NETWORK_NOT_FOUND,      ///< Specified network not in range
+    INVALID_PARAMETERS,     ///< Invalid SSID, password, or other parameters
+    BACKEND_ERROR,          ///< Internal backend error
+    NOT_INITIALIZED,        ///< Backend not started/initialized
+    UNKNOWN_ERROR           ///< Unexpected error condition
 };
 
 /**
  * @brief Detailed error information for WiFi operations
  */
 struct WiFiError {
-    WiFiResult result;           ///< Primary error code
-    std::string technical_msg;   ///< Technical details for logging/debugging
-    std::string user_msg;        ///< User-friendly message for UI display
-    std::string suggestion;      ///< Suggested action for user (optional)
+    WiFiResult result;         ///< Primary error code
+    std::string technical_msg; ///< Technical details for logging/debugging
+    std::string user_msg;      ///< User-friendly message for UI display
+    std::string suggestion;    ///< Suggested action for user (optional)
 
-    WiFiError(WiFiResult r = WiFiResult::SUCCESS,
-              const std::string& tech = "",
-              const std::string& user = "",
-              const std::string& suggest = "")
+    WiFiError(WiFiResult r = WiFiResult::SUCCESS, const std::string& tech = "",
+              const std::string& user = "", const std::string& suggest = "")
         : result(r), technical_msg(tech), user_msg(user), suggestion(suggest) {}
 
-    bool success() const { return result == WiFiResult::SUCCESS; }
-    operator bool() const { return success(); }
+    bool success() const {
+        return result == WiFiResult::SUCCESS;
+    }
+    operator bool() const {
+        return success();
+    }
 };
 
 /**
  * @brief Utility class for creating user-friendly WiFi error messages
  */
 class WiFiErrorHelper {
-public:
+  public:
     /**
      * @brief Create permission denied error with helpful suggestions
      */
     static WiFiError permission_denied(const std::string& technical_detail) {
-        return WiFiError(
-            WiFiResult::PERMISSION_DENIED,
-            technical_detail,
-            "Permission denied - unable to access WiFi controls",
-            "Try running as administrator or check user permissions"
-        );
+        return WiFiError(WiFiResult::PERMISSION_DENIED, technical_detail,
+                         "Permission denied - unable to access WiFi controls",
+                         "Try running as administrator or check user permissions");
     }
 
     /**
      * @brief Create hardware not available error
      */
     static WiFiError hardware_not_available() {
-        return WiFiError(
-            WiFiResult::HARDWARE_NOT_AVAILABLE,
-            "No WiFi interfaces detected",
-            "No WiFi hardware found",
-            "Check that WiFi hardware is installed and enabled"
-        );
+        return WiFiError(WiFiResult::HARDWARE_NOT_AVAILABLE, "No WiFi interfaces detected",
+                         "No WiFi hardware found",
+                         "Check that WiFi hardware is installed and enabled");
     }
 
     /**
      * @brief Create service not running error
      */
     static WiFiError service_not_running(const std::string& service_name) {
-        return WiFiError(
-            WiFiResult::SERVICE_NOT_RUNNING,
-            service_name + " service not running or not accessible",
-            "WiFi service unavailable",
-            "Check that WiFi services are enabled and running"
-        );
+        return WiFiError(WiFiResult::SERVICE_NOT_RUNNING,
+                         service_name + " service not running or not accessible",
+                         "WiFi service unavailable",
+                         "Check that WiFi services are enabled and running");
     }
 
     /**
@@ -113,11 +107,8 @@ public:
      */
     static WiFiError rf_kill_blocked() {
         return WiFiError(
-            WiFiResult::RF_KILL_BLOCKED,
-            "WiFi blocked by RF-kill (hardware or software switch)",
-            "WiFi is disabled",
-            "Check WiFi hardware switch or enable WiFi in system settings"
-        );
+            WiFiResult::RF_KILL_BLOCKED, "WiFi blocked by RF-kill (hardware or software switch)",
+            "WiFi is disabled", "Check WiFi hardware switch or enable WiFi in system settings");
     }
 
     /**
@@ -125,47 +116,36 @@ public:
      */
     static WiFiError interface_down(const std::string& interface_name) {
         return WiFiError(
-            WiFiResult::INTERFACE_DOWN,
-            "WiFi interface " + interface_name + " is down",
-            "WiFi interface is disabled",
-            "Enable the WiFi interface in network settings"
-        );
+            WiFiResult::INTERFACE_DOWN, "WiFi interface " + interface_name + " is down",
+            "WiFi interface is disabled", "Enable the WiFi interface in network settings");
     }
 
     /**
      * @brief Create connection failed error
      */
     static WiFiError connection_failed(const std::string& technical_detail) {
-        return WiFiError(
-            WiFiResult::CONNECTION_FAILED,
-            technical_detail,
-            "Failed to connect to WiFi system",
-            "Check that WiFi services are running and try again"
-        );
+        return WiFiError(WiFiResult::CONNECTION_FAILED, technical_detail,
+                         "Failed to connect to WiFi system",
+                         "Check that WiFi services are running and try again");
     }
 
     /**
      * @brief Create authentication failed error
      */
     static WiFiError authentication_failed(const std::string& ssid) {
-        return WiFiError(
-            WiFiResult::AUTHENTICATION_FAILED,
-            "Authentication failed for network: " + ssid,
-            "Incorrect password or network authentication failed",
-            "Verify the password and try again"
-        );
+        return WiFiError(WiFiResult::AUTHENTICATION_FAILED,
+                         "Authentication failed for network: " + ssid,
+                         "Incorrect password or network authentication failed",
+                         "Verify the password and try again");
     }
 
     /**
      * @brief Create network not found error
      */
     static WiFiError network_not_found(const std::string& ssid) {
-        return WiFiError(
-            WiFiResult::NETWORK_NOT_FOUND,
-            "Network not found: " + ssid,
-            "Network '" + ssid + "' is not in range",
-            "Move closer to the network or check the network name"
-        );
+        return WiFiError(WiFiResult::NETWORK_NOT_FOUND, "Network not found: " + ssid,
+                         "Network '" + ssid + "' is not in range",
+                         "Move closer to the network or check the network name");
     }
 
     /**
@@ -180,14 +160,15 @@ public:
  * @brief WiFi network information
  */
 struct WiFiNetwork {
-    std::string ssid;           ///< Network name (SSID)
-    int signal_strength;        ///< Signal strength (0-100 percentage)
-    bool is_secured;            ///< True if network requires password
-    std::string security_type;  ///< Security type ("WPA2", "WPA3", "WEP", "Open")
+    std::string ssid;          ///< Network name (SSID)
+    int signal_strength;       ///< Signal strength (0-100 percentage)
+    bool is_secured;           ///< True if network requires password
+    std::string security_type; ///< Security type ("WPA2", "WPA3", "WEP", "Open")
 
     WiFiNetwork() : signal_strength(0), is_secured(false) {}
 
-    WiFiNetwork(const std::string& ssid_, int strength, bool secured, const std::string& security = "")
+    WiFiNetwork(const std::string& ssid_, int strength, bool secured,
+                const std::string& security = "")
         : ssid(ssid_), signal_strength(strength), is_secured(secured), security_type(security) {}
 };
 
@@ -206,18 +187,18 @@ struct WiFiNetwork {
  * - Clean error handling with meaningful messages
  */
 class WifiBackend {
-public:
+  public:
     virtual ~WifiBackend() = default;
 
     /**
      * @brief Connection status information
      */
     struct ConnectionStatus {
-        bool connected;           ///< True if connected to a network
-        std::string ssid;         ///< Connected network name
-        std::string bssid;        ///< Access point MAC address
-        std::string ip_address;   ///< Current IP address
-        int signal_strength;      ///< Signal strength (0-100%)
+        bool connected;         ///< True if connected to a network
+        std::string ssid;       ///< Connected network name
+        std::string bssid;      ///< Access point MAC address
+        std::string ip_address; ///< Current IP address
+        int signal_strength;    ///< Signal strength (0-100%)
     };
 
     // ========================================================================
@@ -268,7 +249,7 @@ public:
      * @param callback Handler function
      */
     virtual void register_event_callback(const std::string& name,
-                                        std::function<void(const std::string&)> callback) = 0;
+                                         std::function<void(const std::string&)> callback) = 0;
 
     // ========================================================================
     // Network Scanning

@@ -22,11 +22,13 @@
  */
 
 #include "ui_panel_controls.h"
+
 #include "ui_component_keypad.h"
-#include "ui_panel_motion.h"
-#include "ui_panel_controls_temp.h"
-#include "ui_panel_controls_extrusion.h"
 #include "ui_nav.h"
+#include "ui_panel_controls_extrusion.h"
+#include "ui_panel_controls_temp.h"
+#include "ui_panel_motion.h"
+
 #include <spdlog/spdlog.h>
 
 // Panel object references
@@ -69,8 +71,8 @@ void ui_panel_controls_wire_events(lv_obj_t* panel_obj, lv_obj_t* screen) {
     lv_obj_t* card_motors = lv_obj_find_by_name(panel_obj, "card_motors");
 
     // Verify all cards found
-    if (!card_motion || !card_nozzle_temp || !card_bed_temp ||
-        !card_extrusion || !card_fan || !card_motors) {
+    if (!card_motion || !card_nozzle_temp || !card_bed_temp || !card_extrusion || !card_fan ||
+        !card_motors) {
         spdlog::error("Failed to find all controls panel launcher cards");
         return;
     }
@@ -219,13 +221,13 @@ static void card_extrusion_clicked(lv_event_t* e) {
 }
 
 static void card_fan_clicked(lv_event_t* e) {
-    (void)e;  // Unused - no event data needed
+    (void)e; // Unused - no event data needed
     spdlog::debug("Fan card clicked - Phase 2 feature");
     // TODO: Create and show fan control sub-screen (Phase 2)
 }
 
 static void card_motors_clicked(lv_event_t* e) {
-    (void)e;  // Unused - no event data needed
+    (void)e; // Unused - no event data needed
     spdlog::debug("Motors Disable card clicked");
     // TODO: Show confirmation dialog, then send motors disable command
 }

@@ -1,10 +1,12 @@
 // Copyright 2025 HelixScreen
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+#include "ui_fonts.h"
+#include "ui_theme.h"
+
 #include "lvgl/lvgl.h"
 #include "lvgl/src/others/xml/lv_xml.h"
-#include "ui_theme.h"
-#include "ui_fonts.h"
+
 #include <SDL.h>
 #include <cstdio>
 #include <ctime>
@@ -17,12 +19,9 @@ struct FileData {
 };
 
 static const FileData test_files[] = {
-    {"Burr_Puzzle.gcode", 19, 4.0f},
-    {"Scraper_grip.gcode", 80, 30.0f},
-    {"Robot.gcode", 121, 12.04f},
-    {"Small_box.gcode", 15, 3.5f},
-    {"Large_vase.gcode", 240, 85.0f},
-    {"Support_test.gcode", 45, 12.0f},
+    {"Burr_Puzzle.gcode", 19, 4.0f},  {"Scraper_grip.gcode", 80, 30.0f},
+    {"Robot.gcode", 121, 12.04f},     {"Small_box.gcode", 15, 3.5f},
+    {"Large_vase.gcode", 240, 85.0f}, {"Support_test.gcode", 45, 12.0f},
 };
 static const int FILE_COUNT = sizeof(test_files) / sizeof(test_files[0]);
 

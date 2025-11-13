@@ -22,18 +22,22 @@
  */
 
 #include "ui_wizard.h"
-#include "ui_wizard_wifi.h"
-#include "ui_wizard_connection.h"
-#include "ui_wizard_printer_identify.h"
-#include "ui_wizard_bed_select.h"
-#include "ui_wizard_hotend_select.h"
-#include "ui_wizard_fan_select.h"
-#include "ui_wizard_led_select.h"
-#include "ui_wizard_summary.h"
+
 #include "ui_theme.h"
+#include "ui_wizard_bed_select.h"
+#include "ui_wizard_connection.h"
+#include "ui_wizard_fan_select.h"
+#include "ui_wizard_hotend_select.h"
+#include "ui_wizard_led_select.h"
+#include "ui_wizard_printer_identify.h"
+#include "ui_wizard_summary.h"
+#include "ui_wizard_wifi.h"
+
 #include "lvgl/lvgl.h"
 #include "lvgl/src/others/xml/lv_xml.h"
+
 #include <spdlog/spdlog.h>
+
 #include <cstdio>
 
 // Subject declarations (static/global scope required)
@@ -44,7 +48,7 @@ static lv_subject_t wizard_progress;
 static lv_subject_t wizard_next_button_text;
 
 // Non-static: accessible from ui_wizard_connection.cpp
-lv_subject_t connection_test_passed;  // Global: 0=connection not validated, 1=validated or N/A
+lv_subject_t connection_test_passed; // Global: 0=connection not validated, 1=validated or N/A
 
 // String buffers (must be persistent)
 static char wizard_title_buffer[64];
@@ -68,16 +72,17 @@ void ui_wizard_init_subjects() {
 
     // Initialize subjects with defaults
     lv_subject_init_int(&current_step, 1);
-    lv_subject_init_int(&total_steps, 8);  // 8 steps: WiFi, Connection, Printer, Bed, Hotend, Fan, LED, Summary
+    lv_subject_init_int(&total_steps,
+                        8); // 8 steps: WiFi, Connection, Printer, Bed, Hotend, Fan, LED, Summary
 
-    lv_subject_init_string(&wizard_title, wizard_title_buffer, nullptr,
-                           sizeof(wizard_title_buffer), "Welcome");
+    lv_subject_init_string(&wizard_title, wizard_title_buffer, nullptr, sizeof(wizard_title_buffer),
+                           "Welcome");
 
     lv_subject_init_string(&wizard_progress, wizard_progress_buffer, nullptr,
                            sizeof(wizard_progress_buffer), "Step 1 of 8");
 
-    lv_subject_init_string(&wizard_next_button_text, wizard_next_button_text_buffer,
-                           nullptr, sizeof(wizard_next_button_text_buffer), "Next");
+    lv_subject_init_string(&wizard_next_button_text, wizard_next_button_text_buffer, nullptr,
+                           sizeof(wizard_next_button_text_buffer), "Next");
 
     // Initialize connection_test_passed to 1 (enabled by default for all steps)
     // Step 2 (connection) will set it to 0 until test passes
@@ -103,7 +108,8 @@ struct WizardConstant {
 // Helper: Register array of constants to a scope
 static void register_constants_to_scope(lv_xml_component_scope_t* scope,
                                         const WizardConstant* constants) {
-    if (!scope) return;
+    if (!scope)
+        return;
     for (int i = 0; constants[i].name != NULL; i++) {
         lv_xml_register_const(scope, constants[i].name, constants[i].value);
     }
@@ -130,9 +136,9 @@ void ui_wizard_container_register_responsive_constants() {
     const char* network_icon_size;
     const char* size_label;
 
-    if (greater_res <= UI_BREAKPOINT_SMALL_MAX) {  // ≤480: 480x320
+    if (greater_res <= UI_BREAKPOINT_SMALL_MAX) { // ≤480: 480x320
         header_height = "32";
-        footer_height = "72";  // header + 40
+        footer_height = "72"; // header + 40
         button_width = "110";
         header_font = "montserrat_14";
         title_font = "montserrat_16";
@@ -141,9 +147,9 @@ void ui_wizard_container_register_responsive_constants() {
         wifi_toggle_height = "32";
         network_icon_size = "20";
         size_label = "SMALL";
-    } else if (greater_res <= UI_BREAKPOINT_MEDIUM_MAX) {  // 481-800: 800x480
+    } else if (greater_res <= UI_BREAKPOINT_MEDIUM_MAX) { // 481-800: 800x480
         header_height = "42";
-        footer_height = "82";  // header + 40
+        footer_height = "82"; // header + 40
         button_width = "140";
         header_font = "montserrat_16";
         title_font = "montserrat_20";
@@ -152,9 +158,9 @@ void ui_wizard_container_register_responsive_constants() {
         wifi_toggle_height = "48";
         network_icon_size = "24";
         size_label = "MEDIUM";
-    } else {  // >800: 1024x600+
+    } else { // >800: 1024x600+
         header_height = "48";
-        footer_height = "88";  // header + 40
+        footer_height = "88"; // header + 40
         button_width = "160";
         header_font = "montserrat_20";
         title_font = lv_xml_get_const(NULL, "font_heading");
@@ -187,7 +193,7 @@ void ui_wizard_container_register_responsive_constants() {
         {"wifi_card_height", wifi_card_height},
         {"wifi_ethernet_height", wifi_ethernet_height},
         {"network_icon_size", network_icon_size},
-        {NULL, NULL}  // Sentinel
+        {NULL, NULL} // Sentinel
     };
 
     // 5. Register to wizard_container scope (parent)
@@ -206,7 +212,7 @@ void ui_wizard_container_register_responsive_constants() {
         "wizard_fan_select",
         "wizard_led_select",
         "wizard_summary",
-        NULL  // Sentinel
+        NULL // Sentinel
     };
 
     // 7. Propagate to all children
@@ -219,7 +225,9 @@ void ui_wizard_container_register_responsive_constants() {
         }
     }
 
-    spdlog::info("[Wizard] Registered 11 constants to wizard_container and propagated to {} child components", child_count);
+    spdlog::info("[Wizard] Registered 11 constants to wizard_container and propagated to {} child "
+                 "components",
+                 child_count);
     spdlog::debug("[Wizard] Values: padding={}, gap={}, header_h={}, footer_h={}, button_w={}",
                   padding_value, gap_value, header_height, footer_height, button_width);
 }
@@ -256,8 +264,10 @@ void ui_wizard_navigate_to_step(int step) {
 
     // Clamp step to valid range
     int total = lv_subject_get_int(&total_steps);
-    if (step < 1) step = 1;
-    if (step > total) step = total;
+    if (step < 1)
+        step = 1;
+    if (step > total)
+        step = total;
 
     // Update current_step subject
     lv_subject_set_int(&current_step, step);
@@ -282,8 +292,8 @@ void ui_wizard_navigate_to_step(int step) {
         lv_obj_update_layout(wizard_container);
     }
 
-    spdlog::debug("[Wizard] Updated to step {}/{}, button: {}",
-                  step, total, (step == total) ? "Finish" : "Next");
+    spdlog::debug("[Wizard] Updated to step {}/{}, button: {}", step, total,
+                  (step == total) ? "Finish" : "Next");
 }
 
 void ui_wizard_set_title(const char* title) {
@@ -308,39 +318,39 @@ void ui_wizard_set_title(const char* title) {
  */
 static void ui_wizard_cleanup_current_screen() {
     if (current_screen_step == 0) {
-        return;  // No screen loaded yet
+        return; // No screen loaded yet
     }
 
     spdlog::debug("[Wizard] Cleaning up screen for step {}", current_screen_step);
 
     switch (current_screen_step) {
-        case 1:  // WiFi Setup
-            ui_wizard_wifi_cleanup();
-            break;
-        case 2:  // Moonraker Connection
-            ui_wizard_connection_cleanup();
-            break;
-        case 3:  // Printer Identification
-            ui_wizard_printer_identify_cleanup();
-            break;
-        case 4:  // Bed Select
-            ui_wizard_bed_select_cleanup();
-            break;
-        case 5:  // Hotend Select
-            ui_wizard_hotend_select_cleanup();
-            break;
-        case 6:  // Fan Select
-            ui_wizard_fan_select_cleanup();
-            break;
-        case 7:  // LED Select
-            ui_wizard_led_select_cleanup();
-            break;
-        case 8:  // Summary
-            ui_wizard_summary_cleanup();
-            break;
-        default:
-            spdlog::warn("[Wizard] Unknown screen step {} during cleanup", current_screen_step);
-            break;
+    case 1: // WiFi Setup
+        ui_wizard_wifi_cleanup();
+        break;
+    case 2: // Moonraker Connection
+        ui_wizard_connection_cleanup();
+        break;
+    case 3: // Printer Identification
+        ui_wizard_printer_identify_cleanup();
+        break;
+    case 4: // Bed Select
+        ui_wizard_bed_select_cleanup();
+        break;
+    case 5: // Hotend Select
+        ui_wizard_hotend_select_cleanup();
+        break;
+    case 6: // Fan Select
+        ui_wizard_fan_select_cleanup();
+        break;
+    case 7: // LED Select
+        ui_wizard_led_select_cleanup();
+        break;
+    case 8: // Summary
+        ui_wizard_summary_cleanup();
+        break;
+    default:
+        spdlog::warn("[Wizard] Unknown screen step {} during cleanup", current_screen_step);
+        break;
     }
 }
 
@@ -367,83 +377,84 @@ static void ui_wizard_load_screen(int step) {
 
     // Create appropriate screen based on step
     switch (step) {
-        case 1:  // WiFi Setup
-            spdlog::info("[Wizard] Creating WiFi setup screen");
-            ui_wizard_wifi_init_subjects();
-            ui_wizard_wifi_register_callbacks();
-            // Note: WiFi constants now registered by ui_wizard_container_register_responsive_constants()
-            ui_wizard_wifi_create(content);
-            lv_obj_update_layout(content);
-            ui_wizard_wifi_init_wifi_manager();
-            ui_wizard_set_title("WiFi Setup");
-            break;
+    case 1: // WiFi Setup
+        spdlog::info("[Wizard] Creating WiFi setup screen");
+        ui_wizard_wifi_init_subjects();
+        ui_wizard_wifi_register_callbacks();
+        // Note: WiFi constants now registered by
+        // ui_wizard_container_register_responsive_constants()
+        ui_wizard_wifi_create(content);
+        lv_obj_update_layout(content);
+        ui_wizard_wifi_init_wifi_manager();
+        ui_wizard_set_title("WiFi Setup");
+        break;
 
-        case 2:  // Moonraker Connection
-            spdlog::info("[Wizard] Creating Moonraker connection screen");
-            ui_wizard_connection_init_subjects();
-            ui_wizard_connection_register_callbacks();
-            ui_wizard_connection_create(content);
-            lv_obj_update_layout(content);
-            ui_wizard_set_title("Moonraker Connection");
-            break;
+    case 2: // Moonraker Connection
+        spdlog::info("[Wizard] Creating Moonraker connection screen");
+        ui_wizard_connection_init_subjects();
+        ui_wizard_connection_register_callbacks();
+        ui_wizard_connection_create(content);
+        lv_obj_update_layout(content);
+        ui_wizard_set_title("Moonraker Connection");
+        break;
 
-        case 3:  // Printer Identification
-            spdlog::info("[Wizard] Creating printer identification screen");
-            ui_wizard_printer_identify_init_subjects();
-            ui_wizard_printer_identify_register_callbacks();
-            ui_wizard_printer_identify_create(content);
-            lv_obj_update_layout(content);
-            ui_wizard_set_title("Printer Identification");
-            break;
+    case 3: // Printer Identification
+        spdlog::info("[Wizard] Creating printer identification screen");
+        ui_wizard_printer_identify_init_subjects();
+        ui_wizard_printer_identify_register_callbacks();
+        ui_wizard_printer_identify_create(content);
+        lv_obj_update_layout(content);
+        ui_wizard_set_title("Printer Identification");
+        break;
 
-        case 4:  // Bed Select
-            spdlog::info("[Wizard] Creating bed select screen");
-            ui_wizard_bed_select_init_subjects();
-            ui_wizard_bed_select_register_callbacks();
-            ui_wizard_bed_select_create(content);
-            lv_obj_update_layout(content);
-            ui_wizard_set_title("Bed Configuration");
-            break;
+    case 4: // Bed Select
+        spdlog::info("[Wizard] Creating bed select screen");
+        ui_wizard_bed_select_init_subjects();
+        ui_wizard_bed_select_register_callbacks();
+        ui_wizard_bed_select_create(content);
+        lv_obj_update_layout(content);
+        ui_wizard_set_title("Bed Configuration");
+        break;
 
-        case 5:  // Hotend Select
-            spdlog::info("[Wizard] Creating hotend select screen");
-            ui_wizard_hotend_select_init_subjects();
-            ui_wizard_hotend_select_register_callbacks();
-            ui_wizard_hotend_select_create(content);
-            lv_obj_update_layout(content);
-            ui_wizard_set_title("Hotend Configuration");
-            break;
+    case 5: // Hotend Select
+        spdlog::info("[Wizard] Creating hotend select screen");
+        ui_wizard_hotend_select_init_subjects();
+        ui_wizard_hotend_select_register_callbacks();
+        ui_wizard_hotend_select_create(content);
+        lv_obj_update_layout(content);
+        ui_wizard_set_title("Hotend Configuration");
+        break;
 
-        case 6:  // Fan Select
-            spdlog::info("[Wizard] Creating fan select screen");
-            ui_wizard_fan_select_init_subjects();
-            ui_wizard_fan_select_register_callbacks();
-            ui_wizard_fan_select_create(content);
-            lv_obj_update_layout(content);
-            ui_wizard_set_title("Fan Configuration");
-            break;
+    case 6: // Fan Select
+        spdlog::info("[Wizard] Creating fan select screen");
+        ui_wizard_fan_select_init_subjects();
+        ui_wizard_fan_select_register_callbacks();
+        ui_wizard_fan_select_create(content);
+        lv_obj_update_layout(content);
+        ui_wizard_set_title("Fan Configuration");
+        break;
 
-        case 7:  // LED Select
-            spdlog::info("[Wizard] Creating LED select screen");
-            ui_wizard_led_select_init_subjects();
-            ui_wizard_led_select_register_callbacks();
-            ui_wizard_led_select_create(content);
-            lv_obj_update_layout(content);
-            ui_wizard_set_title("LED Configuration");
-            break;
+    case 7: // LED Select
+        spdlog::info("[Wizard] Creating LED select screen");
+        ui_wizard_led_select_init_subjects();
+        ui_wizard_led_select_register_callbacks();
+        ui_wizard_led_select_create(content);
+        lv_obj_update_layout(content);
+        ui_wizard_set_title("LED Configuration");
+        break;
 
-        case 8:  // Summary
-            spdlog::info("[Wizard] Creating summary screen");
-            ui_wizard_summary_init_subjects();
-            ui_wizard_summary_register_callbacks();
-            ui_wizard_summary_create(content);
-            lv_obj_update_layout(content);
-            ui_wizard_set_title("Configuration Summary");
-            break;
+    case 8: // Summary
+        spdlog::info("[Wizard] Creating summary screen");
+        ui_wizard_summary_init_subjects();
+        ui_wizard_summary_register_callbacks();
+        ui_wizard_summary_create(content);
+        lv_obj_update_layout(content);
+        ui_wizard_set_title("Configuration Summary");
+        break;
 
-        default:
-            spdlog::warn("[Wizard] Invalid step {}, ignoring", step);
-            break;
+    default:
+        spdlog::warn("[Wizard] Invalid step {}, ignoring", step);
+        break;
     }
 
     // Update current screen step tracking
@@ -476,4 +487,3 @@ static void on_next_clicked(lv_event_t* e) {
         // TODO: Handle wizard completion (emit event or callback)
     }
 }
-

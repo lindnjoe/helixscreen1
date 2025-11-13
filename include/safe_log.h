@@ -44,14 +44,30 @@
  */
 
 // NOTE: These macros are NOT safe during static destruction - use fprintf instead
-#define SAFE_LOG_DEBUG(...) \
-    do { if (spdlog::default_logger()) { spdlog::debug(__VA_ARGS__); } } while(0)
+#define SAFE_LOG_DEBUG(...)                                                                        \
+    do {                                                                                           \
+        if (spdlog::default_logger()) {                                                            \
+            spdlog::debug(__VA_ARGS__);                                                            \
+        }                                                                                          \
+    } while (0)
 
-#define SAFE_LOG_INFO(...) \
-    do { if (spdlog::default_logger()) { spdlog::info(__VA_ARGS__); } } while(0)
+#define SAFE_LOG_INFO(...)                                                                         \
+    do {                                                                                           \
+        if (spdlog::default_logger()) {                                                            \
+            spdlog::info(__VA_ARGS__);                                                             \
+        }                                                                                          \
+    } while (0)
 
-#define SAFE_LOG_WARN(...) \
-    do { if (spdlog::default_logger()) { spdlog::warn(__VA_ARGS__); } } while(0)
+#define SAFE_LOG_WARN(...)                                                                         \
+    do {                                                                                           \
+        if (spdlog::default_logger()) {                                                            \
+            spdlog::warn(__VA_ARGS__);                                                             \
+        }                                                                                          \
+    } while (0)
 
-#define SAFE_LOG_ERROR(...) \
-    do { if (spdlog::default_logger()) { spdlog::error(__VA_ARGS__); } } while(0)
+#define SAFE_LOG_ERROR(...)                                                                        \
+    do {                                                                                           \
+        if (spdlog::default_logger()) {                                                            \
+            spdlog::error(__VA_ARGS__);                                                            \
+        }                                                                                          \
+    } while (0)

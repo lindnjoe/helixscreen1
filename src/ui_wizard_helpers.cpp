@@ -22,17 +22,17 @@
  */
 
 #include "ui_wizard_helpers.h"
+
 #include "config.h"
 #include "moonraker_client.h"
+
 #include <spdlog/spdlog.h>
 
 namespace WizardHelpers {
 
-std::string build_dropdown_options(
-    const std::vector<std::string>& items,
-    std::function<bool(const std::string&)> filter,
-    bool include_none)
-{
+std::string build_dropdown_options(const std::vector<std::string>& items,
+                                   std::function<bool(const std::string&)> filter,
+                                   bool include_none) {
     std::string options_str;
 
     // Add filtered items
@@ -59,11 +59,8 @@ std::string build_dropdown_options(
     return options_str;
 }
 
-int find_item_index(
-    const std::vector<std::string>& items,
-    const std::string& name,
-    int default_index)
-{
+int find_item_index(const std::vector<std::string>& items, const std::string& name,
+                    int default_index) {
     for (size_t i = 0; i < items.size(); i++) {
         if (items[i] == name) {
             return static_cast<int>(i);
@@ -72,16 +69,12 @@ int find_item_index(
     return default_index;
 }
 
-int restore_dropdown_selection(
-    lv_obj_t* dropdown,
-    lv_subject_t* subject,
-    const std::vector<std::string>& items,
-    const char* config_path,
-    MoonrakerClient* client,
-    std::function<std::string(MoonrakerClient*)> guess_method_fn,
-    const char* log_prefix)
-{
-    int selected_index = 0;  // Default to first option
+int restore_dropdown_selection(lv_obj_t* dropdown, lv_subject_t* subject,
+                               const std::vector<std::string>& items, const char* config_path,
+                               MoonrakerClient* client,
+                               std::function<std::string(MoonrakerClient*)> guess_method_fn,
+                               const char* log_prefix) {
+    int selected_index = 0; // Default to first option
 
     Config* config = Config::get_instance();
     if (config) {
@@ -113,18 +106,14 @@ int restore_dropdown_selection(
         lv_subject_set_int(subject, selected_index);
     }
 
-    spdlog::debug("{} Configured dropdown with {} options, selected index: {}",
-                 log_prefix, items.size(), selected_index);
+    spdlog::debug("{} Configured dropdown with {} options, selected index: {}", log_prefix,
+                  items.size(), selected_index);
 
     return selected_index;
 }
 
-bool save_dropdown_selection(
-    lv_subject_t* subject,
-    const std::vector<std::string>& items,
-    const char* config_path,
-    const char* log_prefix)
-{
+bool save_dropdown_selection(lv_subject_t* subject, const std::vector<std::string>& items,
+                             const char* config_path, const char* log_prefix) {
     if (!subject) {
         spdlog::warn("{} Cannot save selection: null subject", log_prefix);
         return false;
@@ -139,8 +128,8 @@ bool save_dropdown_selection(
     // Get selection index from subject
     int index = lv_subject_get_int(subject);
     if (index < 0 || index >= static_cast<int>(items.size())) {
-        spdlog::warn("{} Cannot save selection: index {} out of range (0-{})",
-                    log_prefix, index, items.size() - 1);
+        spdlog::warn("{} Cannot save selection: index {} out of range (0-{})", log_prefix, index,
+                     items.size() - 1);
         return false;
     }
 
@@ -152,11 +141,7 @@ bool save_dropdown_selection(
     return true;
 }
 
-void init_int_subject(
-    lv_subject_t* subject,
-    int32_t initial_value,
-    const char* subject_name)
-{
+void init_int_subject(lv_subject_t* subject, int32_t initial_value, const char* subject_name) {
     lv_subject_init_int(subject, initial_value);
     lv_xml_register_subject(nullptr, subject_name, subject);
 }

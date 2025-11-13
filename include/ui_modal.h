@@ -58,10 +58,10 @@
  * x/y coordinates for precise positioning.
  */
 typedef struct {
-    bool use_alignment;     /**< true = use alignment, false = use x/y */
-    lv_align_t alignment;   /**< Alignment preset (if use_alignment=true) */
-    int32_t x;              /**< Manual x position (if use_alignment=false) */
-    int32_t y;              /**< Manual y position (if use_alignment=false) */
+    bool use_alignment;   /**< true = use alignment, false = use x/y */
+    lv_align_t alignment; /**< Alignment preset (if use_alignment=true) */
+    int32_t x;            /**< Manual x position (if use_alignment=false) */
+    int32_t y;            /**< Manual y position (if use_alignment=false) */
 } ui_modal_position_t;
 
 /**
@@ -72,21 +72,21 @@ typedef struct {
  * available when needed.
  */
 typedef struct {
-    bool auto_position;     /**< true = auto based on modal, false = manual */
-    lv_align_t alignment;   /**< Manual alignment (if auto_position=false) */
-    int32_t x;              /**< Manual x offset (if auto_position=false) */
-    int32_t y;              /**< Manual y offset (if auto_position=false) */
+    bool auto_position;   /**< true = auto based on modal, false = manual */
+    lv_align_t alignment; /**< Manual alignment (if auto_position=false) */
+    int32_t x;            /**< Manual x offset (if auto_position=false) */
+    int32_t y;            /**< Manual y offset (if auto_position=false) */
 } ui_modal_keyboard_config_t;
 
 /**
  * @brief Complete modal configuration
  */
 typedef struct {
-    ui_modal_position_t position;           /**< Modal positioning */
-    uint8_t backdrop_opa;                   /**< Backdrop opacity (0-255) */
-    ui_modal_keyboard_config_t* keyboard;   /**< Keyboard config (NULL = no keyboard) */
-    bool persistent;                        /**< true = persistent, false = create-on-demand */
-    lv_event_cb_t on_close;                 /**< Optional close callback */
+    ui_modal_position_t position;         /**< Modal positioning */
+    uint8_t backdrop_opa;                 /**< Backdrop opacity (0-255) */
+    ui_modal_keyboard_config_t* keyboard; /**< Keyboard config (NULL = no keyboard) */
+    bool persistent;                      /**< true = persistent, false = create-on-demand */
+    lv_event_cb_t on_close;               /**< Optional close callback */
 } ui_modal_config_t;
 
 /**
@@ -101,9 +101,8 @@ typedef struct {
  * @param attrs Optional XML attributes (NULL-terminated array, can be NULL)
  * @return Pointer to the created modal object, or NULL on error
  */
-lv_obj_t* ui_modal_show(const char* component_name,
-                         const ui_modal_config_t* config,
-                         const char** attrs);
+lv_obj_t* ui_modal_show(const char* component_name, const ui_modal_config_t* config,
+                        const char** attrs);
 
 /**
  * @brief Hide a specific modal

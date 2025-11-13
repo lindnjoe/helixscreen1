@@ -22,21 +22,25 @@
  */
 
 #include "ui_wizard_printer_identify.h"
-#include "ui_wizard.h"
+
 #include "ui_keyboard.h"
 #include "ui_theme.h"
+#include "ui_wizard.h"
+
 #include "app_globals.h"
 #include "config.h"
-#include "printer_types.h"
-#include "printer_detector.h"
-#include "moonraker_client.h"
 #include "lvgl/lvgl.h"
+#include "moonraker_client.h"
+#include "printer_detector.h"
+#include "printer_types.h"
+
 #include <spdlog/spdlog.h>
-#include <string>
-#include <cstring>
+
 #include <algorithm>
 #include <cctype>
+#include <cstring>
 #include <sstream>
+#include <string>
 
 // ============================================================================
 // Static Data & Subjects
@@ -79,9 +83,9 @@ static void on_printer_type_changed(lv_event_t* e);
  * use pattern matching to suggest printer type.
  */
 struct PrinterDetectionHint {
-    int type_index;      // Index into PrinterTypes::PRINTER_TYPES_ROLLER
-    int confidence;      // 0-100 (≥70 = auto-select, <70 = suggest)
-    std::string reason;  // Human-readable detection reasoning
+    int type_index;     // Index into PrinterTypes::PRINTER_TYPES_ROLLER
+    int confidence;     // 0-100 (≥70 = auto-select, <70 = suggest)
+    std::string reason; // Human-readable detection reasoning
 };
 
 /**
@@ -101,7 +105,7 @@ static int find_printer_type_index(const std::string& printer_name) {
         index++;
     }
 
-    return PrinterTypes::DEFAULT_PRINTER_TYPE_INDEX;  // "Unknown"
+    return PrinterTypes::DEFAULT_PRINTER_TYPE_INDEX; // "Unknown"
 }
 
 /**
@@ -116,11 +120,7 @@ static PrinterDetectionHint detect_printer_type() {
     MoonrakerClient* client = get_moonraker_client();
     if (!client) {
         spdlog::debug("[Wizard Printer] No MoonrakerClient available for auto-detection");
-        return {
-            PrinterTypes::DEFAULT_PRINTER_TYPE_INDEX,
-            0,
-            "No printer connection available"
-        };
+        return {PrinterTypes::DEFAULT_PRINTER_TYPE_INDEX, 0, "No printer connection available"};
     }
 
     // Build hardware data from MoonrakerClient discovery
@@ -136,11 +136,7 @@ static PrinterDetectionHint detect_printer_type() {
 
     if (result.confidence == 0) {
         // No match found
-        return {
-            PrinterTypes::DEFAULT_PRINTER_TYPE_INDEX,
-            0,
-            result.reason
-        };
+        return {PrinterTypes::DEFAULT_PRINTER_TYPE_INDEX, 0, result.reason};
     }
 
     // Map detected type_name to roller index
@@ -148,23 +144,18 @@ static PrinterDetectionHint detect_printer_type() {
 
     if (type_index == PrinterTypes::DEFAULT_PRINTER_TYPE_INDEX && result.confidence > 0) {
         // Detected a printer but it's not in our roller list
-        spdlog::warn("[Wizard Printer] Detected '{}' ({}% confident) but not found in PRINTER_TYPES_ROLLER",
-                     result.type_name, result.confidence);
-        return {
-            PrinterTypes::DEFAULT_PRINTER_TYPE_INDEX,
-            result.confidence,
-            "Detected: " + result.type_name + " (" + result.reason + ") - not in dropdown list"
-        };
+        spdlog::warn(
+            "[Wizard Printer] Detected '{}' ({}% confident) but not found in PRINTER_TYPES_ROLLER",
+            result.type_name, result.confidence);
+        return {PrinterTypes::DEFAULT_PRINTER_TYPE_INDEX, result.confidence,
+                "Detected: " + result.type_name + " (" + result.reason +
+                    ") - not in dropdown list"};
     }
 
     spdlog::info("[Wizard Printer] Auto-detected: {} (confidence: {}, reason: {})",
                  result.type_name, result.confidence, result.reason);
 
-    return {
-        type_index,
-        result.confidence,
-        result.reason
-    };
+    return {type_index, result.confidence, result.reason};
 }
 
 // ============================================================================
@@ -187,8 +178,9 @@ void ui_wizard_printer_identify_init_subjects() {
         // Dynamic lookup: find index by type name
         if (!saved_type.empty()) {
             default_type = find_printer_type_index(saved_type);
-            spdlog::debug("[Wizard Printer] Loaded from config: name='{}', type='{}', resolved index={}",
-                          default_name, saved_type, default_type);
+            spdlog::debug(
+                "[Wizard Printer] Loaded from config: name='{}', type='{}', resolved index={}",
+                default_name, saved_type, default_type);
         } else {
             spdlog::debug("[Wizard Printer] Loaded from config: name='{}', no type saved",
                           default_name);
@@ -201,8 +193,8 @@ void ui_wizard_printer_identify_init_subjects() {
     strncpy(printer_name_buffer, default_name.c_str(), sizeof(printer_name_buffer) - 1);
     printer_name_buffer[sizeof(printer_name_buffer) - 1] = '\0';
 
-    lv_subject_init_string(&printer_name, printer_name_buffer, nullptr,
-                          sizeof(printer_name_buffer), printer_name_buffer);
+    lv_subject_init_string(&printer_name, printer_name_buffer, nullptr, sizeof(printer_name_buffer),
+                           printer_name_buffer);
 
     // Run auto-detection if no saved type
     PrinterDetectionHint hint{PrinterTypes::DEFAULT_PRINTER_TYPE_INDEX, 0, ""};
@@ -211,9 +203,11 @@ void ui_wizard_printer_identify_init_subjects() {
         if (hint.confidence >= 70) {
             // High-confidence detection overrides default
             default_type = hint.type_index;
-            spdlog::info("[Wizard Printer] Auto-detection: {} (confidence: {}%)", hint.reason, hint.confidence);
+            spdlog::info("[Wizard Printer] Auto-detection: {} (confidence: {}%)", hint.reason,
+                         hint.confidence);
         } else if (hint.confidence > 0) {
-            spdlog::info("[Wizard Printer] Auto-detection suggestion: {} (confidence: {}%)", hint.reason, hint.confidence);
+            spdlog::info("[Wizard Printer] Auto-detection suggestion: {} (confidence: {}%)",
+                         hint.reason, hint.confidence);
         } else {
             spdlog::debug("[Wizard Printer] Auto-detection: {}", hint.reason);
         }
@@ -228,12 +222,12 @@ void ui_wizard_printer_identify_init_subjects() {
     } else if (hint.confidence >= 70) {
         // High-confidence detection: show what was detected
         snprintf(printer_detection_status_buffer, sizeof(printer_detection_status_buffer),
-                "Detected: %s", hint.reason.c_str());
+                 "Detected: %s", hint.reason.c_str());
         status_msg = printer_detection_status_buffer;
     } else if (hint.confidence > 0) {
         // Low-confidence suggestion
         snprintf(printer_detection_status_buffer, sizeof(printer_detection_status_buffer),
-                "Possible: %s (low confidence)", hint.reason.c_str());
+                 "Possible: %s (low confidence)", hint.reason.c_str());
         status_msg = printer_detection_status_buffer;
     } else {
         // No detection results
@@ -241,7 +235,7 @@ void ui_wizard_printer_identify_init_subjects() {
     }
 
     lv_subject_init_string(&printer_detection_status, printer_detection_status_buffer, nullptr,
-                          sizeof(printer_detection_status_buffer), status_msg);
+                           sizeof(printer_detection_status_buffer), status_msg);
 
     // Register globally for XML binding
     lv_xml_register_subject(nullptr, "printer_name", &printer_name);
@@ -290,7 +284,7 @@ static void on_printer_name_changed(lv_event_t* e) {
     lv_subject_copy_string(&printer_name, text);
 
     // Validate trimmed length and check max size
-    const size_t max_length = sizeof(printer_name_buffer) - 1;  // 127
+    const size_t max_length = sizeof(printer_name_buffer) - 1; // 127
     bool is_empty = (trimmed.length() == 0);
     bool is_too_long = (trimmed.length() > max_length);
     bool is_valid = !is_empty && !is_too_long;
@@ -307,7 +301,8 @@ static void on_printer_name_changed(lv_event_t* e) {
         lv_color_t error_color = ui_theme_get_color("error_color");
         lv_obj_set_style_border_color(ta, error_color, LV_PART_MAIN);
         lv_obj_set_style_border_width(ta, 2, LV_PART_MAIN);
-        spdlog::debug("[Wizard Printer] Validation: name too long ({} > {})", trimmed.length(), max_length);
+        spdlog::debug("[Wizard Printer] Validation: name too long ({} > {})", trimmed.length(),
+                      max_length);
     } else if (!is_empty) {
         // Valid input: use secondary color border
         lv_color_t valid_color = ui_theme_get_color("secondary_color");
@@ -366,7 +361,8 @@ lv_obj_t* ui_wizard_printer_identify_create(lv_obj_t* parent) {
     }
 
     // Create from XML
-    printer_identify_screen_root = (lv_obj_t*)lv_xml_create(parent, "wizard_printer_identify", nullptr);
+    printer_identify_screen_root =
+        (lv_obj_t*)lv_xml_create(parent, "wizard_printer_identify", nullptr);
 
     if (!printer_identify_screen_root) {
         spdlog::error("[Wizard Printer] Failed to create from XML");
@@ -384,7 +380,8 @@ lv_obj_t* ui_wizard_printer_identify_create(lv_obj_t* parent) {
 
         // Attach change handler
         lv_obj_add_event_cb(roller, on_printer_type_changed, LV_EVENT_VALUE_CHANGED, nullptr);
-        spdlog::debug("[Wizard Printer] Roller configured with {} options", PrinterTypes::PRINTER_TYPE_COUNT);
+        spdlog::debug("[Wizard Printer] Roller configured with {} options",
+                      PrinterTypes::PRINTER_TYPE_COUNT);
     } else {
         spdlog::warn("[Wizard Printer] Roller not found in XML");
     }
@@ -398,7 +395,8 @@ lv_obj_t* ui_wizard_printer_identify_create(lv_obj_t* parent) {
         // Register validation handler for button enable/disable
         lv_obj_add_event_cb(name_ta, on_printer_name_changed, LV_EVENT_VALUE_CHANGED, nullptr);
         ui_keyboard_register_textarea(name_ta);
-        spdlog::debug("[Wizard Printer] Name textarea configured with keyboard and validation (initial: '{}')",
+        spdlog::debug("[Wizard Printer] Name textarea configured with keyboard and validation "
+                      "(initial: '{}')",
                       printer_name_buffer);
     }
 
@@ -439,7 +437,7 @@ void ui_wizard_printer_identify_cleanup() {
         std::istringstream stream(PrinterTypes::PRINTER_TYPES_ROLLER);
         std::string line;
         int idx = 0;
-        std::string type_name = "Unknown";  // Default fallback
+        std::string type_name = "Unknown"; // Default fallback
 
         while (std::getline(stream, line)) {
             if (idx == type_index) {
@@ -451,8 +449,8 @@ void ui_wizard_printer_identify_cleanup() {
 
         // Save printer type name (not index)
         config->set("/printer/type", type_name);
-        spdlog::debug("[Wizard Printer] Saving printer type to config: '{}' (index {})",
-                      type_name, type_index);
+        spdlog::debug("[Wizard Printer] Saving printer type to config: '{}' (index {})", type_name,
+                      type_index);
 
         // Persist config changes to disk
         config->save();

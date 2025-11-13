@@ -29,28 +29,19 @@
  * View mode for print select panel
  */
 enum class PrintSelectViewMode {
-    CARD = 0,  // Card grid view (default)
-    LIST = 1   // List view with columns
+    CARD = 0, // Card grid view (default)
+    LIST = 1  // List view with columns
 };
 
 /**
  * Sort column for list view
  */
-enum class PrintSelectSortColumn {
-    FILENAME,
-    SIZE,
-    MODIFIED,
-    PRINT_TIME,
-    FILAMENT
-};
+enum class PrintSelectSortColumn { FILENAME, SIZE, MODIFIED, PRINT_TIME, FILAMENT };
 
 /**
  * Sort direction
  */
-enum class PrintSelectSortDirection {
-    ASCENDING,
-    DESCENDING
-};
+enum class PrintSelectSortDirection { ASCENDING, DESCENDING };
 
 /**
  * Initialize print select panel subjects

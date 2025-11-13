@@ -23,9 +23,10 @@
 
 #pragma once
 
-#include <string>
-#include <memory>
 #include "ethernet_backend.h"
+
+#include <memory>
+#include <string>
 
 /**
  * @brief Ethernet Manager - High-level interface for Ethernet status queries
@@ -55,7 +56,7 @@
  * - Simple error handling
  */
 class EthernetManager {
-public:
+  public:
     /**
      * @brief Initialize Ethernet manager with appropriate backend
      *
@@ -105,6 +106,6 @@ public:
      */
     std::string get_ip_address();
 
-private:
+  private:
     std::unique_ptr<EthernetBackend> backend_;
 };

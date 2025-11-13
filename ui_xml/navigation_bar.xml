@@ -1,3 +1,4 @@
+<?xml version="1.0"?>
 <!--
   Copyright (C) 2025 356C LLC
   Author: Preston Brown <pbrown@brown-house.net>
@@ -17,40 +18,32 @@
   You should have received a copy of the GNU General Public License
   along with HelixScreen. If not, see <https://www.gnu.org/licenses/>.
 -->
-
 <component>
-	<!-- Vertical Navigation Bar with Reactive Icon Highlighting -->
-	<view extends="lv_obj" width="#nav_width" height="100%" style_pad_all="#nav_padding" style_border_width="0" style_radius="0" flex_flow="column" style_flex_main_place="space_evenly" style_flex_cross_place="center" style_flex_track_place="center">
-
-		<!-- Home Button (Panel 0) -->
-		<lv_button name="nav_btn_home" width="#nav_button_size" height="#nav_button_size" style_bg_opa="0" style_shadow_width="0" style_border_width="0" style_radius="0" style_pad_all="0">
-			<icon name="nav_icon_home" src="mat_home" align="center"/>
-		</lv_button>
-
-		<!-- Print Select Button (Panel 1 - beneath Home) -->
-		<lv_button name="nav_btn_print_select" width="#nav_button_size" height="#nav_button_size" style_bg_opa="0" style_shadow_width="0" style_border_width="0" style_radius="0" style_pad_all="0">
-			<icon name="nav_icon_print_select" src="mat_print" align="center"/>
-		</lv_button>
-
-		<!-- Controls Button (Panel 2) -->
-		<lv_button name="nav_btn_controls" width="#nav_button_size" height="#nav_button_size" style_bg_opa="0" style_shadow_width="0" style_border_width="0" style_radius="0" style_pad_all="0">
-			<icon name="nav_icon_controls" src="mat_move" align="center"/>
-		</lv_button>
-
-		<!-- Filament Button (Panel 3) -->
-		<lv_button name="nav_btn_filament" width="#nav_button_size" height="#nav_button_size" style_bg_opa="0" style_shadow_width="0" style_border_width="0" style_radius="0" style_pad_all="0">
-			<icon name="nav_icon_filament" src="mat_filament" align="center"/>
-		</lv_button>
-
-		<!-- Settings Button (Panel 4) -->
-		<lv_button name="nav_btn_settings" width="#nav_button_size" height="#nav_button_size" style_bg_opa="0" style_shadow_width="0" style_border_width="0" style_radius="0" style_pad_all="0">
-			<icon name="nav_icon_settings" src="mat_fine_tune" align="center"/>
-		</lv_button>
-
-		<!-- Advanced Button (Panel 5) -->
-		<lv_button name="nav_btn_advanced" width="#nav_button_size" height="#nav_button_size" style_bg_opa="0" style_shadow_width="0" style_border_width="0" style_radius="0" style_pad_all="0">
-			<icon name="nav_icon_advanced" src="mat_sysinfo" align="center"/>
-		</lv_button>
-
-	</view>
+  <!-- Vertical Navigation Bar with Reactive Icon Highlighting -->
+  <view extends="lv_obj" width="#nav_width" height="100%" style_pad_all="#nav_padding" style_border_width="0" style_radius="0" flex_flow="column" style_flex_main_place="space_evenly" style_flex_cross_place="center" style_flex_track_place="center">
+    <!-- Home Button (Panel 0) -->
+    <lv_button name="nav_btn_home" width="#nav_button_size" height="#nav_button_size" style_bg_opa="0" style_shadow_width="0" style_border_width="0" style_radius="0" style_pad_all="0">
+      <icon name="nav_icon_home" src="mat_home" align="center"/>
+    </lv_button>
+    <!-- Print Select Button (Panel 1 - beneath Home) -->
+    <lv_button name="nav_btn_print_select" width="#nav_button_size" height="#nav_button_size" style_bg_opa="0" style_shadow_width="0" style_border_width="0" style_radius="0" style_pad_all="0">
+      <icon name="nav_icon_print_select" src="mat_print" align="center"/>
+    </lv_button>
+    <!-- Controls Button (Panel 2) -->
+    <lv_button name="nav_btn_controls" width="#nav_button_size" height="#nav_button_size" style_bg_opa="0" style_shadow_width="0" style_border_width="0" style_radius="0" style_pad_all="0">
+      <icon name="nav_icon_controls" src="mat_move" align="center"/>
+    </lv_button>
+    <!-- Filament Button (Panel 3) -->
+    <lv_button name="nav_btn_filament" width="#nav_button_size" height="#nav_button_size" style_bg_opa="0" style_shadow_width="0" style_border_width="0" style_radius="0" style_pad_all="0">
+      <icon name="nav_icon_filament" src="mat_filament" align="center"/>
+    </lv_button>
+    <!-- Settings Button (Panel 4) -->
+    <lv_button name="nav_btn_settings" width="#nav_button_size" height="#nav_button_size" style_bg_opa="0" style_shadow_width="0" style_border_width="0" style_radius="0" style_pad_all="0">
+      <icon name="nav_icon_settings" src="mat_fine_tune" align="center"/>
+    </lv_button>
+    <!-- Advanced Button (Panel 5) -->
+    <lv_button name="nav_btn_advanced" width="#nav_button_size" height="#nav_button_size" style_bg_opa="0" style_shadow_width="0" style_border_width="0" style_radius="0" style_pad_all="0">
+      <icon name="nav_icon_advanced" src="mat_sysinfo" align="center"/>
+    </lv_button>
+  </view>
 </component>

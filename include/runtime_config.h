@@ -36,13 +36,13 @@ struct RuntimeConfig {
     bool test_mode = false;
 
     // UI/automation flags (independent of test mode)
-    bool skip_splash = false;         // --skip-splash
+    bool skip_splash = false; // --skip-splash
 
     // Individual component overrides (require --test to be set)
-    bool use_real_wifi = false;       // --real-wifi
-    bool use_real_ethernet = false;   // --real-ethernet
-    bool use_real_moonraker = false;  // --real-moonraker
-    bool use_real_files = false;      // --real-files
+    bool use_real_wifi = false;      // --real-wifi
+    bool use_real_ethernet = false;  // --real-ethernet
+    bool use_real_moonraker = false; // --real-moonraker
+    bool use_real_files = false;     // --real-files
 
     /**
      * @brief Check if WiFi should use mock implementation

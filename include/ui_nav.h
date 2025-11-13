@@ -27,12 +27,12 @@
 
 // Navigation panel IDs (order matches app_layout.xml panel children)
 typedef enum {
-    UI_PANEL_HOME,          // Panel 0: Home
-    UI_PANEL_PRINT_SELECT,  // Panel 1: Print Select (beneath Home)
-    UI_PANEL_CONTROLS,      // Panel 2: Controls
-    UI_PANEL_FILAMENT,      // Panel 3: Filament
-    UI_PANEL_SETTINGS,      // Panel 4: Settings
-    UI_PANEL_ADVANCED,      // Panel 5: Advanced
+    UI_PANEL_HOME,         // Panel 0: Home
+    UI_PANEL_PRINT_SELECT, // Panel 1: Print Select (beneath Home)
+    UI_PANEL_CONTROLS,     // Panel 2: Controls
+    UI_PANEL_FILAMENT,     // Panel 3: Filament
+    UI_PANEL_SETTINGS,     // Panel 4: Settings
+    UI_PANEL_ADVANCED,     // Panel 5: Advanced
     UI_PANEL_COUNT
 } ui_panel_id_t;
 
@@ -66,4 +66,3 @@ void ui_nav_push_overlay(lv_obj_t* overlay_panel);
 // Hides the current overlay and shows the previous panel
 // Returns true if navigation occurred, false if history is empty
 bool ui_nav_go_back();
-

@@ -18,7 +18,6 @@
   You should have received a copy of the GNU General Public License
   along with HelixScreen. If not, see <https://www.gnu.org/licenses/>.
 -->
-
 <!--
   Icon Component - Material Design Icons with Semantic Sizing and Color Variants
 
@@ -35,34 +34,30 @@
     The C++ code parses the string properties and applies the appropriate styles.
     Constants and styles are defined here in XML for easy theming without recompilation.
 -->
-
 <component>
-	<api>
-		<prop name="src" type="string" default="mat_home"/>
-		<prop name="size" type="string" default="xl"/>
-		<prop name="variant" type="string" default=""/>
-	</api>
-
-	<consts>
-		<!-- Size constants (width/height in pixels) -->
-		<px name="size_xs" value="16"/>
-		<px name="size_sm" value="24"/>
-		<px name="size_md" value="32"/>
-		<px name="size_lg" value="48"/>
-		<px name="size_xl" value="64"/>
-
-		<!-- Scale constants (size × 4 for 64px base icons) -->
-		<px name="scale_xs" value="64"/>
-		<px name="scale_sm" value="96"/>
-		<px name="scale_md" value="128"/>
-		<px name="scale_lg" value="192"/>
-		<px name="scale_xl" value="256"/>
-	</consts>
-
-	<!--
+  <api>
+    <prop name="src" type="string" default="mat_home"/>
+    <prop name="size" type="string" default="xl"/>
+    <prop name="variant" type="string" default=""/>
+  </api>
+  <consts>
+    <!-- Size constants (width/height in pixels) -->
+    <px name="size_xs" value="16"/>
+    <px name="size_sm" value="24"/>
+    <px name="size_md" value="32"/>
+    <px name="size_lg" value="48"/>
+    <px name="size_xl" value="64"/>
+    <!-- Scale constants (size × 4 for 64px base icons) -->
+    <px name="scale_xs" value="64"/>
+    <px name="scale_sm" value="96"/>
+    <px name="scale_md" value="128"/>
+    <px name="scale_lg" value="192"/>
+    <px name="scale_xl" value="256"/>
+  </consts>
+  <!--
 	  Note: The view extends lv_image but the actual widget creation and property
 	  handling is done by the C++ ui_icon custom widget class. The C++ code will
 	  parse the src, size, and variant properties and configure the lv_image accordingly.
 	-->
-	<view extends="lv_image" src="$src"/>
+  <view extends="lv_image" src="$src"/>
 </component>

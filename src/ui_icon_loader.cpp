@@ -22,8 +22,10 @@
  */
 
 #include "ui_icon_loader.h"
+
 #include "helix_icon_data.h"
 #include "lvgl/src/drivers/sdl/lv_sdl_window.h"
+
 #include <spdlog/spdlog.h>
 
 bool ui_set_window_icon(lv_display_t* disp) {

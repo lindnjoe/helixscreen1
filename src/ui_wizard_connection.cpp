@@ -22,16 +22,20 @@
  */
 
 #include "ui_wizard_connection.h"
-#include "ui_wizard.h"  // For ui_wizard_set_next_button_enabled()
-#include "ui_keyboard.h"  // For keyboard support
+
+#include "ui_keyboard.h" // For keyboard support
+#include "ui_wizard.h"   // For ui_wizard_set_next_button_enabled()
+
 #include "app_globals.h"
-#include "moonraker_client.h"
-#include "wizard_validation.h"
 #include "config.h"
 #include "lvgl/lvgl.h"
+#include "moonraker_client.h"
+#include "wizard_validation.h"
+
 #include <spdlog/spdlog.h>
-#include <string>
+
 #include <cstring>
+#include <string>
 
 // ============================================================================
 // Static Data & Subjects
@@ -43,9 +47,9 @@ extern lv_subject_t connection_test_passed;
 // Subject declarations (module scope)
 static lv_subject_t connection_ip;
 static lv_subject_t connection_port;
-static lv_subject_t connection_status_icon;  // FontAwesome icon (check/xmark/empty)
-static lv_subject_t connection_status_text;  // Status message text
-static lv_subject_t connection_testing;  // 0=idle, 1=testing (controls spinner)
+static lv_subject_t connection_status_icon; // FontAwesome icon (check/xmark/empty)
+static lv_subject_t connection_status_text; // Status message text
+static lv_subject_t connection_testing;     // 0=idle, 1=testing (controls spinner)
 
 // String buffers (must be persistent)
 static char connection_ip_buffer[128];
@@ -77,10 +81,11 @@ void ui_wizard_connection_init_subjects() {
     // Load existing values from config if available
     Config* config = Config::get_instance();
     std::string default_ip = "";
-    std::string default_port = "7125";  // Default Moonraker port
+    std::string default_port = "7125"; // Default Moonraker port
 
     try {
-        std::string default_printer = config->get<std::string>("/default_printer", "default_printer");
+        std::string default_printer =
+            config->get<std::string>("/default_printer", "default_printer");
         std::string printer_path = "/printers/" + default_printer;
 
         default_ip = config->get<std::string>(printer_path + "/moonraker_host", "");
@@ -100,18 +105,18 @@ void ui_wizard_connection_init_subjects() {
     connection_port_buffer[sizeof(connection_port_buffer) - 1] = '\0';
 
     lv_subject_init_string(&connection_ip, connection_ip_buffer, nullptr,
-                          sizeof(connection_ip_buffer), connection_ip_buffer);
+                           sizeof(connection_ip_buffer), connection_ip_buffer);
 
     lv_subject_init_string(&connection_port, connection_port_buffer, nullptr,
-                          sizeof(connection_port_buffer), connection_port_buffer);
+                           sizeof(connection_port_buffer), connection_port_buffer);
 
     lv_subject_init_string(&connection_status_icon, connection_status_icon_buffer, nullptr,
-                          sizeof(connection_status_icon_buffer), "");  // Empty initially
+                           sizeof(connection_status_icon_buffer), ""); // Empty initially
 
     lv_subject_init_string(&connection_status_text, connection_status_text_buffer, nullptr,
-                          sizeof(connection_status_text_buffer), "");  // Empty initially
+                           sizeof(connection_status_text_buffer), ""); // Empty initially
 
-    lv_subject_init_int(&connection_testing, 0);  // Not testing initially
+    lv_subject_init_int(&connection_testing, 0); // Not testing initially
 
     // Set connection_test_passed to 0 (disabled) for this step
     // (It's defined globally in ui_wizard.cpp and defaults to 1 for other steps)
@@ -148,7 +153,7 @@ void ui_wizard_connection_init_subjects() {
  * and updates status based on result.
  */
 static void on_test_connection_clicked(lv_event_t* e) {
-    (void)e;  // Unused parameter
+    (void)e; // Unused parameter
 
     // Get values from subjects
     const char* ip = lv_subject_get_string(&connection_ip);
@@ -162,7 +167,7 @@ static void on_test_connection_clicked(lv_event_t* e) {
 
     // Validate inputs
     if (!ip || strlen(ip) == 0) {
-        lv_subject_copy_string(&connection_status_icon, "");  // No icon for prompt
+        lv_subject_copy_string(&connection_status_icon, ""); // No icon for prompt
         lv_subject_copy_string(&connection_status_text, "Please enter an IP address or hostname");
         spdlog::warn("[Wizard Connection] Empty IP address");
         return;
@@ -206,7 +211,7 @@ static void on_test_connection_clicked(lv_event_t* e) {
     saved_port = port_str;
 
     // Set UI to testing state
-    lv_subject_set_int(&connection_testing, 1);  // Disable button during test
+    lv_subject_set_int(&connection_testing, 1); // Disable button during test
     // Use question mark icon during testing (no spinner icon defined)
     const char* testing_icon = lv_xml_get_const(nullptr, "icon_question_circle");
     lv_subject_copy_string(&connection_status_icon, testing_icon ? testing_icon : "");
@@ -231,7 +236,8 @@ static void on_test_connection_clicked(lv_event_t* e) {
     // trying the Moonraker protocol handshake, triggering on_disconnected callback.
     //
     // Attempt connection
-    int result = client->connect(ws_url.c_str(),
+    int result = client->connect(
+        ws_url.c_str(),
         // On connected callback
         []() {
             spdlog::info("[Wizard Connection] Connection successful!");
@@ -242,20 +248,23 @@ static void on_test_connection_clicked(lv_event_t* e) {
             // Update icon and text separately
             lv_subject_copy_string(&connection_status_icon, check_icon ? check_icon : "");
             lv_subject_copy_string(&connection_status_text, "Connection successful!");
-            lv_subject_set_int(&connection_testing, 0);  // Hide spinner
+            lv_subject_set_int(&connection_testing, 0); // Hide spinner
             connection_validated = true;
-            lv_subject_set_int(&connection_test_passed, 1);  // Enable Next button via reactive binding
+            lv_subject_set_int(&connection_test_passed,
+                               1); // Enable Next button via reactive binding
 
             // Save configuration to helixconfig.json
             Config* config = Config::get_instance();
             try {
-                std::string default_printer = config->get<std::string>("/default_printer", "default_printer");
+                std::string default_printer =
+                    config->get<std::string>("/default_printer", "default_printer");
                 std::string printer_path = "/printers/" + default_printer;
 
                 config->set(printer_path + "/moonraker_host", saved_ip);
                 config->set(printer_path + "/moonraker_port", std::stoi(saved_port));
                 config->save();
-                spdlog::info("[Wizard Connection] Saved configuration: {}:{}", saved_ip, saved_port);
+                spdlog::info("[Wizard Connection] Saved configuration: {}:{}", saved_ip,
+                             saved_port);
             } catch (const std::exception& e) {
                 spdlog::error("[Wizard Connection] Failed to save config: {}", e.what());
             }
@@ -274,8 +283,9 @@ static void on_test_connection_clicked(lv_event_t* e) {
                         auto sensors = client->get_sensors();
                         auto fans = client->get_fans();
 
-                        spdlog::info("[Wizard Connection] Discovered {} heaters, {} sensors, {} fans",
-                                    heaters.size(), sensors.size(), fans.size());
+                        spdlog::info(
+                            "[Wizard Connection] Discovered {} heaters, {} sensors, {} fans",
+                            heaters.size(), sensors.size(), fans.size());
                     }
                 });
             }
@@ -284,10 +294,12 @@ static void on_test_connection_clicked(lv_event_t* e) {
         []() {
             // Check if we're still in testing mode
             int testing_state = lv_subject_get_int(&connection_testing);
-            spdlog::debug("[Wizard Connection] on_disconnected fired, connection_testing={}", testing_state);
+            spdlog::debug("[Wizard Connection] on_disconnected fired, connection_testing={}",
+                          testing_state);
 
             // If we're still in testing mode, this disconnect means the test failed
-            // (connection_testing will be 0 if we successfully connected, since on_connected clears it)
+            // (connection_testing will be 0 if we successfully connected, since on_connected clears
+            // it)
             if (testing_state == 1) {
                 spdlog::error("[Wizard Connection] Connection failed");
 
@@ -296,15 +308,16 @@ static void on_test_connection_clicked(lv_event_t* e) {
 
                 // Update icon and text separately
                 lv_subject_copy_string(&connection_status_icon, error_icon ? error_icon : "");
-                lv_subject_copy_string(&connection_status_text, "Connection failed. Check IP/port and try again.");
-                lv_subject_set_int(&connection_testing, 0);  // Hide spinner
+                lv_subject_copy_string(&connection_status_text,
+                                       "Connection failed. Check IP/port and try again.");
+                lv_subject_set_int(&connection_testing, 0); // Hide spinner
                 connection_validated = false;
-                lv_subject_set_int(&connection_test_passed, 0);  // Disable Next button via reactive binding
+                lv_subject_set_int(&connection_test_passed,
+                                   0); // Disable Next button via reactive binding
             } else {
                 spdlog::debug("[Wizard Connection] Ignoring disconnect (not in testing mode)");
             }
-        }
-    );
+        });
 
     // Disable automatic reconnection for wizard testing - we want manual control
     // Must be called AFTER connect() since connect() sets reconnect settings
@@ -336,7 +349,7 @@ static void on_ip_input_changed(lv_event_t* e) {
 
     // Clear validation state when input changes
     connection_validated = false;
-    lv_subject_set_int(&connection_test_passed, 0);  // Disable Next button via reactive binding
+    lv_subject_set_int(&connection_test_passed, 0); // Disable Next button via reactive binding
 }
 
 /**
@@ -356,7 +369,7 @@ static void on_port_input_changed(lv_event_t* e) {
 
     // Clear validation state when input changes
     connection_validated = false;
-    lv_subject_set_int(&connection_test_passed, 0);  // Disable Next button via reactive binding
+    lv_subject_set_int(&connection_test_passed, 0); // Disable Next button via reactive binding
 }
 
 // ============================================================================

@@ -50,7 +50,7 @@ void ui_panel_filament_set_temp(int current, int target);
 void ui_panel_filament_get_temp(int* current, int* target);
 
 // Material selection
-void ui_panel_filament_set_material(int material_id);  // 0=PLA, 1=PETG, 2=ABS, 3=Custom
+void ui_panel_filament_set_material(int material_id); // 0=PLA, 1=PETG, 2=ABS, 3=Custom
 int ui_panel_filament_get_material();
 
 // Safety state

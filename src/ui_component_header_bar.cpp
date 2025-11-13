@@ -22,8 +22,10 @@
  */
 
 #include "ui_component_header_bar.h"
-#include "ui_utils.h"
+
 #include "ui_theme.h"
+#include "ui_utils.h"
+
 #include <algorithm>
 #include <stdio.h>
 #include <vector>
@@ -50,10 +52,12 @@ static void header_bar_delete_cb(lv_event_t* e) {
 // Global resize callback (called by app resize handler system)
 static void on_app_resize() {
     for (lv_obj_t* header : header_instances) {
-        if (!header) continue;
+        if (!header)
+            continue;
 
         lv_obj_t* screen = lv_obj_get_screen(header);
-        if (!screen) continue;
+        if (!screen)
+            continue;
 
         lv_coord_t header_height = ui_get_responsive_header_height(lv_obj_get_height(screen));
         lv_obj_set_height(header, header_height);

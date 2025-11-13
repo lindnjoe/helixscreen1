@@ -23,18 +23,18 @@
 
 #pragma once
 
-#include <string>
 #include <memory>
+#include <string>
 
 /**
  * @brief Ethernet connection information
  */
 struct EthernetInfo {
-    bool connected;           ///< True if interface is up with valid IP
-    std::string interface;    ///< Interface name (e.g., "eth0", "en0")
-    std::string ip_address;   ///< IPv4 address (e.g., "192.168.1.100")
-    std::string mac_address;  ///< MAC address (e.g., "aa:bb:cc:dd:ee:ff")
-    std::string status;       ///< Human-readable status ("Connected", "No cable", "Unknown")
+    bool connected;          ///< True if interface is up with valid IP
+    std::string interface;   ///< Interface name (e.g., "eth0", "en0")
+    std::string ip_address;  ///< IPv4 address (e.g., "192.168.1.100")
+    std::string mac_address; ///< MAC address (e.g., "aa:bb:cc:dd:ee:ff")
+    std::string status;      ///< Human-readable status ("Connected", "No cable", "Unknown")
 
     EthernetInfo()
         : connected(false), interface(""), ip_address(""), mac_address(""), status("Unknown") {}
@@ -56,7 +56,7 @@ struct EthernetInfo {
  * - Clean error handling with meaningful messages
  */
 class EthernetBackend {
-public:
+  public:
     virtual ~EthernetBackend() = default;
 
     // ========================================================================

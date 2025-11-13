@@ -24,10 +24,11 @@
 #pragma once
 
 #include "wifi_backend.h"
+
+#include <atomic>
 #include <map>
 #include <random>
 #include <thread>
-#include <atomic>
 
 /**
  * @brief Mock WiFi network with password for testing
@@ -37,8 +38,9 @@
  * needed for mock authentication simulation.
  */
 struct MockWiFiNetwork {
-    WiFiNetwork network;      ///< Public network info (SSID, signal, is_secured, security_type: "WPA2", "WPA3", "Open", etc.)
-    std::string password;     ///< Expected password for authentication (empty for open networks)
+    WiFiNetwork network;  ///< Public network info (SSID, signal, is_secured, security_type: "WPA2",
+                          ///< "WPA3", "Open", etc.)
+    std::string password; ///< Expected password for authentication (empty for open networks)
 
     MockWiFiNetwork(const std::string& ssid, int strength, bool secured,
                     const std::string& security, const std::string& pass = "")
@@ -61,7 +63,7 @@ struct MockWiFiNetwork {
  * - Automated testing scenarios
  */
 class WifiBackendMock : public WifiBackend {
-public:
+  public:
     WifiBackendMock();
     ~WifiBackendMock();
 
@@ -74,7 +76,7 @@ public:
     bool is_running() const override;
 
     void register_event_callback(const std::string& name,
-                                std::function<void(const std::string&)> callback) override;
+                                 std::function<void(const std::string&)> callback) override;
 
     WiFiError trigger_scan() override;
     WiFiError get_scan_results(std::vector<WiFiNetwork>& networks) override;
@@ -82,7 +84,7 @@ public:
     WiFiError disconnect_network() override;
     ConnectionStatus get_status() override;
 
-private:
+  private:
     // ========================================================================
     // Internal State
     // ========================================================================
@@ -104,14 +106,14 @@ private:
 
     // Mock networks (realistic variety with passwords)
     std::vector<MockWiFiNetwork> mock_networks_;
-    std::mt19937 rng_;  // Random number generator for signal variations
+    std::mt19937 rng_; // Random number generator for signal variations
 
     // ========================================================================
     // Internal Helpers
     // ========================================================================
 
     void init_mock_networks();
-    void vary_signal_strengths();  // Add realism with signal variations
+    void vary_signal_strengths(); // Add realism with signal variations
     void fire_event(const std::string& event_name, const std::string& data = "");
 
     // Thread functions for async scan/connect simulation

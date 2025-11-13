@@ -42,14 +42,14 @@ typedef enum {
 
 // Jog direction
 typedef enum {
-    JOG_DIR_N,   // +Y
-    JOG_DIR_S,   // -Y
-    JOG_DIR_E,   // +X
-    JOG_DIR_W,   // -X
-    JOG_DIR_NE,  // +X+Y
-    JOG_DIR_NW,  // -X+Y
-    JOG_DIR_SE,  // +X-Y
-    JOG_DIR_SW   // -X-Y
+    JOG_DIR_N,  // +Y
+    JOG_DIR_S,  // -Y
+    JOG_DIR_E,  // +X
+    JOG_DIR_W,  // -X
+    JOG_DIR_NE, // +X+Y
+    JOG_DIR_NW, // -X+Y
+    JOG_DIR_SE, // +X-Y
+    JOG_DIR_SW  // -X-Y
 } jog_direction_t;
 
 /**

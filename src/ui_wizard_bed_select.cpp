@@ -22,17 +22,21 @@
  */
 
 #include "ui_wizard_bed_select.h"
+
 #include "ui_wizard.h"
 #include "ui_wizard_helpers.h"
-#include "wizard_config_paths.h"
+
 #include "app_globals.h"
 #include "config.h"
-#include "moonraker_client.h"
 #include "lvgl/lvgl.h"
+#include "moonraker_client.h"
+#include "wizard_config_paths.h"
+
 #include <spdlog/spdlog.h>
+
+#include <cstring>
 #include <string>
 #include <vector>
-#include <cstring>
 
 // ============================================================================
 // Static Data & Subjects
@@ -115,8 +119,9 @@ lv_obj_t* ui_wizard_bed_select_create(lv_obj_t* parent) {
 
     // Safety check: screen pointer should be nullptr (cleanup should have been called)
     if (bed_select_screen_root) {
-        spdlog::warn("[Wizard Bed] Screen pointer not null - cleanup may not have been called properly");
-        bed_select_screen_root = nullptr;  // Reset pointer, wizard framework handles actual deletion
+        spdlog::warn(
+            "[Wizard Bed] Screen pointer not null - cleanup may not have been called properly");
+        bed_select_screen_root = nullptr; // Reset pointer, wizard framework handles actual deletion
     }
 
     // Create screen from XML
@@ -144,8 +149,8 @@ lv_obj_t* ui_wizard_bed_select_create(lv_obj_t* parent) {
     // Build dropdown options string with "None" option
     std::string heater_options_str = WizardHelpers::build_dropdown_options(
         bed_heater_items,
-        nullptr,  // No additional filter needed (already filtered above)
-        true      // Include "None" option
+        nullptr, // No additional filter needed (already filtered above)
+        true     // Include "None" option
     );
 
     // Add "None" to items vector to match dropdown
@@ -159,11 +164,11 @@ lv_obj_t* ui_wizard_bed_select_create(lv_obj_t* parent) {
     }
 
     // Build dropdown options string with "None" option
-    std::string sensor_options_str = WizardHelpers::build_dropdown_options(
-        bed_sensor_items,
-        nullptr,  // No filter - include all sensors
-        true      // Include "None" option
-    );
+    std::string sensor_options_str =
+        WizardHelpers::build_dropdown_options(bed_sensor_items,
+                                              nullptr, // No filter - include all sensors
+                                              true     // Include "None" option
+        );
 
     // Add "None" to items vector to match dropdown
     bed_sensor_items.push_back("None");
@@ -175,14 +180,8 @@ lv_obj_t* ui_wizard_bed_select_create(lv_obj_t* parent) {
 
         // Restore saved selection with guessing fallback
         WizardHelpers::restore_dropdown_selection(
-            heater_dropdown,
-            &bed_heater_selected,
-            bed_heater_items,
-            WizardConfigPaths::BED_HEATER,
-            client,
-            [](MoonrakerClient* c) { return c->guess_bed_heater(); },
-            "[Wizard Bed]"
-        );
+            heater_dropdown, &bed_heater_selected, bed_heater_items, WizardConfigPaths::BED_HEATER,
+            client, [](MoonrakerClient* c) { return c->guess_bed_heater(); }, "[Wizard Bed]");
     }
 
     // Find and configure sensor dropdown
@@ -192,14 +191,8 @@ lv_obj_t* ui_wizard_bed_select_create(lv_obj_t* parent) {
 
         // Restore saved selection with guessing fallback
         WizardHelpers::restore_dropdown_selection(
-            sensor_dropdown,
-            &bed_sensor_selected,
-            bed_sensor_items,
-            WizardConfigPaths::BED_SENSOR,
-            client,
-            [](MoonrakerClient* c) { return c->guess_bed_sensor(); },
-            "[Wizard Bed]"
-        );
+            sensor_dropdown, &bed_sensor_selected, bed_sensor_items, WizardConfigPaths::BED_SENSOR,
+            client, [](MoonrakerClient* c) { return c->guess_bed_sensor(); }, "[Wizard Bed]");
     }
 
     spdlog::info("[Wizard Bed] Screen created successfully");
@@ -214,19 +207,11 @@ void ui_wizard_bed_select_cleanup() {
     spdlog::debug("[Wizard Bed] Cleaning up resources");
 
     // Save current selections to config before cleanup (deferred save pattern)
-    WizardHelpers::save_dropdown_selection(
-        &bed_heater_selected,
-        bed_heater_items,
-        WizardConfigPaths::BED_HEATER,
-        "[Wizard Bed]"
-    );
+    WizardHelpers::save_dropdown_selection(&bed_heater_selected, bed_heater_items,
+                                           WizardConfigPaths::BED_HEATER, "[Wizard Bed]");
 
-    WizardHelpers::save_dropdown_selection(
-        &bed_sensor_selected,
-        bed_sensor_items,
-        WizardConfigPaths::BED_SENSOR,
-        "[Wizard Bed]"
-    );
+    WizardHelpers::save_dropdown_selection(&bed_sensor_selected, bed_sensor_items,
+                                           WizardConfigPaths::BED_SENSOR, "[Wizard Bed]");
 
     // Persist to disk
     Config* config = Config::get_instance();

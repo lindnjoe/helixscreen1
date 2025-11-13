@@ -44,7 +44,7 @@
  * - ens*: Hot-plug naming scheme
  */
 class EthernetBackendLinux : public EthernetBackend {
-public:
+  public:
     EthernetBackendLinux();
     ~EthernetBackendLinux() override;
 
@@ -55,7 +55,7 @@ public:
     bool has_interface() override;
     EthernetInfo get_info() override;
 
-private:
+  private:
     /**
      * @brief Check if interface name looks like physical Ethernet
      *

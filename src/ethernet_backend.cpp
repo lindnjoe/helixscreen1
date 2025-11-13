@@ -22,7 +22,9 @@
  */
 
 #include "ethernet_backend.h"
+
 #include "ethernet_backend_mock.h"
+
 #include <spdlog/spdlog.h>
 
 #ifdef __APPLE__

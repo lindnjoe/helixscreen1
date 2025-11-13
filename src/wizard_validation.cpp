@@ -14,6 +14,7 @@
  */
 
 #include "wizard_validation.h"
+
 #include <cctype>
 
 bool is_valid_ip_or_hostname(const std::string& host) {
@@ -39,7 +40,7 @@ bool is_valid_ip_or_hostname(const std::string& host) {
         for (size_t i = 0; i < host.length(); i++) {
             if (host[i] == '.') {
                 // Check segment between dots
-                if (i == last_dot) {  // Empty segment (e.g., "192..1.1")
+                if (i == last_dot) { // Empty segment (e.g., "192..1.1")
                     valid_ip = false;
                     break;
                 }
@@ -72,7 +73,8 @@ bool is_valid_ip_or_hostname(const std::string& host) {
                     if (num >= 0 && num <= 255) {
                         return true;
                     }
-                } catch (...) {}
+                } catch (...) {
+                }
             }
         }
         // If it looks like an IP but isn't valid, reject it

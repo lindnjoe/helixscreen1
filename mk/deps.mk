@@ -90,6 +90,22 @@ check-deps:
 			echo "$(GREEN)✓ lv_font_conv installed$(RESET)"; \
 		fi; \
 	fi; \
+	if ! command -v clang-format >/dev/null 2>&1; then \
+		echo "$(YELLOW)⚠ clang-format not found$(RESET) (needed for code formatting)"; WARN=1; \
+		echo "  Install: $(YELLOW)brew install clang-format$(RESET) (macOS)"; \
+		echo "         $(YELLOW)sudo apt install clang-format$(RESET) (Debian/Ubuntu)"; \
+		echo "         $(YELLOW)sudo dnf install clang-tools-extra$(RESET) (Fedora/RHEL)"; \
+	else \
+		echo "$(GREEN)✓ clang-format found:$(RESET) $$(clang-format --version | head -n1)"; \
+	fi; \
+	if ! command -v xmllint >/dev/null 2>&1; then \
+		echo "$(YELLOW)⚠ xmllint not found$(RESET) (needed for XML validation/formatting)"; WARN=1; \
+		echo "  Install: $(YELLOW)brew install libxml2$(RESET) (macOS)"; \
+		echo "         $(YELLOW)sudo apt install libxml2-utils$(RESET) (Debian/Ubuntu)"; \
+		echo "         $(YELLOW)sudo dnf install libxml2$(RESET) (Fedora/RHEL)"; \
+	else \
+		echo "$(GREEN)✓ xmllint found$(RESET)"; \
+	fi; \
 	if ! command -v pkg-config >/dev/null 2>&1; then \
 		echo "$(YELLOW)⚠ pkg-config not found$(RESET) (needed for canvas/lv_img_conv)"; WARN=1; \
 		echo "  Install: $(YELLOW)brew install pkg-config$(RESET) (macOS)"; \
@@ -228,71 +244,76 @@ install-deps:
 		PLATFORM_TYPE="Unknown"; \
 		PKG_MGR="unknown"; \
 	fi; \
+	add_pkg() { \
+		case "$$1:$$PKG_MGR" in \
+			sdl2:brew) echo "sdl2";; \
+			sdl2:apt) echo "libsdl2-dev";; \
+			sdl2:dnf) echo "SDL2-devel";; \
+			npm:brew) echo "node";; \
+			npm:*) echo "npm";; \
+			clang-format:brew|clang-format:apt) echo "clang-format";; \
+			clang-format:dnf) echo "clang-tools-extra";; \
+			xmllint:brew) echo "libxml2";; \
+			xmllint:apt) echo "libxml2-utils";; \
+			xmllint:dnf) echo "libxml2";; \
+			pkg-config:brew|pkg-config:apt) echo "pkg-config";; \
+			pkg-config:dnf) echo "pkgconfig";; \
+			cairo:brew) echo "cairo";; \
+			cairo:apt) echo "libcairo2-dev";; \
+			cairo:dnf) echo "cairo-devel";; \
+			pango:brew) echo "pango";; \
+			pango:apt) echo "libpango1.0-dev";; \
+			pango:dnf) echo "pango-devel";; \
+			libpng:brew) echo "libpng";; \
+			libpng:apt) echo "libpng-dev";; \
+			libpng:dnf) echo "libpng-devel";; \
+			libjpeg:brew) echo "jpeg";; \
+			libjpeg:apt) echo "libjpeg-dev";; \
+			libjpeg:dnf) echo "libjpeg-turbo-devel";; \
+			librsvg:brew) echo "librsvg";; \
+			librsvg:apt) echo "librsvg2-dev";; \
+			librsvg:dnf) echo "librsvg2-devel";; \
+			*) echo "$$1";; \
+		esac; \
+	}; \
 	echo "$(CYAN)Detected platform:$(RESET) $$PLATFORM_TYPE"; \
 	echo ""; \
 	INSTALL_NEEDED=0; TO_INSTALL=""; \
 	if ! command -v sdl2-config >/dev/null 2>&1; then \
-		INSTALL_NEEDED=1; \
-		if [ "$$PKG_MGR" = "brew" ]; then TO_INSTALL="$$TO_INSTALL sdl2"; \
-		elif [ "$$PKG_MGR" = "apt" ]; then TO_INSTALL="$$TO_INSTALL libsdl2-dev"; \
-		elif [ "$$PKG_MGR" = "dnf" ]; then TO_INSTALL="$$TO_INSTALL SDL2-devel"; \
-		fi; \
+		INSTALL_NEEDED=1; TO_INSTALL="$$TO_INSTALL $$(add_pkg sdl2)"; \
 	fi; \
 	if ! command -v npm >/dev/null 2>&1; then \
-		INSTALL_NEEDED=1; \
-		if [ "$$PKG_MGR" = "brew" ]; then TO_INSTALL="$$TO_INSTALL node"; \
-		else TO_INSTALL="$$TO_INSTALL npm"; \
-		fi; \
+		INSTALL_NEEDED=1; TO_INSTALL="$$TO_INSTALL $$(add_pkg npm)"; \
 	fi; \
 	if ! command -v python3 >/dev/null 2>&1; then \
-		INSTALL_NEEDED=1; \
-		TO_INSTALL="$$TO_INSTALL python3"; \
+		INSTALL_NEEDED=1; TO_INSTALL="$$TO_INSTALL python3"; \
 	fi; \
 	if ! command -v clang >/dev/null 2>&1 && ! command -v gcc >/dev/null 2>&1; then \
-		INSTALL_NEEDED=1; \
-		TO_INSTALL="$$TO_INSTALL clang"; \
+		INSTALL_NEEDED=1; TO_INSTALL="$$TO_INSTALL clang"; \
+	fi; \
+	if ! command -v clang-format >/dev/null 2>&1; then \
+		INSTALL_NEEDED=1; TO_INSTALL="$$TO_INSTALL $$(add_pkg clang-format)"; \
+	fi; \
+	if ! command -v xmllint >/dev/null 2>&1; then \
+		INSTALL_NEEDED=1; TO_INSTALL="$$TO_INSTALL $$(add_pkg xmllint)"; \
 	fi; \
 	if ! command -v pkg-config >/dev/null 2>&1; then \
-		INSTALL_NEEDED=1; \
-		if [ "$$PKG_MGR" = "brew" ]; then TO_INSTALL="$$TO_INSTALL pkg-config"; \
-		elif [ "$$PKG_MGR" = "apt" ]; then TO_INSTALL="$$TO_INSTALL pkg-config"; \
-		elif [ "$$PKG_MGR" = "dnf" ]; then TO_INSTALL="$$TO_INSTALL pkgconfig"; \
-		fi; \
+		INSTALL_NEEDED=1; TO_INSTALL="$$TO_INSTALL $$(add_pkg pkg-config)"; \
 	else \
 		if ! pkg-config --exists cairo 2>/dev/null; then \
-			INSTALL_NEEDED=1; \
-			if [ "$$PKG_MGR" = "brew" ]; then TO_INSTALL="$$TO_INSTALL cairo"; \
-			elif [ "$$PKG_MGR" = "apt" ]; then TO_INSTALL="$$TO_INSTALL libcairo2-dev"; \
-			elif [ "$$PKG_MGR" = "dnf" ]; then TO_INSTALL="$$TO_INSTALL cairo-devel"; \
-			fi; \
+			INSTALL_NEEDED=1; TO_INSTALL="$$TO_INSTALL $$(add_pkg cairo)"; \
 		fi; \
 		if ! pkg-config --exists pango 2>/dev/null; then \
-			INSTALL_NEEDED=1; \
-			if [ "$$PKG_MGR" = "brew" ]; then TO_INSTALL="$$TO_INSTALL pango"; \
-			elif [ "$$PKG_MGR" = "apt" ]; then TO_INSTALL="$$TO_INSTALL libpango1.0-dev"; \
-			elif [ "$$PKG_MGR" = "dnf" ]; then TO_INSTALL="$$TO_INSTALL pango-devel"; \
-			fi; \
+			INSTALL_NEEDED=1; TO_INSTALL="$$TO_INSTALL $$(add_pkg pango)"; \
 		fi; \
 		if ! pkg-config --exists libpng 2>/dev/null; then \
-			INSTALL_NEEDED=1; \
-			if [ "$$PKG_MGR" = "brew" ]; then TO_INSTALL="$$TO_INSTALL libpng"; \
-			elif [ "$$PKG_MGR" = "apt" ]; then TO_INSTALL="$$TO_INSTALL libpng-dev"; \
-			elif [ "$$PKG_MGR" = "dnf" ]; then TO_INSTALL="$$TO_INSTALL libpng-devel"; \
-			fi; \
+			INSTALL_NEEDED=1; TO_INSTALL="$$TO_INSTALL $$(add_pkg libpng)"; \
 		fi; \
 		if ! pkg-config --exists libjpeg 2>/dev/null; then \
-			INSTALL_NEEDED=1; \
-			if [ "$$PKG_MGR" = "brew" ]; then TO_INSTALL="$$TO_INSTALL jpeg"; \
-			elif [ "$$PKG_MGR" = "apt" ]; then TO_INSTALL="$$TO_INSTALL libjpeg-dev"; \
-			elif [ "$$PKG_MGR" = "dnf" ]; then TO_INSTALL="$$TO_INSTALL libjpeg-turbo-devel"; \
-			fi; \
+			INSTALL_NEEDED=1; TO_INSTALL="$$TO_INSTALL $$(add_pkg libjpeg)"; \
 		fi; \
 		if ! pkg-config --exists librsvg-2.0 2>/dev/null; then \
-			INSTALL_NEEDED=1; \
-			if [ "$$PKG_MGR" = "brew" ]; then TO_INSTALL="$$TO_INSTALL librsvg"; \
-			elif [ "$$PKG_MGR" = "apt" ]; then TO_INSTALL="$$TO_INSTALL librsvg2-dev"; \
-			elif [ "$$PKG_MGR" = "dnf" ]; then TO_INSTALL="$$TO_INSTALL librsvg2-devel"; \
-			fi; \
+			INSTALL_NEEDED=1; TO_INSTALL="$$TO_INSTALL $$(add_pkg librsvg)"; \
 		fi; \
 	fi; \
 	if [ $$INSTALL_NEEDED -eq 0 ]; then \

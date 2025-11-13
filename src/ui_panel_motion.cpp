@@ -22,15 +22,18 @@
  */
 
 #include "ui_panel_motion.h"
+
 #include "ui_component_header_bar.h"
-#include "ui_nav.h"
-#include "ui_utils.h"
-#include "ui_theme.h"
 #include "ui_jog_pad.h"
+#include "ui_nav.h"
+#include "ui_theme.h"
+#include "ui_utils.h"
+
 #include <spdlog/spdlog.h>
+
+#include <cmath>
 #include <stdio.h>
 #include <string.h>
-#include <cmath>
 
 // Position subjects (reactive data binding)
 static lv_subject_t pos_x_subject;
@@ -87,7 +90,7 @@ static void jog_pad_jog_wrapper(jog_direction_t direction, float distance_mm, vo
 
 static void jog_pad_home_wrapper(void* user_data) {
     (void)user_data;
-    ui_panel_motion_home('A');  // Home XY
+    ui_panel_motion_home('A'); // Home XY
 }
 
 // Helper: Update distance button styling
@@ -112,7 +115,7 @@ static void update_distance_buttons() {
 
 // Event handler: Back button
 static void back_button_cb(lv_event_t* e) {
-    (void)e;  // Unused parameter
+    (void)e; // Unused parameter
 
     // Use navigation history to go back to previous panel
     if (!ui_nav_go_back()) {
@@ -179,7 +182,8 @@ static void home_button_cb(lv_event_t* e) {
     lv_obj_t* btn = (lv_obj_t*)lv_event_get_target(e);
     const char* name = lv_obj_get_name(btn);
 
-    if (!name) return;
+    if (!name)
+        return;
 
     if (strcmp(name, "home_all") == 0) {
         ui_panel_motion_home('A');
@@ -224,7 +228,8 @@ void ui_panel_motion_setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     // Set responsive padding for content area
     lv_obj_t* motion_content = lv_obj_find_by_name(panel, "motion_content");
     if (motion_content) {
-        lv_coord_t vertical_padding = ui_get_header_content_padding(lv_obj_get_height(parent_screen));
+        lv_coord_t vertical_padding =
+            ui_get_header_content_padding(lv_obj_get_height(parent_screen));
         // Set vertical padding (top/bottom) responsively, keep horizontal at medium (12px)
         lv_obj_set_style_pad_top(motion_content, vertical_padding, 0);
         lv_obj_set_style_pad_bottom(motion_content, vertical_padding, 0);
@@ -280,7 +285,7 @@ void ui_panel_motion_setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
         // Create jog pad widget
         jog_pad = ui_jog_pad_create(left_column);
         if (jog_pad) {
-            lv_obj_set_name(jog_pad, "jog_pad");  // Set name for findability
+            lv_obj_set_name(jog_pad, "jog_pad"); // Set name for findability
             lv_obj_set_width(jog_pad, jog_size);
             lv_obj_set_height(jog_pad, jog_size);
             lv_obj_set_align(jog_pad, LV_ALIGN_CENTER);
@@ -356,7 +361,7 @@ void ui_panel_motion_set_distance(jog_distance_t dist) {
 }
 
 void ui_panel_motion_jog(jog_direction_t direction, float distance_mm) {
-    const char* dir_names[] = {"N(+Y)", "S(-Y)", "E(+X)", "W(-X)",
+    const char* dir_names[] = {"N(+Y)",    "S(-Y)",    "E(+X)",    "W(-X)",
                                "NE(+X+Y)", "NW(-X+Y)", "SE(+X-Y)", "SW(-X-Y)"};
 
     printf("[Motion] Jog command: %s %.1fmm\n", dir_names[direction], distance_mm);
@@ -365,14 +370,34 @@ void ui_panel_motion_jog(jog_direction_t direction, float distance_mm) {
     float dx = 0.0f, dy = 0.0f;
 
     switch (direction) {
-        case JOG_DIR_N:  dy = distance_mm; break;
-        case JOG_DIR_S:  dy = -distance_mm; break;
-        case JOG_DIR_E:  dx = distance_mm; break;
-        case JOG_DIR_W:  dx = -distance_mm; break;
-        case JOG_DIR_NE: dx = distance_mm; dy = distance_mm; break;
-        case JOG_DIR_NW: dx = -distance_mm; dy = distance_mm; break;
-        case JOG_DIR_SE: dx = distance_mm; dy = -distance_mm; break;
-        case JOG_DIR_SW: dx = -distance_mm; dy = -distance_mm; break;
+    case JOG_DIR_N:
+        dy = distance_mm;
+        break;
+    case JOG_DIR_S:
+        dy = -distance_mm;
+        break;
+    case JOG_DIR_E:
+        dx = distance_mm;
+        break;
+    case JOG_DIR_W:
+        dx = -distance_mm;
+        break;
+    case JOG_DIR_NE:
+        dx = distance_mm;
+        dy = distance_mm;
+        break;
+    case JOG_DIR_NW:
+        dx = -distance_mm;
+        dy = distance_mm;
+        break;
+    case JOG_DIR_SE:
+        dx = distance_mm;
+        dy = -distance_mm;
+        break;
+    case JOG_DIR_SW:
+        dx = -distance_mm;
+        dy = -distance_mm;
+        break;
     }
 
     ui_panel_motion_set_position(current_x + dx, current_y + dy, current_z);
@@ -386,10 +411,18 @@ void ui_panel_motion_home(char axis) {
 
     // Mock position update (simulate homing)
     switch (axis) {
-        case 'X': ui_panel_motion_set_position(0.0f, current_y, current_z); break;
-        case 'Y': ui_panel_motion_set_position(current_x, 0.0f, current_z); break;
-        case 'Z': ui_panel_motion_set_position(current_x, current_y, 0.0f); break;
-        case 'A': ui_panel_motion_set_position(0.0f, 0.0f, 0.0f); break;  // All axes
+    case 'X':
+        ui_panel_motion_set_position(0.0f, current_y, current_z);
+        break;
+    case 'Y':
+        ui_panel_motion_set_position(current_x, 0.0f, current_z);
+        break;
+    case 'Z':
+        ui_panel_motion_set_position(current_x, current_y, 0.0f);
+        break;
+    case 'A':
+        ui_panel_motion_set_position(0.0f, 0.0f, 0.0f);
+        break; // All axes
     }
 
     // TODO: Send actual G-code command via Moonraker API

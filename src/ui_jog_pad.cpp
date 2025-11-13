@@ -22,8 +22,11 @@
  */
 
 #include "ui_jog_pad.h"
+
 #include "ui_theme.h"
+
 #include <spdlog/spdlog.h>
+
 #include <cmath>
 #include <cstring>
 
@@ -68,12 +71,12 @@ static jog_pad_state_t* get_state(lv_obj_t* obj) {
 // Helper: Load theme-aware colors from component scope or use fallbacks
 static void load_colors(jog_pad_state_t* state, const char* component_scope_name) {
     // Try to get component scope (if widget used in XML component)
-    lv_xml_component_scope_t* scope = component_scope_name ?
-        lv_xml_component_get_scope(component_scope_name) : nullptr;
+    lv_xml_component_scope_t* scope =
+        component_scope_name ? lv_xml_component_get_scope(component_scope_name) : nullptr;
 
     if (!scope) {
         spdlog::debug("[JogPad] No component scope '{}', using fallback colors",
-                     component_scope_name ? component_scope_name : "(null)");
+                      component_scope_name ? component_scope_name : "(null)");
         // Fallback to dark mode defaults
         state->jog_color_outer_ring = lv_color_hex(0x3A3A3A);
         state->jog_color_inner_circle = lv_color_hex(0x2A2A2A);
@@ -91,16 +94,26 @@ static void load_colors(jog_pad_state_t* state, const char* component_scope_name
     // Read light/dark variants for each color
     bool use_dark_mode = ui_theme_is_dark_mode();
 
-    const char* outer_ring = lv_xml_get_const(scope, use_dark_mode ? "jog_outer_ring_dark" : "jog_outer_ring_light");
-    const char* inner_circle = lv_xml_get_const(scope, use_dark_mode ? "jog_inner_circle_dark" : "jog_inner_circle_light");
-    const char* grid_lines = lv_xml_get_const(scope, use_dark_mode ? "jog_grid_lines_dark" : "jog_grid_lines_light");
-    const char* home_bg = lv_xml_get_const(scope, use_dark_mode ? "jog_home_bg_dark" : "jog_home_bg_light");
-    const char* home_border = lv_xml_get_const(scope, use_dark_mode ? "jog_home_border_dark" : "jog_home_border_light");
-    const char* home_text = lv_xml_get_const(scope, use_dark_mode ? "jog_home_text_dark" : "jog_home_text_light");
-    const char* boundary_lines = lv_xml_get_const(scope, use_dark_mode ? "jog_boundary_lines_dark" : "jog_boundary_lines_light");
-    const char* distance_labels = lv_xml_get_const(scope, use_dark_mode ? "jog_distance_labels_dark" : "jog_distance_labels_light");
-    const char* axis_labels = lv_xml_get_const(scope, use_dark_mode ? "jog_axis_labels_dark" : "jog_axis_labels_light");
-    const char* highlight = lv_xml_get_const(scope, use_dark_mode ? "jog_highlight_dark" : "jog_highlight_light");
+    const char* outer_ring =
+        lv_xml_get_const(scope, use_dark_mode ? "jog_outer_ring_dark" : "jog_outer_ring_light");
+    const char* inner_circle =
+        lv_xml_get_const(scope, use_dark_mode ? "jog_inner_circle_dark" : "jog_inner_circle_light");
+    const char* grid_lines =
+        lv_xml_get_const(scope, use_dark_mode ? "jog_grid_lines_dark" : "jog_grid_lines_light");
+    const char* home_bg =
+        lv_xml_get_const(scope, use_dark_mode ? "jog_home_bg_dark" : "jog_home_bg_light");
+    const char* home_border =
+        lv_xml_get_const(scope, use_dark_mode ? "jog_home_border_dark" : "jog_home_border_light");
+    const char* home_text =
+        lv_xml_get_const(scope, use_dark_mode ? "jog_home_text_dark" : "jog_home_text_light");
+    const char* boundary_lines = lv_xml_get_const(
+        scope, use_dark_mode ? "jog_boundary_lines_dark" : "jog_boundary_lines_light");
+    const char* distance_labels = lv_xml_get_const(
+        scope, use_dark_mode ? "jog_distance_labels_dark" : "jog_distance_labels_light");
+    const char* axis_labels =
+        lv_xml_get_const(scope, use_dark_mode ? "jog_axis_labels_dark" : "jog_axis_labels_light");
+    const char* highlight =
+        lv_xml_get_const(scope, use_dark_mode ? "jog_highlight_dark" : "jog_highlight_light");
 
     // Parse colors using theme utility
     state->jog_color_outer_ring = ui_theme_parse_color(outer_ring ? outer_ring : "#3A3A3A");
@@ -109,13 +122,15 @@ static void load_colors(jog_pad_state_t* state, const char* component_scope_name
     state->jog_color_home_bg = ui_theme_parse_color(home_bg ? home_bg : "#404040");
     state->jog_color_home_border = ui_theme_parse_color(home_border ? home_border : "#606060");
     state->jog_color_home_text = ui_theme_parse_color(home_text ? home_text : "#FFFFFF");
-    state->jog_color_boundary_lines = ui_theme_parse_color(boundary_lines ? boundary_lines : "#484848");
-    state->jog_color_distance_labels = ui_theme_parse_color(distance_labels ? distance_labels : "#CCCCCC");
+    state->jog_color_boundary_lines =
+        ui_theme_parse_color(boundary_lines ? boundary_lines : "#484848");
+    state->jog_color_distance_labels =
+        ui_theme_parse_color(distance_labels ? distance_labels : "#CCCCCC");
     state->jog_color_axis_labels = ui_theme_parse_color(axis_labels ? axis_labels : "#FFFFFF");
     state->jog_color_highlight = ui_theme_parse_color(highlight ? highlight : "#FFFFFF");
 
     spdlog::debug("[JogPad] Colors loaded from component scope '{}' ({} mode)",
-                 component_scope_name, use_dark_mode ? "dark" : "light");
+                  component_scope_name, use_dark_mode ? "dark" : "light");
 }
 
 // Helper: Calculate angle from center point (0° = North, clockwise)
@@ -123,7 +138,8 @@ static float calculate_angle(lv_coord_t dx, lv_coord_t dy) {
     // atan2 gives us angle with 0° = East, counter-clockwise
     // We need 0° = North, clockwise
     float angle = atan2f((float)dx, (float)-dy) * 180.0f / M_PI;
-    if (angle < 0) angle += 360.0f;
+    if (angle < 0)
+        angle += 360.0f;
     return angle;
 }
 
@@ -140,14 +156,22 @@ static jog_direction_t angle_to_direction(float angle) {
     // N: 337.5-22.5°, NE: 22.5-67.5°, E: 67.5-112.5°, SE: 112.5-157.5°
     // S: 157.5-202.5°, SW: 202.5-247.5°, W: 247.5-292.5°, NW: 292.5-337.5°
 
-    if (angle >= 337.5f || angle < 22.5f) return JOG_DIR_N;
-    else if (angle >= 22.5f && angle < 67.5f) return JOG_DIR_NE;
-    else if (angle >= 67.5f && angle < 112.5f) return JOG_DIR_E;
-    else if (angle >= 112.5f && angle < 157.5f) return JOG_DIR_SE;
-    else if (angle >= 157.5f && angle < 202.5f) return JOG_DIR_S;
-    else if (angle >= 202.5f && angle < 247.5f) return JOG_DIR_SW;
-    else if (angle >= 247.5f && angle < 292.5f) return JOG_DIR_W;
-    else return JOG_DIR_NW;
+    if (angle >= 337.5f || angle < 22.5f)
+        return JOG_DIR_N;
+    else if (angle >= 22.5f && angle < 67.5f)
+        return JOG_DIR_NE;
+    else if (angle >= 67.5f && angle < 112.5f)
+        return JOG_DIR_E;
+    else if (angle >= 112.5f && angle < 157.5f)
+        return JOG_DIR_SE;
+    else if (angle >= 157.5f && angle < 202.5f)
+        return JOG_DIR_S;
+    else if (angle >= 202.5f && angle < 247.5f)
+        return JOG_DIR_SW;
+    else if (angle >= 247.5f && angle < 292.5f)
+        return JOG_DIR_W;
+    else
+        return JOG_DIR_NW;
 }
 
 // Custom draw event: Draw two-zone circular jog pad (Bambu Lab style)
@@ -197,7 +221,8 @@ static void jog_pad_draw_cb(lv_event_t* e) {
     lv_obj_t* obj = (lv_obj_t*)lv_event_get_target(e);
     lv_layer_t* layer = lv_event_get_layer(e);
     jog_pad_state_t* state = get_state(obj);
-    if (!state) return;
+    if (!state)
+        return;
 
     // Get container dimensions and center point
     lv_area_t obj_coords;
@@ -220,10 +245,10 @@ static void jog_pad_draw_cb(lv_event_t* e) {
     lv_draw_arc_dsc_t bg_arc_dsc;
     lv_draw_arc_dsc_init(&bg_arc_dsc);
     bg_arc_dsc.color = state->jog_color_outer_ring;
-    bg_arc_dsc.width = radius * 2;  // Width = diameter, fills entire circle
+    bg_arc_dsc.width = radius * 2; // Width = diameter, fills entire circle
     bg_arc_dsc.center.x = center_x;
     bg_arc_dsc.center.y = center_y;
-    bg_arc_dsc.radius = radius;  // Centerline at outer edge
+    bg_arc_dsc.radius = radius; // Centerline at outer edge
     bg_arc_dsc.start_angle = 0;
     bg_arc_dsc.end_angle = 360;
     lv_draw_arc(layer, &bg_arc_dsc);
@@ -232,7 +257,7 @@ static void jog_pad_draw_cb(lv_event_t* e) {
     lv_draw_arc_dsc_t inner_arc_dsc;
     lv_draw_arc_dsc_init(&inner_arc_dsc);
     inner_arc_dsc.color = state->jog_color_inner_circle;
-    inner_arc_dsc.width = inner_boundary * 2;  // Width = inner diameter
+    inner_arc_dsc.width = inner_boundary * 2; // Width = inner diameter
     inner_arc_dsc.center.x = center_x;
     inner_arc_dsc.center.y = center_y;
     inner_arc_dsc.radius = inner_boundary;
@@ -263,13 +288,13 @@ static void jog_pad_draw_cb(lv_event_t* e) {
     lv_draw_line(layer, &line_dsc);
 
     // Draw center home button area
-    lv_coord_t home_radius = (lv_coord_t)(radius * 0.25f);  // 25% of total radius
+    lv_coord_t home_radius = (lv_coord_t)(radius * 0.25f); // 25% of total radius
 
     // Draw filled background circle for home area
     lv_draw_arc_dsc_t home_bg_dsc;
     lv_draw_arc_dsc_init(&home_bg_dsc);
     home_bg_dsc.color = state->jog_color_home_bg;
-    home_bg_dsc.width = home_radius * 2;  // Fill entire circle
+    home_bg_dsc.width = home_radius * 2; // Fill entire circle
     home_bg_dsc.center.x = center_x;
     home_bg_dsc.center.y = center_y;
     home_bg_dsc.radius = home_radius;
@@ -281,7 +306,7 @@ static void jog_pad_draw_cb(lv_event_t* e) {
     lv_draw_arc_dsc_t home_ring_dsc;
     lv_draw_arc_dsc_init(&home_ring_dsc);
     home_ring_dsc.color = state->jog_color_home_border;
-    home_ring_dsc.width = 3;  // Border thickness
+    home_ring_dsc.width = 3; // Border thickness
     home_ring_dsc.center.x = center_x;
     home_ring_dsc.center.y = center_y;
     home_ring_dsc.radius = home_radius;
@@ -396,7 +421,7 @@ static void jog_pad_draw_cb(lv_event_t* e) {
             lv_draw_arc_dsc_t highlight_dsc;
             lv_draw_arc_dsc_init(&highlight_dsc);
             highlight_dsc.color = state->jog_color_highlight;
-            highlight_dsc.opa = LV_OPA_60;  // ~23% opacity
+            highlight_dsc.opa = LV_OPA_60; // ~23% opacity
             lv_coord_t home_radius = (lv_coord_t)(radius * 0.25f);
             highlight_dsc.width = home_radius * 2;
             highlight_dsc.center.x = center_x;
@@ -412,8 +437,8 @@ static void jog_pad_draw_cb(lv_event_t* e) {
             // Angle mapping: N=0°, NE=45°, E=90°, SE=135°, S=180°, SW=225°, W=270°, NW=315°
             int direction_angles[] = {0, 180, 90, 270, 45, 315, 135, 225};
             int our_wedge_center = direction_angles[state->pressed_direction];
-            int our_wedge_start = our_wedge_center - 22;  // 22.5° on each side
-            int our_wedge_end = our_wedge_center + 23;    // Total 45° wedge
+            int our_wedge_start = our_wedge_center - 22; // 22.5° on each side
+            int our_wedge_end = our_wedge_center + 23;   // Total 45° wedge
 
             // Convert to LVGL's coordinate system (0°=East, CW)
             int lvgl_start = convert_angle_to_lvgl(our_wedge_start);
@@ -429,10 +454,10 @@ static void jog_pad_draw_cb(lv_event_t* e) {
                 lv_coord_t inner_boundary = (lv_coord_t)(radius * 0.50f);
                 lv_coord_t home_edge = (lv_coord_t)(radius * 0.25f);
 
-                highlight_dsc.width = inner_boundary - home_edge;  // 25% thickness
+                highlight_dsc.width = inner_boundary - home_edge; // 25% thickness
                 highlight_dsc.center.x = center_x;
                 highlight_dsc.center.y = center_y;
-                highlight_dsc.radius = inner_boundary;  // 50% outer edge
+                highlight_dsc.radius = inner_boundary; // 50% outer edge
                 highlight_dsc.start_angle = lvgl_start;
                 highlight_dsc.end_angle = lvgl_end;
                 lv_draw_arc(layer, &highlight_dsc);
@@ -440,10 +465,10 @@ static void jog_pad_draw_cb(lv_event_t* e) {
                 // Outer zone: Draw arc ring from 50% to 100%
                 lv_coord_t inner_boundary = (lv_coord_t)(radius * 0.50f);
 
-                highlight_dsc.width = radius - inner_boundary;  // 50% thickness
+                highlight_dsc.width = radius - inner_boundary; // 50% thickness
                 highlight_dsc.center.x = center_x;
                 highlight_dsc.center.y = center_y;
-                highlight_dsc.radius = radius;  // 100% outer edge
+                highlight_dsc.radius = radius; // 100% outer edge
                 highlight_dsc.start_angle = lvgl_start;
                 highlight_dsc.end_angle = lvgl_end;
                 lv_draw_arc(layer, &highlight_dsc);
@@ -456,7 +481,8 @@ static void jog_pad_draw_cb(lv_event_t* e) {
 static void jog_pad_press_cb(lv_event_t* e) {
     lv_obj_t* obj = (lv_obj_t*)lv_event_get_target(e);
     jog_pad_state_t* state = get_state(obj);
-    if (!state) return;
+    if (!state)
+        return;
 
     lv_point_t point;
     lv_indev_t* indev = lv_indev_active();
@@ -487,7 +513,7 @@ static void jog_pad_press_cb(lv_event_t* e) {
     if (distance < radius * 0.25f) {
         state->pressed_is_home = true;
         state->pressed_is_inner = false;
-        lv_obj_invalidate(obj);  // Trigger redraw
+        lv_obj_invalidate(obj); // Trigger redraw
         return;
     }
 
@@ -509,7 +535,8 @@ static void jog_pad_press_cb(lv_event_t* e) {
 static void jog_pad_release_cb(lv_event_t* e) {
     lv_obj_t* obj = (lv_obj_t*)lv_event_get_target(e);
     jog_pad_state_t* state = get_state(obj);
-    if (!state) return;
+    if (!state)
+        return;
 
     if (state->is_pressed) {
         state->is_pressed = false;
@@ -522,7 +549,8 @@ static void jog_pad_release_cb(lv_event_t* e) {
 static void jog_pad_click_cb(lv_event_t* e) {
     lv_obj_t* obj = (lv_obj_t*)lv_event_get_target(e);
     jog_pad_state_t* state = get_state(obj);
-    if (!state) return;
+    if (!state)
+        return;
 
     lv_point_t point;
     lv_indev_t* indev = lv_indev_active();
@@ -542,7 +570,8 @@ static void jog_pad_click_cb(lv_event_t* e) {
     float distance = sqrtf((float)(dx * dx + dy * dy));
 
     // Check if click is within circular boundary
-    if (distance > radius) return;
+    if (distance > radius)
+        return;
 
     // Home button: center 25% radius
     if (distance < radius * 0.25f) {
@@ -563,19 +592,21 @@ static void jog_pad_click_cb(lv_event_t* e) {
 
     if (distance < inner_boundary) {
         // Inner zone - small movements (0.1mm or 1mm based on selector)
-        jog_dist = (state->current_distance <= JOG_DIST_1MM) ?
-            distance_values[state->current_distance] : distance_values[JOG_DIST_1MM];
+        jog_dist = (state->current_distance <= JOG_DIST_1MM)
+                       ? distance_values[state->current_distance]
+                       : distance_values[JOG_DIST_1MM];
     } else {
         // Outer zone - large movements (10mm or 100mm based on selector)
-        jog_dist = (state->current_distance >= JOG_DIST_10MM) ?
-            distance_values[state->current_distance] : distance_values[JOG_DIST_10MM];
+        jog_dist = (state->current_distance >= JOG_DIST_10MM)
+                       ? distance_values[state->current_distance]
+                       : distance_values[JOG_DIST_10MM];
     }
 
     if (state->jog_callback) {
         state->jog_callback(direction, jog_dist, state->jog_user_data);
     }
 
-    const char* dir_names[] = {"N(+Y)", "S(-Y)", "E(+X)", "W(-X)",
+    const char* dir_names[] = {"N(+Y)",    "S(-Y)",    "E(+X)",    "W(-X)",
                                "NE(+X+Y)", "NW(-X+Y)", "SE(+X-Y)", "SW(-X-Y)"};
     spdlog::debug("[JogPad] Jog: {} {:.1f}mm", dir_names[direction], jog_dist);
 }
@@ -594,7 +625,8 @@ static void jog_pad_delete_cb(lv_event_t* e) {
 lv_obj_t* ui_jog_pad_create(lv_obj_t* parent) {
     // Create base object
     lv_obj_t* obj = lv_obj_create(parent);
-    if (!obj) return nullptr;
+    if (!obj)
+        return nullptr;
 
     // Allocate state
     jog_pad_state_t* state = (jog_pad_state_t*)lv_malloc(sizeof(jog_pad_state_t));
@@ -615,7 +647,7 @@ lv_obj_t* ui_jog_pad_create(lv_obj_t* parent) {
     lv_obj_set_style_bg_opa(obj, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(obj, 0, 0);
     lv_obj_set_style_pad_all(obj, 0, 0);
-    lv_obj_set_style_radius(obj, 160, 0);  // Circular appearance
+    lv_obj_set_style_radius(obj, 160, 0); // Circular appearance
     lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(obj, LV_OBJ_FLAG_CLICKABLE);
 
@@ -662,6 +694,6 @@ void ui_jog_pad_refresh_colors(lv_obj_t* obj) {
     jog_pad_state_t* state = get_state(obj);
     if (state) {
         load_colors(state, "motion_panel");
-        lv_obj_invalidate(obj);  // Trigger redraw
+        lv_obj_invalidate(obj); // Trigger redraw
     }
 }

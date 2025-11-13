@@ -29,17 +29,17 @@
  * Step states for progress indicator
  */
 typedef enum {
-    UI_STEP_STATE_PENDING = 0,     // Not yet started (muted color)
-    UI_STEP_STATE_ACTIVE = 1,      // Currently in progress (primary color, bold text)
-    UI_STEP_STATE_COMPLETED = 2    // Finished (success color, checkmark)
+    UI_STEP_STATE_PENDING = 0,  // Not yet started (muted color)
+    UI_STEP_STATE_ACTIVE = 1,   // Currently in progress (primary color, bold text)
+    UI_STEP_STATE_COMPLETED = 2 // Finished (success color, checkmark)
 } ui_step_state_t;
 
 /**
  * Step definition structure
  */
 typedef struct {
-    const char* label;             // Step text (e.g., "Nozzle heating")
-    ui_step_state_t state;         // Current state
+    const char* label;     // Step text (e.g., "Nozzle heating")
+    ui_step_state_t state; // Current state
 } ui_step_t;
 
 /**
@@ -49,14 +49,12 @@ typedef struct {
  * @param steps Array of step definitions
  * @param step_count Number of steps
  * @param horizontal true for horizontal layout, false for vertical (default)
- * @param scope_name Component scope name for loading theme colors (e.g., "step_progress_test"), or nullptr for defaults
+ * @param scope_name Component scope name for loading theme colors (e.g., "step_progress_test"), or
+ * nullptr for defaults
  * @return Created widget (flex container with step items)
  */
-lv_obj_t* ui_step_progress_create(lv_obj_t* parent,
-                                   const ui_step_t* steps,
-                                   int step_count,
-                                   bool horizontal,
-                                   const char* scope_name = nullptr);
+lv_obj_t* ui_step_progress_create(lv_obj_t* parent, const ui_step_t* steps, int step_count,
+                                  bool horizontal, const char* scope_name = nullptr);
 
 /**
  * Update the current active step (automatically sets previous steps to completed)

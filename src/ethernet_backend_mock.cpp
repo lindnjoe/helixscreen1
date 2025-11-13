@@ -22,6 +22,7 @@
  */
 
 #include "ethernet_backend_mock.h"
+
 #include <spdlog/spdlog.h>
 
 EthernetBackendMock::EthernetBackendMock() {

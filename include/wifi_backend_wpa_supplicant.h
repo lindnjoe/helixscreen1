@@ -23,20 +23,22 @@
 
 #pragma once
 
-#include <string>
+#include "wifi_backend.h" // Base class
+
 #include <functional>
 #include <map>
+#include <string>
 #include <vector>
-#include "wifi_backend.h"  // Base class
 
 #ifndef __APPLE__
 // ============================================================================
 // Linux Implementation: Full wpa_supplicant integration
 // ============================================================================
 
-#include "hv/hloop.h"
 #include "hv/EventLoop.h"
 #include "hv/EventLoopThread.h"
+#include "hv/hloop.h"
+
 #include <mutex>
 
 // Forward declaration - avoid including wpa_ctrl.h in header
@@ -67,7 +69,7 @@ struct wpa_ctrl;
  * @endcode
  */
 class WifiBackendWpaSupplicant : public WifiBackend, private hv::EventLoopThread {
-public:
+  public:
     /**
      * @brief Construct WiFi backend
      *
@@ -121,7 +123,7 @@ public:
      * @param callback Handler function
      */
     void register_event_callback(const std::string& name,
-                                std::function<void(const std::string&)> callback) override;
+                                 std::function<void(const std::string&)> callback) override;
 
     /**
      * @brief Send synchronous command to wpa_supplicant
@@ -152,8 +154,7 @@ public:
     WiFiError disconnect_network() override;
     ConnectionStatus get_status() override;
 
-
-private:
+  private:
     // ========================================================================
     // System Validation and Permission Checking
     // ========================================================================
@@ -235,12 +236,13 @@ private:
     int dbm_to_percentage(int dbm);
     std::string detect_security_type(const std::string& flags, bool& is_secured);
 
-    struct wpa_ctrl* conn;      ///< Control connection for sending commands
-    struct wpa_ctrl* mon_conn;  ///< Monitor connection for receiving events (FIXED LEAK)
+    struct wpa_ctrl* conn;     ///< Control connection for sending commands
+    struct wpa_ctrl* mon_conn; ///< Monitor connection for receiving events (FIXED LEAK)
 
     // Thread safety for callbacks (accessed from multiple threads)
-    std::mutex callbacks_mutex_;  ///< Protects callbacks map from race conditions
-    std::map<std::string, std::function<void(const std::string&)>> callbacks;  ///< Registered event handlers
+    std::mutex callbacks_mutex_; ///< Protects callbacks map from race conditions
+    std::map<std::string, std::function<void(const std::string&)>>
+        callbacks; ///< Registered event handlers
 };
 
 #endif // __APPLE__

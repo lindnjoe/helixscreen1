@@ -24,8 +24,9 @@
 #ifndef UI_JOG_PAD_H
 #define UI_JOG_PAD_H
 
+#include "ui_panel_motion.h" // For jog_direction_t and jog_distance_t enums
+
 #include <lvgl.h>
-#include "ui_panel_motion.h"  // For jog_direction_t and jog_distance_t enums
 
 // Jog pad event callbacks
 typedef void (*jog_pad_jog_cb_t)(jog_direction_t direction, float distance_mm, void* user_data);

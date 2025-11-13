@@ -26,30 +26,30 @@
 #include "lvgl/lvgl.h"
 
 // Default configuration
-#define UI_TEMP_GRAPH_MAX_SERIES 8           // Maximum concurrent temperature series
-#define UI_TEMP_GRAPH_DEFAULT_POINTS 300     // Default point count (5 min @ 1s)
-#define UI_TEMP_GRAPH_DEFAULT_MIN_TEMP 0.0f  // Default Y-axis minimum
+#define UI_TEMP_GRAPH_MAX_SERIES 8            // Maximum concurrent temperature series
+#define UI_TEMP_GRAPH_DEFAULT_POINTS 300      // Default point count (5 min @ 1s)
+#define UI_TEMP_GRAPH_DEFAULT_MIN_TEMP 0.0f   // Default Y-axis minimum
 #define UI_TEMP_GRAPH_DEFAULT_MAX_TEMP 100.0f // Default Y-axis maximum
 
 // Gradient opacity defaults
-#define UI_TEMP_GRAPH_GRADIENT_BOTTOM_OPA LV_OPA_60  // Bottom of gradient (darker)
-#define UI_TEMP_GRAPH_GRADIENT_TOP_OPA LV_OPA_10     // Top of gradient (lighter)
+#define UI_TEMP_GRAPH_GRADIENT_BOTTOM_OPA LV_OPA_60 // Bottom of gradient (darker)
+#define UI_TEMP_GRAPH_GRADIENT_TOP_OPA LV_OPA_10    // Top of gradient (lighter)
 
 /**
  * Temperature series metadata
  * Stores information about each temperature series (heater/sensor)
  */
 typedef struct {
-    int id;                          // Series ID (index in series_meta array)
-    lv_chart_series_t* chart_series; // LVGL chart series
+    int id;                           // Series ID (index in series_meta array)
+    lv_chart_series_t* chart_series;  // LVGL chart series
     lv_chart_cursor_t* target_cursor; // Target temperature cursor (horizontal line)
-    lv_color_t color;                // Series color
-    char name[32];                   // Series name (e.g., "Nozzle", "Bed")
-    bool visible;                    // Show/hide series
-    bool show_target;                // Show/hide target temperature line
-    float target_temp;               // Target temperature for cursor
-    lv_opa_t gradient_bottom_opa;    // Bottom gradient opacity
-    lv_opa_t gradient_top_opa;       // Top gradient opacity
+    lv_color_t color;                 // Series color
+    char name[32];                    // Series name (e.g., "Nozzle", "Bed")
+    bool visible;                     // Show/hide series
+    bool show_target;                 // Show/hide target temperature line
+    float target_temp;                // Target temperature for cursor
+    lv_opa_t gradient_bottom_opa;     // Bottom gradient opacity
+    lv_opa_t gradient_top_opa;        // Top gradient opacity
 } ui_temp_series_meta_t;
 
 /**
@@ -57,13 +57,13 @@ typedef struct {
  * Manages an LVGL chart with dynamic series for real-time temperature monitoring
  */
 typedef struct {
-    lv_obj_t* chart;                                         // LVGL chart widget
+    lv_obj_t* chart;                                             // LVGL chart widget
     ui_temp_series_meta_t series_meta[UI_TEMP_GRAPH_MAX_SERIES]; // Series metadata
-    int series_count;                                        // Current number of series
-    int next_series_id;                                      // Next available series ID
-    int point_count;                                         // Number of points per series
-    float min_temp;                                          // Y-axis minimum temperature
-    float max_temp;                                          // Y-axis maximum temperature
+    int series_count;                                            // Current number of series
+    int next_series_id;                                          // Next available series ID
+    int point_count;                                             // Number of points per series
+    float min_temp;                                              // Y-axis minimum temperature
+    float max_temp;                                              // Y-axis maximum temperature
 } ui_temp_graph_t;
 
 /**
@@ -146,7 +146,8 @@ void ui_temp_graph_update_series(ui_temp_graph_t* graph, int series_id, float te
  * @param temps Array of temperature values
  * @param count Number of temperatures in array
  */
-void ui_temp_graph_set_series_data(ui_temp_graph_t* graph, int series_id, const float* temps, int count);
+void ui_temp_graph_set_series_data(ui_temp_graph_t* graph, int series_id, const float* temps,
+                                   int count);
 
 /**
  * Clear all data points in the graph (all series)
@@ -173,7 +174,8 @@ void ui_temp_graph_clear_series(ui_temp_graph_t* graph, int series_id);
  * @param target Target temperature (in same units as data)
  * @param show true to show target line, false to hide
  */
-void ui_temp_graph_set_series_target(ui_temp_graph_t* graph, int series_id, float target, bool show);
+void ui_temp_graph_set_series_target(ui_temp_graph_t* graph, int series_id, float target,
+                                     bool show);
 
 /**
  * Show or hide target temperature line for a series
@@ -213,4 +215,5 @@ void ui_temp_graph_set_point_count(ui_temp_graph_t* graph, int count);
  * @param bottom_opa Bottom opacity (0-255, default 60% = LV_OPA_60)
  * @param top_opa Top opacity (0-255, default 10% = LV_OPA_10)
  */
-void ui_temp_graph_set_series_gradient(ui_temp_graph_t* graph, int series_id, lv_opa_t bottom_opa, lv_opa_t top_opa);
+void ui_temp_graph_set_series_gradient(ui_temp_graph_t* graph, int series_id, lv_opa_t bottom_opa,
+                                       lv_opa_t top_opa);

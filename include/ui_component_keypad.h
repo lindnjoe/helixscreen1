@@ -36,15 +36,15 @@ typedef void (*ui_keypad_callback_t)(float value, void* user_data);
  * Configuration for numeric keypad
  */
 struct ui_keypad_config_t {
-	float initial_value;      // Initial value to display
-	float min_value;          // Minimum allowed value
-	float max_value;          // Maximum allowed value
-	const char* title_label;  // Title label (e.g., "Nozzle Temp", "Heat Bed Temp")
-	const char* unit_label;   // Unit label (e.g., "°C", "mm")
-	bool allow_decimal;       // Enable decimal point button
-	bool allow_negative;      // Enable negative sign button
-	ui_keypad_callback_t callback;  // Called on OK confirmation
-	void* user_data;          // User data passed to callback
+    float initial_value;           // Initial value to display
+    float min_value;               // Minimum allowed value
+    float max_value;               // Maximum allowed value
+    const char* title_label;       // Title label (e.g., "Nozzle Temp", "Heat Bed Temp")
+    const char* unit_label;        // Unit label (e.g., "°C", "mm")
+    bool allow_decimal;            // Enable decimal point button
+    bool allow_negative;           // Enable negative sign button
+    ui_keypad_callback_t callback; // Called on OK confirmation
+    void* user_data;               // User data passed to callback
 };
 
 /**

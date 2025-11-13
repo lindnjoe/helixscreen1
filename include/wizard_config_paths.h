@@ -33,31 +33,31 @@
  */
 
 namespace WizardConfigPaths {
-    // Printer identification
-    constexpr const char* DEFAULT_PRINTER = "/default_printer";
-    constexpr const char* PRINTER_NAME = "/printer/name";
-    constexpr const char* PRINTER_TYPE = "/printer/type";
+// Printer identification
+constexpr const char* DEFAULT_PRINTER = "/default_printer";
+constexpr const char* PRINTER_NAME = "/printer/name";
+constexpr const char* PRINTER_TYPE = "/printer/type";
 
-    // Bed hardware
-    constexpr const char* BED_HEATER = "/printer/bed_heater";
-    constexpr const char* BED_SENSOR = "/printer/bed_sensor";
+// Bed hardware
+constexpr const char* BED_HEATER = "/printer/bed_heater";
+constexpr const char* BED_SENSOR = "/printer/bed_sensor";
 
-    // Hotend hardware
-    constexpr const char* HOTEND_HEATER = "/printer/hotend_heater";
-    constexpr const char* HOTEND_SENSOR = "/printer/hotend_sensor";
+// Hotend hardware
+constexpr const char* HOTEND_HEATER = "/printer/hotend_heater";
+constexpr const char* HOTEND_SENSOR = "/printer/hotend_sensor";
 
-    // Fan hardware
-    constexpr const char* HOTEND_FAN = "/printer/hotend_fan";
-    constexpr const char* PART_FAN = "/printer/part_fan";
+// Fan hardware
+constexpr const char* HOTEND_FAN = "/printer/hotend_fan";
+constexpr const char* PART_FAN = "/printer/part_fan";
 
-    // LED hardware
-    constexpr const char* LED_STRIP = "/printer/led_strip";
+// LED hardware
+constexpr const char* LED_STRIP = "/printer/led_strip";
 
-    // Network configuration
-    constexpr const char* MOONRAKER_HOST = "/moonraker_host";
-    constexpr const char* MOONRAKER_PORT = "/moonraker_port";
-    constexpr const char* WIFI_SSID = "/wifi/ssid";
-    constexpr const char* WIFI_PASSWORD = "/wifi/password";
-}
+// Network configuration
+constexpr const char* MOONRAKER_HOST = "/moonraker_host";
+constexpr const char* MOONRAKER_PORT = "/moonraker_port";
+constexpr const char* WIFI_SSID = "/wifi/ssid";
+constexpr const char* WIFI_PASSWORD = "/wifi/password";
+} // namespace WizardConfigPaths
 
 #endif // WIZARD_CONFIG_PATHS_H

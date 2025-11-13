@@ -1,3 +1,4 @@
+<?xml version="1.0"?>
 <!--
   Copyright (C) 2025 356C LLC
   Author: Preston Brown <pbrown@brown-house.net>
@@ -18,7 +19,6 @@
   along with HelixScreen. If not, see <https://www.gnu.org/licenses/>.
 -->
 <!-- Global dimensions and constants (colors/fonts handled by LVGL theme) -->
-
 <!--
   ⚠️ CRITICAL: Do NOT add <subjects> declarations to this file!
 
@@ -34,252 +34,289 @@
        CLAUDE.md "Critical Patterns #1"
 -->
 <component>
-<consts>
-	<!-- UI dimensions -->
-	<px name="nav_width" value="102" />
-	<px name="nav_padding" value="16" />
-	<px name="nav_button_size" value="70" />
-
-	<px name="border_radius" value="8" />
-
-	<!-- Responsive padding size variants (~80% of LVGL defaults)
+  <consts>
+    <!-- UI dimensions -->
+    <px name="nav_width" value="102"/>
+    <px name="nav_padding" value="16"/>
+    <px name="nav_button_size" value="70"/>
+    <px name="border_radius" value="8"/>
+    <!-- Responsive padding size variants (~80% of LVGL defaults)
 	     Runtime selects appropriate variant via ui_theme_register_responsive_padding()
 	     based on max(width, height): SMALL (≤480px), MEDIUM (481-800px), LARGE (>800px)
 	     Target hardware: 480x320 (SMALL), 800x480 (MEDIUM), 1024x600+ (LARGE) -->
-
-	<!-- padding_normal variants (container padding) -->
-	<px name="padding_normal_small" value="12" />
-	<px name="padding_normal_medium" value="16" />
-	<px name="padding_normal_large" value="20" />
-	<px name="padding_normal" value="20" />  <!-- Default, overridden at runtime -->
-
-	<!-- padding_small variants (compact padding) -->
-	<px name="padding_small_small" value="8" />
-	<px name="padding_small_medium" value="10" />
-	<px name="padding_small_large" value="12" />
-	<px name="padding_small" value="10" />  <!-- Default, overridden at runtime -->
-
-	<!-- padding_tiny variants (minimal padding) -->
-	<px name="padding_tiny_small" value="2" />
-	<px name="padding_tiny_medium" value="4" />
-	<px name="padding_tiny_large" value="6" />
-	<px name="padding_tiny" value="6" />  <!-- Default, overridden at runtime -->
-
-	<!-- Non-responsive padding (static across all screen sizes) -->
-	<px name="padding_medium" value="12" />  <!-- Medium padding for buttons/flex items -->
-
-	<!-- printer_img_size moved to home_panel.xml -->
-	<!-- accent_bar_width moved to home_panel.xml -->
-	<px name="accent_bar_height" value="28" />
-	<!-- accent_bar_gap moved to home_panel.xml -->
-	<percentage name="card_width" value="45%" />
-	<percentage name="card_height" value="80%" />
-
-	<!-- Print file card dimensions - responsive layouts for different screen sizes -->
-	<!-- Shared constants -->
-	<px name="print_file_card_padding" value="12" />
-	<px name="print_file_card_spacing" value="8" />
-
-	<!-- 5-column layout (1280 & 1024 screens) -->
-	<!-- Content: ~890-1146px, 5 cards with 20px gaps -->
-	<px name="print_file_card_width_5col" value="205" />
-	<px name="print_file_card_height_5col" value="280" />
-	<px name="print_file_card_thumb_5col" value="180" />
-	<px name="print_file_card_gap_5col" value="20" />
-
-	<!-- 4-column layout (800 screens) -->
-	<!-- Content: ~666px, 4 cards with 20px gaps -->
-	<px name="print_file_card_width_4col" value="151" />
-	<px name="print_file_card_height_4col" value="280" />
-	<px name="print_file_card_thumb_4col" value="127" />
-	<px name="print_file_card_gap_4col" value="20" />
-
-	<!-- 3-column layout (480 screens) -->
-	<!-- Content: ~346px, 3 cards with 12px gaps -->
-	<px name="print_file_card_width_3col" value="107" />
-	<px name="print_file_card_height_3col" value="200" />
-	<px name="print_file_card_thumb_3col" value="83" />
-	<px name="print_file_card_gap_3col" value="12" />
-
-	<!-- label_height_* moved to filament_panel.xml -->
-
-	<!-- Button dimensions -->
-	<px name="button_height" value="50" />
-	<px name="button_height_small" value="48" />
-	<px name="button_padding" value="12" />
-	<!-- Icon buttons, back buttons -->
-	<px name="button_height_normal" value="56" />
-	<!-- Primary action buttons -->
-	<px name="button_row_height" value="64" />
-	<!-- Row height for button containers -->
-
-	<!-- Wizard-specific dimensions -->
-	<px name="wizard_button_width" value="140" />
-	<!-- Width for wizard navigation buttons (Back/Next) -->
-	<px name="input_height" value="48" />
-	<!-- Standard height for all input fields (textareas, dropdowns, etc.) -->
-	<px name="wizard_printer_img_height" value="140" />
-	<!-- Printer image height in printer identification screen -->
-
-	<!-- Wizard Container - Responsive constants (overridden by C++ at runtime) -->
-	<!-- These defaults are for SMALL screens (800x480). C++ sets values based on detected screen size. -->
-	<px name="wizard_padding" value="12"/>          <!-- Container padding, responsive -->
-	<px name="wizard_gap" value="8"/>               <!-- Gap between flex items, responsive -->
-	<px name="wizard_header_height" value="42"/>    <!-- Header min-height, responsive -->
-	<px name="wizard_footer_height" value="82"/>    <!-- Footer min-height, responsive -->
-	<string name="wizard_header_font" value="montserrat_16"/>   <!-- Progress font, responsive -->
-	<string name="wizard_title_font" value="montserrat_20"/>    <!-- Title font, responsive -->
-
-	<!-- Input field dimensions (text inputs, dropdowns, rollers) -->
-	<px name="input_border_width" value="1" />
-	<!-- Border width for input fields (prominent for visibility) -->
-
-	<!-- Card styling -->
-	<px name="border_radius_large" value="12" />
-	<!-- Larger radius for prominent cards/buttons -->
-	<px name="padding_card" value="16" />
-	<!-- Standard internal card padding -->
-	<px name="padding_card_emphasis" value="20" />
-	<!-- Emphasis cards (progress, highlights) -->
-
-	<!-- Launcher card sizing (controls panel) -->
-	<!-- Percentage-based width for uniform sizing across rows -->
-	<percentage name="launcher_card_width" value="47%" />
-	<!-- 47% = 2 cards per row on tiny screens, wraps to 2-3-4 cards on larger screens -->
-	<px name="launcher_card_height" value="200" />
-	<!-- Fixed height for consistent appearance -->
-	<px name="launcher_card_padding" value="16" />
-	<!-- Reduced padding for compact layouts (was 24px) -->
-	<px name="launcher_card_icon_padding" value="12" />
-	<!-- Icon bottom padding (was 16px) -->
-	<px name="launcher_card_title_padding" value="6" />
-	<!-- Title bottom padding (was 8px) -->
-
-	<!-- Spacing and gaps -->
-
-	<!-- gap_normal variants (flex gap) -->
-	<px name="gap_normal_small" value="8" />
-	<px name="gap_normal_medium" value="10" />
-	<px name="gap_normal_large" value="12" />
-	<px name="gap_normal" value="12" />  <!-- Default, overridden at runtime -->
-
-	<!-- Non-responsive gaps (static across all screen sizes) -->
-	<px name="gap_large" value="16" />   <!-- Larger gap for major sections -->
-	<px name="gap_small" value="8" />    <!-- Compact gap for tight layouts -->
-	<px name="gap_tiny" value="6" />     <!-- Very tight gap for dense info -->
-
-	<!-- Typography - 3 semantic font sizes for design system consistency -->
-	<string name="font_heading" value="montserrat_24" />
-	<string name="font_body" value="montserrat_16" />
-	<string name="font_small" value="montserrat_12" />
-
-	<!-- Theme colors -->
-	<color name="primary_color" value="#AD2724" />
-	<color name="secondary_color" value="#37AEB3" />
-	<color name="error_color" value="#AD2724" />  <!-- Error/validation feedback (red) -->
-
-	<!-- App background colors (theme-specific variants) -->
-	<color name="app_bg_color_light" value="#FFFFFF" />  <!-- Light mode: white -->
-	<color name="app_bg_color_dark" value="#292A2D" />   <!-- Dark mode: dark gray -->
-
-	<!-- Primary text colors (theme-specific variants) -->
-	<color name="text_primary_light" value="#565656" />  <!-- Light mode: dark gray -->
-	<color name="text_primary_dark" value="#C4C5C6" />   <!-- Dark mode: light gray -->
-
-	<!-- Header text colors (theme-specific variants) -->
-	<color name="header_text_light" value="#1F1F1F" />   <!-- Light mode: very dark -->
-	<color name="header_text_dark" value="#E3E3E3" />    <!-- Dark mode: very light -->
-
-	<!-- Secondary text color (same for both themes) -->
-	<color name="text_secondary" value="#AAAAAA" />
-
-	<!-- Card background colors (theme-aware: light/dark modes) -->
-	<color name="card_bg_light" value="#F0F3F9" />  <!-- Light mode: light blue-gray -->
-	<color name="card_bg_dark" value="#1F1F1F" />   <!-- Dark mode: very dark gray -->
-
-	<!-- Theme grey colors (replaces LVGL default grey palette) -->
-	<color name="theme_grey_light" value="#D0D0D0" />  <!-- Light mode: Medium light grey -->
-	<color name="theme_grey_dark" value="#505050" />   <!-- Dark mode: Medium dark grey -->
-
-	<!-- Component dimensions -->
-	<px name="header_height" value="60" />
-	<!-- Standard header bar height -->
-	<px name="header_back_button_size" value="60" />
-	<!-- Back button touch target size -->
-	<px name="header_right_button_width" value="120" />
-	<!-- Right action button width -->
-	<px name="header_right_button_height" value="40" />
-	<!-- Right action button height -->
-
-	<!-- Motion panel dimensions (Z-axis controls) -->
-	<px name="z_button_width" value="140" />
-	<!-- Increased from 120 to fit icon + "10mm" text -->
-	<px name="z_button_height" value="58" />
-	<!-- Increased slightly for better proportions -->
-
-	<!-- Overlay/Modal Panel Dimensions -->
-	<!-- Used for numeric keypad, temperature panels, and other overlay panels -->
-	<!-- Responsive percentages: 68% = standard overlays, 83% = complex 2-column layouts -->
-	<percentage name="overlay_panel_width" value="68%" />
-	<!-- Standard overlay width (temps, simple panels) -->
-	<percentage name="overlay_panel_width_large" value="83%" />
-	<!-- Large overlay width (motion, complex 2-column panels) -->
-
-					<!-- ===================================================================== -->
-		<!-- FontAwesome icon constants - AUTO-GENERATED - DO NOT EDIT MANUALLY   -->
-		<!-- Run: python3 scripts/generate-icon-consts.py                         -->
-		<!-- ===================================================================== -->
-		<str name="icon_advanced" value=""/>  <!-- U+F142 ellipsis-vertical -->
-		<str name="icon_arrow_down" value="↓"/>  <!-- U+2193 downwards arrow -->
-		<str name="icon_arrow_down_left" value="↙"/>  <!-- U+2199 diagonal down-left -->
-		<str name="icon_arrow_down_right" value="↘"/>  <!-- U+2198 diagonal down-right -->
-		<str name="icon_arrow_down_to_line" value=""/>  <!-- U+F33D arrow-down-to-line (load) -->
-		<str name="icon_arrow_left" value="←"/>  <!-- U+2190 leftwards arrow -->
-		<str name="icon_arrow_right" value="→"/>  <!-- U+2192 rightwards arrow -->
-		<str name="icon_arrow_up" value="↑"/>  <!-- U+2191 upwards arrow -->
-		<str name="icon_arrow_up_left" value="↖"/>  <!-- U+2196 diagonal up-left -->
-		<str name="icon_arrow_up_line" value=""/>  <!-- U+F342 arrow-up-from-line -->
-		<str name="icon_arrow_up_right" value="↗"/>  <!-- U+2197 diagonal up-right -->
-		<str name="icon_arrows_all" value=""/>  <!-- U+F0B2 arrows-up-down-left-right -->
-		<str name="icon_backspace" value=""/>  <!-- U+F55A delete-left -->
-		<str name="icon_check_circle" value=""/>  <!-- U+F058 circle-check (connected) -->
-		<str name="icon_chevron_down" value=""/>  <!-- U+F078 chevron-down -->
-		<str name="icon_chevron_left" value=""/>  <!-- U+F053 chevron-left -->
-		<str name="icon_chevron_up" value=""/>  <!-- U+F077 chevron-up -->
-		<str name="icon_clock" value=""/>  <!-- U+F017 clock-o -->
-		<str name="icon_controls" value=""/>  <!-- U+F1DE sliders -->
-		<str name="icon_cube" value=""/>  <!-- U+F1B2 cube (PETG) -->
-		<str name="icon_droplet" value=""/>  <!-- U+F043 droplet (purge) -->
-		<str name="icon_edit" value=""/>  <!-- U+F044 edit (custom) -->
-		<str name="icon_ethernet" value=""/>  <!-- U+F796 ethernet -->
-		<str name="icon_fan" value=""/>  <!-- U+F863 fan -->
-		<str name="icon_filament" value=""/>  <!-- U+F008 film -->
-		<str name="icon_fire" value=""/>  <!-- U+F06D fire -->
-		<str name="icon_folder" value=""/>  <!-- U+F07C folder-open -->
-		<str name="icon_home" value=""/>  <!-- U+F015 house -->
-		<str name="icon_leaf" value=""/>  <!-- U+F06C leaf -->
-		<str name="icon_lightbulb" value=""/>  <!-- U+F0EB lightbulb -->
-		<str name="icon_list" value=""/>  <!-- U+F03A list -->
-		<str name="icon_lock" value=""/>  <!-- U+F023 lock (encrypted) -->
-		<str name="icon_power_off" value=""/>  <!-- U+F011 power-off -->
-		<str name="icon_question_circle" value=""/>  <!-- U+F059 circle-question -->
-		<str name="icon_settings" value=""/>  <!-- U+F013 gear -->
-		<str name="icon_signal_wifi_1" value=""/>  <!-- U+F6AC wifi-1 (0-25% signal) -->
-		<str name="icon_signal_wifi_2" value=""/>  <!-- U+F6AA wifi-2 (26-50% signal) -->
-		<str name="icon_signal_wifi_3" value=""/>  <!-- U+F6AB wifi-3 (51-75% signal) -->
-		<str name="icon_signal_wifi_4" value=""/>  <!-- U+F1EB wifi (76-100% signal) -->
-		<str name="icon_temperature" value=""/>  <!-- U+F2C7 thermometer-half -->
-		<str name="icon_th_large" value=""/>  <!-- U+F009 th-large -->
-		<str name="icon_trash" value=""/>  <!-- U+F1F8 trash -->
-		<str name="icon_triangle_exclamation" value=""/>  <!-- U+F071 triangle-exclamation (warning) -->
-		<str name="icon_wifi" value=""/>  <!-- U+F1EB wifi -->
-		<str name="icon_wifi_slash" value=""/>  <!-- U+F127 wifi-slash -->
-		<str name="icon_xmark_circle" value=""/>  <!-- U+F057 circle-xmark (error/failed) -->
-	<!-- ===================================================================== -->
-	<!-- Subjects for reactive data binding                                   -->
-	<!-- Subjects are initialized in C++ code before XML loading              -->
-	<!-- ===================================================================== -->
-</consts>
-
-<view extends="lv_obj"/>
+    <!-- padding_normal variants (container padding) -->
+    <px name="padding_normal_small" value="12"/>
+    <px name="padding_normal_medium" value="16"/>
+    <px name="padding_normal_large" value="20"/>
+    <px name="padding_normal" value="20"/>
+    <!-- Default, overridden at runtime -->
+    <!-- padding_small variants (compact padding) -->
+    <px name="padding_small_small" value="8"/>
+    <px name="padding_small_medium" value="10"/>
+    <px name="padding_small_large" value="12"/>
+    <px name="padding_small" value="10"/>
+    <!-- Default, overridden at runtime -->
+    <!-- padding_tiny variants (minimal padding) -->
+    <px name="padding_tiny_small" value="2"/>
+    <px name="padding_tiny_medium" value="4"/>
+    <px name="padding_tiny_large" value="6"/>
+    <px name="padding_tiny" value="6"/>
+    <!-- Default, overridden at runtime -->
+    <!-- Non-responsive padding (static across all screen sizes) -->
+    <px name="padding_medium" value="12"/>
+    <!-- Medium padding for buttons/flex items -->
+    <!-- printer_img_size moved to home_panel.xml -->
+    <!-- accent_bar_width moved to home_panel.xml -->
+    <px name="accent_bar_height" value="28"/>
+    <!-- accent_bar_gap moved to home_panel.xml -->
+    <percentage name="card_width" value="45%"/>
+    <percentage name="card_height" value="80%"/>
+    <!-- Print file card dimensions - responsive layouts for different screen sizes -->
+    <!-- Shared constants -->
+    <px name="print_file_card_padding" value="12"/>
+    <px name="print_file_card_spacing" value="8"/>
+    <!-- 5-column layout (1280 & 1024 screens) -->
+    <!-- Content: ~890-1146px, 5 cards with 20px gaps -->
+    <px name="print_file_card_width_5col" value="205"/>
+    <px name="print_file_card_height_5col" value="280"/>
+    <px name="print_file_card_thumb_5col" value="180"/>
+    <px name="print_file_card_gap_5col" value="20"/>
+    <!-- 4-column layout (800 screens) -->
+    <!-- Content: ~666px, 4 cards with 20px gaps -->
+    <px name="print_file_card_width_4col" value="151"/>
+    <px name="print_file_card_height_4col" value="280"/>
+    <px name="print_file_card_thumb_4col" value="127"/>
+    <px name="print_file_card_gap_4col" value="20"/>
+    <!-- 3-column layout (480 screens) -->
+    <!-- Content: ~346px, 3 cards with 12px gaps -->
+    <px name="print_file_card_width_3col" value="107"/>
+    <px name="print_file_card_height_3col" value="200"/>
+    <px name="print_file_card_thumb_3col" value="83"/>
+    <px name="print_file_card_gap_3col" value="12"/>
+    <!-- label_height_* moved to filament_panel.xml -->
+    <!-- Button dimensions -->
+    <px name="button_height" value="50"/>
+    <px name="button_height_small" value="48"/>
+    <px name="button_padding" value="12"/>
+    <!-- Icon buttons, back buttons -->
+    <px name="button_height_normal" value="56"/>
+    <!-- Primary action buttons -->
+    <px name="button_row_height" value="64"/>
+    <!-- Row height for button containers -->
+    <!-- Wizard-specific dimensions -->
+    <px name="wizard_button_width" value="140"/>
+    <!-- Width for wizard navigation buttons (Back/Next) -->
+    <px name="input_height" value="48"/>
+    <!-- Standard height for all input fields (textareas, dropdowns, etc.) -->
+    <px name="wizard_printer_img_height" value="140"/>
+    <!-- Printer image height in printer identification screen -->
+    <!-- Wizard Container - Responsive constants (overridden by C++ at runtime) -->
+    <!-- These defaults are for SMALL screens (800x480). C++ sets values based on detected screen size. -->
+    <px name="wizard_padding" value="12"/>
+    <!-- Container padding, responsive -->
+    <px name="wizard_gap" value="8"/>
+    <!-- Gap between flex items, responsive -->
+    <px name="wizard_header_height" value="42"/>
+    <!-- Header min-height, responsive -->
+    <px name="wizard_footer_height" value="82"/>
+    <!-- Footer min-height, responsive -->
+    <string name="wizard_header_font" value="montserrat_16"/>
+    <!-- Progress font, responsive -->
+    <string name="wizard_title_font" value="montserrat_20"/>
+    <!-- Title font, responsive -->
+    <!-- Input field dimensions (text inputs, dropdowns, rollers) -->
+    <px name="input_border_width" value="1"/>
+    <!-- Border width for input fields (prominent for visibility) -->
+    <!-- Card styling -->
+    <px name="border_radius_large" value="12"/>
+    <!-- Larger radius for prominent cards/buttons -->
+    <px name="padding_card" value="16"/>
+    <!-- Standard internal card padding -->
+    <px name="padding_card_emphasis" value="20"/>
+    <!-- Emphasis cards (progress, highlights) -->
+    <!-- Launcher card sizing (controls panel) -->
+    <!-- Percentage-based width for uniform sizing across rows -->
+    <percentage name="launcher_card_width" value="47%"/>
+    <!-- 47% = 2 cards per row on tiny screens, wraps to 2-3-4 cards on larger screens -->
+    <px name="launcher_card_height" value="200"/>
+    <!-- Fixed height for consistent appearance -->
+    <px name="launcher_card_padding" value="16"/>
+    <!-- Reduced padding for compact layouts (was 24px) -->
+    <px name="launcher_card_icon_padding" value="12"/>
+    <!-- Icon bottom padding (was 16px) -->
+    <px name="launcher_card_title_padding" value="6"/>
+    <!-- Title bottom padding (was 8px) -->
+    <!-- Spacing and gaps -->
+    <!-- gap_normal variants (flex gap) -->
+    <px name="gap_normal_small" value="8"/>
+    <px name="gap_normal_medium" value="10"/>
+    <px name="gap_normal_large" value="12"/>
+    <px name="gap_normal" value="12"/>
+    <!-- Default, overridden at runtime -->
+    <!-- Non-responsive gaps (static across all screen sizes) -->
+    <px name="gap_large" value="16"/>
+    <!-- Larger gap for major sections -->
+    <px name="gap_small" value="8"/>
+    <!-- Compact gap for tight layouts -->
+    <px name="gap_tiny" value="6"/>
+    <!-- Very tight gap for dense info -->
+    <!-- Typography - 3 semantic font sizes for design system consistency -->
+    <string name="font_heading" value="montserrat_24"/>
+    <string name="font_body" value="montserrat_16"/>
+    <string name="font_small" value="montserrat_12"/>
+    <!-- Theme colors -->
+    <color name="primary_color" value="#AD2724"/>
+    <color name="secondary_color" value="#37AEB3"/>
+    <color name="error_color" value="#AD2724"/>
+    <!-- Error/validation feedback (red) -->
+    <!-- App background colors (theme-specific variants) -->
+    <color name="app_bg_color_light" value="#FFFFFF"/>
+    <!-- Light mode: white -->
+    <color name="app_bg_color_dark" value="#292A2D"/>
+    <!-- Dark mode: dark gray -->
+    <!-- Primary text colors (theme-specific variants) -->
+    <color name="text_primary_light" value="#565656"/>
+    <!-- Light mode: dark gray -->
+    <color name="text_primary_dark" value="#C4C5C6"/>
+    <!-- Dark mode: light gray -->
+    <!-- Header text colors (theme-specific variants) -->
+    <color name="header_text_light" value="#1F1F1F"/>
+    <!-- Light mode: very dark -->
+    <color name="header_text_dark" value="#E3E3E3"/>
+    <!-- Dark mode: very light -->
+    <!-- Secondary text color (same for both themes) -->
+    <color name="text_secondary" value="#AAAAAA"/>
+    <!-- Card background colors (theme-aware: light/dark modes) -->
+    <color name="card_bg_light" value="#F0F3F9"/>
+    <!-- Light mode: light blue-gray -->
+    <color name="card_bg_dark" value="#1F1F1F"/>
+    <!-- Dark mode: very dark gray -->
+    <!-- Theme grey colors (replaces LVGL default grey palette) -->
+    <color name="theme_grey_light" value="#D0D0D0"/>
+    <!-- Light mode: Medium light grey -->
+    <color name="theme_grey_dark" value="#505050"/>
+    <!-- Dark mode: Medium dark grey -->
+    <!-- Component dimensions -->
+    <px name="header_height" value="60"/>
+    <!-- Standard header bar height -->
+    <px name="header_back_button_size" value="60"/>
+    <!-- Back button touch target size -->
+    <px name="header_right_button_width" value="120"/>
+    <!-- Right action button width -->
+    <px name="header_right_button_height" value="40"/>
+    <!-- Right action button height -->
+    <!-- Motion panel dimensions (Z-axis controls) -->
+    <px name="z_button_width" value="140"/>
+    <!-- Increased from 120 to fit icon + "10mm" text -->
+    <px name="z_button_height" value="58"/>
+    <!-- Increased slightly for better proportions -->
+    <!-- Overlay/Modal Panel Dimensions -->
+    <!-- Used for numeric keypad, temperature panels, and other overlay panels -->
+    <!-- Responsive percentages: 68% = standard overlays, 83% = complex 2-column layouts -->
+    <percentage name="overlay_panel_width" value="68%"/>
+    <!-- Standard overlay width (temps, simple panels) -->
+    <percentage name="overlay_panel_width_large" value="83%"/>
+    <!-- Large overlay width (motion, complex 2-column panels) -->
+    <!-- ===================================================================== -->
+    <!-- FontAwesome icon constants - AUTO-GENERATED - DO NOT EDIT MANUALLY   -->
+    <!-- Run: python3 scripts/generate-icon-consts.py                         -->
+    <!-- ===================================================================== -->
+    <str name="icon_advanced" value="&#xF142;"/>
+    <!-- U+F142 ellipsis-vertical -->
+    <str name="icon_arrow_down" value="&#x2193;"/>
+    <!-- U+2193 downwards arrow -->
+    <str name="icon_arrow_down_left" value="&#x2199;"/>
+    <!-- U+2199 diagonal down-left -->
+    <str name="icon_arrow_down_right" value="&#x2198;"/>
+    <!-- U+2198 diagonal down-right -->
+    <str name="icon_arrow_down_to_line" value="&#xF33D;"/>
+    <!-- U+F33D arrow-down-to-line (load) -->
+    <str name="icon_arrow_left" value="&#x2190;"/>
+    <!-- U+2190 leftwards arrow -->
+    <str name="icon_arrow_right" value="&#x2192;"/>
+    <!-- U+2192 rightwards arrow -->
+    <str name="icon_arrow_up" value="&#x2191;"/>
+    <!-- U+2191 upwards arrow -->
+    <str name="icon_arrow_up_left" value="&#x2196;"/>
+    <!-- U+2196 diagonal up-left -->
+    <str name="icon_arrow_up_line" value="&#xF342;"/>
+    <!-- U+F342 arrow-up-from-line -->
+    <str name="icon_arrow_up_right" value="&#x2197;"/>
+    <!-- U+2197 diagonal up-right -->
+    <str name="icon_arrows_all" value="&#xF0B2;"/>
+    <!-- U+F0B2 arrows-up-down-left-right -->
+    <str name="icon_backspace" value="&#xF55A;"/>
+    <!-- U+F55A delete-left -->
+    <str name="icon_check_circle" value="&#xF058;"/>
+    <!-- U+F058 circle-check (connected) -->
+    <str name="icon_chevron_down" value="&#xF078;"/>
+    <!-- U+F078 chevron-down -->
+    <str name="icon_chevron_left" value="&#xF053;"/>
+    <!-- U+F053 chevron-left -->
+    <str name="icon_chevron_up" value="&#xF077;"/>
+    <!-- U+F077 chevron-up -->
+    <str name="icon_clock" value="&#xF017;"/>
+    <!-- U+F017 clock-o -->
+    <str name="icon_controls" value="&#xF1DE;"/>
+    <!-- U+F1DE sliders -->
+    <str name="icon_cube" value="&#xF1B2;"/>
+    <!-- U+F1B2 cube (PETG) -->
+    <str name="icon_droplet" value="&#xF043;"/>
+    <!-- U+F043 droplet (purge) -->
+    <str name="icon_edit" value="&#xF044;"/>
+    <!-- U+F044 edit (custom) -->
+    <str name="icon_ethernet" value="&#xF796;"/>
+    <!-- U+F796 ethernet -->
+    <str name="icon_fan" value="&#xF863;"/>
+    <!-- U+F863 fan -->
+    <str name="icon_filament" value="&#xF008;"/>
+    <!-- U+F008 film -->
+    <str name="icon_fire" value="&#xF06D;"/>
+    <!-- U+F06D fire -->
+    <str name="icon_folder" value="&#xF07C;"/>
+    <!-- U+F07C folder-open -->
+    <str name="icon_home" value="&#xF015;"/>
+    <!-- U+F015 house -->
+    <str name="icon_leaf" value="&#xF06C;"/>
+    <!-- U+F06C leaf -->
+    <str name="icon_lightbulb" value="&#xF0EB;"/>
+    <!-- U+F0EB lightbulb -->
+    <str name="icon_list" value="&#xF03A;"/>
+    <!-- U+F03A list -->
+    <str name="icon_lock" value="&#xF023;"/>
+    <!-- U+F023 lock (encrypted) -->
+    <str name="icon_power_off" value="&#xF011;"/>
+    <!-- U+F011 power-off -->
+    <str name="icon_question_circle" value="&#xF059;"/>
+    <!-- U+F059 circle-question -->
+    <str name="icon_settings" value="&#xF013;"/>
+    <!-- U+F013 gear -->
+    <str name="icon_signal_wifi_1" value="&#xF6AC;"/>
+    <!-- U+F6AC wifi-1 (0-25% signal) -->
+    <str name="icon_signal_wifi_2" value="&#xF6AA;"/>
+    <!-- U+F6AA wifi-2 (26-50% signal) -->
+    <str name="icon_signal_wifi_3" value="&#xF6AB;"/>
+    <!-- U+F6AB wifi-3 (51-75% signal) -->
+    <str name="icon_signal_wifi_4" value="&#xF1EB;"/>
+    <!-- U+F1EB wifi (76-100% signal) -->
+    <str name="icon_temperature" value="&#xF2C7;"/>
+    <!-- U+F2C7 thermometer-half -->
+    <str name="icon_th_large" value="&#xF009;"/>
+    <!-- U+F009 th-large -->
+    <str name="icon_trash" value="&#xF1F8;"/>
+    <!-- U+F1F8 trash -->
+    <str name="icon_triangle_exclamation" value="&#xF071;"/>
+    <!-- U+F071 triangle-exclamation (warning) -->
+    <str name="icon_wifi" value="&#xF1EB;"/>
+    <!-- U+F1EB wifi -->
+    <str name="icon_wifi_slash" value="&#xF127;"/>
+    <!-- U+F127 wifi-slash -->
+    <str name="icon_xmark_circle" value="&#xF057;"/>
+    <!-- U+F057 circle-xmark (error/failed) -->
+    <!-- ===================================================================== -->
+    <!-- Subjects for reactive data binding                                   -->
+    <!-- Subjects are initialized in C++ code before XML loading              -->
+    <!-- ===================================================================== -->
+  </consts>
+  <view extends="lv_obj"/>
 </component>

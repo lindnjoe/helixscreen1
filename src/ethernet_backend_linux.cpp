@@ -22,10 +22,13 @@
  */
 
 #include "ethernet_backend_linux.h"
-#include "ifconfig.h"  // libhv's cross-platform ifconfig utility
+
+#include "ifconfig.h" // libhv's cross-platform ifconfig utility
+
 #include <spdlog/spdlog.h>
-#include <fstream>
+
 #include <algorithm>
+#include <fstream>
 
 EthernetBackendLinux::EthernetBackendLinux() {
     spdlog::debug("[EthernetLinux] Linux backend created");
@@ -162,14 +165,12 @@ EthernetInfo EthernetBackendLinux::get_info() {
         std::string operstate = read_operstate(name);
         if (operstate == "up" && has_ip) {
             up_ethernet = &iface;
-            break;  // Found best match, use it
+            break; // Found best match, use it
         }
     }
 
     // Use best available interface
-    ifconfig_t* selected = up_ethernet ? up_ethernet :
-                          ip_ethernet ? ip_ethernet :
-                          first_ethernet;
+    ifconfig_t* selected = up_ethernet ? up_ethernet : ip_ethernet ? ip_ethernet : first_ethernet;
 
     if (!selected) {
         // No Ethernet interface found
@@ -187,30 +188,29 @@ EthernetInfo EthernetBackendLinux::get_info() {
     std::string operstate = read_operstate(info.interface);
 
     // Determine connection status based on IP and operstate
-    bool has_ip = !info.ip_address.empty() &&
-                 info.ip_address != "0.0.0.0" &&
-                 info.ip_address != "127.0.0.1";
+    bool has_ip =
+        !info.ip_address.empty() && info.ip_address != "0.0.0.0" && info.ip_address != "127.0.0.1";
 
     if (has_ip && operstate == "up") {
         info.connected = true;
         info.status = "Connected";
-        spdlog::info("[EthernetLinux] Ethernet connected: {} ({}, operstate: {})",
-                    info.interface, info.ip_address, operstate);
+        spdlog::info("[EthernetLinux] Ethernet connected: {} ({}, operstate: {})", info.interface,
+                     info.ip_address, operstate);
     } else if (has_ip) {
         info.connected = true;
         info.status = "Connected";
-        spdlog::info("[EthernetLinux] Ethernet has IP: {} ({}, operstate: {})",
-                    info.interface, info.ip_address, operstate);
+        spdlog::info("[EthernetLinux] Ethernet has IP: {} ({}, operstate: {})", info.interface,
+                     info.ip_address, operstate);
     } else if (operstate == "down") {
         info.connected = false;
         info.status = "No cable";
         spdlog::debug("[EthernetLinux] Ethernet cable disconnected: {} (operstate: {})",
-                     info.interface, operstate);
+                      info.interface, operstate);
     } else {
         info.connected = false;
         info.status = "No connection";
         spdlog::debug("[EthernetLinux] Ethernet interface {} has no IP (operstate: {})",
-                     info.interface, operstate);
+                      info.interface, operstate);
     }
 
     return info;

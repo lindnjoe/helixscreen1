@@ -41,7 +41,7 @@
  * - Fallback when platform backends fail
  */
 class EthernetBackendMock : public EthernetBackend {
-public:
+  public:
     EthernetBackendMock();
     ~EthernetBackendMock() override;
 

@@ -66,18 +66,10 @@ extern "C" {
  *   lv_display_set_theme(display, theme);
  * @endcode
  */
-lv_theme_t* helix_theme_init(
-    lv_display_t* display,
-    lv_color_t primary_color,
-    lv_color_t secondary_color,
-    lv_color_t text_primary_color,
-    bool is_dark,
-    const lv_font_t* base_font,
-    lv_color_t screen_bg,
-    lv_color_t card_bg,
-    lv_color_t theme_grey,
-    int32_t border_radius
-);
+lv_theme_t* helix_theme_init(lv_display_t* display, lv_color_t primary_color,
+                             lv_color_t secondary_color, lv_color_t text_primary_color,
+                             bool is_dark, const lv_font_t* base_font, lv_color_t screen_bg,
+                             lv_color_t card_bg, lv_color_t theme_grey, int32_t border_radius);
 
 #ifdef __cplusplus
 }

@@ -25,8 +25,9 @@
 
 #ifdef __APPLE__
 
-#include "wifi_backend.h"
 #include "lvgl/lvgl.h"
+#include "wifi_backend.h"
+
 #include <map>
 #include <mutex>
 
@@ -54,7 +55,7 @@
  * - Validating connection workflows on real hardware
  */
 class WifiBackendMacOS : public WifiBackend {
-public:
+  public:
     WifiBackendMacOS();
     ~WifiBackendMacOS();
 
@@ -67,7 +68,7 @@ public:
     bool is_running() const override;
 
     void register_event_callback(const std::string& name,
-                                std::function<void(const std::string&)> callback) override;
+                                 std::function<void(const std::string&)> callback) override;
 
     WiFiError trigger_scan() override;
     WiFiError get_scan_results(std::vector<WiFiNetwork>& networks) override;
@@ -75,17 +76,17 @@ public:
     WiFiError disconnect_network() override;
     ConnectionStatus get_status() override;
 
-private:
+  private:
     // ========================================================================
     // Internal State
     // ========================================================================
 
     bool running_;
-    void* wifi_client_;  ///< CoreWLAN client (CWWiFiClient*, cast in .mm file)
-    void* interface_;     ///< Primary WiFi interface (CWInterface*, cast in .mm file)
+    void* wifi_client_; ///< CoreWLAN client (CWWiFiClient*, cast in .mm file)
+    void* interface_;   ///< Primary WiFi interface (CWInterface*, cast in .mm file)
 
     // Event system
-    std::mutex callbacks_mutex_;  ///< Protects callbacks map from race conditions
+    std::mutex callbacks_mutex_; ///< Protects callbacks map from race conditions
     std::map<std::string, std::function<void(const std::string&)>> callbacks_;
 
     // LVGL timers for async operation completion
@@ -94,7 +95,7 @@ private:
 
     // Cached scan results (updated after each scan)
     std::vector<WiFiNetwork> cached_networks_;
-    std::mutex networks_mutex_;  ///< Protects cached_networks_
+    std::mutex networks_mutex_; ///< Protects cached_networks_
 
     // Connection state
     std::string connecting_ssid_;

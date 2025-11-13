@@ -22,11 +22,14 @@
  */
 
 #include "ui_panel_filament.h"
+
 #include "ui_component_keypad.h"
 #include "ui_nav.h"
-#include "ui_utils.h"
 #include "ui_theme.h"
+#include "ui_utils.h"
+
 #include <spdlog/spdlog.h>
+
 #include <string.h>
 
 // Temperature subjects (reactive data binding)
@@ -45,11 +48,11 @@ static char warning_temps_buf[64];
 // Current state
 static int nozzle_current = 25;
 static int nozzle_target = 0;
-static int selected_material = -1;  // -1 = none, 0=PLA, 1=PETG, 2=ABS, 3=Custom
+static int selected_material = -1; // -1 = none, 0=PLA, 1=PETG, 2=ABS, 3=Custom
 static const int MIN_EXTRUSION_TEMP = 170;
 
 // Material temperature presets
-static const int MATERIAL_TEMPS[] = {210, 240, 250, 200};  // PLA, PETG, ABS, Custom default
+static const int MATERIAL_TEMPS[] = {210, 240, 250, 200}; // PLA, PETG, ABS, Custom default
 
 // Temperature limits (can be updated from Moonraker heater config)
 static int nozzle_min_temp = 0;
@@ -83,34 +86,43 @@ void ui_panel_filament_init_subjects() {
     }
 
     // Initialize subjects with default values
-    snprintf(temp_display_buf, sizeof(temp_display_buf), "%d / %d°C", nozzle_current, nozzle_target);
+    snprintf(temp_display_buf, sizeof(temp_display_buf), "%d / %d°C", nozzle_current,
+             nozzle_target);
     snprintf(status_buf, sizeof(status_buf), "Select material to begin");
-    snprintf(warning_temps_buf, sizeof(warning_temps_buf), "Current: %d°C | Target: %d°C", nozzle_current, nozzle_target);
+    snprintf(warning_temps_buf, sizeof(warning_temps_buf), "Current: %d°C | Target: %d°C",
+             nozzle_current, nozzle_target);
 
-    lv_subject_init_string(&filament_temp_display_subject, temp_display_buf, nullptr, sizeof(temp_display_buf), temp_display_buf);
-    lv_subject_init_string(&filament_status_subject, status_buf, nullptr, sizeof(status_buf), status_buf);
+    lv_subject_init_string(&filament_temp_display_subject, temp_display_buf, nullptr,
+                           sizeof(temp_display_buf), temp_display_buf);
+    lv_subject_init_string(&filament_status_subject, status_buf, nullptr, sizeof(status_buf),
+                           status_buf);
     lv_subject_init_int(&filament_material_selected_subject, -1);
-    lv_subject_init_int(&filament_extrusion_allowed_subject, 0);  // false (cold at start)
-    lv_subject_init_int(&filament_safety_warning_visible_subject, 1);  // true (cold at start)
-    lv_subject_init_string(&filament_warning_temps_subject, warning_temps_buf, nullptr, sizeof(warning_temps_buf), warning_temps_buf);
+    lv_subject_init_int(&filament_extrusion_allowed_subject, 0);      // false (cold at start)
+    lv_subject_init_int(&filament_safety_warning_visible_subject, 1); // true (cold at start)
+    lv_subject_init_string(&filament_warning_temps_subject, warning_temps_buf, nullptr,
+                           sizeof(warning_temps_buf), warning_temps_buf);
 
     // Register subjects with XML system (global scope)
     lv_xml_register_subject(NULL, "filament_temp_display", &filament_temp_display_subject);
     lv_xml_register_subject(NULL, "filament_status", &filament_status_subject);
-    lv_xml_register_subject(NULL, "filament_material_selected", &filament_material_selected_subject);
-    lv_xml_register_subject(NULL, "filament_extrusion_allowed", &filament_extrusion_allowed_subject);
-    lv_xml_register_subject(NULL, "filament_safety_warning_visible", &filament_safety_warning_visible_subject);
+    lv_xml_register_subject(NULL, "filament_material_selected",
+                            &filament_material_selected_subject);
+    lv_xml_register_subject(NULL, "filament_extrusion_allowed",
+                            &filament_extrusion_allowed_subject);
+    lv_xml_register_subject(NULL, "filament_safety_warning_visible",
+                            &filament_safety_warning_visible_subject);
     lv_xml_register_subject(NULL, "filament_warning_temps", &filament_warning_temps_subject);
 
     subjects_initialized = true;
 
-    spdlog::debug("[Filament] Subjects initialized: temp={}/{}°C, material={}",
-           nozzle_current, nozzle_target, selected_material);
+    spdlog::debug("[Filament] Subjects initialized: temp={}/{}°C, material={}", nozzle_current,
+                  nozzle_target, selected_material);
 }
 
 // Update temperature display text
 static void update_temp_display() {
-    snprintf(temp_display_buf, sizeof(temp_display_buf), "%d / %d°C", nozzle_current, nozzle_target);
+    snprintf(temp_display_buf, sizeof(temp_display_buf), "%d / %d°C", nozzle_current,
+             nozzle_target);
     lv_subject_copy_string(&filament_temp_display_subject, temp_display_buf);
 }
 
@@ -120,7 +132,8 @@ static void update_status() {
 
     if (nozzle_current >= MIN_EXTRUSION_TEMP) {
         // Hot enough
-        if (nozzle_target > 0 && nozzle_current >= nozzle_target - 5 && nozzle_current <= nozzle_target + 5) {
+        if (nozzle_target > 0 && nozzle_current >= nozzle_target - 5 &&
+            nozzle_current <= nozzle_target + 5) {
             status_msg = "✓ Ready to load";
         } else {
             status_msg = "✓ Ready to load";
@@ -186,7 +199,8 @@ static void update_safety_state() {
         }
     }
 
-    spdlog::debug("[Filament] Safety state updated: allowed={} (temp={}°C)", allowed, nozzle_current);
+    spdlog::debug("[Filament] Safety state updated: allowed={} (temp={}°C)", allowed,
+                  nozzle_current);
 }
 
 // Update visual feedback for preset buttons
@@ -210,7 +224,7 @@ static void update_preset_buttons_visual() {
 
 // Event handler: Material preset buttons
 static void preset_button_cb(lv_event_t* e) {
-    (void)lv_event_get_target(e);  // Unused - we only need user_data
+    (void)lv_event_get_target(e); // Unused - we only need user_data
     int material_id = (int)(uintptr_t)lv_event_get_user_data(e);
 
     selected_material = material_id;
@@ -232,7 +246,7 @@ static void custom_temp_confirmed_cb(float value, void* user_data) {
 
     spdlog::info("[Filament] Custom temperature confirmed: {}°C", static_cast<int>(value));
 
-    selected_material = 3;  // Custom
+    selected_material = 3; // Custom
     nozzle_target = (int)value;
 
     lv_subject_set_int(&filament_material_selected_subject, selected_material);
@@ -249,17 +263,15 @@ static void preset_custom_button_cb(lv_event_t* e) {
 
     spdlog::debug("[Filament] Opening custom temperature keypad");
 
-    ui_keypad_config_t config = {
-        .initial_value = (float)(nozzle_target > 0 ? nozzle_target : 200),
-        .min_value = 0.0f,
-        .max_value = (float)nozzle_max_temp,
-        .title_label = "Custom Temperature",
-        .unit_label = "°C",
-        .allow_decimal = false,
-        .allow_negative = false,
-        .callback = custom_temp_confirmed_cb,
-        .user_data = nullptr
-    };
+    ui_keypad_config_t config = {.initial_value = (float)(nozzle_target > 0 ? nozzle_target : 200),
+                                 .min_value = 0.0f,
+                                 .max_value = (float)nozzle_max_temp,
+                                 .title_label = "Custom Temperature",
+                                 .unit_label = "°C",
+                                 .allow_decimal = false,
+                                 .allow_negative = false,
+                                 .callback = custom_temp_confirmed_cb,
+                                 .user_data = nullptr};
 
     ui_keypad_show(&config);
 }
@@ -269,8 +281,8 @@ static void load_button_cb(lv_event_t* e) {
     (void)e;
 
     if (nozzle_current < MIN_EXTRUSION_TEMP) {
-        spdlog::warn("[Filament] Load blocked: nozzle too cold ({}°C < {}°C)",
-                     nozzle_current, MIN_EXTRUSION_TEMP);
+        spdlog::warn("[Filament] Load blocked: nozzle too cold ({}°C < {}°C)", nozzle_current,
+                     MIN_EXTRUSION_TEMP);
         return;
     }
 
@@ -283,8 +295,8 @@ static void unload_button_cb(lv_event_t* e) {
     (void)e;
 
     if (nozzle_current < MIN_EXTRUSION_TEMP) {
-        spdlog::warn("[Filament] Unload blocked: nozzle too cold ({}°C < {}°C)",
-                     nozzle_current, MIN_EXTRUSION_TEMP);
+        spdlog::warn("[Filament] Unload blocked: nozzle too cold ({}°C < {}°C)", nozzle_current,
+                     MIN_EXTRUSION_TEMP);
         return;
     }
 
@@ -297,8 +309,8 @@ static void purge_button_cb(lv_event_t* e) {
     (void)e;
 
     if (nozzle_current < MIN_EXTRUSION_TEMP) {
-        spdlog::warn("[Filament] Purge blocked: nozzle too cold ({}°C < {}°C)",
-                     nozzle_current, MIN_EXTRUSION_TEMP);
+        spdlog::warn("[Filament] Purge blocked: nozzle too cold ({}°C < {}°C)", nozzle_current,
+                     MIN_EXTRUSION_TEMP);
         return;
     }
 
@@ -339,10 +351,12 @@ void ui_panel_filament_setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
         if (preset_buttons[i]) {
             if (i < 3) {
                 // Standard presets (PLA, PETG, ABS)
-                lv_obj_add_event_cb(preset_buttons[i], preset_button_cb, LV_EVENT_CLICKED, (void*)(uintptr_t)i);
+                lv_obj_add_event_cb(preset_buttons[i], preset_button_cb, LV_EVENT_CLICKED,
+                                    (void*)(uintptr_t)i);
             } else {
                 // Custom preset (opens keypad)
-                lv_obj_add_event_cb(preset_buttons[i], preset_custom_button_cb, LV_EVENT_CLICKED, nullptr);
+                lv_obj_add_event_cb(preset_buttons[i], preset_custom_button_cb, LV_EVENT_CLICKED,
+                                    nullptr);
             }
         }
     }
@@ -406,8 +420,10 @@ void ui_panel_filament_set_temp(int current, int target) {
 }
 
 void ui_panel_filament_get_temp(int* current, int* target) {
-    if (current) *current = nozzle_current;
-    if (target) *target = nozzle_target;
+    if (current)
+        *current = nozzle_current;
+    if (target)
+        *target = nozzle_target;
 }
 
 void ui_panel_filament_set_material(int material_id) {

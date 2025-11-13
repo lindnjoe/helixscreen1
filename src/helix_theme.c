@@ -22,19 +22,21 @@
  */
 
 #include "helix_theme.h"
+
 #include "lvgl/src/themes/lv_theme_private.h"
+
 #include <stdlib.h>
 #include <string.h>
 
 // HelixScreen custom theme structure
 typedef struct {
-    lv_theme_t base;            // Base LVGL theme structure (MUST be first)
-    lv_theme_t* default_theme;  // LVGL default theme to delegate to
-    lv_style_t input_bg_style;  // Custom style for input widget backgrounds
-    lv_style_t disabled_style;  // Global disabled state style (50% opacity)
-    lv_style_t pressed_style;   // Global pressed state style (preserve radius)
-    lv_style_t button_style;    // Default button style (grey background)
-    bool is_dark_mode;          // Track theme mode for context
+    lv_theme_t base;           // Base LVGL theme structure (MUST be first)
+    lv_theme_t* default_theme; // LVGL default theme to delegate to
+    lv_style_t input_bg_style; // Custom style for input widget backgrounds
+    lv_style_t disabled_style; // Global disabled state style (50% opacity)
+    lv_style_t pressed_style;  // Global pressed state style (preserve radius)
+    lv_style_t button_style;   // Default button style (grey background)
+    bool is_dark_mode;         // Track theme mode for context
 } helix_theme_t;
 
 // Static theme instance (singleton pattern matching LVGL's approach)
@@ -129,18 +131,10 @@ static void helix_theme_apply(lv_theme_t* theme, lv_obj_t* obj) {
 #endif
 }
 
-lv_theme_t* helix_theme_init(
-    lv_display_t* display,
-    lv_color_t primary_color,
-    lv_color_t secondary_color,
-    lv_color_t text_primary_color,
-    bool is_dark,
-    const lv_font_t* base_font,
-    lv_color_t screen_bg,
-    lv_color_t card_bg,
-    lv_color_t theme_grey,
-    int32_t border_radius
-) {
+lv_theme_t* helix_theme_init(lv_display_t* display, lv_color_t primary_color,
+                             lv_color_t secondary_color, lv_color_t text_primary_color,
+                             bool is_dark, const lv_font_t* base_font, lv_color_t screen_bg,
+                             lv_color_t card_bg, lv_color_t theme_grey, int32_t border_radius) {
     // Clean up previous theme instance if exists
     if (helix_theme_instance) {
         lv_style_reset(&helix_theme_instance->input_bg_style);
@@ -159,13 +153,8 @@ lv_theme_t* helix_theme_init(
     memset(helix_theme_instance, 0, sizeof(helix_theme_t));
 
     // Initialize LVGL default theme (this does most of the heavy lifting)
-    helix_theme_instance->default_theme = lv_theme_default_init(
-        display,
-        primary_color,
-        secondary_color,
-        is_dark,
-        base_font
-    );
+    helix_theme_instance->default_theme =
+        lv_theme_default_init(display, primary_color, secondary_color, is_dark, base_font);
 
     if (!helix_theme_instance->default_theme) {
         free(helix_theme_instance);
@@ -175,7 +164,7 @@ lv_theme_t* helix_theme_init(
 
     // Configure base theme structure
     helix_theme_instance->base.apply_cb = helix_theme_apply;
-    helix_theme_instance->base.parent = NULL;  // No parent theme
+    helix_theme_instance->base.parent = NULL; // No parent theme
     helix_theme_instance->base.user_data = NULL;
     helix_theme_instance->base.disp = display;
     helix_theme_instance->base.color_primary = primary_color;
@@ -203,7 +192,8 @@ lv_theme_t* helix_theme_init(
     lv_style_init(&helix_theme_instance->pressed_style);
     lv_style_set_radius(&helix_theme_instance->pressed_style, border_radius);
 
-    // Initialize default button style (grey background with border radius, no shadow, theme-aware text color)
+    // Initialize default button style (grey background with border radius, no shadow, theme-aware
+    // text color)
     lv_style_init(&helix_theme_instance->button_style);
     lv_style_set_bg_color(&helix_theme_instance->button_style, theme_grey);
     lv_style_set_bg_opa(&helix_theme_instance->button_style, LV_OPA_COVER);
@@ -244,7 +234,7 @@ lv_theme_t* helix_theme_init(
         lv_color_t color_card;
         lv_color_t color_grey;
         bool inited;
-        theme_styles_partial_t styles;  // Partial - only what we need to access
+        theme_styles_partial_t styles; // Partial - only what we need to access
     } default_theme_t;
 
     default_theme_t* def_theme = (default_theme_t*)helix_theme_instance->default_theme;

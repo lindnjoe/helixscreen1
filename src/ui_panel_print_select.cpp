@@ -22,21 +22,25 @@
  */
 
 #include "ui_panel_print_select.h"
-#include "ui_panel_print_status.h"
-#include "ui_utils.h"
+
 #include "ui_fonts.h"
-#include "ui_theme.h"
-#include "ui_nav.h"
 #include "ui_modal.h"
+#include "ui_nav.h"
+#include "ui_panel_print_status.h"
+#include "ui_theme.h"
+#include "ui_utils.h"
+
 #include "app_globals.h"
-#include "moonraker_api.h"
 #include "config.h"
 #include "lvgl/src/others/xml/lv_xml.h"
+#include "moonraker_api.h"
+
 #include <spdlog/spdlog.h>
-#include <string>
-#include <vector>
+
 #include <algorithm>
 #include <ctime>
+#include <string>
+#include <vector>
 
 // Default placeholder thumbnail for print files
 static const char* DEFAULT_PLACEHOLDER_THUMB = "A:assets/images/thumbnail-placeholder.png";
@@ -63,8 +67,8 @@ static std::string construct_thumbnail_url(const std::string& relative_path) {
         int port = config->get<int>(config->df() + "moonraker_port");
 
         // Build URL: http://host:port/server/files/gcodes/{relative_path}
-        std::string url = "http://" + host + ":" + std::to_string(port) +
-                         "/server/files/gcodes/" + relative_path;
+        std::string url =
+            "http://" + host + ":" + std::to_string(port) + "/server/files/gcodes/" + relative_path;
 
         return url;
     } catch (const std::exception& e) {
@@ -79,10 +83,10 @@ static std::string construct_thumbnail_url(const std::string& relative_path) {
 struct PrintFileData {
     std::string filename;
     std::string thumbnail_path;
-    size_t file_size_bytes;      // File size in bytes
-    time_t modified_timestamp;   // Last modified timestamp
-    int print_time_minutes;      // Print time in minutes
-    float filament_grams;        // Filament weight in grams
+    size_t file_size_bytes;    // File size in bytes
+    time_t modified_timestamp; // Last modified timestamp
+    int print_time_minutes;    // Print time in minutes
+    float filament_grams;      // Filament weight in grams
 
     // Formatted strings (cached for performance)
     std::string size_str;
@@ -96,9 +100,9 @@ struct PrintFileData {
 // ============================================================================
 static const char* CARD_COMPONENT_NAME = "print_file_card";
 static const int CARD_GAP = 20;
-static const int CARD_MIN_WIDTH = 165;  // Increased to prevent metadata wrapping
+static const int CARD_MIN_WIDTH = 165; // Increased to prevent metadata wrapping
 static const int CARD_MAX_WIDTH = 220;
-static const int CARD_DEFAULT_HEIGHT = 245;  // Default height (overridden by dynamic calculation)
+static const int CARD_DEFAULT_HEIGHT = 245; // Default height (overridden by dynamic calculation)
 
 // Row count breakpoint: minimum container height for 3 rows vs 2 rows
 static const int ROW_COUNT_3_MIN_HEIGHT = 520;
@@ -132,20 +136,23 @@ static CardDimensions calculate_card_dimensions(lv_obj_t* container) {
     lv_coord_t panel_height = lv_obj_get_height(panel_root);
 
     // Find the top bar to subtract its height
-    lv_obj_t* top_bar = lv_obj_get_child(panel_root, 0);  // First child is top bar
+    lv_obj_t* top_bar = lv_obj_get_child(panel_root, 0); // First child is top bar
     lv_coord_t top_bar_height = top_bar ? lv_obj_get_height(top_bar) : 60;
 
     // Check for gap between panel children in flex layout
     lv_coord_t panel_gap = lv_obj_get_style_pad_row(panel_root, LV_PART_MAIN);
 
-    // Calculate available height for cards (panel minus top bar minus container padding minus any gaps)
+    // Calculate available height for cards (panel minus top bar minus container padding minus any
+    // gaps)
     lv_coord_t container_padding = lv_obj_get_style_pad_top(container, LV_PART_MAIN) +
                                    lv_obj_get_style_pad_bottom(container, LV_PART_MAIN);
     lv_coord_t container_actual_height = lv_obj_get_height(container);
     lv_coord_t available_height = panel_height - top_bar_height - container_padding - panel_gap;
 
-    spdlog::info("Heights: panel={}, top_bar={}, container_actual={}, container_padding={}, panel_gap={}, available={}",
-               panel_height, top_bar_height, container_actual_height, container_padding, panel_gap, available_height);
+    spdlog::info("Heights: panel={}, top_bar={}, container_actual={}, container_padding={}, "
+                 "panel_gap={}, available={}",
+                 panel_height, top_bar_height, container_actual_height, container_padding,
+                 panel_gap, available_height);
 
     CardDimensions dims;
 
@@ -169,15 +176,16 @@ static CardDimensions calculate_card_dimensions(lv_obj_t* container) {
             dims.num_columns = cols;
             dims.card_width = card_width;
 
-            spdlog::info("Calculated card layout: {} rows × {} columns, card={}x{}",
-                       dims.num_rows, dims.num_columns, dims.card_width, dims.card_height);
+            spdlog::info("Calculated card layout: {} rows × {} columns, card={}x{}", dims.num_rows,
+                         dims.num_columns, dims.card_width, dims.card_height);
             return dims;
         }
     }
 
     // Fallback to minimum width if nothing fits perfectly
     dims.num_columns = container_width / (CARD_MIN_WIDTH + CARD_GAP);
-    if (dims.num_columns < 1) dims.num_columns = 1;  // Safety: always at least 1 column
+    if (dims.num_columns < 1)
+        dims.num_columns = 1; // Safety: always at least 1 column
     dims.card_width = CARD_MIN_WIDTH;
 
     spdlog::warn("No optimal card layout found, using fallback: {} columns", dims.num_columns);
@@ -188,10 +196,11 @@ static CardDimensions calculate_card_dimensions(lv_obj_t* container) {
 // Static state
 // ============================================================================
 static std::vector<PrintFileData> file_list;
-static PrintSelectViewMode current_view_mode = PrintSelectViewMode::CARD;  // Default view mode
+static PrintSelectViewMode current_view_mode = PrintSelectViewMode::CARD; // Default view mode
 static PrintSelectSortColumn current_sort_column = PrintSelectSortColumn::FILENAME;
 static PrintSelectSortDirection current_sort_direction = PrintSelectSortDirection::ASCENDING;
-static bool panel_initialized = false;  // Guard flag to prevent resize callback before setup complete
+static bool panel_initialized =
+    false; // Guard flag to prevent resize callback before setup complete
 
 // Widget references
 static lv_obj_t* panel_root_widget = nullptr;
@@ -239,7 +248,8 @@ static void scale_detail_images();
 // ============================================================================
 static void on_resize() {
     // CRITICAL: Don't run resize logic until panel is fully initialized (prevents segfault)
-    if (!panel_initialized) return;
+    if (!panel_initialized)
+        return;
 
     spdlog::info("Print select panel handling resize event");
 
@@ -252,7 +262,8 @@ static void on_resize() {
     if (detail_view_widget && parent_screen_widget) {
         lv_obj_t* content_container = lv_obj_find_by_name(detail_view_widget, "content_container");
         if (content_container) {
-            lv_coord_t padding = ui_get_header_content_padding(lv_obj_get_height(parent_screen_widget));
+            lv_coord_t padding =
+                ui_get_header_content_padding(lv_obj_get_height(parent_screen_widget));
             lv_obj_set_style_pad_all(content_container, padding, 0);
         }
     }
@@ -263,20 +274,20 @@ static void on_resize() {
 // ============================================================================
 void ui_panel_print_select_init_subjects() {
     // Initialize selected file subjects
-    lv_subject_init_string(&selected_filename_subject, selected_filename_buffer,
-                          nullptr, sizeof(selected_filename_buffer), "");
+    lv_subject_init_string(&selected_filename_subject, selected_filename_buffer, nullptr,
+                           sizeof(selected_filename_buffer), "");
     lv_xml_register_subject(nullptr, "selected_filename", &selected_filename_subject);
 
-    lv_subject_init_string(&selected_thumbnail_subject, selected_thumbnail_buffer,
-                          nullptr, sizeof(selected_thumbnail_buffer), DEFAULT_PLACEHOLDER_THUMB);
+    lv_subject_init_string(&selected_thumbnail_subject, selected_thumbnail_buffer, nullptr,
+                           sizeof(selected_thumbnail_buffer), DEFAULT_PLACEHOLDER_THUMB);
     lv_xml_register_subject(nullptr, "selected_thumbnail", &selected_thumbnail_subject);
 
-    lv_subject_init_string(&selected_print_time_subject, selected_print_time_buffer,
-                          nullptr, sizeof(selected_print_time_subject), "");
+    lv_subject_init_string(&selected_print_time_subject, selected_print_time_buffer, nullptr,
+                           sizeof(selected_print_time_subject), "");
     lv_xml_register_subject(nullptr, "selected_print_time", &selected_print_time_subject);
 
     lv_subject_init_string(&selected_filament_weight_subject, selected_filament_weight_buffer,
-                          nullptr, sizeof(selected_filament_weight_buffer), "");
+                           nullptr, sizeof(selected_filament_weight_buffer), "");
     lv_xml_register_subject(nullptr, "selected_filament_weight", &selected_filament_weight_subject);
 
     // Initialize detail view visibility subject (0 = hidden, 1 = visible)
@@ -313,27 +324,32 @@ void ui_panel_print_select_setup(lv_obj_t* panel_root, lv_obj_t* parent_screen) 
     }
 
     // Wire up view toggle button
-    lv_obj_add_event_cb(view_toggle_btn, [](lv_event_t* e) {
-        (void)e;
-        ui_panel_print_select_toggle_view();
-    }, LV_EVENT_CLICKED, nullptr);
+    lv_obj_add_event_cb(
+        view_toggle_btn,
+        [](lv_event_t* e) {
+            (void)e;
+            ui_panel_print_select_toggle_view();
+        },
+        LV_EVENT_CLICKED, nullptr);
 
     // Wire up column header click handlers
     static const char* header_names[] = {"header_filename", "header_size", "header_modified",
                                          "header_print_time"};
     // IMPORTANT: Static storage so pointers remain valid after function returns
-    static PrintSelectSortColumn columns[] = {PrintSelectSortColumn::FILENAME,
-                                              PrintSelectSortColumn::SIZE,
-                                              PrintSelectSortColumn::MODIFIED,
-                                              PrintSelectSortColumn::PRINT_TIME};
+    static PrintSelectSortColumn columns[] = {
+        PrintSelectSortColumn::FILENAME, PrintSelectSortColumn::SIZE,
+        PrintSelectSortColumn::MODIFIED, PrintSelectSortColumn::PRINT_TIME};
 
     for (int i = 0; i < 4; i++) {
         lv_obj_t* header = lv_obj_find_by_name(panel_root, header_names[i]);
         if (header) {
-            lv_obj_add_event_cb(header, [](lv_event_t* e) {
-                PrintSelectSortColumn* col = (PrintSelectSortColumn*)lv_event_get_user_data(e);
-                ui_panel_print_select_sort_by(*col);
-            }, LV_EVENT_CLICKED, &columns[i]);
+            lv_obj_add_event_cb(
+                header,
+                [](lv_event_t* e) {
+                    PrintSelectSortColumn* col = (PrintSelectSortColumn*)lv_event_get_user_data(e);
+                    ui_panel_print_select_sort_by(*col);
+                },
+                LV_EVENT_CLICKED, &columns[i]);
         }
     }
 
@@ -397,10 +413,11 @@ void ui_panel_print_select_toggle_view() {
 // Sorting
 // ============================================================================
 static void apply_sort() {
-    std::sort(file_list.begin(), file_list.end(), [](const PrintFileData& a, const PrintFileData& b) {
-        bool result = false;
+    std::sort(
+        file_list.begin(), file_list.end(), [](const PrintFileData& a, const PrintFileData& b) {
+            bool result = false;
 
-        switch (current_sort_column) {
+            switch (current_sort_column) {
             case PrintSelectSortColumn::FILENAME:
                 result = a.filename < b.filename;
                 break;
@@ -408,7 +425,7 @@ static void apply_sort() {
                 result = a.file_size_bytes < b.file_size_bytes;
                 break;
             case PrintSelectSortColumn::MODIFIED:
-                result = a.modified_timestamp > b.modified_timestamp;  // Newer first by default
+                result = a.modified_timestamp > b.modified_timestamp; // Newer first by default
                 break;
             case PrintSelectSortColumn::PRINT_TIME:
                 result = a.print_time_minutes < b.print_time_minutes;
@@ -416,23 +433,23 @@ static void apply_sort() {
             case PrintSelectSortColumn::FILAMENT:
                 result = a.filament_grams < b.filament_grams;
                 break;
-        }
+            }
 
-        // Reverse if descending
-        if (current_sort_direction == PrintSelectSortDirection::DESCENDING) {
-            result = !result;
-        }
+            // Reverse if descending
+            if (current_sort_direction == PrintSelectSortDirection::DESCENDING) {
+                result = !result;
+            }
 
-        return result;
-    });
+            return result;
+        });
 }
 
 void ui_panel_print_select_sort_by(PrintSelectSortColumn column) {
     // Toggle direction if same column, otherwise default to ascending
     if (column == current_sort_column) {
         current_sort_direction = (current_sort_direction == PrintSelectSortDirection::ASCENDING)
-                                ? PrintSelectSortDirection::DESCENDING
-                                : PrintSelectSortDirection::ASCENDING;
+                                     ? PrintSelectSortDirection::DESCENDING
+                                     : PrintSelectSortDirection::ASCENDING;
     } else {
         current_sort_column = column;
         current_sort_direction = PrintSelectSortDirection::ASCENDING;
@@ -455,8 +472,7 @@ static void update_sort_indicators() {
     // Update column header icons to show sort direction
     const char* header_names[] = {"header_filename", "header_size", "header_modified",
                                   "header_print_time"};
-    PrintSelectSortColumn columns[] = {PrintSelectSortColumn::FILENAME,
-                                       PrintSelectSortColumn::SIZE,
+    PrintSelectSortColumn columns[] = {PrintSelectSortColumn::FILENAME, PrintSelectSortColumn::SIZE,
                                        PrintSelectSortColumn::MODIFIED,
                                        PrintSelectSortColumn::PRINT_TIME};
 
@@ -502,7 +518,8 @@ void ui_panel_print_select_refresh_files() {
     spdlog::info("Refreshing file list from Moonraker...");
 
     // Request file list from gcodes directory (non-recursive for now)
-    api->list_files("gcodes", "", false,
+    api->list_files(
+        "gcodes", "", false,
         // Success callback
         [api](const std::vector<FileInfo>& files) {
             spdlog::info("Received {} files from Moonraker", files.size());
@@ -513,7 +530,8 @@ void ui_panel_print_select_refresh_files() {
             // Convert FileInfo to PrintFileData (with placeholder values initially)
             for (const auto& file : files) {
                 // Skip directories
-                if (file.is_dir) continue;
+                if (file.is_dir)
+                    continue;
 
                 // Only process .gcode files
                 if (file.filename.find(".gcode") == std::string::npos &&
@@ -545,43 +563,52 @@ void ui_panel_print_select_refresh_files() {
             populate_list_view();
             update_empty_state();
 
-            spdlog::info("File list updated with {} G-code files (fetching metadata...)", file_list.size());
+            spdlog::info("File list updated with {} G-code files (fetching metadata...)",
+                         file_list.size());
 
             // Now fetch metadata for each file asynchronously
             for (size_t i = 0; i < file_list.size(); i++) {
                 const std::string filename = file_list[i].filename;
 
-                api->get_file_metadata(filename,
+                api->get_file_metadata(
+                    filename,
                     // Metadata success callback
                     [i, filename](const FileMetadata& metadata) {
                         // Bounds check (file_list could change during async operation)
                         if (i >= file_list.size() || file_list[i].filename != filename) {
-                            spdlog::warn("File list changed during metadata fetch for {}", filename);
+                            spdlog::warn("File list changed during metadata fetch for {}",
+                                         filename);
                             return;
                         }
 
                         // Update metadata fields
-                        file_list[i].print_time_minutes = static_cast<int>(metadata.estimated_time / 60.0);
-                        file_list[i].filament_grams = static_cast<float>(metadata.filament_weight_total);
+                        file_list[i].print_time_minutes =
+                            static_cast<int>(metadata.estimated_time / 60.0);
+                        file_list[i].filament_grams =
+                            static_cast<float>(metadata.filament_weight_total);
 
                         // Update formatted strings
-                        file_list[i].print_time_str = format_print_time(file_list[i].print_time_minutes);
-                        file_list[i].filament_str = format_filament_weight(file_list[i].filament_grams);
+                        file_list[i].print_time_str =
+                            format_print_time(file_list[i].print_time_minutes);
+                        file_list[i].filament_str =
+                            format_filament_weight(file_list[i].filament_grams);
 
-                        spdlog::debug("Updated metadata for {}: {}min, {}g",
-                                     filename, file_list[i].print_time_minutes, file_list[i].filament_grams);
+                        spdlog::debug("Updated metadata for {}: {}min, {}g", filename,
+                                      file_list[i].print_time_minutes, file_list[i].filament_grams);
 
                         // Handle thumbnails if available
                         if (!metadata.thumbnails.empty()) {
                             // Use the first (typically largest) thumbnail
-                            std::string thumbnail_url = construct_thumbnail_url(metadata.thumbnails[0]);
+                            std::string thumbnail_url =
+                                construct_thumbnail_url(metadata.thumbnails[0]);
 
                             if (!thumbnail_url.empty()) {
                                 spdlog::info("Thumbnail URL for {}: {}", filename, thumbnail_url);
 
                                 // TODO: Download thumbnail from URL to local file
                                 // For now, keep using placeholder
-                                // Future enhancement: Download to /tmp/helix_thumbs/ and update file_list[i].thumbnail_path
+                                // Future enhancement: Download to /tmp/helix_thumbs/ and update
+                                // file_list[i].thumbnail_path
                             }
                         }
 
@@ -591,22 +618,20 @@ void ui_panel_print_select_refresh_files() {
                     },
                     // Metadata error callback
                     [filename](const MoonrakerError& error) {
-                        spdlog::warn("Failed to get metadata for {}: {} ({})",
-                                    filename, error.message, error.get_type_string());
+                        spdlog::warn("Failed to get metadata for {}: {} ({})", filename,
+                                     error.message, error.get_type_string());
                         // Keep placeholder values, no need to do anything
-                    }
-                );
+                    });
             }
         },
         // Error callback
         [](const MoonrakerError& error) {
-            spdlog::error("Failed to refresh file list: {} ({})",
-                         error.message, error.get_type_string());
+            spdlog::error("Failed to refresh file list: {} ({})", error.message,
+                          error.get_type_string());
 
             // Show error to user (you might want to display this in UI)
             // For now, just log it
-        }
-    );
+        });
 }
 
 // ============================================================================
@@ -625,7 +650,7 @@ void ui_panel_print_select_populate_test_data(lv_obj_t* panel_root) {
     struct TestFile {
         const char* filename;
         size_t size_bytes;
-        int days_ago;         // For timestamp calculation
+        int days_ago; // For timestamp calculation
         int print_time_mins;
         float filament_grams;
     };
@@ -633,7 +658,8 @@ void ui_panel_print_select_populate_test_data(lv_obj_t* panel_root) {
     TestFile test_files[] = {
         {"Benchy.gcode", 1024 * 512, 1, 150, 45.0f},
         {"Calibration_Cube.gcode", 1024 * 128, 2, 45, 12.0f},
-        {"Large_Vase_With_Very_Long_Filename_That_Should_Truncate.gcode", 1024 * 1024 * 2, 3, 30, 8.0f},
+        {"Large_Vase_With_Very_Long_Filename_That_Should_Truncate.gcode", 1024 * 1024 * 2, 3, 30,
+         8.0f},
         {"Gear_Assembly.gcode", 1024 * 768, 5, 150, 45.0f},
         {"Flower_Pot.gcode", 1024 * 1024, 7, 240, 85.0f},
         {"Keychain.gcode", 1024 * 64, 10, 480, 120.0f},
@@ -647,7 +673,7 @@ void ui_panel_print_select_populate_test_data(lv_obj_t* panel_root) {
         data.filename = file.filename;
         data.thumbnail_path = DEFAULT_PLACEHOLDER_THUMB;
         data.file_size_bytes = file.size_bytes;
-        data.modified_timestamp = now - (file.days_ago * 86400);  // 86400 seconds per day
+        data.modified_timestamp = now - (file.days_ago * 86400); // 86400 seconds per day
         data.print_time_minutes = file.print_time_mins;
         data.filament_grams = file.filament_grams;
 
@@ -675,12 +701,14 @@ void ui_panel_print_select_populate_test_data(lv_obj_t* panel_root) {
 }
 
 static void populate_card_view() {
-    if (!card_view_container) return;
+    if (!card_view_container)
+        return;
 
     // Clear existing cards
     lv_obj_clean(card_view_container);
 
-    // CRITICAL: Force layout calculation before querying dimensions (prevents segfault on tiny screens)
+    // CRITICAL: Force layout calculation before querying dimensions (prevents segfault on tiny
+    // screens)
     lv_obj_update_layout(card_view_container);
 
     // Calculate optimal card dimensions based on actual container width
@@ -691,13 +719,15 @@ static void populate_card_view() {
 
     for (const auto& file : file_list) {
         // Create XML attributes array
-        const char* attrs[] = {
-            "thumbnail_src", file.thumbnail_path.c_str(),
-            "filename", file.filename.c_str(),
-            "print_time", file.print_time_str.c_str(),
-            "filament_weight", file.filament_str.c_str(),
-            NULL
-        };
+        const char* attrs[] = {"thumbnail_src",
+                               file.thumbnail_path.c_str(),
+                               "filename",
+                               file.filename.c_str(),
+                               "print_time",
+                               file.print_time_str.c_str(),
+                               "filament_weight",
+                               file.filament_str.c_str(),
+                               NULL};
 
         // Create card component
         lv_obj_t* card = (lv_obj_t*)lv_xml_create(card_view_container, CARD_COMPONENT_NAME, attrs);
@@ -706,7 +736,7 @@ static void populate_card_view() {
             // Override card dimensions to calculated optimal size
             lv_obj_set_width(card, dims.card_width);
             lv_obj_set_height(card, dims.card_height);
-            lv_obj_set_style_flex_grow(card, 0, LV_PART_MAIN);  // Disable flex_grow
+            lv_obj_set_style_flex_grow(card, 0, LV_PART_MAIN); // Disable flex_grow
 
             // Calculate proper filename label height based on font
             lv_obj_t* filename_label = lv_obj_find_by_name(card, "filename_label");
@@ -728,7 +758,8 @@ static void populate_card_view() {
                     // Calculate scale to cover the card
                     float scale_w = (float)dims.card_width / header.w;
                     float scale_h = (float)dims.card_height / header.h;
-                    float scale = (scale_w > scale_h) ? scale_w : scale_h;  // Use larger scale to cover
+                    float scale =
+                        (scale_w > scale_h) ? scale_w : scale_h; // Use larger scale to cover
 
                     uint16_t zoom = (uint16_t)(scale * 256);
                     lv_image_set_scale(gradient_bg, zoom);
@@ -747,15 +778,17 @@ static void populate_card_view() {
                     // Calculate scale to cover the card (like CSS object-fit: cover)
                     float scale_w = (float)dims.card_width / header.w;
                     float scale_h = (float)dims.card_height / header.h;
-                    float scale = (scale_w > scale_h) ? scale_w : scale_h;  // Use larger scale to cover
+                    float scale =
+                        (scale_w > scale_h) ? scale_w : scale_h; // Use larger scale to cover
 
                     uint16_t zoom = (uint16_t)(scale * 256);
                     lv_image_set_scale(thumbnail, zoom);
                     lv_image_set_inner_align(thumbnail, LV_IMAGE_ALIGN_CENTER);
 
-                    int img_w = header.w, img_h = header.h;  // Copy bitfields for formatting
+                    int img_w = header.w, img_h = header.h; // Copy bitfields for formatting
                     spdlog::debug("Thumbnail scale: img={}x{}, card={}x{}, zoom={} ({:.1f}%)",
-                               img_w, img_h, dims.card_width, dims.card_height, zoom, scale * 100);
+                                  img_w, img_h, dims.card_width, dims.card_height, zoom,
+                                  scale * 100);
                 }
             }
 
@@ -766,20 +799,23 @@ static void populate_card_view() {
 }
 
 static void populate_list_view() {
-    if (!list_rows_container) return;
+    if (!list_rows_container)
+        return;
 
     // Clear existing rows
     lv_obj_clean(list_rows_container);
 
     for (const auto& file : file_list) {
         // Create XML attributes array
-        const char* attrs[] = {
-            "filename", file.filename.c_str(),
-            "file_size", file.size_str.c_str(),
-            "modified_date", file.modified_str.c_str(),
-            "print_time", file.print_time_str.c_str(),
-            NULL
-        };
+        const char* attrs[] = {"filename",
+                               file.filename.c_str(),
+                               "file_size",
+                               file.size_str.c_str(),
+                               "modified_date",
+                               file.modified_str.c_str(),
+                               "print_time",
+                               file.print_time_str.c_str(),
+                               NULL};
 
         // Create list row from XML component
         lv_obj_t* row = (lv_obj_t*)lv_xml_create(list_rows_container, "print_file_list_row", attrs);
@@ -792,7 +828,8 @@ static void populate_list_view() {
 }
 
 static void update_empty_state() {
-    if (!empty_state_container) return;
+    if (!empty_state_container)
+        return;
 
     bool is_empty = file_list.empty();
 
@@ -832,7 +869,8 @@ void ui_panel_print_select_set_file(const char* filename, const char* thumbnail_
 // Detail view image scaling helper
 // ============================================================================
 static void scale_detail_images() {
-    if (!detail_view_widget) return;
+    if (!detail_view_widget)
+        return;
 
     // Find thumbnail section to get target dimensions
     lv_obj_t* thumbnail_section = lv_obj_find_by_name(detail_view_widget, "thumbnail_section");
@@ -892,7 +930,8 @@ static void create_detail_view() {
     }
 
     // Create detail view from XML component (as child of screen for full overlay)
-    detail_view_widget = (lv_obj_t*)lv_xml_create(parent_screen_widget, "print_file_detail", nullptr);
+    detail_view_widget =
+        (lv_obj_t*)lv_xml_create(parent_screen_widget, "print_file_detail", nullptr);
 
     if (!detail_view_widget) {
         spdlog::error("Failed to create detail view from XML");
@@ -920,104 +959,120 @@ static void create_detail_view() {
     // Wire up back button
     lv_obj_t* back_button = lv_obj_find_by_name(detail_view_widget, "back_button");
     if (back_button) {
-        lv_obj_add_event_cb(back_button, [](lv_event_t* e) {
-            (void)e;
-            ui_panel_print_select_hide_detail_view();
-        }, LV_EVENT_CLICKED, nullptr);
+        lv_obj_add_event_cb(
+            back_button,
+            [](lv_event_t* e) {
+                (void)e;
+                ui_panel_print_select_hide_detail_view();
+            },
+            LV_EVENT_CLICKED, nullptr);
     }
 
     // Wire up delete button
     lv_obj_t* delete_button = lv_obj_find_by_name(detail_view_widget, "delete_button");
     if (delete_button) {
-        lv_obj_add_event_cb(delete_button, [](lv_event_t* e) {
-            (void)e;
-            ui_panel_print_select_show_delete_confirmation();
-        }, LV_EVENT_CLICKED, nullptr);
+        lv_obj_add_event_cb(
+            delete_button,
+            [](lv_event_t* e) {
+                (void)e;
+                ui_panel_print_select_show_delete_confirmation();
+            },
+            LV_EVENT_CLICKED, nullptr);
     }
 
     // Wire up print button
     lv_obj_t* print_button = lv_obj_find_by_name(detail_view_widget, "print_button");
     if (print_button) {
-        lv_obj_add_event_cb(print_button, [](lv_event_t* e) {
-            (void)e;
+        lv_obj_add_event_cb(
+            print_button,
+            [](lv_event_t* e) {
+                (void)e;
 
-            // Get the filename to print
-            std::string filename_to_print(selected_filename_buffer);
+                // Get the filename to print
+                std::string filename_to_print(selected_filename_buffer);
 
-            // Get MoonrakerAPI instance
-            MoonrakerAPI* api = get_moonraker_api();
-            if (api) {
-                spdlog::info("Starting print: {}", filename_to_print);
+                // Get MoonrakerAPI instance
+                MoonrakerAPI* api = get_moonraker_api();
+                if (api) {
+                    spdlog::info("Starting print: {}", filename_to_print);
 
-                // Start the print via Moonraker
-                api->start_print(filename_to_print,
-                    // Success callback
-                    []() {
-                        spdlog::info("Print started successfully");
+                    // Start the print via Moonraker
+                    api->start_print(
+                        filename_to_print,
+                        // Success callback
+                        []() {
+                            spdlog::info("Print started successfully");
 
-                        if (print_status_panel_widget) {
-                            // Hide detail view
-                            ui_panel_print_select_hide_detail_view();
+                            if (print_status_panel_widget) {
+                                // Hide detail view
+                                ui_panel_print_select_hide_detail_view();
 
-                            // Push print status panel onto navigation history
-                            ui_nav_push_overlay(print_status_panel_widget);
+                                // Push print status panel onto navigation history
+                                ui_nav_push_overlay(print_status_panel_widget);
 
-                            // Hide print select panel (will be restored by nav history when going back)
-                            if (panel_root_widget) {
-                                lv_obj_add_flag(panel_root_widget, LV_OBJ_FLAG_HIDDEN);
+                                // Hide print select panel (will be restored by nav history when
+                                // going back)
+                                if (panel_root_widget) {
+                                    lv_obj_add_flag(panel_root_widget, LV_OBJ_FLAG_HIDDEN);
+                                }
+
+                                // Show print status panel
+                                lv_obj_remove_flag(print_status_panel_widget, LV_OBJ_FLAG_HIDDEN);
+                                lv_obj_move_foreground(print_status_panel_widget);
+
+                                // Note: Print status panel will now show real print progress from
+                                // Moonraker via the PrinterState subjects that are updated from
+                                // notifications
+                            } else {
+                                spdlog::error(
+                                    "Print status panel not set - cannot show print progress");
                             }
+                        },
+                        // Error callback
+                        [filename_to_print](const MoonrakerError& error) {
+                            spdlog::error("Failed to start print for {}: {} ({})",
+                                          filename_to_print, error.message,
+                                          error.get_type_string());
 
-                            // Show print status panel
-                            lv_obj_remove_flag(print_status_panel_widget, LV_OBJ_FLAG_HIDDEN);
-                            lv_obj_move_foreground(print_status_panel_widget);
+                            // TODO: Show error message to user
+                        });
+                } else {
+                    // Fall back to mock print if MoonrakerAPI not available
+                    spdlog::warn("MoonrakerAPI not available - using mock print");
 
-                            // Note: Print status panel will now show real print progress from Moonraker
-                            // via the PrinterState subjects that are updated from notifications
-                        } else {
-                            spdlog::error("Print status panel not set - cannot show print progress");
+                    if (print_status_panel_widget) {
+                        ui_panel_print_select_hide_detail_view();
+                        ui_nav_push_overlay(print_status_panel_widget);
+
+                        if (panel_root_widget) {
+                            lv_obj_add_flag(panel_root_widget, LV_OBJ_FLAG_HIDDEN);
                         }
-                    },
-                    // Error callback
-                    [filename_to_print](const MoonrakerError& error) {
-                        spdlog::error("Failed to start print for {}: {} ({})",
-                                     filename_to_print, error.message, error.get_type_string());
 
-                        // TODO: Show error message to user
+                        const char* filename = selected_filename_buffer;
+                        lv_obj_remove_flag(print_status_panel_widget, LV_OBJ_FLAG_HIDDEN);
+                        lv_obj_move_foreground(print_status_panel_widget);
+
+                        // Start mock print (250 layers, 3 hours = 10800 seconds)
+                        ui_panel_print_status_start_mock_print(filename, 250, 10800);
+
+                        spdlog::info("Started mock print for: %s", filename);
                     }
-                );
-            } else {
-                // Fall back to mock print if MoonrakerAPI not available
-                spdlog::warn("MoonrakerAPI not available - using mock print");
-
-                if (print_status_panel_widget) {
-                    ui_panel_print_select_hide_detail_view();
-                    ui_nav_push_overlay(print_status_panel_widget);
-
-                    if (panel_root_widget) {
-                        lv_obj_add_flag(panel_root_widget, LV_OBJ_FLAG_HIDDEN);
-                    }
-
-                    const char* filename = selected_filename_buffer;
-                    lv_obj_remove_flag(print_status_panel_widget, LV_OBJ_FLAG_HIDDEN);
-                    lv_obj_move_foreground(print_status_panel_widget);
-
-                    // Start mock print (250 layers, 3 hours = 10800 seconds)
-                    ui_panel_print_status_start_mock_print(filename, 250, 10800);
-
-                    spdlog::info("Started mock print for: %s", filename);
                 }
-            }
-        }, LV_EVENT_CLICKED, nullptr);
+            },
+            LV_EVENT_CLICKED, nullptr);
     }
 
     // Click backdrop to close
-    lv_obj_add_event_cb(detail_view_widget, [](lv_event_t* e) {
-        lv_obj_t* target = (lv_obj_t*)lv_event_get_target(e);
-        lv_obj_t* current_target = (lv_obj_t*)lv_event_get_current_target(e);
-        if (target == current_target) {
-            ui_panel_print_select_hide_detail_view();
-        }
-    }, LV_EVENT_CLICKED, nullptr);
+    lv_obj_add_event_cb(
+        detail_view_widget,
+        [](lv_event_t* e) {
+            lv_obj_t* target = (lv_obj_t*)lv_event_get_target(e);
+            lv_obj_t* current_target = (lv_obj_t*)lv_event_get_current_target(e);
+            if (target == current_target) {
+                ui_panel_print_select_hide_detail_view();
+            }
+        },
+        LV_EVENT_CLICKED, nullptr);
 
     spdlog::debug("Detail view created");
 }
@@ -1034,24 +1089,19 @@ static void hide_delete_confirmation() {
 
 void ui_panel_print_select_show_delete_confirmation() {
     // Configure modal: centered, non-persistent (create on demand), no keyboard
-    ui_modal_config_t config = {
-        .position = {.use_alignment = true, .alignment = LV_ALIGN_CENTER},
-        .backdrop_opa = 180,
-        .keyboard = nullptr,
-        .persistent = false,  // Create on demand
-        .on_close = nullptr
-    };
+    ui_modal_config_t config = {.position = {.use_alignment = true, .alignment = LV_ALIGN_CENTER},
+                                .backdrop_opa = 180,
+                                .keyboard = nullptr,
+                                .persistent = false, // Create on demand
+                                .on_close = nullptr};
 
     // Create message with current filename
     char msg_buf[256];
-    snprintf(msg_buf, sizeof(msg_buf), "Are you sure you want to delete '%s'? This action cannot be undone.",
+    snprintf(msg_buf, sizeof(msg_buf),
+             "Are you sure you want to delete '%s'? This action cannot be undone.",
              selected_filename_buffer);
 
-    const char* attrs[] = {
-        "title", "Delete File?",
-        "message", msg_buf,
-        NULL
-    };
+    const char* attrs[] = {"title", "Delete File?", "message", msg_buf, NULL};
 
     confirmation_dialog_widget = ui_modal_show("confirmation_dialog", &config, attrs);
 
@@ -1063,55 +1113,61 @@ void ui_panel_print_select_show_delete_confirmation() {
     // Wire up cancel button
     lv_obj_t* cancel_btn = lv_obj_find_by_name(confirmation_dialog_widget, "dialog_cancel_btn");
     if (cancel_btn) {
-        lv_obj_add_event_cb(cancel_btn, [](lv_event_t* e) {
-            (void)e;
-            hide_delete_confirmation();
-        }, LV_EVENT_CLICKED, nullptr);
+        lv_obj_add_event_cb(
+            cancel_btn,
+            [](lv_event_t* e) {
+                (void)e;
+                hide_delete_confirmation();
+            },
+            LV_EVENT_CLICKED, nullptr);
     }
 
     // Wire up confirm button
     lv_obj_t* confirm_btn = lv_obj_find_by_name(confirmation_dialog_widget, "dialog_confirm_btn");
     if (confirm_btn) {
-        lv_obj_add_event_cb(confirm_btn, [](lv_event_t* e) {
-            (void)e;
+        lv_obj_add_event_cb(
+            confirm_btn,
+            [](lv_event_t* e) {
+                (void)e;
 
-            // Get the filename to delete
-            std::string filename_to_delete(selected_filename_buffer);
+                // Get the filename to delete
+                std::string filename_to_delete(selected_filename_buffer);
 
-            // Get MoonrakerAPI instance
-            MoonrakerAPI* api = get_moonraker_api();
-            if (api) {
-                spdlog::info("Deleting file: {}", filename_to_delete);
+                // Get MoonrakerAPI instance
+                MoonrakerAPI* api = get_moonraker_api();
+                if (api) {
+                    spdlog::info("Deleting file: {}", filename_to_delete);
 
-                // Delete the file via Moonraker
-                api->delete_file(filename_to_delete,
-                    // Success callback
-                    []() {
-                        spdlog::info("File deleted successfully");
+                    // Delete the file via Moonraker
+                    api->delete_file(
+                        filename_to_delete,
+                        // Success callback
+                        []() {
+                            spdlog::info("File deleted successfully");
 
-                        // Hide dialogs
-                        hide_delete_confirmation();
-                        ui_panel_print_select_hide_detail_view();
+                            // Hide dialogs
+                            hide_delete_confirmation();
+                            ui_panel_print_select_hide_detail_view();
 
-                        // Refresh the file list
-                        ui_panel_print_select_refresh_files();
-                    },
-                    // Error callback
-                    [](const MoonrakerError& error) {
-                        spdlog::error("Failed to delete file: {} ({})",
-                                     error.message, error.get_type_string());
+                            // Refresh the file list
+                            ui_panel_print_select_refresh_files();
+                        },
+                        // Error callback
+                        [](const MoonrakerError& error) {
+                            spdlog::error("Failed to delete file: {} ({})", error.message,
+                                          error.get_type_string());
 
-                        // Hide confirmation dialog but keep detail view open
-                        hide_delete_confirmation();
+                            // Hide confirmation dialog but keep detail view open
+                            hide_delete_confirmation();
 
-                        // TODO: Show error message to user
-                    }
-                );
-            } else {
-                spdlog::warn("MoonrakerAPI not available - cannot delete file");
-                hide_delete_confirmation();
-            }
-        }, LV_EVENT_CLICKED, nullptr);
+                            // TODO: Show error message to user
+                        });
+                } else {
+                    spdlog::warn("MoonrakerAPI not available - cannot delete file");
+                    hide_delete_confirmation();
+                }
+            },
+            LV_EVENT_CLICKED, nullptr);
     }
 
     spdlog::info("Delete confirmation dialog shown");
@@ -1124,36 +1180,36 @@ static void attach_card_click_handler(lv_obj_t* card, const PrintFileData& file_
     // Allocate persistent data
     PrintFileData* data = new PrintFileData(file_data);
 
-    lv_obj_add_event_cb(card, [](lv_event_t* e) {
-        PrintFileData* data = (PrintFileData*)lv_event_get_user_data(e);
+    lv_obj_add_event_cb(
+        card,
+        [](lv_event_t* e) {
+            PrintFileData* data = (PrintFileData*)lv_event_get_user_data(e);
 
-        ui_panel_print_select_set_file(
-            data->filename.c_str(),
-            data->thumbnail_path.c_str(),
-            data->print_time_str.c_str(),
-            data->filament_str.c_str()
-        );
+            ui_panel_print_select_set_file(data->filename.c_str(), data->thumbnail_path.c_str(),
+                                           data->print_time_str.c_str(),
+                                           data->filament_str.c_str());
 
-        ui_panel_print_select_show_detail_view();
-    }, LV_EVENT_CLICKED, data);
+            ui_panel_print_select_show_detail_view();
+        },
+        LV_EVENT_CLICKED, data);
 }
 
 static void attach_row_click_handler(lv_obj_t* row, const PrintFileData& file_data) {
     // Allocate persistent data
     PrintFileData* data = new PrintFileData(file_data);
 
-    lv_obj_add_event_cb(row, [](lv_event_t* e) {
-        PrintFileData* data = (PrintFileData*)lv_event_get_user_data(e);
+    lv_obj_add_event_cb(
+        row,
+        [](lv_event_t* e) {
+            PrintFileData* data = (PrintFileData*)lv_event_get_user_data(e);
 
-        ui_panel_print_select_set_file(
-            data->filename.c_str(),
-            data->thumbnail_path.c_str(),
-            data->print_time_str.c_str(),
-            data->filament_str.c_str()
-        );
+            ui_panel_print_select_set_file(data->filename.c_str(), data->thumbnail_path.c_str(),
+                                           data->print_time_str.c_str(),
+                                           data->filament_str.c_str());
 
-        ui_panel_print_select_show_detail_view();
-    }, LV_EVENT_CLICKED, data);
+            ui_panel_print_select_show_detail_view();
+        },
+        LV_EVENT_CLICKED, data);
 }
 
 // ============================================================================

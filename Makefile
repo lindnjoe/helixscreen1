@@ -288,7 +288,7 @@ MOCK_OBJS := $(patsubst $(TEST_MOCK_DIR)/%.cpp,$(OBJ_DIR)/tests/mocks/%.o,$(MOCK
 # Default target
 .DEFAULT_GOAL := all
 
-.PHONY: all build clean run test test-integration test-cards test-print-select test-size-content demo compile_commands libhv-build apply-patches generate-fonts help check-deps install-deps icon
+.PHONY: all build clean run test test-integration test-cards test-print-select test-size-content demo compile_commands libhv-build apply-patches generate-fonts help check-deps install-deps icon format format-staged
 
 # Help target - checks stdout dynamically to avoid colors when piped
 help:
@@ -316,6 +316,8 @@ help:
 	echo ""; \
 	echo "$${C}Development Targets:$${X}"; \
 	echo "  $${G}compile_commands$${X} - Generate compile_commands.json for IDE/LSP"; \
+	echo "  $${G}format$${X}           - Auto-format all C/C++ and XML files"; \
+	echo "  $${G}format-staged$${X}    - Auto-format only staged files (pre-commit)"; \
 	echo "  $${G}check-deps$${X}       - Verify all dependencies are installed"; \
 	echo "  $${G}install-deps$${X}     - Auto-install missing dependencies (interactive)"; \
 	echo "  $${G}apply-patches$${X}    - Apply LVGL patches"; \
@@ -343,4 +345,5 @@ include mk/deps.mk
 include mk/patches.mk
 include mk/tests.mk
 include mk/fonts.mk
+include mk/format.mk
 include mk/rules.mk

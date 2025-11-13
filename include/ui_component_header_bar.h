@@ -65,7 +65,8 @@ bool ui_header_bar_hide_right_button(lv_obj_t* header_bar_widget);
 
 /**
  * Set the text of the right button in a header_bar component
- * Note: This does NOT automatically show the button - call ui_header_bar_show_right_button() separately
+ * Note: This does NOT automatically show the button - call ui_header_bar_show_right_button()
+ * separately
  * @param header_bar_widget Pointer to the header_bar component root
  * @param text New button text
  * @return true if button was found and updated, false otherwise

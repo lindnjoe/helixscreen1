@@ -22,10 +22,12 @@
  */
 
 #include "ui_panel_controls_extrusion.h"
+
 #include "ui_component_header_bar.h"
 #include "ui_nav.h"
-#include "ui_utils.h"
 #include "ui_theme.h"
+#include "ui_utils.h"
+
 #include <stdio.h>
 #include <string.h>
 
@@ -40,12 +42,12 @@ static char warning_temps_buf[64];
 // Current state
 static int nozzle_current = 25;
 static int nozzle_target = 0;
-static int selected_amount = 10;  // Default: 10mm
+static int selected_amount = 10; // Default: 10mm
 static const int MIN_EXTRUSION_TEMP = 170;
 
 // Temperature limits (can be updated from Moonraker heater config)
 static int nozzle_min_temp = 0;
-static int nozzle_max_temp = 500;  // Safe default for most hotends
+static int nozzle_max_temp = 500; // Safe default for most hotends
 
 // Panel widgets
 static lv_obj_t* extrusion_panel = nullptr;
@@ -67,17 +69,20 @@ static void update_amount_buttons_visual();
 void ui_panel_controls_extrusion_init_subjects() {
     // Initialize subjects with default values
     snprintf(temp_status_buf, sizeof(temp_status_buf), "%d / %d°C", nozzle_current, nozzle_target);
-    snprintf(warning_temps_buf, sizeof(warning_temps_buf), "Current: %d°C\nTarget: %d°C", nozzle_current, nozzle_target);
+    snprintf(warning_temps_buf, sizeof(warning_temps_buf), "Current: %d°C\nTarget: %d°C",
+             nozzle_current, nozzle_target);
 
-    lv_subject_init_string(&temp_status_subject, temp_status_buf, nullptr, sizeof(temp_status_buf), temp_status_buf);
-    lv_subject_init_string(&warning_temps_subject, warning_temps_buf, nullptr, sizeof(warning_temps_buf), warning_temps_buf);
+    lv_subject_init_string(&temp_status_subject, temp_status_buf, nullptr, sizeof(temp_status_buf),
+                           temp_status_buf);
+    lv_subject_init_string(&warning_temps_subject, warning_temps_buf, nullptr,
+                           sizeof(warning_temps_buf), warning_temps_buf);
 
     // Register subjects with XML system (global scope)
     lv_xml_register_subject(NULL, "extrusion_temp_status", &temp_status_subject);
     lv_xml_register_subject(NULL, "extrusion_warning_temps", &warning_temps_subject);
 
-    printf("[Extrusion] Subjects initialized: temp=%d/%d°C, amount=%dmm\n",
-           nozzle_current, nozzle_target, selected_amount);
+    printf("[Extrusion] Subjects initialized: temp=%d/%d°C, amount=%dmm\n", nozzle_current,
+           nozzle_target, selected_amount);
 }
 
 // Update temperature status display text
@@ -86,21 +91,20 @@ static void update_temp_status() {
     const char* status_icon;
     if (nozzle_current >= MIN_EXTRUSION_TEMP) {
         // Within 5°C of target and hot enough (safe range check without overflow)
-        if (nozzle_target > 0 &&
-            nozzle_current >= nozzle_target - 5 &&
+        if (nozzle_target > 0 && nozzle_current >= nozzle_target - 5 &&
             nozzle_current <= nozzle_target + 5) {
-            status_icon = "✓";  // Ready
+            status_icon = "✓"; // Ready
         } else {
-            status_icon = "✓";  // Hot enough
+            status_icon = "✓"; // Hot enough
         }
     } else if (nozzle_target >= MIN_EXTRUSION_TEMP) {
-        status_icon = "⚠";  // Heating
+        status_icon = "⚠"; // Heating
     } else {
-        status_icon = "✗";  // Too cold
+        status_icon = "✗"; // Too cold
     }
 
-    snprintf(temp_status_buf, sizeof(temp_status_buf), "%d / %d°C %s",
-             nozzle_current, nozzle_target, status_icon);
+    snprintf(temp_status_buf, sizeof(temp_status_buf), "%d / %d°C %s", nozzle_current,
+             nozzle_target, status_icon);
     lv_subject_copy_string(&temp_status_subject, temp_status_buf);
 }
 
@@ -188,7 +192,8 @@ static void amount_button_cb(lv_event_t* e) {
     lv_obj_t* btn = (lv_obj_t*)lv_event_get_target(e);
     const char* name = lv_obj_get_name(btn);
 
-    if (!name) return;
+    if (!name)
+        return;
 
     if (strcmp(name, "amount_5mm") == 0) {
         selected_amount = 5;
@@ -209,8 +214,8 @@ static void extrude_button_cb(lv_event_t* e) {
     (void)e;
 
     if (nozzle_current < MIN_EXTRUSION_TEMP) {
-        printf("[Extrusion] ✗ Extrude blocked: nozzle too cold (%d°C < %d°C)\n",
-               nozzle_current, MIN_EXTRUSION_TEMP);
+        printf("[Extrusion] ✗ Extrude blocked: nozzle too cold (%d°C < %d°C)\n", nozzle_current,
+               MIN_EXTRUSION_TEMP);
         return;
     }
 
@@ -223,8 +228,8 @@ static void retract_button_cb(lv_event_t* e) {
     (void)e;
 
     if (nozzle_current < MIN_EXTRUSION_TEMP) {
-        printf("[Extrusion] ✗ Retract blocked: nozzle too cold (%d°C < %d°C)\n",
-               nozzle_current, MIN_EXTRUSION_TEMP);
+        printf("[Extrusion] ✗ Retract blocked: nozzle too cold (%d°C < %d°C)\n", nozzle_current,
+               MIN_EXTRUSION_TEMP);
         return;
     }
 
@@ -268,7 +273,8 @@ void ui_panel_controls_extrusion_setup(lv_obj_t* panel, lv_obj_t* parent_screen)
     // Set responsive padding for content area
     lv_obj_t* extrusion_content = lv_obj_find_by_name(panel, "extrusion_content");
     if (extrusion_content) {
-        lv_coord_t vertical_padding = ui_get_header_content_padding(lv_obj_get_height(parent_screen));
+        lv_coord_t vertical_padding =
+            ui_get_header_content_padding(lv_obj_get_height(parent_screen));
         // Set vertical padding (top/bottom) responsively, keep horizontal at medium (12px)
         lv_obj_set_style_pad_top(extrusion_content, vertical_padding, 0);
         lv_obj_set_style_pad_bottom(extrusion_content, vertical_padding, 0);
@@ -327,12 +333,14 @@ void ui_panel_controls_extrusion_setup(lv_obj_t* panel, lv_obj_t* parent_screen)
 void ui_panel_controls_extrusion_set_temp(int current, int target) {
     // Validate temperature ranges using dynamic limits
     if (current < nozzle_min_temp || current > nozzle_max_temp) {
-        printf("[Extrusion] WARNING: Invalid nozzle current temperature %d°C (valid: %d-%d°C), clamping\n",
+        printf("[Extrusion] WARNING: Invalid nozzle current temperature %d°C (valid: %d-%d°C), "
+               "clamping\n",
                current, nozzle_min_temp, nozzle_max_temp);
         current = (current < nozzle_min_temp) ? nozzle_min_temp : nozzle_max_temp;
     }
     if (target < nozzle_min_temp || target > nozzle_max_temp) {
-        printf("[Extrusion] WARNING: Invalid nozzle target temperature %d°C (valid: %d-%d°C), clamping\n",
+        printf("[Extrusion] WARNING: Invalid nozzle target temperature %d°C (valid: %d-%d°C), "
+               "clamping\n",
                target, nozzle_min_temp, nozzle_max_temp);
         target = (target < nozzle_min_temp) ? nozzle_min_temp : nozzle_max_temp;
     }

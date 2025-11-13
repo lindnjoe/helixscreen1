@@ -22,8 +22,9 @@
  */
 
 #include "wifi_backend.h"
-#include "wifi_backend_mock.h"
+
 #include "spdlog/spdlog.h"
+#include "wifi_backend_mock.h"
 
 #ifdef __APPLE__
 #include "wifi_backend_macos.h"
@@ -45,7 +46,7 @@ std::unique_ptr<WifiBackend> WifiBackend::create() {
 
     // Fallback to mock (leave disabled - wizard will enable via toggle)
     spdlog::warn("[WifiBackend] CoreWLAN backend failed: {} - falling back to mock",
-                start_result.technical_msg);
+                 start_result.technical_msg);
     spdlog::info("[WifiBackend] Mock backend created");
     return std::make_unique<WifiBackendMock>();
 #else
@@ -61,7 +62,7 @@ std::unique_ptr<WifiBackend> WifiBackend::create() {
 
     // Fallback to mock (leave disabled - wizard will enable via toggle)
     spdlog::warn("[WifiBackend] wpa_supplicant backend failed: {} - falling back to mock",
-                start_result.technical_msg);
+                 start_result.technical_msg);
     spdlog::info("[WifiBackend] Mock backend created");
     return std::make_unique<WifiBackendMock>();
 #endif

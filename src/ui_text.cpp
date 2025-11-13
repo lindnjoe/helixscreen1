@@ -22,14 +22,17 @@
  */
 
 #include "ui_text.h"
+
 #include "ui_theme.h"
+
 #include "lvgl/lvgl.h"
 #include "lvgl/src/others/xml/lv_xml.h"
-#include "lvgl/src/others/xml/lv_xml_widget.h"
 #include "lvgl/src/others/xml/lv_xml_parser.h"
 #include "lvgl/src/others/xml/lv_xml_utils.h"
-#include "lvgl/src/others/xml/parsers/lv_xml_obj_parser.h"
+#include "lvgl/src/others/xml/lv_xml_widget.h"
 #include "lvgl/src/others/xml/parsers/lv_xml_label_parser.h"
+#include "lvgl/src/others/xml/parsers/lv_xml_obj_parser.h"
+
 #include <spdlog/spdlog.h>
 
 /**
@@ -39,7 +42,8 @@
  * @param font_const_name Name of font constant in globals.xml (e.g., "font_heading")
  * @param color_const_name Name of color constant in globals.xml (e.g., "header_text_color")
  */
-static void apply_semantic_style(lv_obj_t* label, const char* font_const_name, const char* color_const_name) {
+static void apply_semantic_style(lv_obj_t* label, const char* font_const_name,
+                                 const char* color_const_name) {
     // Apply font
     const char* font_name = lv_xml_get_const(NULL, font_const_name);
     if (font_name) {
@@ -47,8 +51,8 @@ static void apply_semantic_style(lv_obj_t* label, const char* font_const_name, c
         if (font) {
             lv_obj_set_style_text_font(label, font, 0);
         } else {
-            spdlog::warn("[ui_text] Failed to load font '{}' from constant '{}'",
-                         font_name, font_const_name);
+            spdlog::warn("[ui_text] Failed to load font '{}' from constant '{}'", font_name,
+                         font_const_name);
         }
     } else {
         spdlog::warn("[ui_text] Font constant '{}' not found in globals.xml", font_const_name);
@@ -135,5 +139,6 @@ void ui_text_init() {
     lv_xml_register_widget("text_body", ui_text_body_create, ui_text_body_apply);
     lv_xml_register_widget("text_small", ui_text_small_create, ui_text_small_apply);
 
-    spdlog::debug("[ui_text] Registered semantic text widgets: text_heading, text_body, text_small");
+    spdlog::debug(
+        "[ui_text] Registered semantic text widgets: text_heading, text_body, text_small");
 }

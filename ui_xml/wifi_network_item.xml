@@ -1,3 +1,4 @@
+<?xml version="1.0"?>
 <!--
   Copyright (C) 2025 356C LLC
   Author: Preston Brown <pbrown@brown-house.net>
@@ -17,69 +18,28 @@
   You should have received a copy of the GNU General Public License
   along with HelixScreen. If not, see <https://www.gnu.org/licenses/>.
 -->
-
 <component>
-	<!-- WiFi Network List Item - Reusable Component -->
-	<!-- Displays network SSID, signal strength icon, and security status -->
-	<!-- Subjects are created per-instance in C++ and bound programmatically -->
-
-	<!-- Component-local constants for theme-aware colors -->
-	<consts>
-		<!-- WiFi list item background color (slightly lighter than card background) -->
-		<const name="wifi_item_bg_light" value="#F5F5F5"/>
-		<const name="wifi_item_bg_dark" value="#262626"/>
-
-		<!-- WiFi list item text color (brighter than default text) -->
-		<const name="wifi_item_text_light" value="#1A1A1A"/>
-		<const name="wifi_item_text_dark" value="#E3E3E3"/>
-	</consts>
-
-	<view extends="lv_button"
-	      width="100%"
-	      scrollable="false"
-	      clickable="true"
-	      style_bg_opa="1"
-	      style_border_width="1"
-	      style_border_side="bottom"
-	      style_border_color="#text_secondary"
-	      style_border_opa="30"
-	      style_shadow_width="0"
-	      style_pad_all="0"
-	      style_pad_gap="#list_item_padding"
-	      flex_flow="row"
-	      style_flex_main_place="start"
-	      style_flex_cross_place="center">
-
-		<!-- Signal strength icon (left) - colored with primary theme color -->
-		<icon name="signal_icon"
-		      src="mat_wifi_strength_4"
-		      size="sm"
-		      variant="accent"
-		      clickable="false"/>
-
-		<!-- SSID and security type column (center) -->
-		<lv_obj flex_grow="1"
-				height="#list_item_height"
-		        style_bg_opa="0"
-		        style_pad_all="0"
-				radius="0"
-				style_border_width="0"
-		        style_pad_gap="4"
-				scrollable="false"
-				clickable="false"
-		        flex_flow="row"
-		        style_flex_main_place="space_between"
-		        style_flex_cross_place="center">
-
-			<!-- Network SSID -->
-			<text_body name="ssid_label"
-			          style_text_font="#list_item_font"
-			          clickable="false"/>
-
-			<!-- Security type (right-justified) -->
-			<lv_label name="security_label"
-			          style_text_color="#text_secondary"
-			          clickable="false"/>
-		</lv_obj>
-	</view>
+  <!-- WiFi Network List Item - Reusable Component -->
+  <!-- Displays network SSID, signal strength icon, and security status -->
+  <!-- Subjects are created per-instance in C++ and bound programmatically -->
+  <!-- Component-local constants for theme-aware colors -->
+  <consts>
+    <!-- WiFi list item background color (slightly lighter than card background) -->
+    <const name="wifi_item_bg_light" value="#F5F5F5"/>
+    <const name="wifi_item_bg_dark" value="#262626"/>
+    <!-- WiFi list item text color (brighter than default text) -->
+    <const name="wifi_item_text_light" value="#1A1A1A"/>
+    <const name="wifi_item_text_dark" value="#E3E3E3"/>
+  </consts>
+  <view extends="lv_button" width="100%" scrollable="false" clickable="true" style_bg_opa="1" style_border_width="1" style_border_side="bottom" style_border_color="#text_secondary" style_border_opa="30" style_shadow_width="0" style_pad_all="0" style_pad_gap="#list_item_padding" flex_flow="row" style_flex_main_place="start" style_flex_cross_place="center">
+    <!-- Signal strength icon (left) - colored with primary theme color -->
+    <icon name="signal_icon" src="mat_wifi_strength_4" size="sm" variant="accent" clickable="false"/>
+    <!-- SSID and security type column (center) -->
+    <lv_obj flex_grow="1" height="#list_item_height" style_bg_opa="0" style_pad_all="0" radius="0" style_border_width="0" style_pad_gap="4" scrollable="false" clickable="false" flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center">
+      <!-- Network SSID -->
+      <text_body name="ssid_label" style_text_font="#list_item_font" clickable="false"/>
+      <!-- Security type (right-justified) -->
+      <lv_label name="security_label" style_text_color="#text_secondary" clickable="false"/>
+    </lv_obj>
+  </view>
 </component>

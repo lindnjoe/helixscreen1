@@ -23,9 +23,10 @@
 
 #pragma once
 
-#include <string>
-#include <ctime>
 #include "lvgl/lvgl.h"
+
+#include <ctime>
+#include <string>
 
 /**
  * Format print time from minutes to human-readable string
@@ -112,7 +113,8 @@ void ui_resize_handler_register(ui_resize_callback_t callback);
  * @param target_height Target height in pixels
  * @return true if scaling succeeded, false if image info could not be obtained
  */
-bool ui_image_scale_to_cover(lv_obj_t* image_widget, lv_coord_t target_width, lv_coord_t target_height);
+bool ui_image_scale_to_cover(lv_obj_t* image_widget, lv_coord_t target_width,
+                             lv_coord_t target_height);
 
 /**
  * Scale image to fit within a target area (like CSS object-fit: contain)
@@ -124,5 +126,6 @@ bool ui_image_scale_to_cover(lv_obj_t* image_widget, lv_coord_t target_width, lv
  * @param align Alignment within the target area (default: LV_IMAGE_ALIGN_CENTER)
  * @return true if scaling succeeded, false if image info could not be obtained
  */
-bool ui_image_scale_to_contain(lv_obj_t* image_widget, lv_coord_t target_width, lv_coord_t target_height,
-                                lv_image_align_t align = LV_IMAGE_ALIGN_CENTER);
+bool ui_image_scale_to_contain(lv_obj_t* image_widget, lv_coord_t target_width,
+                               lv_coord_t target_height,
+                               lv_image_align_t align = LV_IMAGE_ALIGN_CENTER);

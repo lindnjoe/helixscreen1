@@ -23,12 +23,13 @@
 
 #pragma once
 
-#include <string>
-#include <vector>
+#include "lvgl/lvgl.h"
+#include "wifi_backend.h"
+
 #include <functional>
 #include <memory>
-#include "wifi_backend.h"
-#include "lvgl/lvgl.h"
+#include <string>
+#include <vector>
 
 /**
  * @brief WiFi Manager - Clean interface using backend system
@@ -45,7 +46,7 @@
  * - Cleaner separation between WiFi operations and UI timer management
  */
 class WiFiManager {
-public:
+  public:
     /**
      * @brief Initialize WiFi manager with appropriate backend
      *
@@ -103,9 +104,8 @@ public:
      * @param password Network password (empty for open networks)
      * @param on_complete Callback with (success, error_message)
      */
-    void connect(const std::string& ssid,
-                const std::string& password,
-                std::function<void(bool success, const std::string& error)> on_complete);
+    void connect(const std::string& ssid, const std::string& password,
+                 std::function<void(bool success, const std::string& error)> on_complete);
 
     /**
      * @brief Disconnect from current network
@@ -183,7 +183,7 @@ public:
      */
     void init_self_reference(std::shared_ptr<WiFiManager> self);
 
-private:
+  private:
     std::unique_ptr<WifiBackend> backend_;
 
     // Self-reference for async callback safety

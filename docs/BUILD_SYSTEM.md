@@ -7,11 +7,12 @@ This document describes the HelixScreen prototype build system, including automa
 ## Build System Overview
 
 The project uses **GNU Make** with a modular architecture:
-- **Modular design**: 960 lines split across 5 files for maintainability
+- **Modular design**: 1463 lines split across 6 files for maintainability
 - **Color-coded output** for easy visual parsing
 - **Verbosity control** to show/hide full compiler commands
 - **Automatic dependency checking** before builds with smart canvas detection
 - **Interactive installation** of missing dependencies (`make install-deps`)
+- **Automatic code formatting** for C/C++ and XML files
 - **Fail-fast error handling** with clear diagnostics
 - **Parallel build support** with output synchronization
 - **Build timing** for performance tracking
@@ -20,11 +21,13 @@ The project uses **GNU Make** with a modular architecture:
 
 The build system is organized into focused modules:
 
-- **`Makefile`** (222 lines) - Configuration, variables, platform detection, module includes
-- **`mk/deps.mk`** (316 lines) - Dependency checking, installation, libhv building
-- **`mk/tests.mk`** (162 lines) - All test targets (unit, integration, specialized)
-- **`mk/fonts.mk`** (122 lines) - Font/icon generation, Material icons, LVGL patches
-- **`mk/rules.mk`** (138 lines) - Compilation rules, linking, main build targets
+- **`Makefile`** (349 lines) - Configuration, variables, platform detection, module includes
+- **`mk/deps.mk`** (431 lines) - Dependency checking, installation, libhv building
+- **`mk/tests.mk`** (266 lines) - All test targets (unit, integration, specialized)
+- **`mk/format.mk`** (100 lines) - Code and XML formatting (clang-format, xmllint)
+- **`mk/fonts.mk`** (107 lines) - Font/icon generation, Material icons, LVGL patches
+- **`mk/patches.mk`** (31 lines) - LVGL patch application
+- **`mk/rules.mk`** (179 lines) - Compilation rules, linking, main build targets
 
 Each module is self-contained with GPL-3 copyright headers and clear separation of concerns.
 
@@ -39,6 +42,10 @@ make build
 
 # Verbose mode (shows full commands)
 make V=1
+
+# Code formatting (clang-format for C/C++, xmllint for XML)
+make format              # Format all files
+make format-staged       # Format only staged files
 
 # Dependency checking (comprehensive)
 make check-deps
@@ -68,6 +75,7 @@ make check-deps
 
 This checks for:
 - **System tools**: C/C++ compiler, cmake, make, python3, npm
+- **Code formatters**: clang-format (C/C++), xmllint (XML validation/formatting)
 - **Libraries**: pkg-config
 - **Canvas dependencies**: cairo, pango, libpng, libjpeg, librsvg (for lv_img_conv)
 - **npm packages**: lv_font_conv, lv_img_conv
@@ -141,6 +149,66 @@ Example:
 ✗ Compilation failed: src/ui_panel_home.cpp
 Command: clang++ -std=c++17 -Wall -Wextra -O2 -g -I. -Iinclude ...
 ```
+
+## Code Formatting
+
+The build system includes automatic code formatting for C/C++ and XML files, integrated with pre-commit hooks.
+
+### Formatters
+
+- **clang-format** - Formats C, C++, and Objective-C files according to `.clang-format` config
+- **xmllint** - Formats and validates XML layout files with consistent indentation
+
+### Configuration
+
+**`.clang-format`** (LLVM-based with project customizations):
+- **Indentation**: 4 spaces, no tabs
+- **Line length**: 100 characters
+- **Braces**: K&R style (same line)
+- **Pointers**: Left-aligned (`int* ptr`)
+- **Includes**: Auto-sorted with grouping (project → external → system)
+
+### Formatting Commands
+
+```bash
+# Format all C/C++ and XML files
+make format
+
+# Format only staged files (useful before commit)
+make format-staged
+
+# Check formatting without modifying files
+./scripts/quality-checks.sh
+```
+
+### Pre-commit Integration
+
+Formatting is automatically checked by the pre-commit hook (`.git/hooks/pre-commit`), which calls `scripts/quality-checks.sh --staged-only`:
+
+1. **Checks staged files** for formatting issues
+2. **Reports files** that need formatting
+3. **Prevents commit** if formatting issues are found
+4. **Suggests fix**: Run `make format-staged` or `clang-format -i <file>`
+
+To bypass (not recommended):
+```bash
+git commit --no-verify
+```
+
+### Quality Checks
+
+The `scripts/quality-checks.sh` script runs multiple checks:
+- **Code formatting** (clang-format)
+- **XML formatting** (xmllint)
+- **XML validation** (xmllint --noout)
+- **Copyright headers** (GPL v3 SPDX identifiers)
+- **Merge conflict markers**
+- **Trailing whitespace**
+- **Build verification** (pre-commit only)
+
+Used by both:
+- **Pre-commit hook** (staged files only)
+- **CI/CD** (all files)
 
 ## Automatic Patch Application
 

@@ -23,26 +23,23 @@
 
 #ifdef __APPLE__
 
-#import <Foundation/Foundation.h>
-#import <CoreWLAN/CoreWLAN.h>
-#import <CoreLocation/CoreLocation.h>
-
 #include "wifi_backend_macos.h"
+
 #include "safe_log.h"
+
 #include <spdlog/spdlog.h>
+
+#import <CoreLocation/CoreLocation.h>
+#import <CoreWLAN/CoreWLAN.h>
+#import <Foundation/Foundation.h>
 
 // ============================================================================
 // Constructor / Destructor
 // ============================================================================
 
 WifiBackendMacOS::WifiBackendMacOS()
-    : running_(false)
-    , wifi_client_(nullptr)
-    , interface_(nullptr)
-    , scan_timer_(nullptr)
-    , connect_timer_(nullptr)
-    , connection_in_progress_(false)
-{
+    : running_(false), wifi_client_(nullptr), interface_(nullptr), scan_timer_(nullptr),
+      connect_timer_(nullptr), connection_in_progress_(false) {
     spdlog::debug("[WiFiMacOS] Backend created");
 }
 
@@ -79,7 +76,7 @@ WiFiError WifiBackendMacOS::start() {
     WiFiError prereq_check = check_system_prerequisites();
     if (!prereq_check.success()) {
         spdlog::error("[WiFiMacOS] System prerequisites check failed: {}",
-                     prereq_check.technical_msg);
+                      prereq_check.technical_msg);
         return prereq_check;
     }
 
@@ -88,10 +85,8 @@ WiFiError WifiBackendMacOS::start() {
         CWWiFiClient* client = [[CWWiFiClient alloc] init];
         if (!client) {
             spdlog::error("[WiFiMacOS] Failed to create CWWiFiClient");
-            return WiFiError(WiFiResult::BACKEND_ERROR,
-                           "Failed to create CWWiFiClient",
-                           "WiFi system initialization failed",
-                           "Restart the application");
+            return WiFiError(WiFiResult::BACKEND_ERROR, "Failed to create CWWiFiClient",
+                             "WiFi system initialization failed", "Restart the application");
         }
         wifi_client_ = (__bridge void*)client;
 
@@ -107,7 +102,7 @@ WiFiError WifiBackendMacOS::start() {
 
         NSString* ifaceName = [iface interfaceName];
         spdlog::info("[WiFiMacOS] Using interface: {}",
-                    ifaceName ? [ifaceName UTF8String] : "unknown");
+                     ifaceName ? [ifaceName UTF8String] : "unknown");
     }
 
     running_ = true;
@@ -149,7 +144,7 @@ bool WifiBackendMacOS::is_running() const {
 // ============================================================================
 
 void WifiBackendMacOS::register_event_callback(const std::string& name,
-                                              std::function<void(const std::string&)> callback) {
+                                               std::function<void(const std::string&)> callback) {
     std::lock_guard<std::mutex> lock(callbacks_mutex_);
     callbacks_[name] = callback;
     spdlog::debug("[WiFiMacOS] Registered callback for event: {}", name);
@@ -171,10 +166,8 @@ void WifiBackendMacOS::fire_event(const std::string& event_name, const std::stri
 
 WiFiError WifiBackendMacOS::trigger_scan() {
     if (!running_) {
-        return WiFiError(WiFiResult::NOT_INITIALIZED,
-                        "Backend not started",
-                        "WiFi system not initialized",
-                        "");
+        return WiFiError(WiFiResult::NOT_INITIALIZED, "Backend not started",
+                         "WiFi system not initialized", "");
     }
 
     spdlog::info("[WiFiMacOS] Triggering network scan");
@@ -187,24 +180,27 @@ WiFiError WifiBackendMacOS::trigger_scan() {
 
     // Perform scan in background (simulate async with timer)
     // Use lambda capture to avoid accessing private timer fields
-    scan_timer_ = lv_timer_create([](lv_timer_t* timer) {
-        // Get backend pointer from timer user_data (set below)
-        WifiBackendMacOS* backend = static_cast<WifiBackendMacOS*>(lv_timer_get_user_data(timer));
-        if (backend) {
-            backend->scan_timer_callback(timer);
-        }
-    }, 100, nullptr);
+    scan_timer_ = lv_timer_create(
+        [](lv_timer_t* timer) {
+            // Get backend pointer from timer user_data (set below)
+            WifiBackendMacOS* backend =
+                static_cast<WifiBackendMacOS*>(lv_timer_get_user_data(timer));
+            if (backend) {
+                backend->scan_timer_callback(timer);
+            }
+        },
+        100, nullptr);
 
     if (scan_timer_) {
         lv_timer_set_user_data(scan_timer_, this);
-        lv_timer_set_repeat_count(scan_timer_, 1);  // Fire once
+        lv_timer_set_repeat_count(scan_timer_, 1); // Fire once
     }
 
     return WiFiErrorHelper::success();
 }
 
 void WifiBackendMacOS::scan_timer_callback(lv_timer_t* timer) {
-    scan_timer_ = nullptr;  // Timer will be auto-deleted
+    scan_timer_ = nullptr; // Timer will be auto-deleted
 
     @autoreleasepool {
         CWInterface* iface = (__bridge CWInterface*)interface_;
@@ -218,8 +214,7 @@ void WifiBackendMacOS::scan_timer_callback(lv_timer_t* timer) {
         NSSet<CWNetwork*>* networks = [iface scanForNetworksWithSSID:nil error:&error];
 
         if (error) {
-            spdlog::error("[WiFiMacOS] Scan failed: {}",
-                         [[error localizedDescription] UTF8String]);
+            spdlog::error("[WiFiMacOS] Scan failed: {}", [[error localizedDescription] UTF8String]);
             fire_event("SCAN_COMPLETE", "");
             return;
         }
@@ -229,7 +224,7 @@ void WifiBackendMacOS::scan_timer_callback(lv_timer_t* timer) {
         for (CWNetwork* network in networks) {
             NSString* ssid = [network ssid];
             if (!ssid || [ssid length] == 0) {
-                continue;  // Skip hidden networks
+                continue; // Skip hidden networks
             }
 
             WiFiNetwork wifi_net;
@@ -246,9 +241,9 @@ void WifiBackendMacOS::scan_timer_callback(lv_timer_t* timer) {
 
         // Sort by signal strength (strongest first)
         std::sort(discovered.begin(), discovered.end(),
-                 [](const WiFiNetwork& a, const WiFiNetwork& b) {
-                     return a.signal_strength > b.signal_strength;
-                 });
+                  [](const WiFiNetwork& a, const WiFiNetwork& b) {
+                      return a.signal_strength > b.signal_strength;
+                  });
 
         // Cache results
         {
@@ -263,10 +258,8 @@ void WifiBackendMacOS::scan_timer_callback(lv_timer_t* timer) {
 
 WiFiError WifiBackendMacOS::get_scan_results(std::vector<WiFiNetwork>& networks) {
     if (!running_) {
-        return WiFiError(WiFiResult::NOT_INITIALIZED,
-                        "Backend not started",
-                        "WiFi system not initialized",
-                        "");
+        return WiFiError(WiFiResult::NOT_INITIALIZED, "Backend not started",
+                         "WiFi system not initialized", "");
     }
 
     std::lock_guard<std::mutex> lock(networks_mutex_);
@@ -280,20 +273,15 @@ WiFiError WifiBackendMacOS::get_scan_results(std::vector<WiFiNetwork>& networks)
 // Connection Management
 // ============================================================================
 
-WiFiError WifiBackendMacOS::connect_network(const std::string& ssid,
-                                           const std::string& password) {
+WiFiError WifiBackendMacOS::connect_network(const std::string& ssid, const std::string& password) {
     if (!running_) {
-        return WiFiError(WiFiResult::NOT_INITIALIZED,
-                        "Backend not started",
-                        "WiFi system not initialized",
-                        "");
+        return WiFiError(WiFiResult::NOT_INITIALIZED, "Backend not started",
+                         "WiFi system not initialized", "");
     }
 
     if (connection_in_progress_) {
-        return WiFiError(WiFiResult::BACKEND_ERROR,
-                        "Connection already in progress",
-                        "Please wait for current connection to complete",
-                        "");
+        return WiFiError(WiFiResult::BACKEND_ERROR, "Connection already in progress",
+                         "Please wait for current connection to complete", "");
     }
 
     spdlog::info("[WiFiMacOS] Connecting to network: {}", ssid);
@@ -309,23 +297,26 @@ WiFiError WifiBackendMacOS::connect_network(const std::string& ssid,
     }
 
     // Perform connection in background (use timer with public API)
-    connect_timer_ = lv_timer_create([](lv_timer_t* timer) {
-        WifiBackendMacOS* backend = static_cast<WifiBackendMacOS*>(lv_timer_get_user_data(timer));
-        if (backend) {
-            backend->connect_timer_callback(timer);
-        }
-    }, 100, nullptr);
+    connect_timer_ = lv_timer_create(
+        [](lv_timer_t* timer) {
+            WifiBackendMacOS* backend =
+                static_cast<WifiBackendMacOS*>(lv_timer_get_user_data(timer));
+            if (backend) {
+                backend->connect_timer_callback(timer);
+            }
+        },
+        100, nullptr);
 
     if (connect_timer_) {
         lv_timer_set_user_data(connect_timer_, this);
-        lv_timer_set_repeat_count(connect_timer_, 1);  // Fire once
+        lv_timer_set_repeat_count(connect_timer_, 1); // Fire once
     }
 
     return WiFiErrorHelper::success();
 }
 
 void WifiBackendMacOS::connect_timer_callback(lv_timer_t* timer) {
-    connect_timer_ = nullptr;  // Timer will be auto-deleted
+    connect_timer_ = nullptr; // Timer will be auto-deleted
 
     @autoreleasepool {
         CWInterface* iface = (__bridge CWInterface*)interface_;
@@ -366,7 +357,7 @@ void WifiBackendMacOS::connect_timer_callback(lv_timer_t* timer) {
             fire_event("CONNECTED", connecting_ssid_);
         } else {
             spdlog::error("[WiFiMacOS] Connection failed: {}",
-                         error ? [[error localizedDescription] UTF8String] : "unknown error");
+                          error ? [[error localizedDescription] UTF8String] : "unknown error");
             fire_event("AUTH_FAILED", connecting_ssid_);
         }
 
@@ -376,19 +367,15 @@ void WifiBackendMacOS::connect_timer_callback(lv_timer_t* timer) {
 
 WiFiError WifiBackendMacOS::disconnect_network() {
     if (!running_) {
-        return WiFiError(WiFiResult::NOT_INITIALIZED,
-                        "Backend not started",
-                        "WiFi system not initialized",
-                        "");
+        return WiFiError(WiFiResult::NOT_INITIALIZED, "Backend not started",
+                         "WiFi system not initialized", "");
     }
 
     @autoreleasepool {
         CWInterface* iface = (__bridge CWInterface*)interface_;
         if (!iface) {
-            return WiFiError(WiFiResult::BACKEND_ERROR,
-                           "No WiFi interface",
-                           "WiFi interface unavailable",
-                           "");
+            return WiFiError(WiFiResult::BACKEND_ERROR, "No WiFi interface",
+                             "WiFi interface unavailable", "");
         }
 
         [iface disassociate];
@@ -433,7 +420,7 @@ WifiBackend::ConnectionStatus WifiBackendMacOS::get_status() {
 
             // Get IP address (requires additional work, simplified for now)
             // Would need to query network interfaces via getifaddrs() or similar
-            status.ip_address = "";  // TODO: Implement IP address query
+            status.ip_address = ""; // TODO: Implement IP address query
         }
     }
 
@@ -472,7 +459,7 @@ WiFiError WifiBackendMacOS::check_wifi_hardware() {
 
         NSString* ifaceName = [iface interfaceName];
         spdlog::debug("[WiFiMacOS] WiFi interface found: {}",
-                     ifaceName ? [ifaceName UTF8String] : "unknown");
+                      ifaceName ? [ifaceName UTF8String] : "unknown");
     }
 
     return WiFiErrorHelper::success();
@@ -480,36 +467,36 @@ WiFiError WifiBackendMacOS::check_wifi_hardware() {
 
 WiFiError WifiBackendMacOS::check_location_permission() {
     @autoreleasepool {
-        // Use class method (deprecated but compatible with macOS 10.15)
-        #pragma clang diagnostic push
-        #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+// Use class method (deprecated but compatible with macOS 10.15)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         CLAuthorizationStatus status = [CLLocationManager authorizationStatus];
-        #pragma clang diagnostic pop
+#pragma clang diagnostic pop
 
         switch (status) {
-            case kCLAuthorizationStatusAuthorizedAlways:
-                spdlog::debug("[WiFiMacOS] Location permission granted");
-                return WiFiErrorHelper::success();
+        case kCLAuthorizationStatusAuthorizedAlways:
+            spdlog::debug("[WiFiMacOS] Location permission granted");
+            return WiFiErrorHelper::success();
 
-            case kCLAuthorizationStatusNotDetermined:
-                spdlog::warn("[WiFiMacOS] Location permission not determined");
-                spdlog::warn("[WiFiMacOS] Grant location permission: System Preferences → Security & Privacy → Location Services");
-                return WiFiError(WiFiResult::PERMISSION_DENIED,
-                               "Location permission not determined",
-                               "Location access required for WiFi scanning",
-                               "Grant location permission in System Preferences");
+        case kCLAuthorizationStatusNotDetermined:
+            spdlog::warn("[WiFiMacOS] Location permission not determined");
+            spdlog::warn("[WiFiMacOS] Grant location permission: System Preferences → Security & "
+                         "Privacy → Location Services");
+            return WiFiError(WiFiResult::PERMISSION_DENIED, "Location permission not determined",
+                             "Location access required for WiFi scanning",
+                             "Grant location permission in System Preferences");
 
-            case kCLAuthorizationStatusDenied:
-            case kCLAuthorizationStatusRestricted:
-                spdlog::warn("[WiFiMacOS] Location permission denied/restricted");
-                spdlog::warn("[WiFiMacOS] Grant location permission: System Preferences → Security & Privacy → Location Services");
-                return WiFiError(WiFiResult::PERMISSION_DENIED,
-                               "Location permission denied",
-                               "Location access required for WiFi scanning",
-                               "Grant location permission in System Preferences > Privacy");
+        case kCLAuthorizationStatusDenied:
+        case kCLAuthorizationStatusRestricted:
+            spdlog::warn("[WiFiMacOS] Location permission denied/restricted");
+            spdlog::warn("[WiFiMacOS] Grant location permission: System Preferences → Security & "
+                         "Privacy → Location Services");
+            return WiFiError(WiFiResult::PERMISSION_DENIED, "Location permission denied",
+                             "Location access required for WiFi scanning",
+                             "Grant location permission in System Preferences > Privacy");
 
-            default:
-                return WiFiErrorHelper::success();
+        default:
+            return WiFiErrorHelper::success();
         }
     }
 }
@@ -523,8 +510,10 @@ int WifiBackendMacOS::rssi_to_percentage(int rssi) {
     // -50 dBm or better = 100%
     // -100 dBm or worse = 0%
 
-    if (rssi >= -50) return 100;
-    if (rssi <= -100) return 0;
+    if (rssi >= -50)
+        return 100;
+    if (rssi <= -100)
+        return 0;
 
     // Linear interpolation
     return 2 * (rssi + 100);
@@ -559,7 +548,7 @@ std::string WifiBackendMacOS::extract_security_type(void* network_ptr, bool& is_
             return "WEP";
         }
 
-        return "Secured";  // Unknown security type but requires password
+        return "Secured"; // Unknown security type but requires password
     }
 }
 

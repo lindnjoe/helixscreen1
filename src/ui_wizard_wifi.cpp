@@ -22,17 +22,21 @@
  */
 
 #include "ui_wizard_wifi.h"
-#include "ui_theme.h"
+
 #include "ui_icon.h"
-#include "wifi_manager.h"
-#include "ethernet_manager.h"
 #include "ui_keyboard.h"
 #include "ui_modal.h"
+#include "ui_theme.h"
+
+#include "ethernet_manager.h"
 #include "lvgl/lvgl.h"
+#include "wifi_manager.h"
+
 #include <spdlog/spdlog.h>
-#include <memory>
-#include <cstring>
+
 #include <algorithm>
+#include <cstring>
+#include <memory>
 
 // ============================================================================
 // Static Data & Subjects
@@ -47,7 +51,8 @@ struct WifiConstant {
 // Helper: Register array of constants to a scope
 static void register_wifi_constants_to_scope(lv_xml_component_scope_t* scope,
                                              const WifiConstant* constants) {
-    if (!scope) return;
+    if (!scope)
+        return;
     for (int i = 0; constants[i].name != NULL; i++) {
         lv_xml_register_const(scope, constants[i].name, constants[i].value);
     }
@@ -57,10 +62,10 @@ static void register_wifi_constants_to_scope(lv_xml_component_scope_t* scope,
 static lv_subject_t wifi_enabled;
 static lv_subject_t wifi_status;
 static lv_subject_t ethernet_status;
-static lv_subject_t wifi_scanning;  // 0=not scanning, 1=scanning
-static lv_subject_t wifi_password_modal_visible;  // 0=hidden, 1=visible (reactive modal control)
-static lv_subject_t wifi_password_modal_ssid;  // SSID for password modal (reactive)
-static lv_subject_t wifi_connecting;  // 0=idle, 1=connecting (disables Connect button)
+static lv_subject_t wifi_scanning;               // 0=not scanning, 1=scanning
+static lv_subject_t wifi_password_modal_visible; // 0=hidden, 1=visible (reactive modal control)
+static lv_subject_t wifi_password_modal_ssid;    // SSID for password modal (reactive)
+static lv_subject_t wifi_connecting;             // 0=idle, 1=connecting (disables Connect button)
 
 // String buffers (must be persistent)
 static char wifi_status_buffer[64];
@@ -91,10 +96,10 @@ static lv_color_t wifi_item_text_color;
 // Each network item gets its own subject set for reactive UI updates
 struct NetworkItemData {
     WiFiNetwork network;           // Network info for click handler
-    lv_subject_t* ssid;           // Subject for SSID label binding
-    lv_subject_t* signal_strength;// Subject for signal icon color
-    lv_subject_t* is_secured;     // Subject for lock icon visibility
-    char ssid_buffer[64];         // Persistent buffer for SSID subject
+    lv_subject_t* ssid;            // Subject for SSID label binding
+    lv_subject_t* signal_strength; // Subject for signal icon color
+    lv_subject_t* is_secured;      // Subject for lock icon visibility
+    char ssid_buffer[64];          // Persistent buffer for SSID subject
 
     NetworkItemData(const WiFiNetwork& net) : network(net) {
         ssid = new lv_subject_t();
@@ -186,22 +191,24 @@ static void init_wifi_item_colors() {
         bool use_dark_mode = ui_theme_is_dark_mode();
 
         // Load background color
-        const char* bg_str = lv_xml_get_const(scope, use_dark_mode ? "wifi_item_bg_dark" : "wifi_item_bg_light");
+        const char* bg_str =
+            lv_xml_get_const(scope, use_dark_mode ? "wifi_item_bg_dark" : "wifi_item_bg_light");
         wifi_item_bg_color = bg_str ? ui_theme_parse_color(bg_str) : lv_color_hex(0x262626);
 
         // Load text color
-        const char* text_str = lv_xml_get_const(scope, use_dark_mode ? "wifi_item_text_dark" : "wifi_item_text_light");
+        const char* text_str =
+            lv_xml_get_const(scope, use_dark_mode ? "wifi_item_text_dark" : "wifi_item_text_light");
         wifi_item_text_color = text_str ? ui_theme_parse_color(text_str) : lv_color_hex(0xE3E3E3);
 
-        spdlog::debug("[WiFi] Item colors loaded: bg={}, text={} ({})",
-                     bg_str ? bg_str : "default",
-                     text_str ? text_str : "default",
-                     use_dark_mode ? "dark" : "light");
+        spdlog::debug("[WiFi] Item colors loaded: bg={}, text={} ({})", bg_str ? bg_str : "default",
+                      text_str ? text_str : "default", use_dark_mode ? "dark" : "light");
     } else {
         // Fallback to defaults if scope not found
         wifi_item_bg_color = lv_color_hex(0x262626);
         wifi_item_text_color = lv_color_hex(0xE3E3E3);
-        spdlog::warn("[WiFi] wifi_network_item component not registered yet - using hardcoded default colors (bg=#262626, text=#E3E3E3). Call init_wifi_item_colors() after component registration for theme support.");
+        spdlog::warn("[WiFi] wifi_network_item component not registered yet - using hardcoded "
+                     "default colors (bg=#262626, text=#E3E3E3). Call init_wifi_item_colors() "
+                     "after component registration for theme support.");
     }
 }
 
@@ -212,7 +219,8 @@ static void init_wifi_item_colors() {
  * Applies card-like background and accent border to indicate active connection
  */
 static void apply_connected_network_highlight(lv_obj_t* item) {
-    if (!item) return;
+    if (!item)
+        return;
 
     // Left accent border (4px primary color)
     lv_obj_set_style_border_side(item, LV_BORDER_SIDE_LEFT, LV_PART_MAIN);
@@ -241,15 +249,15 @@ void ui_wizard_wifi_init_subjects() {
     spdlog::debug("[WiFi Screen] Initializing subjects");
 
     // Initialize subjects with defaults
-    lv_subject_init_int(&wifi_enabled, 0);   // WiFi off by default
-    lv_subject_init_int(&wifi_scanning, 0);  // Not scanning by default
-    lv_subject_init_int(&wifi_password_modal_visible, 0);  // Modal hidden by default
-    lv_subject_init_int(&wifi_connecting, 0);  // Not connecting by default
+    lv_subject_init_int(&wifi_enabled, 0);                // WiFi off by default
+    lv_subject_init_int(&wifi_scanning, 0);               // Not scanning by default
+    lv_subject_init_int(&wifi_password_modal_visible, 0); // Modal hidden by default
+    lv_subject_init_int(&wifi_connecting, 0);             // Not connecting by default
 
     lv_subject_init_string(&wifi_password_modal_ssid, wifi_password_modal_ssid_buffer, nullptr,
-                          sizeof(wifi_password_modal_ssid_buffer), "");  // SSID for password modal
-    lv_subject_init_string(&wifi_status, wifi_status_buffer, nullptr,
-                           sizeof(wifi_status_buffer), get_status_text("disabled"));
+                           sizeof(wifi_password_modal_ssid_buffer), ""); // SSID for password modal
+    lv_subject_init_string(&wifi_status, wifi_status_buffer, nullptr, sizeof(wifi_status_buffer),
+                           get_status_text("disabled"));
 
     lv_subject_init_string(&ethernet_status, ethernet_status_buffer, nullptr,
                            sizeof(ethernet_status_buffer), "Checking...");
@@ -294,15 +302,15 @@ void ui_wizard_wifi_register_responsive_constants() {
     // Buffer for calculated height value (static for persistence beyond this scope)
     static char list_item_height_buf[16];
 
-    if (greater_res <= UI_BREAKPOINT_SMALL_MAX) {  // ≤480: 480x320
+    if (greater_res <= UI_BREAKPOINT_SMALL_MAX) { // ≤480: 480x320
         list_item_padding = "4";
         list_item_font = "montserrat_14";
         size_label = "SMALL";
-    } else if (greater_res <= UI_BREAKPOINT_MEDIUM_MAX) {  // 481-800: 800x480
+    } else if (greater_res <= UI_BREAKPOINT_MEDIUM_MAX) { // 481-800: 800x480
         list_item_padding = "6";
         list_item_font = "montserrat_16";
         size_label = "MEDIUM";
-    } else {  // >800: 1024x600+
+    } else { // >800: 1024x600+
         list_item_padding = "8";
         list_item_font = lv_xml_get_const(NULL, "font_body");
         size_label = "LARGE";
@@ -318,8 +326,9 @@ void ui_wizard_wifi_register_responsive_constants() {
                       font_height, list_item_font);
     } else {
         // Fallback to hardcoded values if font not found
-        const char* fallback_height = (greater_res <= UI_BREAKPOINT_SMALL_MAX) ? "60" :
-                                      (greater_res <= UI_BREAKPOINT_MEDIUM_MAX) ? "80" : "100";
+        const char* fallback_height = (greater_res <= UI_BREAKPOINT_SMALL_MAX)    ? "60"
+                                      : (greater_res <= UI_BREAKPOINT_MEDIUM_MAX) ? "80"
+                                                                                  : "100";
         snprintf(list_item_height_buf, sizeof(list_item_height_buf), "%s", fallback_height);
         spdlog::warn("[WiFi Screen] Failed to get font '{}', using fallback list_item_height={}",
                      list_item_font, fallback_height);
@@ -331,7 +340,7 @@ void ui_wizard_wifi_register_responsive_constants() {
         {"list_item_padding", list_item_padding},
         {"list_item_height", list_item_height},
         {"list_item_font", list_item_font},
-        {NULL, NULL}  // Sentinel
+        {NULL, NULL} // Sentinel
     };
 
     // 4. Register to wifi_network_item scope
@@ -345,10 +354,12 @@ void ui_wizard_wifi_register_responsive_constants() {
     // 6. Initialize theme-aware colors now that wifi_network_item component is registered
     init_wifi_item_colors();
 
-    spdlog::info("[WiFi Screen] Registered 3 constants to wifi_network_item and wizard_wifi_setup scopes ({})",
+    spdlog::info("[WiFi Screen] Registered 3 constants to wifi_network_item and wizard_wifi_setup "
+                 "scopes ({})",
                  size_label);
-    spdlog::debug("[WiFi Screen] Values: list_item_padding={}, list_item_height={}, list_item_font={}",
-                  list_item_padding, list_item_height, list_item_font);
+    spdlog::debug(
+        "[WiFi Screen] Values: list_item_padding={}, list_item_height={}, list_item_font={}",
+        list_item_padding, list_item_height, list_item_font);
 }
 
 lv_obj_t* ui_wizard_wifi_create(lv_obj_t* parent) {
@@ -458,22 +469,17 @@ void ui_wizard_wifi_show_password_modal(const char* ssid) {
 
     // Configure modal: centered, non-persistent, with automatic keyboard positioning
     ui_modal_keyboard_config_t kbd_config = {
-        .auto_position = true  // Keyboard will auto-position based on modal alignment
+        .auto_position = true // Keyboard will auto-position based on modal alignment
     };
 
-    ui_modal_config_t config = {
-        .position = {.use_alignment = true, .alignment = LV_ALIGN_CENTER},
-        .backdrop_opa = 180,
-        .keyboard = &kbd_config,
-        .persistent = false,  // Create on demand
-        .on_close = nullptr
-    };
+    ui_modal_config_t config = {.position = {.use_alignment = true, .alignment = LV_ALIGN_CENTER},
+                                .backdrop_opa = 180,
+                                .keyboard = &kbd_config,
+                                .persistent = false, // Create on demand
+                                .on_close = nullptr};
 
     // Create modal with SSID in attributes
-    const char* attrs[] = {
-        "ssid", ssid,
-        NULL
-    };
+    const char* attrs[] = {"ssid", ssid, NULL};
 
     password_modal = ui_modal_show("wifi_password_modal", &config, attrs);
 
@@ -564,7 +570,8 @@ static void on_wifi_toggle_changed(lv_event_t* e) {
             // Start network scanning
             spdlog::debug("[WiFi Screen] About to call start_scan with callback");
             wifi_manager->start_scan([](const std::vector<WiFiNetwork>& networks) {
-                spdlog::info("[WiFi Screen] *** SCAN CALLBACK INVOKED with {} networks ***", networks.size());
+                spdlog::info("[WiFi Screen] *** SCAN CALLBACK INVOKED with {} networks ***",
+                             networks.size());
 
                 // Hide scanning indicator
                 lv_subject_set_int(&wifi_scanning, 0);
@@ -580,7 +587,7 @@ static void on_wifi_toggle_changed(lv_event_t* e) {
     } else {
         // Disable WiFi
         update_wifi_status(get_status_text("disabled"));
-        lv_subject_set_int(&wifi_scanning, 0);  // Stop scanning indicator
+        lv_subject_set_int(&wifi_scanning, 0); // Stop scanning indicator
         clear_network_list();
 
         if (wifi_manager) {
@@ -613,7 +620,8 @@ static void on_network_item_clicked(lv_event_t* e) {
 
     // Update WiFi status (read base text from XML enum, append SSID)
     char status_buf[128];
-    snprintf(status_buf, sizeof(status_buf), "%s%s", get_status_text("connecting"), network.ssid.c_str());
+    snprintf(status_buf, sizeof(status_buf), "%s%s", get_status_text("connecting"),
+             network.ssid.c_str());
     update_wifi_status(status_buf);
 
     if (network.is_secured) {
@@ -807,7 +815,8 @@ static void populate_network_list(const std::vector<WiFiNetwork>& networks) {
     // Create network items
     for (const auto& network : sorted_networks) {
         // Create network item from component
-        lv_obj_t* item = (lv_obj_t*)lv_xml_create(network_list_container, "wifi_network_item", nullptr);
+        lv_obj_t* item =
+            (lv_obj_t*)lv_xml_create(network_list_container, "wifi_network_item", nullptr);
         if (!item) {
             spdlog::error("[WiFi Screen] Failed to create network item for SSID: {}", network.ssid);
             continue;
@@ -837,17 +846,17 @@ static void populate_network_list(const std::vector<WiFiNetwork>& networks) {
             if (network.is_secured) {
                 lv_label_set_text(security_label, network.security_type.c_str());
             } else {
-                lv_label_set_text(security_label, "");  // Empty string for open networks
+                lv_label_set_text(security_label, ""); // Empty string for open networks
             }
         }
 
         // Set signal strength icon (includes lock indicator for secured networks)
         if (signal_icon) {
-            const char* icon_name = get_wifi_signal_icon(network.signal_strength, network.is_secured);
+            const char* icon_name =
+                get_wifi_signal_icon(network.signal_strength, network.is_secured);
             ui_icon_set_source(signal_icon, icon_name);
-            spdlog::trace("[WiFi Screen] Set signal icon '{}' for {}% strength ({})",
-                          icon_name, network.signal_strength,
-                          network.is_secured ? "secured" : "open");
+            spdlog::trace("[WiFi Screen] Set signal icon '{}' for {}% strength ({})", icon_name,
+                          network.signal_strength, network.is_secured ? "secured" : "open");
         }
 
         // Highlight connected network with card-like background and accent border
@@ -863,9 +872,8 @@ static void populate_network_list(const std::vector<WiFiNetwork>& networks) {
         // Register click event
         lv_obj_add_event_cb(item, on_network_item_clicked, LV_EVENT_CLICKED, nullptr);
 
-        spdlog::debug("[WiFi Screen] Added network: {} ({}%, {})",
-                     network.ssid, network.signal_strength,
-                     network.is_secured ? "secured" : "open");
+        spdlog::debug("[WiFi Screen] Added network: {} ({}%, {})", network.ssid,
+                      network.signal_strength, network.is_secured ? "secured" : "open");
     }
 
     spdlog::info("[WiFi Screen] Populated {} network items", sorted_networks.size());
@@ -905,7 +913,7 @@ static void clear_network_list() {
 
             // Now safe to free NetworkItemData (subjects no longer referenced by LVGL)
             if (item_data) {
-                delete item_data;  // Destructor cleans up subjects
+                delete item_data; // Destructor cleans up subjects
             }
         }
     }

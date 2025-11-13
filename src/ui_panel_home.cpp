@@ -22,13 +22,17 @@
  */
 
 #include "ui_panel_home.h"
+
+#include "ui_fonts.h"
 #include "ui_nav.h"
 #include "ui_theme.h"
-#include "ui_fonts.h"
+
 #include "tips_manager.h"
+
 #include <spdlog/spdlog.h>
-#include <cstring>
+
 #include <cstdlib>
+#include <cstring>
 
 static lv_obj_t* home_panel = nullptr;
 
@@ -45,7 +49,7 @@ static lv_subject_t network_label_subject;
 static lv_subject_t network_color_subject;
 static lv_subject_t light_icon_color_subject;
 
-static char status_buffer[512];  // Larger buffer for tips (title + content)
+static char status_buffer[512]; // Larger buffer for tips (title + content)
 static char temp_buffer[32];
 static char network_icon_buffer[8];
 static char network_label_buffer[32];
@@ -61,8 +65,8 @@ static lv_color_t light_icon_off_color;
 
 // Tip of the day rotation
 static lv_timer_t* tip_rotation_timer = nullptr;
-static PrintingTip current_tip;  // Store full tip for dialog display
-static lv_obj_t* tip_detail_dialog = nullptr;  // Modal dialog reference
+static PrintingTip current_tip;               // Store full tip for dialog display
+static lv_obj_t* tip_detail_dialog = nullptr; // Modal dialog reference
 
 // Forward declarations
 static void light_toggle_event_cb(lv_event_t* e);
@@ -85,17 +89,18 @@ static void init_home_panel_colors() {
         bool use_dark_mode = ui_theme_is_dark_mode();
 
         // Load light icon ON color
-        const char* on_str = lv_xml_get_const(scope, use_dark_mode ? "light_icon_on_dark" : "light_icon_on_light");
+        const char* on_str =
+            lv_xml_get_const(scope, use_dark_mode ? "light_icon_on_dark" : "light_icon_on_light");
         light_icon_on_color = on_str ? ui_theme_parse_color(on_str) : lv_color_hex(0xFFD700);
 
         // Load light icon OFF color
-        const char* off_str = lv_xml_get_const(scope, use_dark_mode ? "light_icon_off_dark" : "light_icon_off_light");
+        const char* off_str =
+            lv_xml_get_const(scope, use_dark_mode ? "light_icon_off_dark" : "light_icon_off_light");
         light_icon_off_color = off_str ? ui_theme_parse_color(off_str) : lv_color_hex(0x909090);
 
         spdlog::debug("[Home] Light icon colors loaded: on={}, off={} ({})",
-                     on_str ? on_str : "default",
-                     off_str ? off_str : "default",
-                     use_dark_mode ? "dark" : "light");
+                      on_str ? on_str : "default", off_str ? off_str : "default",
+                      use_dark_mode ? "dark" : "light");
     } else {
         // Fallback to defaults if scope not found
         light_icon_on_color = lv_color_hex(0xFFD700);
@@ -116,12 +121,17 @@ void ui_panel_home_init_subjects() {
     init_home_panel_colors();
 
     // Initialize subjects with default values
-    lv_subject_init_string(&status_subject, status_buffer, NULL, sizeof(status_buffer), "Welcome to HelixScreen");
+    lv_subject_init_string(&status_subject, status_buffer, NULL, sizeof(status_buffer),
+                           "Welcome to HelixScreen");
     lv_subject_init_string(&temp_subject, temp_buffer, NULL, sizeof(temp_buffer), "30 °C");
-    lv_subject_init_string(&network_icon_subject, network_icon_buffer, NULL, sizeof(network_icon_buffer), ICON_WIFI);
-    lv_subject_init_string(&network_label_subject, network_label_buffer, NULL, sizeof(network_label_buffer), "Wi-Fi");
-    lv_subject_init_string(&network_color_subject, network_color_buffer, NULL, sizeof(network_color_buffer), "0xff4444");
-    lv_subject_init_color(&light_icon_color_subject, light_icon_off_color);  // Theme-aware "off" state color
+    lv_subject_init_string(&network_icon_subject, network_icon_buffer, NULL,
+                           sizeof(network_icon_buffer), ICON_WIFI);
+    lv_subject_init_string(&network_label_subject, network_label_buffer, NULL,
+                           sizeof(network_label_buffer), "Wi-Fi");
+    lv_subject_init_string(&network_color_subject, network_color_buffer, NULL,
+                           sizeof(network_color_buffer), "0xff4444");
+    lv_subject_init_color(&light_icon_color_subject,
+                          light_icon_off_color); // Theme-aware "off" state color
 
     // Register subjects globally so XML can bind to them
     lv_xml_register_subject(NULL, "status_text", &status_subject);
@@ -137,8 +147,10 @@ void ui_panel_home_init_subjects() {
     lv_xml_register_event_cb(NULL, "tip_text_clicked_cb", tip_text_clicked_cb);
 
     subjects_initialized = true;
-    spdlog::debug("Registered subjects: status_text, temp_text, network_icon, network_label, network_color, light_icon_color");
-    spdlog::debug("Registered event callbacks: light_toggle_cb, print_card_clicked_cb, tip_text_clicked_cb");
+    spdlog::debug("Registered subjects: status_text, temp_text, network_icon, network_label, "
+                  "network_color, light_icon_color");
+    spdlog::debug(
+        "Registered event callbacks: light_toggle_cb, print_card_clicked_cb, tip_text_clicked_cb");
 
     // Set initial tip of the day
     update_tip_of_day();
@@ -160,8 +172,7 @@ void ui_panel_home_setup_observers(lv_obj_t* panel) {
     if (!network_icon_label || !network_text_label || !light_icon_label) {
         spdlog::error("Failed to find named widgets (net_icon={}, net_label={}, light={})",
                       static_cast<void*>(network_icon_label),
-                      static_cast<void*>(network_text_label),
-                      static_cast<void*>(light_icon_label));
+                      static_cast<void*>(network_text_label), static_cast<void*>(light_icon_label));
         return;
     }
 
@@ -173,26 +184,26 @@ void ui_panel_home_setup_observers(lv_obj_t* panel) {
     lv_obj_t* printer_image = lv_obj_find_by_name(home_panel, "printer_image");
     if (printer_image) {
         int32_t printer_size;
-        uint16_t zoom_level;  // 256 = 100%, 128 = 50%, 512 = 200%
+        uint16_t zoom_level; // 256 = 100%, 128 = 50%, 512 = 200%
 
         // Calculate printer image size and zoom based on screen height
         if (screen_height <= UI_SCREEN_TINY_H) {
-            printer_size = 150;  // Tiny screens (480x320)
-            zoom_level = 96;     // 37.5% zoom to scale 400px -> 150px
+            printer_size = 150; // Tiny screens (480x320)
+            zoom_level = 96;    // 37.5% zoom to scale 400px -> 150px
         } else if (screen_height <= UI_SCREEN_SMALL_H) {
-            printer_size = 250;  // Small screens (800x480)
-            zoom_level = 160;    // 62.5% zoom to scale 400px -> 250px
+            printer_size = 250; // Small screens (800x480)
+            zoom_level = 160;   // 62.5% zoom to scale 400px -> 250px
         } else if (screen_height <= UI_SCREEN_MEDIUM_H) {
-            printer_size = 300;  // Medium screens (1024x600)
-            zoom_level = 192;    // 75% zoom to scale 400px -> 300px
+            printer_size = 300; // Medium screens (1024x600)
+            zoom_level = 192;   // 75% zoom to scale 400px -> 300px
         } else {
-            printer_size = 400;  // Large screens (1280x720+)
-            zoom_level = 256;    // 100% zoom (original size)
+            printer_size = 400; // Large screens (1280x720+)
+            zoom_level = 256;   // 100% zoom (original size)
         }
 
         lv_obj_set_width(printer_image, printer_size);
         lv_obj_set_height(printer_image, printer_size);
-        lv_image_set_scale(printer_image, zoom_level);  // Actually scale the image
+        lv_image_set_scale(printer_image, zoom_level); // Actually scale the image
         spdlog::debug("Set printer image: size={}px, zoom={} ({}%) for screen height {}",
                       printer_size, zoom_level, (zoom_level * 100) / 256, screen_height);
     } else {
@@ -202,29 +213,34 @@ void ui_panel_home_setup_observers(lv_obj_t* panel) {
     // 2. Set responsive info card icon sizes
     const lv_font_t* info_icon_font;
     if (screen_height <= UI_SCREEN_TINY_H) {
-        info_icon_font = &fa_icons_24;  // Tiny: 24px icons
+        info_icon_font = &fa_icons_24; // Tiny: 24px icons
     } else if (screen_height <= UI_SCREEN_SMALL_H) {
-        info_icon_font = &fa_icons_24;  // Small: 24px icons
+        info_icon_font = &fa_icons_24; // Small: 24px icons
     } else {
-        info_icon_font = &fa_icons_48;  // Medium/Large: 48px icons
+        info_icon_font = &fa_icons_48; // Medium/Large: 48px icons
     }
 
     lv_obj_t* temp_icon = lv_obj_find_by_name(home_panel, "temp_icon");
-    if (temp_icon) lv_obj_set_style_text_font(temp_icon, info_icon_font, 0);
+    if (temp_icon)
+        lv_obj_set_style_text_font(temp_icon, info_icon_font, 0);
 
-    if (network_icon_label) lv_obj_set_style_text_font(network_icon_label, info_icon_font, 0);
-    if (light_icon_label) lv_obj_set_style_text_font(light_icon_label, info_icon_font, 0);
+    if (network_icon_label)
+        lv_obj_set_style_text_font(network_icon_label, info_icon_font, 0);
+    if (light_icon_label)
+        lv_obj_set_style_text_font(light_icon_label, info_icon_font, 0);
 
     // 3. Set responsive status text font for tiny screens
     if (screen_height <= UI_SCREEN_TINY_H) {
         lv_obj_t* status_text = lv_obj_find_by_name(home_panel, "status_text_label");
         if (status_text) {
-            lv_obj_set_style_text_font(status_text, UI_FONT_HEADING, 0);  // Smaller font for tiny
+            lv_obj_set_style_text_font(status_text, UI_FONT_HEADING, 0); // Smaller font for tiny
             spdlog::debug("Set status text to UI_FONT_HEADING for tiny screen");
         }
     }
 
-    int icon_size = (info_icon_font == &fa_icons_24) ? 24 : (info_icon_font == &fa_icons_32) ? 32 : 48;
+    int icon_size = (info_icon_font == &fa_icons_24)   ? 24
+                    : (info_icon_font == &fa_icons_32) ? 32
+                                                       : 48;
     spdlog::debug("Set info card icons to {}px for screen height {}", icon_size, screen_height);
 
     // Add observers to watch subjects and update widgets
@@ -289,21 +305,21 @@ void ui_panel_home_set_network(network_type_t type) {
     current_network = type;
 
     switch (type) {
-        case NETWORK_WIFI:
-            lv_subject_copy_string(&network_icon_subject, ICON_WIFI);
-            lv_subject_copy_string(&network_label_subject, "Wi-Fi");
-            lv_subject_copy_string(&network_color_subject, "0xff4444");  // Primary color
-            break;
-        case NETWORK_ETHERNET:
-            lv_subject_copy_string(&network_icon_subject, ICON_ETHERNET);
-            lv_subject_copy_string(&network_label_subject, "Ethernet");
-            lv_subject_copy_string(&network_color_subject, "0xff4444");  // Primary color
-            break;
-        case NETWORK_DISCONNECTED:
-            lv_subject_copy_string(&network_icon_subject, ICON_WIFI_SLASH);
-            lv_subject_copy_string(&network_label_subject, "Disconnected");
-            lv_subject_copy_string(&network_color_subject, "0x909090");  // Text secondary
-            break;
+    case NETWORK_WIFI:
+        lv_subject_copy_string(&network_icon_subject, ICON_WIFI);
+        lv_subject_copy_string(&network_label_subject, "Wi-Fi");
+        lv_subject_copy_string(&network_color_subject, "0xff4444"); // Primary color
+        break;
+    case NETWORK_ETHERNET:
+        lv_subject_copy_string(&network_icon_subject, ICON_ETHERNET);
+        lv_subject_copy_string(&network_label_subject, "Ethernet");
+        lv_subject_copy_string(&network_color_subject, "0xff4444"); // Primary color
+        break;
+    case NETWORK_DISCONNECTED:
+        lv_subject_copy_string(&network_icon_subject, ICON_WIFI_SLASH);
+        lv_subject_copy_string(&network_label_subject, "Disconnected");
+        lv_subject_copy_string(&network_color_subject, "0x909090"); // Text secondary
+        break;
     }
     spdlog::debug("Updated network status to type {}", static_cast<int>(type));
 }
@@ -326,7 +342,7 @@ bool ui_panel_home_get_light_state() {
 }
 
 static void light_toggle_event_cb(lv_event_t* e) {
-    (void)e;  // Unused parameter
+    (void)e; // Unused parameter
 
     spdlog::info("Light button clicked");
 
@@ -338,7 +354,7 @@ static void light_toggle_event_cb(lv_event_t* e) {
 }
 
 static void print_card_clicked_cb(lv_event_t* e) {
-    (void)e;  // Unused parameter
+    (void)e; // Unused parameter
 
     spdlog::info("Print card clicked - navigating to print select panel");
 
@@ -348,8 +364,8 @@ static void print_card_clicked_cb(lv_event_t* e) {
 
 // Observer callback for network icon/label/color changes
 static void network_observer_cb(lv_observer_t* observer, lv_subject_t* subject) {
-    (void)observer;  // Unused parameter
-    (void)subject;   // Unused - we read subjects directly, not from callback param
+    (void)observer; // Unused parameter
+    (void)subject;  // Unused - we read subjects directly, not from callback param
 
     if (!network_icon_label || !network_text_label) {
         return;
@@ -375,7 +391,7 @@ static void network_observer_cb(lv_observer_t* observer, lv_subject_t* subject) 
 
 // Observer callback for light icon color changes
 static void light_observer_cb(lv_observer_t* observer, lv_subject_t* subject) {
-    (void)observer;  // Unused parameter
+    (void)observer; // Unused parameter
 
     if (!light_icon_label) {
         return;
@@ -407,13 +423,13 @@ static void update_tip_of_day() {
 
 // Timer callback for tip rotation (runs every 60 seconds)
 static void tip_rotation_timer_cb(lv_timer_t* timer) {
-    (void)timer;  // Unused parameter
+    (void)timer; // Unused parameter
     update_tip_of_day();
 }
 
 // Event handler for tip text click - shows modal with full tip
 static void tip_text_clicked_cb(lv_event_t* e) {
-    (void)e;  // Unused parameter
+    (void)e; // Unused parameter
 
     if (current_tip.title.empty()) {
         spdlog::warn("[Home] No tip available to display");
@@ -423,11 +439,8 @@ static void tip_text_clicked_cb(lv_event_t* e) {
     spdlog::info("[Home] Tip text clicked - showing detail dialog");
 
     // Create dialog with current tip data
-    const char* attrs[] = {
-        "title", current_tip.title.c_str(),
-        "content", current_tip.content.c_str(),
-        NULL
-    };
+    const char* attrs[] = {"title", current_tip.title.c_str(), "content",
+                           current_tip.content.c_str(), NULL};
 
     lv_obj_t* screen = lv_screen_active();
     tip_detail_dialog = (lv_obj_t*)lv_xml_create(screen, "tip_detail_dialog", attrs);
@@ -440,27 +453,33 @@ static void tip_text_clicked_cb(lv_event_t* e) {
     // Wire up Ok button to close dialog
     lv_obj_t* btn_ok = lv_obj_find_by_name(tip_detail_dialog, "btn_ok");
     if (btn_ok) {
-        lv_obj_add_event_cb(btn_ok, [](lv_event_t* e) {
-            (void)e;
-            if (tip_detail_dialog) {
-                lv_obj_delete(tip_detail_dialog);
-                tip_detail_dialog = nullptr;
-                spdlog::debug("[Home] Tip dialog closed via Ok button");
-            }
-        }, LV_EVENT_CLICKED, nullptr);
+        lv_obj_add_event_cb(
+            btn_ok,
+            [](lv_event_t* e) {
+                (void)e;
+                if (tip_detail_dialog) {
+                    lv_obj_delete(tip_detail_dialog);
+                    tip_detail_dialog = nullptr;
+                    spdlog::debug("[Home] Tip dialog closed via Ok button");
+                }
+            },
+            LV_EVENT_CLICKED, nullptr);
     }
 
     // Backdrop click to close
-    lv_obj_add_event_cb(tip_detail_dialog, [](lv_event_t* e) {
-        lv_obj_t* target = (lv_obj_t*)lv_event_get_target(e);
-        lv_obj_t* current_target = (lv_obj_t*)lv_event_get_current_target(e);
-        // Only handle if clicking the backdrop itself (not a child)
-        if (target == current_target && tip_detail_dialog) {
-            lv_obj_delete(tip_detail_dialog);
-            tip_detail_dialog = nullptr;
-            spdlog::debug("[Home] Tip dialog closed via backdrop click");
-        }
-    }, LV_EVENT_CLICKED, nullptr);
+    lv_obj_add_event_cb(
+        tip_detail_dialog,
+        [](lv_event_t* e) {
+            lv_obj_t* target = (lv_obj_t*)lv_event_get_target(e);
+            lv_obj_t* current_target = (lv_obj_t*)lv_event_get_current_target(e);
+            // Only handle if clicking the backdrop itself (not a child)
+            if (target == current_target && tip_detail_dialog) {
+                lv_obj_delete(tip_detail_dialog);
+                tip_detail_dialog = nullptr;
+                spdlog::debug("[Home] Tip dialog closed via backdrop click");
+            }
+        },
+        LV_EVENT_CLICKED, nullptr);
 
     // Bring to foreground
     lv_obj_move_foreground(tip_detail_dialog);

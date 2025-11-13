@@ -22,17 +22,21 @@
  */
 
 #include "ui_wizard_fan_select.h"
+
 #include "ui_wizard.h"
 #include "ui_wizard_helpers.h"
-#include "wizard_config_paths.h"
+
 #include "app_globals.h"
 #include "config.h"
-#include "moonraker_client.h"
 #include "lvgl/lvgl.h"
+#include "moonraker_client.h"
+#include "wizard_config_paths.h"
+
 #include <spdlog/spdlog.h>
+
+#include <cstring>
 #include <string>
 #include <vector>
-#include <cstring>
 
 // ============================================================================
 // Static Data & Subjects
@@ -115,8 +119,9 @@ lv_obj_t* ui_wizard_fan_select_create(lv_obj_t* parent) {
 
     // Safety check: cleanup should have been called by wizard navigation
     if (fan_select_screen_root) {
-        spdlog::warn("[Wizard Fan] Screen pointer not null - cleanup may not have been called properly");
-        fan_select_screen_root = nullptr;  // Reset pointer, wizard framework handles deletion
+        spdlog::warn(
+            "[Wizard Fan] Screen pointer not null - cleanup may not have been called properly");
+        fan_select_screen_root = nullptr; // Reset pointer, wizard framework handles deletion
     }
 
     // Create screen from XML
@@ -145,8 +150,8 @@ lv_obj_t* ui_wizard_fan_select_create(lv_obj_t* parent) {
     // Build dropdown options string with "None" option
     std::string hotend_options_str = WizardHelpers::build_dropdown_options(
         hotend_fan_items,
-        nullptr,  // No additional filter needed (already filtered above)
-        true      // Include "None" option
+        nullptr, // No additional filter needed (already filtered above)
+        true     // Include "None" option
     );
 
     // Add "None" to items vector to match dropdown
@@ -169,8 +174,8 @@ lv_obj_t* ui_wizard_fan_select_create(lv_obj_t* parent) {
     // Build dropdown options string with "None" option
     std::string part_options_str = WizardHelpers::build_dropdown_options(
         part_fan_items,
-        nullptr,  // No additional filter needed (already filtered above)
-        true      // Include "None" option
+        nullptr, // No additional filter needed (already filtered above)
+        true     // Include "None" option
     );
 
     // Add "None" to items vector to match dropdown
@@ -182,32 +187,24 @@ lv_obj_t* ui_wizard_fan_select_create(lv_obj_t* parent) {
         lv_dropdown_set_options(hotend_dropdown, hotend_options_str.c_str());
 
         // Restore saved selection (fan screen has no guessing methods)
-        WizardHelpers::restore_dropdown_selection(
-            hotend_dropdown,
-            &hotend_fan_selected,
-            hotend_fan_items,
-            WizardConfigPaths::HOTEND_FAN,
-            client,
-            nullptr,  // No guessing method for hotend fans
-            "[Wizard Fan]"
-        );
+        WizardHelpers::restore_dropdown_selection(hotend_dropdown, &hotend_fan_selected,
+                                                  hotend_fan_items, WizardConfigPaths::HOTEND_FAN,
+                                                  client,
+                                                  nullptr, // No guessing method for hotend fans
+                                                  "[Wizard Fan]");
     }
 
     // Find and configure part fan dropdown
-    lv_obj_t* part_dropdown = lv_obj_find_by_name(fan_select_screen_root, "part_cooling_fan_dropdown");
+    lv_obj_t* part_dropdown =
+        lv_obj_find_by_name(fan_select_screen_root, "part_cooling_fan_dropdown");
     if (part_dropdown) {
         lv_dropdown_set_options(part_dropdown, part_options_str.c_str());
 
         // Restore saved selection (fan screen has no guessing methods)
-        WizardHelpers::restore_dropdown_selection(
-            part_dropdown,
-            &part_fan_selected,
-            part_fan_items,
-            WizardConfigPaths::PART_FAN,
-            client,
-            nullptr,  // No guessing method for part fans
-            "[Wizard Fan]"
-        );
+        WizardHelpers::restore_dropdown_selection(part_dropdown, &part_fan_selected, part_fan_items,
+                                                  WizardConfigPaths::PART_FAN, client,
+                                                  nullptr, // No guessing method for part fans
+                                                  "[Wizard Fan]");
     }
 
     spdlog::info("[Wizard Fan] Screen created successfully");
@@ -222,19 +219,11 @@ void ui_wizard_fan_select_cleanup() {
     spdlog::debug("[Wizard Fan] Cleaning up resources");
 
     // Save current selections to config before cleanup (deferred save pattern)
-    WizardHelpers::save_dropdown_selection(
-        &hotend_fan_selected,
-        hotend_fan_items,
-        WizardConfigPaths::HOTEND_FAN,
-        "[Wizard Fan]"
-    );
+    WizardHelpers::save_dropdown_selection(&hotend_fan_selected, hotend_fan_items,
+                                           WizardConfigPaths::HOTEND_FAN, "[Wizard Fan]");
 
-    WizardHelpers::save_dropdown_selection(
-        &part_fan_selected,
-        part_fan_items,
-        WizardConfigPaths::PART_FAN,
-        "[Wizard Fan]"
-    );
+    WizardHelpers::save_dropdown_selection(&part_fan_selected, part_fan_items,
+                                           WizardConfigPaths::PART_FAN, "[Wizard Fan]");
 
     // Persist to disk
     Config* config = Config::get_instance();

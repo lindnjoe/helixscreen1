@@ -1,3 +1,4 @@
+<?xml version="1.0"?>
 <!--
   Copyright (C) 2025 356C LLC
   Author: Preston Brown <pbrown@brown-house.net>
@@ -18,230 +19,71 @@
   along with HelixScreen. If not, see <https://www.gnu.org/licenses/>.
 -->
 <component>
-	<!-- Component-local constants for theme-aware colors and dimensions -->
-	<consts>
-		<!-- Light icon color when light is ON (bright yellow) -->
-		<const name="light_icon_on_light" value="#FFD700"/>
-		<const name="light_icon_on_dark" value="#FFD700"/>
-
-		<!-- Light icon color when light is OFF (muted gray) -->
-		<const name="light_icon_off_light" value="#707070"/>
-		<const name="light_icon_off_dark" value="#909090"/>
-
-		<!-- Component-specific dimensions (home panel layout) -->
-		<px name="printer_img_size" value="400"/>
-		<px name="accent_bar_width" value="4"/>
-		<px name="accent_bar_gap" value="18"/>
-	</consts>
-
-	<!-- Now references global constants from globals.xml -->
-	<view
-		extends="lv_obj"
-		width="100%"
-		height="100%"
-		style_pad_all="0"
-		style_border_width="0"
-		flex_flow="column"
-	>
-		<!-- Top section: Printer visualization -->
-		<lv_obj
-			width="100%"
-			flex_grow="17"
-			style_bg_opa="0%"
-			style_border_width="0"
-			style_pad_all="#padding_normal"
-			flex_flow="row"
-			style_flex_main_place="center"
-			style_flex_cross_place="center"
-		>
-			<!-- Printer Image (size and scaling set dynamically in C++ based on screen size) -->
-			<lv_image
-				name="printer_image"
-				src="A:assets/images/printer_400.png"
-				width="#printer_img_size"
-				height="#printer_img_size"
-				align="center"
-			/>
-
-			<!-- Status Message with accent bar (flex-grows to fill available space) -->
-			<lv_obj
-				flex_grow="1"
-				style_bg_opa="0%"
-				style_border_width="0"
-				style_pad_all="0"
-				flex_flow="row"
-				style_flex_cross_place="center"
-				style_pad_gap="#accent_bar_gap"
-			>
-				<!-- Vertical accent bar (height fills container) -->
-				<lv_obj
-					name="status_accent_bar"
-					width="#accent_bar_width"
-					height="100%"
-					style_bg_color="#primary_color"
-					style_bg_opa="255"
-					style_radius="2"
-					style_border_width="0"
-					style_pad_all="0"
-				/>
-
-				<!-- Status text container with padding for breathing room -->
-				<lv_obj
-					flex_grow="1"
-					style_bg_opa="0%"
-					style_border_width="0"
-					style_pad_ver="8"
-					style_pad_hor="0"
-					flex_flow="row"
-					style_pad_gap="8"
-					clickable="true"
-				>
-					<event_cb trigger="clicked" callback="tip_text_clicked_cb"/>
-
-					<!-- "Tip: " prefix -->
-					<lv_label
-						text="Tip:"
-								style_text_font="#font_heading"
-					/>
-
-					<!-- Tip text (bound to subject) -->
-					<lv_label
-						name="status_text_label"
-						bind_text="status_text"
-								style_text_font="#font_heading"
-					/>
-
-					<!-- Question mark icon -->
-					<lv_label
-						text="#icon_question_circle"
-								style_text_font="fa_icons_24"
-					/>
-				</lv_obj>
-			</lv_obj>
-		</lv_obj>
-
-		<!-- Bottom section: Info cards -->
-		<lv_obj
-			width="100%"
-			flex_grow="10"
-			style_bg_opa="0%"
-			style_border_width="0"
-			style_pad_top="#padding_normal"
-			style_pad_bottom="#padding_normal"
-			style_pad_left="8"
-			style_pad_right="8"
-			flex_flow="row"
-			style_pad_gap="#gap_normal"
-			align="center"
-		>
-			<!-- Print Files Card -->
-			<lv_button
-				name="print_card"
-				flex_grow="1"
-				height="100%"
-					style_radius="#border_radius"
-				style_border_width="0"
-				style_pad_all="#padding_normal"
-				style_shadow_width="0"
-			>
-				<lv_label text="Print Files" style_text_font="#font_body" align="center" />
-				<event_cb trigger="clicked" callback="print_card_clicked_cb"/>
-			</lv_button>
-
-			<!-- Status Card (Temperature, Network, Light) -->
-			<ui_card
-				name="status_card"
-				flex_grow="1"
-				height="100%"
-				style_radius="#border_radius"
-				style_pad_all="0"
-				flex_flow="row"
-				style_flex_cross_place="center"
-			>
-				<!-- Temperature display - icon on top, text below -->
-				<lv_obj
-					flex_grow="1"
-					style_bg_opa="0%"
-					style_border_width="0"
-					style_pad_all="0"
-					flex_flow="column"
-					style_flex_main_place="center"
-					style_flex_cross_place="center"
-				>
-					<icon name="temp_icon" src="mat_extruder" variant="secondary" />
-					<lv_label
-						name="temp_text_label"
-						bind_text="temp_text"
-								style_text_font="#font_body"
-						style_text_align="center"
-						width="100%"
-					/>
-				</lv_obj>
-
-				<!-- Vertical divider (margin removed for testing) -->
-				<lv_obj
-					name="divider1"
-					width="1"
-					height="100%"
-					style_bg_color="#text_secondary"
-					style_bg_opa="50%"
-					style_border_width="0"
-					style_pad_all="0"
-				style_margin_ver="12"
-				/>
-
-				<!-- Network status - icon on top, label below (centered) -->
-				<lv_obj
-					flex_grow="1"
-					style_bg_opa="0%"
-					style_border_width="0"
-					style_pad_all="0"
-					flex_flow="column"
-					style_flex_main_place="center"
-					style_flex_cross_place="center"
-				>
-					<lv_label
-						name="network_icon"
-						bind_text="network_icon"
-						style_text_font="fa_icons_48"
-						style_text_align="center"
-						width="100%"
-					/>
-					<lv_label
-						name="network_label"
-						bind_text="network_label"
-								style_text_font="#font_body"
-						style_text_align="center"
-						width="100%"
-					/>
-				</lv_obj>
-
-				<!-- Vertical divider (margin removed for testing) -->
-				<lv_obj
-					name="divider2"
-					width="1"
-					height="100%"
-					style_bg_color="#text_secondary"
-					style_bg_opa="50%"
-					style_border_width="0"
-					style_pad_all="0"
-				style_margin_ver="12"
-				/>
-
-				<!-- Light control button - icon only -->
-				<lv_button
-					name="light_button"
-					flex_grow="1"
-					style_bg_opa="0%"
-					style_border_width="0"
-					style_pad_all="0"
-					style_shadow_width="0"
-				>
-					<lv_image name="light_icon" src="mat_light" width="64" height="64" align="center" />
-					<!-- NOTE: LVGL source uses lv_event-call_function, NOT event_cb (despite what web docs say) -->
-					<event_cb trigger="clicked" callback="light_toggle_cb"/>
-				</lv_button>
-			</ui_card>
-		</lv_obj>
-	</view>
+  <!-- Component-local constants for theme-aware colors and dimensions -->
+  <consts>
+    <!-- Light icon color when light is ON (bright yellow) -->
+    <const name="light_icon_on_light" value="#FFD700"/>
+    <const name="light_icon_on_dark" value="#FFD700"/>
+    <!-- Light icon color when light is OFF (muted gray) -->
+    <const name="light_icon_off_light" value="#707070"/>
+    <const name="light_icon_off_dark" value="#909090"/>
+    <!-- Component-specific dimensions (home panel layout) -->
+    <px name="printer_img_size" value="400"/>
+    <px name="accent_bar_width" value="4"/>
+    <px name="accent_bar_gap" value="18"/>
+  </consts>
+  <!-- Now references global constants from globals.xml -->
+  <view extends="lv_obj" width="100%" height="100%" style_pad_all="0" style_border_width="0" flex_flow="column">
+    <!-- Top section: Printer visualization -->
+    <lv_obj width="100%" flex_grow="17" style_bg_opa="0%" style_border_width="0" style_pad_all="#padding_normal" flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center">
+      <!-- Printer Image (size and scaling set dynamically in C++ based on screen size) -->
+      <lv_image name="printer_image" src="A:assets/images/printer_400.png" width="#printer_img_size" height="#printer_img_size" align="center"/>
+      <!-- Status Message with accent bar (flex-grows to fill available space) -->
+      <lv_obj flex_grow="1" style_bg_opa="0%" style_border_width="0" style_pad_all="0" flex_flow="row" style_flex_cross_place="center" style_pad_gap="#accent_bar_gap">
+        <!-- Vertical accent bar (height fills container) -->
+        <lv_obj name="status_accent_bar" width="#accent_bar_width" height="100%" style_bg_color="#primary_color" style_bg_opa="255" style_radius="2" style_border_width="0" style_pad_all="0"/>
+        <!-- Status text container with padding for breathing room -->
+        <lv_obj flex_grow="1" style_bg_opa="0%" style_border_width="0" style_pad_ver="8" style_pad_hor="0" flex_flow="row" style_pad_gap="8" clickable="true">
+          <event_cb trigger="clicked" callback="tip_text_clicked_cb"/>
+          <!-- "Tip: " prefix -->
+          <lv_label text="Tip:" style_text_font="#font_heading"/>
+          <!-- Tip text (bound to subject) -->
+          <lv_label name="status_text_label" bind_text="status_text" style_text_font="#font_heading"/>
+          <!-- Question mark icon -->
+          <lv_label text="#icon_question_circle" style_text_font="fa_icons_24"/>
+        </lv_obj>
+      </lv_obj>
+    </lv_obj>
+    <!-- Bottom section: Info cards -->
+    <lv_obj width="100%" flex_grow="10" style_bg_opa="0%" style_border_width="0" style_pad_top="#padding_normal" style_pad_bottom="#padding_normal" style_pad_left="8" style_pad_right="8" flex_flow="row" style_pad_gap="#gap_normal" align="center">
+      <!-- Print Files Card -->
+      <lv_button name="print_card" flex_grow="1" height="100%" style_radius="#border_radius" style_border_width="0" style_pad_all="#padding_normal" style_shadow_width="0">
+        <lv_label text="Print Files" style_text_font="#font_body" align="center"/>
+        <event_cb trigger="clicked" callback="print_card_clicked_cb"/>
+      </lv_button>
+      <!-- Status Card (Temperature, Network, Light) -->
+      <ui_card name="status_card" flex_grow="1" height="100%" style_radius="#border_radius" style_pad_all="0" flex_flow="row" style_flex_cross_place="center">
+        <!-- Temperature display - icon on top, text below -->
+        <lv_obj flex_grow="1" style_bg_opa="0%" style_border_width="0" style_pad_all="0" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center">
+          <icon name="temp_icon" src="mat_extruder" variant="secondary"/>
+          <lv_label name="temp_text_label" bind_text="temp_text" style_text_font="#font_body" style_text_align="center" width="100%"/>
+        </lv_obj>
+        <!-- Vertical divider (margin removed for testing) -->
+        <lv_obj name="divider1" width="1" height="100%" style_bg_color="#text_secondary" style_bg_opa="50%" style_border_width="0" style_pad_all="0" style_margin_ver="12"/>
+        <!-- Network status - icon on top, label below (centered) -->
+        <lv_obj flex_grow="1" style_bg_opa="0%" style_border_width="0" style_pad_all="0" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center">
+          <lv_label name="network_icon" bind_text="network_icon" style_text_font="fa_icons_48" style_text_align="center" width="100%"/>
+          <lv_label name="network_label" bind_text="network_label" style_text_font="#font_body" style_text_align="center" width="100%"/>
+        </lv_obj>
+        <!-- Vertical divider (margin removed for testing) -->
+        <lv_obj name="divider2" width="1" height="100%" style_bg_color="#text_secondary" style_bg_opa="50%" style_border_width="0" style_pad_all="0" style_margin_ver="12"/>
+        <!-- Light control button - icon only -->
+        <lv_button name="light_button" flex_grow="1" style_bg_opa="0%" style_border_width="0" style_pad_all="0" style_shadow_width="0">
+          <lv_image name="light_icon" src="mat_light" width="64" height="64" align="center"/>
+          <!-- NOTE: LVGL source uses lv_event-call_function, NOT event_cb (despite what web docs say) -->
+          <event_cb trigger="clicked" callback="light_toggle_cb"/>
+        </lv_button>
+      </ui_card>
+    </lv_obj>
+  </view>
 </component>

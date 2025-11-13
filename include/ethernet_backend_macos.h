@@ -43,7 +43,7 @@
  * - en4+: Additional adapters
  */
 class EthernetBackendMacOS : public EthernetBackend {
-public:
+  public:
     EthernetBackendMacOS();
     ~EthernetBackendMacOS() override;
 
@@ -54,7 +54,7 @@ public:
     bool has_interface() override;
     EthernetInfo get_info() override;
 
-private:
+  private:
     /**
      * @brief Check if interface name looks like Ethernet
      *

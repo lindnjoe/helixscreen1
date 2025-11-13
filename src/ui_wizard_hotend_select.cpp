@@ -22,17 +22,21 @@
  */
 
 #include "ui_wizard_hotend_select.h"
+
 #include "ui_wizard.h"
 #include "ui_wizard_helpers.h"
-#include "wizard_config_paths.h"
+
 #include "app_globals.h"
 #include "config.h"
-#include "moonraker_client.h"
 #include "lvgl/lvgl.h"
+#include "moonraker_client.h"
+#include "wizard_config_paths.h"
+
 #include <spdlog/spdlog.h>
+
+#include <cstring>
 #include <string>
 #include <vector>
-#include <cstring>
 
 // ============================================================================
 // Static Data & Subjects
@@ -115,8 +119,9 @@ lv_obj_t* ui_wizard_hotend_select_create(lv_obj_t* parent) {
 
     // Safety check: cleanup should have been called by wizard navigation
     if (hotend_select_screen_root) {
-        spdlog::warn("[Wizard Hotend] Screen pointer not null - cleanup may not have been called properly");
-        hotend_select_screen_root = nullptr;  // Reset pointer, wizard framework handles deletion
+        spdlog::warn(
+            "[Wizard Hotend] Screen pointer not null - cleanup may not have been called properly");
+        hotend_select_screen_root = nullptr; // Reset pointer, wizard framework handles deletion
     }
 
     // Create screen from XML
@@ -144,8 +149,8 @@ lv_obj_t* ui_wizard_hotend_select_create(lv_obj_t* parent) {
     // Build dropdown options string with "None" option
     std::string heater_options_str = WizardHelpers::build_dropdown_options(
         hotend_heater_items,
-        nullptr,  // No additional filter needed (already filtered above)
-        true      // Include "None" option
+        nullptr, // No additional filter needed (already filtered above)
+        true     // Include "None" option
     );
 
     // Add "None" to items vector to match dropdown
@@ -167,45 +172,37 @@ lv_obj_t* ui_wizard_hotend_select_create(lv_obj_t* parent) {
     // Build dropdown options string with "None" option
     std::string sensor_options_str = WizardHelpers::build_dropdown_options(
         hotend_sensor_items,
-        nullptr,  // No additional filter needed (already filtered above)
-        true      // Include "None" option
+        nullptr, // No additional filter needed (already filtered above)
+        true     // Include "None" option
     );
 
     // Add "None" to items vector to match dropdown
     hotend_sensor_items.push_back("None");
 
     // Find and configure heater dropdown
-    lv_obj_t* heater_dropdown = lv_obj_find_by_name(hotend_select_screen_root, "hotend_heater_dropdown");
+    lv_obj_t* heater_dropdown =
+        lv_obj_find_by_name(hotend_select_screen_root, "hotend_heater_dropdown");
     if (heater_dropdown) {
         lv_dropdown_set_options(heater_dropdown, heater_options_str.c_str());
 
         // Restore saved selection with guessing fallback
         WizardHelpers::restore_dropdown_selection(
-            heater_dropdown,
-            &hotend_heater_selected,
-            hotend_heater_items,
-            WizardConfigPaths::HOTEND_HEATER,
-            client,
-            [](MoonrakerClient* c) { return c->guess_hotend_heater(); },
-            "[Wizard Hotend]"
-        );
+            heater_dropdown, &hotend_heater_selected, hotend_heater_items,
+            WizardConfigPaths::HOTEND_HEATER, client,
+            [](MoonrakerClient* c) { return c->guess_hotend_heater(); }, "[Wizard Hotend]");
     }
 
     // Find and configure sensor dropdown
-    lv_obj_t* sensor_dropdown = lv_obj_find_by_name(hotend_select_screen_root, "hotend_sensor_dropdown");
+    lv_obj_t* sensor_dropdown =
+        lv_obj_find_by_name(hotend_select_screen_root, "hotend_sensor_dropdown");
     if (sensor_dropdown) {
         lv_dropdown_set_options(sensor_dropdown, sensor_options_str.c_str());
 
         // Restore saved selection with guessing fallback
         WizardHelpers::restore_dropdown_selection(
-            sensor_dropdown,
-            &hotend_sensor_selected,
-            hotend_sensor_items,
-            WizardConfigPaths::HOTEND_SENSOR,
-            client,
-            [](MoonrakerClient* c) { return c->guess_hotend_sensor(); },
-            "[Wizard Hotend]"
-        );
+            sensor_dropdown, &hotend_sensor_selected, hotend_sensor_items,
+            WizardConfigPaths::HOTEND_SENSOR, client,
+            [](MoonrakerClient* c) { return c->guess_hotend_sensor(); }, "[Wizard Hotend]");
     }
 
     spdlog::info("[Wizard Hotend] Screen created successfully");
@@ -220,19 +217,11 @@ void ui_wizard_hotend_select_cleanup() {
     spdlog::debug("[Wizard Hotend] Cleaning up resources");
 
     // Save current selections to config before cleanup (deferred save pattern)
-    WizardHelpers::save_dropdown_selection(
-        &hotend_heater_selected,
-        hotend_heater_items,
-        WizardConfigPaths::HOTEND_HEATER,
-        "[Wizard Hotend]"
-    );
+    WizardHelpers::save_dropdown_selection(&hotend_heater_selected, hotend_heater_items,
+                                           WizardConfigPaths::HOTEND_HEATER, "[Wizard Hotend]");
 
-    WizardHelpers::save_dropdown_selection(
-        &hotend_sensor_selected,
-        hotend_sensor_items,
-        WizardConfigPaths::HOTEND_SENSOR,
-        "[Wizard Hotend]"
-    );
+    WizardHelpers::save_dropdown_selection(&hotend_sensor_selected, hotend_sensor_items,
+                                           WizardConfigPaths::HOTEND_SENSOR, "[Wizard Hotend]");
 
     // Persist to disk
     Config* config = Config::get_instance();

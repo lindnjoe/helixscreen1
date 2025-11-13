@@ -22,10 +22,13 @@
  */
 
 #include "ui_temp_graph.h"
+
 #include "ui_theme.h"
+
 #include <spdlog/spdlog.h>
-#include <string.h>
+
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 // Helper: Find series metadata by ID
@@ -35,7 +38,8 @@ static ui_temp_series_meta_t* find_series(ui_temp_graph_t* graph, int series_id)
     }
 
     for (int i = 0; i < graph->series_count; i++) {
-        if (graph->series_meta[i].id == series_id && graph->series_meta[i].chart_series != nullptr) {
+        if (graph->series_meta[i].id == series_id &&
+            graph->series_meta[i].chart_series != nullptr) {
             return &graph->series_meta[i];
         }
     }
@@ -133,7 +137,7 @@ static void draw_gradient_fill_cb(lv_event_t* e) {
         }
     }
 }
-#endif  // Gradient fill disabled
+#endif // Gradient fill disabled
 
 // Create temperature graph widget
 ui_temp_graph_t* ui_temp_graph_create(lv_obj_t* parent) {
@@ -172,8 +176,8 @@ ui_temp_graph_t* ui_temp_graph_create(lv_obj_t* parent) {
     lv_chart_set_point_count(graph->chart, graph->point_count);
 
     // Set Y-axis range
-    lv_chart_set_axis_range(graph->chart, LV_CHART_AXIS_PRIMARY_Y,
-                            (int32_t)graph->min_temp, (int32_t)graph->max_temp);
+    lv_chart_set_axis_range(graph->chart, LV_CHART_AXIS_PRIMARY_Y, (int32_t)graph->min_temp,
+                            (int32_t)graph->max_temp);
 
     // Style chart background (theme handles colors)
     lv_obj_set_style_bg_opa(graph->chart, LV_OPA_COVER, LV_PART_MAIN);
@@ -182,18 +186,18 @@ ui_temp_graph_t* ui_temp_graph_create(lv_obj_t* parent) {
 
     // Style division lines (theme handles colors)
     lv_obj_set_style_line_width(graph->chart, 1, LV_PART_MAIN);
-    lv_obj_set_style_line_opa(graph->chart, LV_OPA_30, LV_PART_MAIN);  // Subtle - 30% opacity
+    lv_obj_set_style_line_opa(graph->chart, LV_OPA_30, LV_PART_MAIN); // Subtle - 30% opacity
 
     // Style data series lines
-    lv_obj_set_style_line_width(graph->chart, 2, LV_PART_ITEMS);  // Series line thickness
-    lv_obj_set_style_line_opa(graph->chart, LV_OPA_COVER, LV_PART_ITEMS);  // Full opacity for series
+    lv_obj_set_style_line_width(graph->chart, 2, LV_PART_ITEMS);          // Series line thickness
+    lv_obj_set_style_line_opa(graph->chart, LV_OPA_COVER, LV_PART_ITEMS); // Full opacity for series
 
     // Hide point indicators (circles at each data point)
     lv_obj_set_style_width(graph->chart, 0, LV_PART_INDICATOR);
     lv_obj_set_style_height(graph->chart, 0, LV_PART_INDICATOR);
 
     // Configure division line count
-    lv_chart_set_div_line_count(graph->chart, 5, 10);  // 5 horizontal, 10 vertical division lines
+    lv_chart_set_div_line_count(graph->chart, 5, 10); // 5 horizontal, 10 vertical division lines
 
     // TODO: Gradient fill temporarily disabled - requires LVGL 9 draw task system rewrite
     // The LVGL 8-style event-based custom drawing doesn't work in LVGL 9
@@ -205,15 +209,16 @@ ui_temp_graph_t* ui_temp_graph_create(lv_obj_t* parent) {
     // Store graph pointer in chart user data for retrieval
     lv_obj_set_user_data(graph->chart, graph);
 
-    spdlog::info("[TempGraph] Created: {} points, {:.0f}-{:.0f}°C range",
-                 graph->point_count, graph->min_temp, graph->max_temp);
+    spdlog::info("[TempGraph] Created: {} points, {:.0f}-{:.0f}°C range", graph->point_count,
+                 graph->min_temp, graph->max_temp);
 
     return graph;
 }
 
 // Destroy temperature graph widget
 void ui_temp_graph_destroy(ui_temp_graph_t* graph) {
-    if (!graph) return;
+    if (!graph)
+        return;
 
     // Remove all series (cursors will be cleaned up automatically)
     for (int i = 0; i < graph->series_count; i++) {
@@ -290,8 +295,8 @@ int ui_temp_graph_add_series(ui_temp_graph_t* graph, const char* name, lv_color_
 
     graph->series_count++;
 
-    spdlog::debug("[TempGraph] Added series {} '{}' (slot {}, color 0x{:06X})",
-                  meta->id, meta->name, slot, lv_color_to_u32(color));
+    spdlog::debug("[TempGraph] Added series {} '{}' (slot {}, color 0x{:06X})", meta->id,
+                  meta->name, slot, lv_color_to_u32(color));
 
     return meta->id;
 }
@@ -319,7 +324,8 @@ void ui_temp_graph_remove_series(ui_temp_graph_t* graph, int series_id) {
 
     graph->series_count--;
 
-    spdlog::debug("[TempGraph] Removed series {} ({} series remaining)", series_id, graph->series_count);
+    spdlog::debug("[TempGraph] Removed series {} ({} series remaining)", series_id,
+                  graph->series_count);
 }
 
 // Show or hide a series
@@ -336,7 +342,8 @@ void ui_temp_graph_show_series(ui_temp_graph_t* graph, int series_id, bool visib
     lv_chart_hide_series(graph->chart, meta->chart_series, !visible);
 
     lv_obj_invalidate(graph->chart);
-    spdlog::debug("[TempGraph] Series {} '{}' {}", series_id, meta->name, visible ? "shown" : "hidden");
+    spdlog::debug("[TempGraph] Series {} '{}' {}", series_id, meta->name,
+                  visible ? "shown" : "hidden");
 }
 
 // Add a single temperature point (push mode)
@@ -352,7 +359,8 @@ void ui_temp_graph_update_series(ui_temp_graph_t* graph, int series_id, float te
 }
 
 // Replace all data points (array mode)
-void ui_temp_graph_set_series_data(ui_temp_graph_t* graph, int series_id, const float* temps, int count) {
+void ui_temp_graph_set_series_data(ui_temp_graph_t* graph, int series_id, const float* temps,
+                                   int count) {
     ui_temp_series_meta_t* meta = find_series(graph, series_id);
     if (!meta || !temps || count <= 0) {
         spdlog::error("[TempGraph] Invalid parameters");
@@ -380,12 +388,14 @@ void ui_temp_graph_set_series_data(ui_temp_graph_t* graph, int series_id, const 
     free(values);
 
     lv_chart_refresh(graph->chart);
-    spdlog::debug("[TempGraph] Series {} '{}' data set ({} points)", series_id, meta->name, points_to_copy);
+    spdlog::debug("[TempGraph] Series {} '{}' data set ({} points)", series_id, meta->name,
+                  points_to_copy);
 }
 
 // Clear all data
 void ui_temp_graph_clear(ui_temp_graph_t* graph) {
-    if (!graph) return;
+    if (!graph)
+        return;
 
     for (int i = 0; i < graph->series_count; i++) {
         ui_temp_series_meta_t* meta = &graph->series_meta[i];
@@ -413,7 +423,8 @@ void ui_temp_graph_clear_series(ui_temp_graph_t* graph, int series_id) {
 }
 
 // Set target temperature and visibility
-void ui_temp_graph_set_series_target(ui_temp_graph_t* graph, int series_id, float target, bool show) {
+void ui_temp_graph_set_series_target(ui_temp_graph_t* graph, int series_id, float target,
+                                     bool show) {
     ui_temp_series_meta_t* meta = find_series(graph, series_id);
     if (!meta) {
         spdlog::error("[TempGraph] Series {} not found", series_id);
@@ -430,7 +441,8 @@ void ui_temp_graph_set_series_target(ui_temp_graph_t* graph, int series_id, floa
         lv_obj_invalidate(graph->chart);
     }
 
-    spdlog::debug("[TempGraph] Series {} target: {:.1f}°C ({})", series_id, target, show ? "shown" : "hidden");
+    spdlog::debug("[TempGraph] Series {} target: {:.1f}°C ({})", series_id, target,
+                  show ? "shown" : "hidden");
 }
 
 // Show or hide target temperature line
@@ -473,7 +485,8 @@ void ui_temp_graph_set_point_count(ui_temp_graph_t* graph, int count) {
 }
 
 // Set gradient opacity for a series
-void ui_temp_graph_set_series_gradient(ui_temp_graph_t* graph, int series_id, lv_opa_t bottom_opa, lv_opa_t top_opa) {
+void ui_temp_graph_set_series_gradient(ui_temp_graph_t* graph, int series_id, lv_opa_t bottom_opa,
+                                       lv_opa_t top_opa) {
     ui_temp_series_meta_t* meta = find_series(graph, series_id);
     if (!meta) {
         spdlog::error("[TempGraph] Series {} not found", series_id);
@@ -485,6 +498,6 @@ void ui_temp_graph_set_series_gradient(ui_temp_graph_t* graph, int series_id, lv
 
     lv_obj_invalidate(graph->chart);
 
-    spdlog::debug("[TempGraph] Series {} gradient: bottom={}%, top={}%",
-                  series_id, (bottom_opa * 100) / 255, (top_opa * 100) / 255);
+    spdlog::debug("[TempGraph] Series {} gradient: bottom={}%, top={}%", series_id,
+                  (bottom_opa * 100) / 255, (top_opa * 100) / 255);
 }

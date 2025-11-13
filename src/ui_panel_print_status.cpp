@@ -22,10 +22,13 @@
  */
 
 #include "ui_panel_print_status.h"
+
 #include "ui_component_header_bar.h"
-#include "ui_utils.h"
 #include "ui_nav.h"
+#include "ui_utils.h"
+
 #include <spdlog/spdlog.h>
+
 #include <stdio.h>
 #include <string.h>
 
@@ -95,16 +98,24 @@ void ui_panel_print_status_init_subjects() {
     snprintf(flow_buf, sizeof(flow_buf), "100%%");
     snprintf(pause_button_buf, sizeof(pause_button_buf), "Pause");
 
-    lv_subject_init_string(&filename_subject, filename_buf, nullptr, sizeof(filename_buf), filename_buf);
-    lv_subject_init_string(&progress_text_subject, progress_text_buf, nullptr, sizeof(progress_text_buf), progress_text_buf);
-    lv_subject_init_string(&layer_text_subject, layer_text_buf, nullptr, sizeof(layer_text_buf), layer_text_buf);
-    lv_subject_init_string(&elapsed_subject, elapsed_buf, nullptr, sizeof(elapsed_buf), elapsed_buf);
-    lv_subject_init_string(&remaining_subject, remaining_buf, nullptr, sizeof(remaining_buf), remaining_buf);
-    lv_subject_init_string(&nozzle_temp_subject, nozzle_temp_buf, nullptr, sizeof(nozzle_temp_buf), nozzle_temp_buf);
-    lv_subject_init_string(&bed_temp_subject, bed_temp_buf, nullptr, sizeof(bed_temp_buf), bed_temp_buf);
+    lv_subject_init_string(&filename_subject, filename_buf, nullptr, sizeof(filename_buf),
+                           filename_buf);
+    lv_subject_init_string(&progress_text_subject, progress_text_buf, nullptr,
+                           sizeof(progress_text_buf), progress_text_buf);
+    lv_subject_init_string(&layer_text_subject, layer_text_buf, nullptr, sizeof(layer_text_buf),
+                           layer_text_buf);
+    lv_subject_init_string(&elapsed_subject, elapsed_buf, nullptr, sizeof(elapsed_buf),
+                           elapsed_buf);
+    lv_subject_init_string(&remaining_subject, remaining_buf, nullptr, sizeof(remaining_buf),
+                           remaining_buf);
+    lv_subject_init_string(&nozzle_temp_subject, nozzle_temp_buf, nullptr, sizeof(nozzle_temp_buf),
+                           nozzle_temp_buf);
+    lv_subject_init_string(&bed_temp_subject, bed_temp_buf, nullptr, sizeof(bed_temp_buf),
+                           bed_temp_buf);
     lv_subject_init_string(&speed_subject, speed_buf, nullptr, sizeof(speed_buf), speed_buf);
     lv_subject_init_string(&flow_subject, flow_buf, nullptr, sizeof(flow_buf), flow_buf);
-    lv_subject_init_string(&pause_button_subject, pause_button_buf, nullptr, sizeof(pause_button_buf), pause_button_buf);
+    lv_subject_init_string(&pause_button_subject, pause_button_buf, nullptr,
+                           sizeof(pause_button_buf), pause_button_buf);
 
     // Register subjects with XML system (global scope)
     lv_xml_register_subject(NULL, "print_filename", &filename_subject);
@@ -255,7 +266,8 @@ static void cancel_button_cb(lv_event_t* e) {
 // ============================================================================
 
 static void scale_thumbnail_images() {
-    if (!print_status_panel) return;
+    if (!print_status_panel)
+        return;
 
     // Find thumbnail section to get target dimensions
     lv_obj_t* thumbnail_section = lv_obj_find_by_name(print_status_panel, "thumbnail_section");
@@ -309,7 +321,7 @@ void ui_panel_print_status_setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
 
     // Calculate width to fill remaining space after navigation bar (screen-size agnostic)
     lv_coord_t screen_width = lv_obj_get_width(parent_screen);
-    lv_coord_t nav_width = screen_width / 10;  // UI_NAV_WIDTH macro: screen_width / 10
+    lv_coord_t nav_width = screen_width / 10; // UI_NAV_WIDTH macro: screen_width / 10
     lv_obj_set_width(panel, screen_width - nav_width);
 
     // Setup header for responsive height
@@ -420,8 +432,10 @@ void ui_panel_print_status_set_filename(const char* filename) {
 
 void ui_panel_print_status_set_progress(int percent) {
     current_progress = percent;
-    if (current_progress < 0) current_progress = 0;
-    if (current_progress > 100) current_progress = 100;
+    if (current_progress < 0)
+        current_progress = 0;
+    if (current_progress > 100)
+        current_progress = 100;
     update_all_displays();
 }
 
@@ -475,8 +489,8 @@ void ui_panel_print_status_start_mock_print(const char* filename, int layers, in
     ui_panel_print_status_set_speeds(100, 100);
     ui_panel_print_status_set_state(PRINT_STATE_PRINTING);
 
-    spdlog::info("[PrintStatus] Mock print started: %s (%d layers, %d seconds)",
-           filename, layers, duration_secs);
+    spdlog::info("[PrintStatus] Mock print started: %s (%d layers, %d seconds)", filename, layers,
+                 duration_secs);
 }
 
 void ui_panel_print_status_stop_mock_print() {
@@ -485,8 +499,10 @@ void ui_panel_print_status_stop_mock_print() {
 }
 
 void ui_panel_print_status_tick_mock_print() {
-    if (!mock_active) return;
-    if (current_state != PRINT_STATE_PRINTING) return;
+    if (!mock_active)
+        return;
+    if (current_state != PRINT_STATE_PRINTING)
+        return;
     if (mock_elapsed_seconds >= mock_total_seconds) {
         // Print complete
         ui_panel_print_status_set_state(PRINT_STATE_COMPLETE);

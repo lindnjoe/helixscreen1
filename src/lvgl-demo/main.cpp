@@ -1,8 +1,9 @@
 // Copyright 2025 HelixScreen
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "lvgl/lvgl.h"
 #include "lvgl/demos/lv_demos.h"
+#include "lvgl/lvgl.h"
+
 #include <SDL.h>
 #include <cstdio>
 
@@ -30,7 +31,7 @@ int main(int, char**) {
 
     // Main loop - let LVGL's SDL driver handle all events
     while (lv_display_get_next(NULL)) {
-        lv_timer_handler();  // This calls LVGL's internal SDL event handler
+        lv_timer_handler(); // This calls LVGL's internal SDL event handler
         SDL_Delay(5);
     }
 

@@ -22,10 +22,13 @@
  */
 
 #include "ui_theme.h"
+
 #include "helix_theme.h"
 #include "lvgl/lvgl.h"
 #include "lvgl/src/others/xml/lv_xml.h"
+
 #include <spdlog/spdlog.h>
+
 #include <cstdlib>
 
 static lv_theme_t* current_theme = nullptr;
@@ -54,13 +57,13 @@ void ui_theme_register_responsive_padding(lv_display_t* display) {
     const char* size_suffix;
     const char* size_label;
 
-    if (greater_res <= UI_BREAKPOINT_SMALL_MAX) {  // ≤480: 480x320
+    if (greater_res <= UI_BREAKPOINT_SMALL_MAX) { // ≤480: 480x320
         size_suffix = "_small";
         size_label = "SMALL";
-    } else if (greater_res <= UI_BREAKPOINT_MEDIUM_MAX) {  // 481-800: 800x480, up to 800x600
+    } else if (greater_res <= UI_BREAKPOINT_MEDIUM_MAX) { // 481-800: 800x480, up to 800x600
         size_suffix = "_medium";
         size_label = "MEDIUM";
-    } else {  // >800: 1024x600, 1280x720+
+    } else { // >800: 1024x600, 1280x720+
         size_suffix = "_large";
         size_label = "LARGE";
     }
@@ -82,11 +85,10 @@ void ui_theme_register_responsive_padding(lv_display_t* display) {
 
     // Validate that variants were found
     if (!padding_normal || !padding_small || !padding_tiny || !gap_normal) {
-        spdlog::error("[Theme] Failed to read padding variants for size: {} (normal={}, small={}, tiny={}, gap={})",
-                      size_label,
-                      padding_normal ? "found" : "NULL",
-                      padding_small ? "found" : "NULL",
-                      padding_tiny ? "found" : "NULL",
+        spdlog::error("[Theme] Failed to read padding variants for size: {} (normal={}, small={}, "
+                      "tiny={}, gap={})",
+                      size_label, padding_normal ? "found" : "NULL",
+                      padding_small ? "found" : "NULL", padding_tiny ? "found" : "NULL",
                       gap_normal ? "found" : "NULL");
         return;
     }
@@ -100,7 +102,8 @@ void ui_theme_register_responsive_padding(lv_display_t* display) {
         lv_xml_register_const(scope, "gap_normal", gap_normal);
 
         spdlog::info("[Theme] Responsive padding: {} ({}px) - normal={}, small={}, tiny={}, gap={}",
-                     size_label, greater_res, padding_normal, padding_small, padding_tiny, gap_normal);
+                     size_label, greater_res, padding_normal, padding_small, padding_tiny,
+                     gap_normal);
     } else {
         spdlog::warn("[Theme] Failed to get globals scope for padding constants");
     }
@@ -113,7 +116,8 @@ void ui_theme_init(lv_display_t* display, bool use_dark_mode_param) {
     // Override runtime theme constants based on light/dark mode preference
     lv_xml_component_scope_t* scope = lv_xml_component_get_scope("globals");
     if (!scope) {
-        spdlog::critical("[Theme] FATAL: Failed to get globals scope for runtime constant registration");
+        spdlog::critical(
+            "[Theme] FATAL: Failed to get globals scope for runtime constant registration");
         std::exit(EXIT_FAILURE);
     }
 
@@ -142,18 +146,18 @@ void ui_theme_init(lv_display_t* display, bool use_dark_mode_param) {
     // Register runtime constants based on theme preference
     const char* selected_bg = use_dark_mode ? app_bg_dark : app_bg_light;
     lv_xml_register_const(scope, "app_bg_color", selected_bg);
-    spdlog::debug("[Theme] Registered app_bg_color={} for {} mode",
-                  selected_bg, use_dark_mode ? "dark" : "light");
+    spdlog::debug("[Theme] Registered app_bg_color={} for {} mode", selected_bg,
+                  use_dark_mode ? "dark" : "light");
 
     const char* selected_text = use_dark_mode ? text_primary_dark : text_primary_light;
     lv_xml_register_const(scope, "text_primary", selected_text);
-    spdlog::debug("[Theme] Registered text_primary={} for {} mode",
-                  selected_text, use_dark_mode ? "dark" : "light");
+    spdlog::debug("[Theme] Registered text_primary={} for {} mode", selected_text,
+                  use_dark_mode ? "dark" : "light");
 
     const char* selected_header = use_dark_mode ? header_text_dark : header_text_light;
     lv_xml_register_const(scope, "header_text_color", selected_header);
-    spdlog::debug("[Theme] Registered header_text_color={} for {} mode",
-                  selected_header, use_dark_mode ? "dark" : "light");
+    spdlog::debug("[Theme] Registered header_text_color={} for {} mode", selected_header,
+                  use_dark_mode ? "dark" : "light");
 
     spdlog::debug("[Theme] Runtime constants set for {} mode", use_dark_mode ? "dark" : "light");
 
@@ -179,11 +183,11 @@ void ui_theme_init(lv_display_t* display, bool use_dark_mode_param) {
 
     // Read color variants for theme initialization
     const char* screen_bg_str = use_dark_mode ? lv_xml_get_const(NULL, "app_bg_color_dark")
-                                               : lv_xml_get_const(NULL, "app_bg_color_light");
+                                              : lv_xml_get_const(NULL, "app_bg_color_light");
     const char* card_bg_str = use_dark_mode ? lv_xml_get_const(NULL, "card_bg_dark")
-                                             : lv_xml_get_const(NULL, "card_bg_light");
+                                            : lv_xml_get_const(NULL, "card_bg_light");
     const char* theme_grey_str = use_dark_mode ? lv_xml_get_const(NULL, "theme_grey_dark")
-                                                : lv_xml_get_const(NULL, "theme_grey_light");
+                                               : lv_xml_get_const(NULL, "theme_grey_light");
 
     if (!screen_bg_str || !card_bg_str || !theme_grey_str) {
         spdlog::error("[Theme] Failed to read color variants from globals.xml");
@@ -206,25 +210,17 @@ void ui_theme_init(lv_display_t* display, bool use_dark_mode_param) {
     lv_color_t text_primary_color = ui_theme_parse_color(selected_text);
 
     // Initialize custom HelixScreen theme (wraps LVGL default theme)
-    current_theme = helix_theme_init(
-        display,
-        primary_color,
-        secondary_color,
-        text_primary_color,
-        use_dark_mode,
-        base_font,
-        screen_bg,
-        card_bg,
-        theme_grey,
-        border_radius
-    );
+    current_theme =
+        helix_theme_init(display, primary_color, secondary_color, text_primary_color, use_dark_mode,
+                         base_font, screen_bg, card_bg, theme_grey, border_radius);
 
     if (current_theme) {
         lv_display_set_theme(display, current_theme);
-        spdlog::info("[Theme] Initialized HelixScreen theme: {} mode, primary={}, secondary={}, base_font={}",
+        spdlog::info("[Theme] Initialized HelixScreen theme: {} mode, primary={}, secondary={}, "
+                     "base_font={}",
                      use_dark_mode ? "dark" : "light", primary_str, secondary_str, font_body_name);
-        spdlog::info("[Theme] Colors: screen={}, card={}, grey={}",
-                     screen_bg_str, card_bg_str, theme_grey_str);
+        spdlog::info("[Theme] Colors: screen={}, card={}, grey={}", screen_bg_str, card_bg_str,
+                     theme_grey_str);
 
         // Register responsive padding constants AFTER theme init
         ui_theme_register_responsive_padding(display);
@@ -281,8 +277,8 @@ lv_color_t ui_theme_get_color(const char* base_name) {
     const char* dark_str = lv_xml_get_const(nullptr, dark_name);
 
     if (!light_str || !dark_str) {
-        spdlog::error("[Theme] Color variant not found: {} (light={}, dark={})",
-                      base_name, light_str ? "found" : "missing", dark_str ? "found" : "missing");
+        spdlog::error("[Theme] Color variant not found: {} (light={}, dark={})", base_name,
+                      light_str ? "found" : "missing", dark_str ? "found" : "missing");
         return lv_color_hex(0x000000);
     }
 
@@ -290,8 +286,8 @@ lv_color_t ui_theme_get_color(const char* base_name) {
     const char* selected_str = use_dark_mode ? dark_str : light_str;
     lv_color_t color = ui_theme_parse_color(selected_str);
 
-    spdlog::debug("[Theme] ui_theme_get_color({}) = {} (0x{:06X}) ({} mode)",
-                  base_name, selected_str, lv_color_to_u32(color) & 0xFFFFFF,
+    spdlog::debug("[Theme] ui_theme_get_color({}) = {} (0x{:06X}) ({} mode)", base_name,
+                  selected_str, lv_color_to_u32(color) & 0xFFFFFF,
                   use_dark_mode ? "dark" : "light");
 
     return color;
@@ -319,8 +315,8 @@ void ui_theme_apply_bg_color(lv_obj_t* obj, const char* base_name, lv_part_t par
     lv_color_t color = ui_theme_get_color(base_name);
     lv_obj_set_style_bg_color(obj, color, part);
 
-    spdlog::info("[Theme] Applied background color {} (0x{:06X}) to object (part={})",
-                 base_name, lv_color_to_u32(color) & 0xFFFFFF, static_cast<int>(part));
+    spdlog::info("[Theme] Applied background color {} (0x{:06X}) to object (part={})", base_name,
+                 lv_color_to_u32(color) & 0xFFFFFF, static_cast<int>(part));
 }
 
 /**

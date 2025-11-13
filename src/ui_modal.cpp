@@ -22,18 +22,21 @@
  */
 
 #include "ui_modal.h"
+
 #include "ui_keyboard.h"
+
 #include <spdlog/spdlog.h>
-#include <vector>
+
 #include <algorithm>
+#include <vector>
 
 /**
  * @brief Modal metadata stored alongside LVGL object
  */
 struct ModalMetadata {
-    lv_obj_t* modal_obj;                    // The modal object itself
-    ui_modal_config_t config;               // Original configuration
-    std::string component_name;             // XML component name
+    lv_obj_t* modal_obj;        // The modal object itself
+    ui_modal_config_t config;   // Original configuration
+    std::string component_name; // XML component name
 };
 
 // Modal stack - topmost modal is at the back
@@ -42,12 +45,9 @@ static std::vector<ModalMetadata> g_modal_stack;
 /**
  * @brief Find modal metadata by LVGL object pointer
  */
-static ModalMetadata* find_modal_metadata(lv_obj_t* modal)
-{
+static ModalMetadata* find_modal_metadata(lv_obj_t* modal) {
     auto it = std::find_if(g_modal_stack.begin(), g_modal_stack.end(),
-                           [modal](const ModalMetadata& meta) {
-                               return meta.modal_obj == modal;
-                           });
+                           [modal](const ModalMetadata& meta) { return meta.modal_obj == modal; });
     return (it != g_modal_stack.end()) ? &(*it) : nullptr;
 }
 
@@ -57,8 +57,7 @@ static ModalMetadata* find_modal_metadata(lv_obj_t* modal)
  * Only closes the modal if the click target is the backdrop itself
  * (not a child widget). Only responds if this is the topmost modal.
  */
-static void backdrop_click_event_cb(lv_event_t* e)
-{
+static void backdrop_click_event_cb(lv_event_t* e) {
     lv_obj_t* target = static_cast<lv_obj_t*>(lv_event_get_target(e));
     lv_obj_t* current = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
 
@@ -79,8 +78,7 @@ static void backdrop_click_event_cb(lv_event_t* e)
  *
  * Closes the topmost modal when ESC is pressed.
  */
-static void modal_key_event_cb(lv_event_t* e)
-{
+static void modal_key_event_cb(lv_event_t* e) {
     uint32_t key = lv_event_get_key(e);
 
     if (key == LV_KEY_ESC && !g_modal_stack.empty()) {
@@ -92,11 +90,8 @@ static void modal_key_event_cb(lv_event_t* e)
 /**
  * @brief Determine automatic keyboard alignment based on modal position
  */
-static void get_auto_keyboard_position(const ui_modal_position_t& modal_pos,
-                                        lv_align_t* out_align,
-                                        int32_t* out_x,
-                                        int32_t* out_y)
-{
+static void get_auto_keyboard_position(const ui_modal_position_t& modal_pos, lv_align_t* out_align,
+                                       int32_t* out_x, int32_t* out_y) {
     // Default: bottom-center
     *out_align = LV_ALIGN_BOTTOM_MID;
     *out_x = 0;
@@ -119,41 +114,40 @@ static void get_auto_keyboard_position(const ui_modal_position_t& modal_pos,
 
     // Alignment-based positioning
     switch (modal_pos.alignment) {
-        case LV_ALIGN_RIGHT_MID:
-        case LV_ALIGN_TOP_RIGHT:
-        case LV_ALIGN_BOTTOM_RIGHT:
-            // Right-aligned modals get keyboard on left
-            spdlog::debug("[Modal] Right-aligned modal - keyboard on left");
-            *out_align = LV_ALIGN_LEFT_MID;
-            *out_x = 0;
-            *out_y = 0;
-            break;
+    case LV_ALIGN_RIGHT_MID:
+    case LV_ALIGN_TOP_RIGHT:
+    case LV_ALIGN_BOTTOM_RIGHT:
+        // Right-aligned modals get keyboard on left
+        spdlog::debug("[Modal] Right-aligned modal - keyboard on left");
+        *out_align = LV_ALIGN_LEFT_MID;
+        *out_x = 0;
+        *out_y = 0;
+        break;
 
-        case LV_ALIGN_LEFT_MID:
-        case LV_ALIGN_TOP_LEFT:
-        case LV_ALIGN_BOTTOM_LEFT:
-            // Left-aligned modals get keyboard on right
-            spdlog::debug("[Modal] Left-aligned modal - keyboard on right");
-            *out_align = LV_ALIGN_RIGHT_MID;
-            *out_x = 0;
-            *out_y = 0;
-            break;
+    case LV_ALIGN_LEFT_MID:
+    case LV_ALIGN_TOP_LEFT:
+    case LV_ALIGN_BOTTOM_LEFT:
+        // Left-aligned modals get keyboard on right
+        spdlog::debug("[Modal] Left-aligned modal - keyboard on right");
+        *out_align = LV_ALIGN_RIGHT_MID;
+        *out_x = 0;
+        *out_y = 0;
+        break;
 
-        default:
-            // Center/top/bottom modals get keyboard at bottom
-            spdlog::debug("[Modal] Center/top/bottom modal - keyboard at bottom");
-            *out_align = LV_ALIGN_BOTTOM_MID;
-            *out_x = 0;
-            *out_y = 0;
-            break;
+    default:
+        // Center/top/bottom modals get keyboard at bottom
+        spdlog::debug("[Modal] Center/top/bottom modal - keyboard at bottom");
+        *out_align = LV_ALIGN_BOTTOM_MID;
+        *out_x = 0;
+        *out_y = 0;
+        break;
     }
 }
 
 /**
  * @brief Position keyboard based on modal configuration
  */
-static void position_keyboard_for_modal(lv_obj_t* modal)
-{
+static void position_keyboard_for_modal(lv_obj_t* modal) {
     ModalMetadata* meta = find_modal_metadata(modal);
     if (!meta || !meta->config.keyboard) {
         return;
@@ -172,15 +166,12 @@ static void position_keyboard_for_modal(lv_obj_t* modal)
         y = meta->config.keyboard->y;
     }
 
-    spdlog::debug("[Modal] Positioning keyboard: align={}, x={}, y={}",
-                  (int)align, x, y);
+    spdlog::debug("[Modal] Positioning keyboard: align={}, x={}, y={}", (int)align, x, y);
     ui_keyboard_set_position(align, x, y);
 }
 
-lv_obj_t* ui_modal_show(const char* component_name,
-                         const ui_modal_config_t* config,
-                         const char** attrs)
-{
+lv_obj_t* ui_modal_show(const char* component_name, const ui_modal_config_t* config,
+                        const char** attrs) {
     if (!component_name || !config) {
         spdlog::error("[Modal] Invalid parameters: component_name={}, config={}",
                       (void*)component_name, (void*)config);
@@ -190,7 +181,8 @@ lv_obj_t* ui_modal_show(const char* component_name,
     spdlog::info("[Modal] Showing modal: {}", component_name);
 
     // Create modal from XML
-    lv_obj_t* modal = static_cast<lv_obj_t*>(lv_xml_create(lv_screen_active(), component_name, attrs));
+    lv_obj_t* modal =
+        static_cast<lv_obj_t*>(lv_xml_create(lv_screen_active(), component_name, attrs));
     if (!modal) {
         spdlog::error("[Modal] Failed to create modal from XML: {}", component_name);
         return nullptr;
@@ -246,8 +238,7 @@ lv_obj_t* ui_modal_show(const char* component_name,
     return modal;
 }
 
-void ui_modal_hide(lv_obj_t* modal)
-{
+void ui_modal_hide(lv_obj_t* modal) {
     if (!modal) {
         spdlog::error("[Modal] Cannot hide NULL modal");
         return;
@@ -255,9 +246,7 @@ void ui_modal_hide(lv_obj_t* modal)
 
     // Find modal in stack
     auto it = std::find_if(g_modal_stack.begin(), g_modal_stack.end(),
-                           [modal](const ModalMetadata& meta) {
-                               return meta.modal_obj == modal;
-                           });
+                           [modal](const ModalMetadata& meta) { return meta.modal_obj == modal; });
 
     if (it == g_modal_stack.end()) {
         spdlog::warn("[Modal] Modal not found in stack: {}", (void*)modal);
@@ -301,8 +290,7 @@ void ui_modal_hide(lv_obj_t* modal)
     }
 }
 
-void ui_modal_hide_all()
-{
+void ui_modal_hide_all() {
     spdlog::info("[Modal] Hiding all modals (count: {})", g_modal_stack.size());
 
     // Hide from top to bottom
@@ -313,24 +301,21 @@ void ui_modal_hide_all()
     spdlog::info("[Modal] All modals hidden");
 }
 
-lv_obj_t* ui_modal_get_top()
-{
+lv_obj_t* ui_modal_get_top() {
     if (g_modal_stack.empty()) {
         return nullptr;
     }
     return g_modal_stack.back().modal_obj;
 }
 
-bool ui_modal_is_visible()
-{
+bool ui_modal_is_visible() {
     return !g_modal_stack.empty();
 }
 
-void ui_modal_register_keyboard(lv_obj_t* modal, lv_obj_t* textarea)
-{
+void ui_modal_register_keyboard(lv_obj_t* modal, lv_obj_t* textarea) {
     if (!modal || !textarea) {
-        spdlog::error("[Modal] Cannot register keyboard: modal={}, textarea={}",
-                      (void*)modal, (void*)textarea);
+        spdlog::error("[Modal] Cannot register keyboard: modal={}, textarea={}", (void*)modal,
+                      (void*)textarea);
         return;
     }
 
@@ -348,6 +333,6 @@ void ui_modal_register_keyboard(lv_obj_t* modal, lv_obj_t* textarea)
         ui_keyboard_register_textarea(textarea);
     }
 
-    spdlog::debug("[Modal] Keyboard registered for modal: {}, textarea: {}",
-                  (void*)modal, (void*)textarea);
+    spdlog::debug("[Modal] Keyboard registered for modal: {}, textarea: {}", (void*)modal,
+                  (void*)textarea);
 }

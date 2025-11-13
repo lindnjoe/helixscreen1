@@ -26,11 +26,7 @@
 #include "lvgl/lvgl.h"
 
 // Network connection types
-typedef enum {
-    NETWORK_WIFI,
-    NETWORK_ETHERNET,
-    NETWORK_DISCONNECTED
-} network_type_t;
+typedef enum { NETWORK_WIFI, NETWORK_ETHERNET, NETWORK_DISCONNECTED } network_type_t;
 
 // Initialize subjects for reactive data binding
 // MUST be called BEFORE creating any XML that references home panel subjects

@@ -22,8 +22,11 @@
  */
 
 #include "ui_utils.h"
+
 #include "ui_theme.h"
+
 #include <spdlog/spdlog.h>
+
 #include <cstdio>
 #include <ctime>
 #include <vector>
@@ -130,7 +133,8 @@ static constexpr uint32_t RESIZE_DEBOUNCE_MS = 250;
 static void resize_timer_cb(lv_timer_t* timer) {
     (void)timer;
 
-    spdlog::debug("Resize debounce complete, calling {} registered callbacks", resize_callbacks.size());
+    spdlog::debug("Resize debounce complete, calling {} registered callbacks",
+                  resize_callbacks.size());
 
     // Call all registered callbacks
     for (auto callback : resize_callbacks) {
@@ -162,7 +166,7 @@ static void resize_event_cb(lv_event_t* e) {
             lv_timer_reset(resize_debounce_timer);
         } else {
             resize_debounce_timer = lv_timer_create(resize_timer_cb, RESIZE_DEBOUNCE_MS, nullptr);
-            lv_timer_set_repeat_count(resize_debounce_timer, 1);  // One-shot
+            lv_timer_set_repeat_count(resize_debounce_timer, 1); // One-shot
         }
     }
 }
@@ -193,7 +197,8 @@ void ui_resize_handler_register(ui_resize_callback_t callback) {
 // Image Scaling Utilities
 // ============================================================================
 
-bool ui_image_scale_to_cover(lv_obj_t* image_widget, lv_coord_t target_width, lv_coord_t target_height) {
+bool ui_image_scale_to_cover(lv_obj_t* image_widget, lv_coord_t target_width,
+                             lv_coord_t target_height) {
     if (!image_widget) {
         spdlog::error("Cannot scale image: widget is null");
         return false;
@@ -204,8 +209,9 @@ bool ui_image_scale_to_cover(lv_obj_t* image_widget, lv_coord_t target_width, lv
     lv_result_t res = lv_image_decoder_get_info(lv_image_get_src(image_widget), &header);
 
     if (res != LV_RESULT_OK || header.w == 0 || header.h == 0) {
-        int w = header.w, h = header.h;  // Copy bitfields for formatting
-        spdlog::warn("Cannot get image info for scaling (res={}, w={}, h={})", static_cast<int>(res), w, h);
+        int w = header.w, h = header.h; // Copy bitfields for formatting
+        spdlog::warn("Cannot get image info for scaling (res={}, w={}, h={})",
+                     static_cast<int>(res), w, h);
         return false;
     }
 
@@ -213,22 +219,22 @@ bool ui_image_scale_to_cover(lv_obj_t* image_widget, lv_coord_t target_width, lv
     // Use larger scale factor so image fills entire area (may crop)
     float scale_w = (float)target_width / header.w;
     float scale_h = (float)target_height / header.h;
-    float scale = (scale_w > scale_h) ? scale_w : scale_h;  // Use larger scale to cover
+    float scale = (scale_w > scale_h) ? scale_w : scale_h; // Use larger scale to cover
 
     // LVGL uses zoom as fixed-point: 256 = 1.0x, 512 = 2.0x, etc.
     uint16_t zoom = (uint16_t)(scale * 256);
     lv_image_set_scale(image_widget, zoom);
     lv_image_set_inner_align(image_widget, LV_IMAGE_ALIGN_CENTER);
 
-    int img_w = header.w, img_h = header.h;  // Copy bitfields for formatting
-    spdlog::debug("Image scale (cover): img={}x{}, target={}x{}, zoom={} ({:.1f}%)",
-               img_w, img_h, target_width, target_height, zoom, scale * 100);
+    int img_w = header.w, img_h = header.h; // Copy bitfields for formatting
+    spdlog::debug("Image scale (cover): img={}x{}, target={}x{}, zoom={} ({:.1f}%)", img_w, img_h,
+                  target_width, target_height, zoom, scale * 100);
 
     return true;
 }
 
-bool ui_image_scale_to_contain(lv_obj_t* image_widget, lv_coord_t target_width, lv_coord_t target_height,
-                                lv_image_align_t align) {
+bool ui_image_scale_to_contain(lv_obj_t* image_widget, lv_coord_t target_width,
+                               lv_coord_t target_height, lv_image_align_t align) {
     if (!image_widget) {
         spdlog::error("Cannot scale image: widget is null");
         return false;
@@ -239,8 +245,9 @@ bool ui_image_scale_to_contain(lv_obj_t* image_widget, lv_coord_t target_width, 
     lv_result_t res = lv_image_decoder_get_info(lv_image_get_src(image_widget), &header);
 
     if (res != LV_RESULT_OK || header.w == 0 || header.h == 0) {
-        int w = header.w, h = header.h;  // Copy bitfields for formatting
-        spdlog::warn("Cannot get image info for scaling (res={}, w={}, h={})", static_cast<int>(res), w, h);
+        int w = header.w, h = header.h; // Copy bitfields for formatting
+        spdlog::warn("Cannot get image info for scaling (res={}, w={}, h={})",
+                     static_cast<int>(res), w, h);
         return false;
     }
 
@@ -248,16 +255,16 @@ bool ui_image_scale_to_contain(lv_obj_t* image_widget, lv_coord_t target_width, 
     // Use smaller scale factor so entire image fits within area (no crop)
     float scale_w = (float)target_width / header.w;
     float scale_h = (float)target_height / header.h;
-    float scale = (scale_w < scale_h) ? scale_w : scale_h;  // Use smaller scale to contain
+    float scale = (scale_w < scale_h) ? scale_w : scale_h; // Use smaller scale to contain
 
     // LVGL uses zoom as fixed-point: 256 = 1.0x, 512 = 2.0x, etc.
     uint16_t zoom = (uint16_t)(scale * 256);
     lv_image_set_scale(image_widget, zoom);
     lv_image_set_inner_align(image_widget, align);
 
-    int img_w = header.w, img_h = header.h;  // Copy bitfields for formatting
-    spdlog::debug("Image scale (contain): img={}x{}, target={}x{}, zoom={} ({:.1f}%)",
-               img_w, img_h, target_width, target_height, zoom, scale * 100);
+    int img_w = header.w, img_h = header.h; // Copy bitfields for formatting
+    spdlog::debug("Image scale (contain): img={}x{}, target={}x{}, zoom={} ({:.1f}%)", img_w, img_h,
+                  target_width, target_height, zoom, scale * 100);
 
     return true;
 }

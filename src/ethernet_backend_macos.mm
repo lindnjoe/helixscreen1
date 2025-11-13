@@ -22,8 +22,11 @@
  */
 
 #include "ethernet_backend_macos.h"
-#include "ifconfig.h"  // libhv's cross-platform ifconfig utility
+
+#include "ifconfig.h" // libhv's cross-platform ifconfig utility
+
 #include <spdlog/spdlog.h>
+
 #include <algorithm>
 
 EthernetBackendMacOS::EthernetBackendMacOS() {
@@ -112,7 +115,7 @@ EthernetInfo EthernetBackendMacOS::get_info() {
         // Check if it has a valid IP
         if (!ip.empty() && ip != "0.0.0.0" && ip != "127.0.0.1") {
             connected_ethernet = &iface;
-            break;  // Found connected interface, use it
+            break; // Found connected interface, use it
         }
     }
 
@@ -132,10 +135,12 @@ EthernetInfo EthernetBackendMacOS::get_info() {
     info.mac_address = selected->mac;
 
     // Determine connection status
-    if (!info.ip_address.empty() && info.ip_address != "0.0.0.0" && info.ip_address != "127.0.0.1") {
+    if (!info.ip_address.empty() && info.ip_address != "0.0.0.0" &&
+        info.ip_address != "127.0.0.1") {
         info.connected = true;
         info.status = "Connected";
-        spdlog::info("[EthernetMacOS] Ethernet connected: {} ({})", info.interface, info.ip_address);
+        spdlog::info("[EthernetMacOS] Ethernet connected: {} ({})", info.interface,
+                     info.ip_address);
     } else {
         info.connected = false;
         info.status = "No connection";

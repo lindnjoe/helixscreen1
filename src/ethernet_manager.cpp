@@ -22,6 +22,7 @@
  */
 
 #include "ethernet_manager.h"
+
 #include <spdlog/spdlog.h>
 
 EthernetManager::EthernetManager() {

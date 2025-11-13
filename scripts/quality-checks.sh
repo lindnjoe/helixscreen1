@@ -195,6 +195,49 @@ fi
 
 echo ""
 
+# XML Formatting Check
+echo "📐 Checking XML formatting..."
+if [ "$STAGED_ONLY" = true ]; then
+  XML_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep "\.xml$" || true)
+else
+  XML_FILES=$(find ui_xml -name "*.xml" 2>/dev/null || true)
+fi
+
+if [ -n "$XML_FILES" ]; then
+  if command -v xmllint >/dev/null 2>&1; then
+    FORMAT_ISSUES=""
+    for file in $XML_FILES; do
+      if [ -f "$file" ]; then
+        # Check if file needs formatting (xmllint --format for consistent indentation)
+        FORMATTED=$(xmllint --format "$file" 2>/dev/null || echo "PARSE_ERROR")
+        if [ "$FORMATTED" = "PARSE_ERROR" ]; then
+          echo "⚠️  Cannot format $file (may have XML errors)"
+        else
+          ORIGINAL=$(cat "$file")
+          if [ "$FORMATTED" != "$ORIGINAL" ]; then
+            FORMAT_ISSUES="$FORMAT_ISSUES $file"
+          fi
+        fi
+      fi
+    done
+
+    if [ -n "$FORMAT_ISSUES" ]; then
+      echo "⚠️  XML files need formatting:"
+      echo "$FORMAT_ISSUES" | tr ' ' '\n' | grep -v '^$' | sed 's/^/   /'
+      echo "ℹ️  Fix with: xmllint --format -o <file> <file>"
+      echo "ℹ️  Or run: make format"
+    else
+      echo "✅ All XML files properly formatted"
+    fi
+  else
+    echo "ℹ️  xmllint not found - skipping XML format check"
+  fi
+else
+  echo "ℹ️  No XML files to check"
+fi
+
+echo ""
+
 # Build Verification
 if [ "$STAGED_ONLY" = true ]; then
   echo "🔨 Verifying incremental build..."

@@ -44,18 +44,19 @@ void ui_panel_print_status_setup(lv_obj_t* panel, lv_obj_t* parent_screen);
 
 // API to update print state (from WebSocket or mock simulation)
 void ui_panel_print_status_set_filename(const char* filename);
-void ui_panel_print_status_set_progress(int percent);  // 0-100
+void ui_panel_print_status_set_progress(int percent); // 0-100
 void ui_panel_print_status_set_layer(int current, int total);
 void ui_panel_print_status_set_times(int elapsed_seconds, int remaining_seconds);
-void ui_panel_print_status_set_temperatures(int nozzle_current, int nozzle_target,
-                                            int bed_current, int bed_target);
+void ui_panel_print_status_set_temperatures(int nozzle_current, int nozzle_target, int bed_current,
+                                            int bed_target);
 void ui_panel_print_status_set_speeds(int speed_percent, int flow_percent);
 void ui_panel_print_status_set_state(print_state_t state);
 
 // Mock print simulation (for testing without real printer)
-void ui_panel_print_status_start_mock_print(const char* filename, int total_layers, int duration_seconds);
+void ui_panel_print_status_start_mock_print(const char* filename, int total_layers,
+                                            int duration_seconds);
 void ui_panel_print_status_stop_mock_print();
-void ui_panel_print_status_tick_mock_print();  // Call periodically to advance simulation
+void ui_panel_print_status_tick_mock_print(); // Call periodically to advance simulation
 
 // Query current state
 print_state_t ui_panel_print_status_get_state();

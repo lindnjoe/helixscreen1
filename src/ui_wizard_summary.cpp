@@ -22,13 +22,17 @@
  */
 
 #include "ui_wizard_summary.h"
+
 #include "ui_wizard.h"
+
 #include "app_globals.h"
 #include "config.h"
 #include "lvgl/lvgl.h"
+
 #include <spdlog/spdlog.h>
-#include <string>
+
 #include <sstream>
+#include <string>
 
 // ============================================================================
 // Static Data & Subjects
@@ -117,51 +121,52 @@ void ui_wizard_summary_init_subjects() {
     Config* config = Config::get_instance();
 
     // Printer name
-    std::string printer_name = config ? config->get<std::string>("/printer/name", "Unnamed Printer") : "Unnamed Printer";
+    std::string printer_name =
+        config ? config->get<std::string>("/printer/name", "Unnamed Printer") : "Unnamed Printer";
     strncpy(printer_name_buffer, printer_name.c_str(), sizeof(printer_name_buffer) - 1);
     printer_name_buffer[sizeof(printer_name_buffer) - 1] = '\0';
     lv_subject_init_string(&summary_printer_name, printer_name_buffer, nullptr,
-                          sizeof(printer_name_buffer), printer_name_buffer);
+                           sizeof(printer_name_buffer), printer_name_buffer);
     lv_xml_register_subject(nullptr, "summary_printer_name", &summary_printer_name);
 
     // Printer type
-    std::string printer_type = config ? config->get<std::string>("/printer/type", "Unknown") : "Unknown";
+    std::string printer_type =
+        config ? config->get<std::string>("/printer/type", "Unknown") : "Unknown";
     strncpy(printer_type_buffer, printer_type.c_str(), sizeof(printer_type_buffer) - 1);
     printer_type_buffer[sizeof(printer_type_buffer) - 1] = '\0';
     lv_subject_init_string(&summary_printer_type, printer_type_buffer, nullptr,
-                          sizeof(printer_type_buffer), printer_type_buffer);
+                           sizeof(printer_type_buffer), printer_type_buffer);
     lv_xml_register_subject(nullptr, "summary_printer_type", &summary_printer_type);
 
     // Network configuration
     std::string network_summary = config ? format_network_summary(config) : "Not configured";
     strncpy(network_buffer, network_summary.c_str(), sizeof(network_buffer) - 1);
     network_buffer[sizeof(network_buffer) - 1] = '\0';
-    lv_subject_init_string(&summary_network, network_buffer, nullptr,
-                          sizeof(network_buffer), network_buffer);
+    lv_subject_init_string(&summary_network, network_buffer, nullptr, sizeof(network_buffer),
+                           network_buffer);
     lv_xml_register_subject(nullptr, "summary_network", &summary_network);
 
     // Bed configuration
     std::string bed_summary = config ? format_bed_summary(config) : "Not configured";
     strncpy(bed_buffer, bed_summary.c_str(), sizeof(bed_buffer) - 1);
     bed_buffer[sizeof(bed_buffer) - 1] = '\0';
-    lv_subject_init_string(&summary_bed, bed_buffer, nullptr,
-                          sizeof(bed_buffer), bed_buffer);
+    lv_subject_init_string(&summary_bed, bed_buffer, nullptr, sizeof(bed_buffer), bed_buffer);
     lv_xml_register_subject(nullptr, "summary_bed", &summary_bed);
 
     // Hotend configuration
     std::string hotend_summary = config ? format_hotend_summary(config) : "Not configured";
     strncpy(hotend_buffer, hotend_summary.c_str(), sizeof(hotend_buffer) - 1);
     hotend_buffer[sizeof(hotend_buffer) - 1] = '\0';
-    lv_subject_init_string(&summary_hotend, hotend_buffer, nullptr,
-                          sizeof(hotend_buffer), hotend_buffer);
+    lv_subject_init_string(&summary_hotend, hotend_buffer, nullptr, sizeof(hotend_buffer),
+                           hotend_buffer);
     lv_xml_register_subject(nullptr, "summary_hotend", &summary_hotend);
 
     // Part cooling fan
     std::string part_fan = config ? config->get<std::string>("/printer/part_fan", "None") : "None";
     strncpy(part_fan_buffer, part_fan.c_str(), sizeof(part_fan_buffer) - 1);
     part_fan_buffer[sizeof(part_fan_buffer) - 1] = '\0';
-    lv_subject_init_string(&summary_part_fan, part_fan_buffer, nullptr,
-                          sizeof(part_fan_buffer), part_fan_buffer);
+    lv_subject_init_string(&summary_part_fan, part_fan_buffer, nullptr, sizeof(part_fan_buffer),
+                           part_fan_buffer);
     lv_xml_register_subject(nullptr, "summary_part_fan", &summary_part_fan);
 
     spdlog::info("[Wizard Summary] Subjects initialized with config values");
@@ -185,8 +190,9 @@ lv_obj_t* ui_wizard_summary_create(lv_obj_t* parent) {
 
     // Safety check: cleanup should have been called by wizard navigation
     if (summary_screen_root) {
-        spdlog::warn("[Wizard Summary] Screen pointer not null - cleanup may not have been called properly");
-        summary_screen_root = nullptr;  // Reset pointer, wizard framework handles deletion
+        spdlog::warn(
+            "[Wizard Summary] Screen pointer not null - cleanup may not have been called properly");
+        summary_screen_root = nullptr; // Reset pointer, wizard framework handles deletion
     }
 
     // Refresh subjects with latest config values before creating UI

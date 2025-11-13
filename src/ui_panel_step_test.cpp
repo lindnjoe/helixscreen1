@@ -22,7 +22,9 @@
  */
 
 #include "ui_panel_step_test.h"
+
 #include "ui_step_progress.h"
+
 #include <spdlog/spdlog.h>
 
 // Widget references
@@ -32,21 +34,17 @@ static int vertical_step = 0;
 static int horizontal_step = 0;
 
 // Step definitions for vertical progress (retract wizard)
-static const ui_step_t vertical_steps[] = {
-    {"Nozzle heating", UI_STEP_STATE_COMPLETED},
-    {"Prepare to retract", UI_STEP_STATE_ACTIVE},
-    {"Retracting", UI_STEP_STATE_PENDING},
-    {"Retract done", UI_STEP_STATE_PENDING}
-};
+static const ui_step_t vertical_steps[] = {{"Nozzle heating", UI_STEP_STATE_COMPLETED},
+                                           {"Prepare to retract", UI_STEP_STATE_ACTIVE},
+                                           {"Retracting", UI_STEP_STATE_PENDING},
+                                           {"Retract done", UI_STEP_STATE_PENDING}};
 static const int vertical_step_count = sizeof(vertical_steps) / sizeof(vertical_steps[0]);
 
 // Step definitions for horizontal progress (leveling wizard)
-static const ui_step_t horizontal_steps[] = {
-    {"Homing", UI_STEP_STATE_COMPLETED},
-    {"Leveling", UI_STEP_STATE_ACTIVE},
-    {"Vibration test", UI_STEP_STATE_PENDING},
-    {"Completed", UI_STEP_STATE_PENDING}
-};
+static const ui_step_t horizontal_steps[] = {{"Homing", UI_STEP_STATE_COMPLETED},
+                                             {"Leveling", UI_STEP_STATE_ACTIVE},
+                                             {"Vibration test", UI_STEP_STATE_PENDING},
+                                             {"Completed", UI_STEP_STATE_PENDING}};
 static const int horizontal_step_count = sizeof(horizontal_steps) / sizeof(horizontal_steps[0]);
 
 // Event handlers
@@ -105,21 +103,20 @@ void ui_panel_step_test_setup(lv_obj_t* panel_root) {
 
     // Find container widgets
     lv_obj_t* vertical_container = lv_obj_find_by_name(panel_root, "vertical_progress_container");
-    lv_obj_t* horizontal_container = lv_obj_find_by_name(panel_root, "horizontal_progress_container");
+    lv_obj_t* horizontal_container =
+        lv_obj_find_by_name(panel_root, "horizontal_progress_container");
 
     spdlog::debug("Found containers: vertical={}, horizontal={}",
-                  static_cast<void*>(vertical_container),
-                  static_cast<void*>(horizontal_container));
+                  static_cast<void*>(vertical_container), static_cast<void*>(horizontal_container));
 
     if (!vertical_container || !horizontal_container) {
         spdlog::error("Failed to find progress containers in step test panel");
         return;
     }
 
-
     // Create vertical progress widget with theme colors from step_progress_test scope
     vertical_widget = ui_step_progress_create(vertical_container, vertical_steps,
-                                               vertical_step_count, false, "step_progress_test");
+                                              vertical_step_count, false, "step_progress_test");
     if (!vertical_widget) {
         spdlog::error("Failed to create vertical progress widget");
         return;
@@ -127,7 +124,7 @@ void ui_panel_step_test_setup(lv_obj_t* panel_root) {
 
     // Create horizontal progress widget with theme colors from step_progress_test scope
     horizontal_widget = ui_step_progress_create(horizontal_container, horizontal_steps,
-                                                 horizontal_step_count, true, "step_progress_test");
+                                                horizontal_step_count, true, "step_progress_test");
     if (!horizontal_widget) {
         spdlog::error("Failed to create horizontal progress widget");
         return;

@@ -25,6 +25,7 @@
 #define MOONRAKER_CLIENT_MOCK_H
 
 #include "moonraker_client.h"
+
 #include <string>
 #include <vector>
 
@@ -38,7 +39,7 @@
  * Overrides discover_printer() to populate test data without WebSocket connection.
  */
 class MoonrakerClientMock : public MoonrakerClient {
-public:
+  public:
     enum class PrinterType {
         VORON_24,           // Voron 2.4 (CoreXY, chamber heating)
         VORON_TRIDENT,      // Voron Trident (3Z, CoreXY)
@@ -63,8 +64,7 @@ public:
      * @param on_disconnected Callback stored but never invoked in mock
      * @return Always returns 0 (success)
      */
-    int connect(const char* url,
-                std::function<void()> on_connected,
+    int connect(const char* url, std::function<void()> on_connected,
                 std::function<void()> on_disconnected) override;
 
     /**
@@ -115,8 +115,7 @@ public:
      * @param cb Callback function (not invoked in mock)
      * @return Always returns 0 (success)
      */
-    int send_jsonrpc(const std::string& method,
-                     const json& params,
+    int send_jsonrpc(const std::string& method, const json& params,
                      std::function<void(json)> cb) override;
 
     /**
@@ -131,8 +130,7 @@ public:
      * @param timeout_ms Timeout (ignored in mock)
      * @return Always returns 0 (success)
      */
-    int send_jsonrpc(const std::string& method,
-                     const json& params,
+    int send_jsonrpc(const std::string& method, const json& params,
                      std::function<void(json)> success_cb,
                      std::function<void(const MoonrakerError&)> error_cb,
                      uint32_t timeout_ms = 0) override;
@@ -152,9 +150,11 @@ public:
      *
      * @param type Printer type to simulate
      */
-    void set_printer_type(PrinterType type) { printer_type_ = type; }
+    void set_printer_type(PrinterType type) {
+        printer_type_ = type;
+    }
 
-private:
+  private:
     /**
      * @brief Populate hardware lists based on configured printer type
      *
@@ -163,7 +163,7 @@ private:
      */
     void populate_hardware();
 
-private:
+  private:
     PrinterType printer_type_;
 };
 

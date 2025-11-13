@@ -22,21 +22,21 @@
  */
 
 #include "ui_panel_controls_temp.h"
-#include "ui_component_keypad.h"
+
 #include "ui_component_header_bar.h"
-#include "ui_utils.h"
+#include "ui_component_keypad.h"
 #include "ui_nav.h"
-#include "ui_theme.h"
 #include "ui_temp_graph.h"
+#include "ui_theme.h"
+#include "ui_utils.h"
+
 #include <spdlog/spdlog.h>
-#include <string.h>
+
 #include <math.h>
+#include <string.h>
 
 // Heater type enumeration
-typedef enum {
-    HEATER_NOZZLE,
-    HEATER_BED
-} heater_type_t;
+typedef enum { HEATER_NOZZLE, HEATER_BED } heater_type_t;
 
 // Heater configuration structure
 typedef struct {
@@ -83,9 +83,9 @@ static int bed_target = 0;
 
 // Temperature limits (can be updated from Moonraker heater config)
 static int nozzle_min_temp = 0;
-static int nozzle_max_temp = 500;  // Safe default for most hotends
+static int nozzle_max_temp = 500; // Safe default for most hotends
 static int bed_min_temp = 0;
-static int bed_max_temp = 150;     // Safe default for most heatbeds
+static int bed_max_temp = 150; // Safe default for most heatbeds
 
 // Panel widgets
 static lv_obj_t* nozzle_panel = nullptr;
@@ -103,25 +103,23 @@ static heater_config_t NOZZLE_CONFIG = {
     .type = HEATER_NOZZLE,
     .name = "Nozzle",
     .title = "Nozzle Temperature",
-    .color = lv_color_hex(0xFF4444),     // Default red (will be loaded from XML)
+    .color = lv_color_hex(0xFF4444), // Default red (will be loaded from XML)
     .temp_range_max = 320.0f,
     .y_axis_increment = 80,
     .default_mock_target = 210,
     .presets = {0, 210, 240, 250},
-    .keypad_range = {0.0f, 350.0f}
-};
+    .keypad_range = {0.0f, 350.0f}};
 
 static heater_config_t BED_CONFIG = {
     .type = HEATER_BED,
     .name = "Bed",
     .title = "Heatbed Temperature",
-    .color = lv_color_hex(0x00CED1),     // Default cyan (will be loaded from XML)
+    .color = lv_color_hex(0x00CED1), // Default cyan (will be loaded from XML)
     .temp_range_max = 140.0f,
     .y_axis_increment = 35,
     .default_mock_target = 60,
     .presets = {0, 60, 80, 100},
-    .keypad_range = {0.0f, 150.0f}
-};
+    .keypad_range = {0.0f, 150.0f}};
 
 // Forward declarations for callbacks
 static void update_nozzle_display();
@@ -140,8 +138,10 @@ static void generate_mock_temp_data(float* temps, int count, float start_temp, f
             temps[i] = room_temp + (actual_start - room_temp) * expf(-progress * 4.5f);
         } else {
             // Heating curve with more dramatic overshoot and oscillation
-            float base_curve = actual_start + (target_temp - actual_start) * (1.0f - expf(-progress * 6.0f));
-            float overshoot = (target_temp - actual_start) * 0.12f * expf(-progress * 8.0f) * sinf(progress * 3.14159f * 3.0f);
+            float base_curve =
+                actual_start + (target_temp - actual_start) * (1.0f - expf(-progress * 6.0f));
+            float overshoot = (target_temp - actual_start) * 0.12f * expf(-progress * 8.0f) *
+                              sinf(progress * 3.14159f * 3.0f);
             temps[i] = base_curve + overshoot;
 
             // Add some noise for realism
@@ -157,15 +157,22 @@ void ui_panel_controls_temp_init_subjects() {
     snprintf(nozzle_target_buf, sizeof(nozzle_target_buf), "%d°C", nozzle_target);
     snprintf(bed_current_buf, sizeof(bed_current_buf), "%d°C", bed_current);
     snprintf(bed_target_buf, sizeof(bed_target_buf), "%d°C", bed_target);
-    snprintf(nozzle_display_buf, sizeof(nozzle_display_buf), "%d / %d°C", nozzle_current, nozzle_target);
+    snprintf(nozzle_display_buf, sizeof(nozzle_display_buf), "%d / %d°C", nozzle_current,
+             nozzle_target);
     snprintf(bed_display_buf, sizeof(bed_display_buf), "%d / %d°C", bed_current, bed_target);
 
-    lv_subject_init_string(&nozzle_current_subject, nozzle_current_buf, nullptr, sizeof(nozzle_current_buf), nozzle_current_buf);
-    lv_subject_init_string(&nozzle_target_subject, nozzle_target_buf, nullptr, sizeof(nozzle_target_buf), nozzle_target_buf);
-    lv_subject_init_string(&bed_current_subject, bed_current_buf, nullptr, sizeof(bed_current_buf), bed_current_buf);
-    lv_subject_init_string(&bed_target_subject, bed_target_buf, nullptr, sizeof(bed_target_buf), bed_target_buf);
-    lv_subject_init_string(&nozzle_display_subject, nozzle_display_buf, nullptr, sizeof(nozzle_display_buf), nozzle_display_buf);
-    lv_subject_init_string(&bed_display_subject, bed_display_buf, nullptr, sizeof(bed_display_buf), bed_display_buf);
+    lv_subject_init_string(&nozzle_current_subject, nozzle_current_buf, nullptr,
+                           sizeof(nozzle_current_buf), nozzle_current_buf);
+    lv_subject_init_string(&nozzle_target_subject, nozzle_target_buf, nullptr,
+                           sizeof(nozzle_target_buf), nozzle_target_buf);
+    lv_subject_init_string(&bed_current_subject, bed_current_buf, nullptr, sizeof(bed_current_buf),
+                           bed_current_buf);
+    lv_subject_init_string(&bed_target_subject, bed_target_buf, nullptr, sizeof(bed_target_buf),
+                           bed_target_buf);
+    lv_subject_init_string(&nozzle_display_subject, nozzle_display_buf, nullptr,
+                           sizeof(nozzle_display_buf), nozzle_display_buf);
+    lv_subject_init_string(&bed_display_subject, bed_display_buf, nullptr, sizeof(bed_display_buf),
+                           bed_display_buf);
 
     // Register subjects with XML system (global scope)
     lv_xml_register_subject(NULL, "nozzle_current_temp", &nozzle_current_subject);
@@ -175,13 +182,14 @@ void ui_panel_controls_temp_init_subjects() {
     lv_xml_register_subject(NULL, "nozzle_temp_display", &nozzle_display_subject);
     lv_xml_register_subject(NULL, "bed_temp_display", &bed_display_subject);
 
-    spdlog::info("[Temp] Subjects initialized: nozzle={}/{}°C, bed={}/{}°C",
-                 nozzle_current, nozzle_target, bed_current, bed_target);
+    spdlog::info("[Temp] Subjects initialized: nozzle={}/{}°C, bed={}/{}°C", nozzle_current,
+                 nozzle_target, bed_current, bed_target);
 }
 
 // Update nozzle display text
 static void update_nozzle_display() {
-    snprintf(nozzle_display_buf, sizeof(nozzle_display_buf), "%d / %d°C", nozzle_current, nozzle_target);
+    snprintf(nozzle_display_buf, sizeof(nozzle_display_buf), "%d / %d°C", nozzle_current,
+             nozzle_target);
     lv_subject_copy_string(&nozzle_display_subject, nozzle_display_buf);
 }
 
@@ -197,7 +205,8 @@ static void update_bed_display() {
 
 // Helper: Create Y-axis temperature labels
 static void create_y_axis_labels(lv_obj_t* container, const heater_config_t* config) {
-    if (!container) return;
+    if (!container)
+        return;
 
     // Calculate number of labels based on range and increment
     int num_labels = (int)(config->temp_range_max / config->y_axis_increment) + 1;
@@ -210,17 +219,19 @@ static void create_y_axis_labels(lv_obj_t* container, const heater_config_t* con
         snprintf(buf, sizeof(buf), "%d°", temp);
         lv_label_set_text(label, buf);
         // Theme handles text color
-        lv_obj_set_style_text_font(label, UI_FONT_SMALL, 0);  // Compact chart axis labels
+        lv_obj_set_style_text_font(label, UI_FONT_SMALL, 0); // Compact chart axis labels
     }
 }
 
 // Helper: Create and configure temperature graph
 static ui_temp_graph_t* create_temp_graph(lv_obj_t* chart_area, const heater_config_t* config,
                                           int current_temp, int target_temp, int* series_id_out) {
-    if (!chart_area) return nullptr;
+    if (!chart_area)
+        return nullptr;
 
     ui_temp_graph_t* graph = ui_temp_graph_create(chart_area);
-    if (!graph) return nullptr;
+    if (!graph)
+        return nullptr;
 
     lv_obj_t* chart = ui_temp_graph_get_chart(graph);
     lv_obj_set_size(chart, lv_pct(100), lv_pct(100));
@@ -257,13 +268,19 @@ static ui_temp_graph_t* create_temp_graph(lv_obj_t* chart_area, const heater_con
 static void get_heater_state(heater_type_t type, int* current_out, int* target_out,
                              void (**update_fn_out)()) {
     if (type == HEATER_NOZZLE) {
-        if (current_out) *current_out = nozzle_current;
-        if (target_out) *target_out = nozzle_target;
-        if (update_fn_out) *update_fn_out = update_nozzle_display;
+        if (current_out)
+            *current_out = nozzle_current;
+        if (target_out)
+            *target_out = nozzle_target;
+        if (update_fn_out)
+            *update_fn_out = update_nozzle_display;
     } else {
-        if (current_out) *current_out = bed_current;
-        if (target_out) *target_out = bed_target;
-        if (update_fn_out) *update_fn_out = update_bed_display;
+        if (current_out)
+            *current_out = bed_current;
+        if (target_out)
+            *target_out = bed_target;
+        if (update_fn_out)
+            *update_fn_out = update_bed_display;
     }
 }
 
@@ -282,7 +299,8 @@ static void set_heater_target(heater_type_t type, int temp) {
 static void preset_button_cb_generic(lv_event_t* e, const heater_config_t* config) {
     lv_obj_t* btn = (lv_obj_t*)lv_event_get_target(e);
     const char* name = lv_obj_get_name(btn);
-    if (!name) return;
+    if (!name)
+        return;
 
     int temp = 0;
     if (strcmp(name, "preset_off") == 0) {
@@ -345,8 +363,7 @@ static void custom_button_cb_generic(lv_event_t* e, const heater_config_t* confi
         .allow_decimal = false,
         .allow_negative = false,
         .callback = custom_temp_callback_generic,
-        .user_data = callback_data
-    };
+        .user_data = callback_data};
 
     ui_keypad_show(&keypad_config);
 }
@@ -418,10 +435,12 @@ void ui_panel_controls_temp_nozzle_setup(lv_obj_t* panel, lv_obj_t* parent_scree
     lv_xml_component_scope_t* scope = lv_xml_component_get_scope("nozzle_temp_panel");
     if (scope) {
         bool use_dark_mode = ui_theme_is_dark_mode();
-        const char* color_str = lv_xml_get_const(scope, use_dark_mode ? "temp_graph_nozzle_dark" : "temp_graph_nozzle_light");
+        const char* color_str = lv_xml_get_const(scope, use_dark_mode ? "temp_graph_nozzle_dark"
+                                                                      : "temp_graph_nozzle_light");
         if (color_str) {
             NOZZLE_CONFIG.color = ui_theme_parse_color(color_str);
-            spdlog::debug("[Temp] Nozzle graph color loaded: {} ({})", color_str, use_dark_mode ? "dark" : "light");
+            spdlog::debug("[Temp] Nozzle graph color loaded: {} ({})", color_str,
+                          use_dark_mode ? "dark" : "light");
         }
     }
 
@@ -436,7 +455,8 @@ void ui_panel_controls_temp_nozzle_setup(lv_obj_t* panel, lv_obj_t* parent_scree
     // Create temperature graph using common helper
     lv_obj_t* chart_area = lv_obj_find_by_name(panel, "chart_area");
     if (chart_area) {
-        nozzle_graph = create_temp_graph(chart_area, &NOZZLE_CONFIG, nozzle_current, nozzle_target, &nozzle_series_id);
+        nozzle_graph = create_temp_graph(chart_area, &NOZZLE_CONFIG, nozzle_current, nozzle_target,
+                                         &nozzle_series_id);
     }
 
     // Setup header for responsive height
@@ -554,10 +574,12 @@ void ui_panel_controls_temp_bed_setup(lv_obj_t* panel, lv_obj_t* parent_screen) 
     lv_xml_component_scope_t* scope = lv_xml_component_get_scope("bed_temp_panel");
     if (scope) {
         bool use_dark_mode = ui_theme_is_dark_mode();
-        const char* color_str = lv_xml_get_const(scope, use_dark_mode ? "temp_graph_bed_dark" : "temp_graph_bed_light");
+        const char* color_str =
+            lv_xml_get_const(scope, use_dark_mode ? "temp_graph_bed_dark" : "temp_graph_bed_light");
         if (color_str) {
             BED_CONFIG.color = ui_theme_parse_color(color_str);
-            spdlog::debug("[Temp] Bed graph color loaded: {} ({})", color_str, use_dark_mode ? "dark" : "light");
+            spdlog::debug("[Temp] Bed graph color loaded: {} ({})", color_str,
+                          use_dark_mode ? "dark" : "light");
         }
     }
 
@@ -572,7 +594,8 @@ void ui_panel_controls_temp_bed_setup(lv_obj_t* panel, lv_obj_t* parent_screen) 
     // Create temperature graph using common helper
     lv_obj_t* chart_area = lv_obj_find_by_name(panel, "chart_area");
     if (chart_area) {
-        bed_graph = create_temp_graph(chart_area, &BED_CONFIG, bed_current, bed_target, &bed_series_id);
+        bed_graph =
+            create_temp_graph(chart_area, &BED_CONFIG, bed_current, bed_target, &bed_series_id);
     }
 
     // Setup header for responsive height

@@ -43,4 +43,4 @@ bool ui_set_window_icon(lv_display_t* disp);
 }
 #endif
 
-#endif  // UI_ICON_LOADER_H
+#endif // UI_ICON_LOADER_H

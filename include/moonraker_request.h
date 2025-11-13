@@ -24,11 +24,13 @@
 #ifndef MOONRAKER_REQUEST_H
 #define MOONRAKER_REQUEST_H
 
-#include "hv/json.hpp"
 #include "moonraker_error.h"
+
 #include <chrono>
 #include <functional>
 #include <string>
+
+#include "hv/json.hpp"
 
 using json = nlohmann::json;
 
@@ -38,12 +40,13 @@ using json = nlohmann::json;
  * Stores request metadata for timeout tracking and callback management.
  */
 struct PendingRequest {
-    uint64_t id;                                    // JSON-RPC request ID
-    std::string method;                             // Method name for logging
-    std::function<void(json)> success_callback;    // Success callback (pass-by-value for thread safety)
-    std::function<void(const MoonrakerError&)> error_callback;  // Error callback (optional)
-    std::chrono::steady_clock::time_point timestamp;  // When request was sent
-    uint32_t timeout_ms;                           // Timeout in milliseconds
+    uint64_t id;        // JSON-RPC request ID
+    std::string method; // Method name for logging
+    std::function<void(json)>
+        success_callback; // Success callback (pass-by-value for thread safety)
+    std::function<void(const MoonrakerError&)> error_callback; // Error callback (optional)
+    std::chrono::steady_clock::time_point timestamp;           // When request was sent
+    uint32_t timeout_ms;                                       // Timeout in milliseconds
 
     /**
      * @brief Check if request has timed out

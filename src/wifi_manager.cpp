@@ -22,22 +22,21 @@
  */
 
 #include "wifi_manager.h"
-#include "safe_log.h"
+
 #include "lvgl/lvgl.h"
+#include "safe_log.h"
 #include "spdlog/spdlog.h"
 
-#include <sys/stat.h>
-#include <dirent.h>
-#include <cstring>
 #include <algorithm>
+#include <cstring>
+#include <dirent.h>
+#include <sys/stat.h>
 
 // ============================================================================
 // Constructor / Destructor
 // ============================================================================
 
-WiFiManager::WiFiManager()
-    : scan_timer_(nullptr)
-{
+WiFiManager::WiFiManager() : scan_timer_(nullptr) {
     spdlog::info("[WiFiManager] Initializing with backend system");
 
     // Create platform-appropriate backend (already started by factory)
@@ -55,14 +54,14 @@ WiFiManager::WiFiManager()
     }
 
     // Register event callbacks
-    backend_->register_event_callback("SCAN_COMPLETE",
-        [this](const std::string& data) { handle_scan_complete(data); });
+    backend_->register_event_callback(
+        "SCAN_COMPLETE", [this](const std::string& data) { handle_scan_complete(data); });
     backend_->register_event_callback("CONNECTED",
-        [this](const std::string& data) { handle_connected(data); });
-    backend_->register_event_callback("DISCONNECTED",
-        [this](const std::string& data) { handle_disconnected(data); });
-    backend_->register_event_callback("AUTH_FAILED",
-        [this](const std::string& data) { handle_auth_failed(data); });
+                                      [this](const std::string& data) { handle_connected(data); });
+    backend_->register_event_callback(
+        "DISCONNECTED", [this](const std::string& data) { handle_disconnected(data); });
+    backend_->register_event_callback(
+        "AUTH_FAILED", [this](const std::string& data) { handle_auth_failed(data); });
 }
 
 void WiFiManager::init_self_reference(std::shared_ptr<WiFiManager> self) {
@@ -119,7 +118,8 @@ std::vector<WiFiNetwork> WiFiManager::scan_once() {
     return networks;
 }
 
-void WiFiManager::start_scan(std::function<void(const std::vector<WiFiNetwork>&)> on_networks_updated) {
+void WiFiManager::start_scan(
+    std::function<void(const std::vector<WiFiNetwork>&)> on_networks_updated) {
     if (!backend_) {
         spdlog::error("[WiFiManager] No backend available for scanning");
         return;
@@ -173,9 +173,8 @@ void WiFiManager::scan_timer_callback(lv_timer_t* timer) {
 // Connection Management
 // ============================================================================
 
-void WiFiManager::connect(const std::string& ssid,
-                         const std::string& password,
-                         std::function<void(bool success, const std::string& error)> on_complete) {
+void WiFiManager::connect(const std::string& ssid, const std::string& password,
+                          std::function<void(bool success, const std::string& error)> on_complete) {
     if (!backend_) {
         spdlog::error("[WiFiManager] No backend available for connection");
         if (on_complete) {
@@ -191,9 +190,11 @@ void WiFiManager::connect(const std::string& ssid,
     // Use backend's connect method
     WiFiError result = backend_->connect_network(ssid, password);
     if (!result.success()) {
-        spdlog::error("[WiFiManager] Backend failed to initiate connection: {}", result.technical_msg);
+        spdlog::error("[WiFiManager] Backend failed to initiate connection: {}",
+                      result.technical_msg);
         if (connect_callback_) {
-            connect_callback_(false, result.user_msg.empty() ? result.technical_msg : result.user_msg);
+            connect_callback_(false,
+                              result.user_msg.empty() ? result.technical_msg : result.user_msg);
             connect_callback_ = nullptr;
         }
     }
@@ -218,28 +219,32 @@ void WiFiManager::disconnect() {
 // ============================================================================
 
 bool WiFiManager::is_connected() {
-    if (!backend_) return false;
+    if (!backend_)
+        return false;
 
     WifiBackend::ConnectionStatus status = backend_->get_status();
     return status.connected;
 }
 
 std::string WiFiManager::get_connected_ssid() {
-    if (!backend_) return "";
+    if (!backend_)
+        return "";
 
     WifiBackend::ConnectionStatus status = backend_->get_status();
     return status.ssid;
 }
 
 std::string WiFiManager::get_ip_address() {
-    if (!backend_) return "";
+    if (!backend_)
+        return "";
 
     WifiBackend::ConnectionStatus status = backend_->get_status();
     return status.ip_address;
 }
 
 int WiFiManager::get_signal_strength() {
-    if (!backend_) return 0;
+    if (!backend_)
+        return 0;
 
     WifiBackend::ConnectionStatus status = backend_->get_status();
     return status.signal_strength;
@@ -255,12 +260,14 @@ bool WiFiManager::has_hardware() {
 }
 
 bool WiFiManager::is_enabled() {
-    if (!backend_) return false;
+    if (!backend_)
+        return false;
     return backend_->is_running();
 }
 
 bool WiFiManager::set_enabled(bool enabled) {
-    if (!backend_) return false;
+    if (!backend_)
+        return false;
 
     spdlog::debug("[WiFiManager] set_enabled({})", enabled);
 
@@ -291,7 +298,7 @@ struct ScanCallbackData {
 };
 
 void WiFiManager::handle_scan_complete(const std::string& event_data) {
-    (void)event_data;  // Unused for now
+    (void)event_data; // Unused for now
 
     spdlog::info("[WiFiManager] *** handle_scan_complete ENTRY (backend thread) ***");
 
@@ -306,52 +313,61 @@ void WiFiManager::handle_scan_complete(const std::string& event_data) {
     WiFiError result = backend_->get_scan_results(networks);
 
     if (result.success()) {
-        spdlog::info("[WiFiManager] Got {} scan results, dispatching to LVGL thread", networks.size());
+        spdlog::info("[WiFiManager] Got {} scan results, dispatching to LVGL thread",
+                     networks.size());
 
         // Store weak_ptr for safe async access
         auto* callback_data = new ScanCallbackData{self_, networks};
 
         // Dispatch to LVGL thread using lv_async_call
-        lv_async_call([](void* user_data) {
-            auto* data = static_cast<ScanCallbackData*>(user_data);
+        lv_async_call(
+            [](void* user_data) {
+                auto* data = static_cast<ScanCallbackData*>(user_data);
 
-            spdlog::info("[WiFiManager] *** async_call executing in LVGL thread with {} networks ***",
-                        data->networks.size());
+                spdlog::info(
+                    "[WiFiManager] *** async_call executing in LVGL thread with {} networks ***",
+                    data->networks.size());
 
-            // Safely check if manager still exists
-            if (auto manager = data->manager.lock()) {
-                if (manager->scan_callback_) {
-                    manager->scan_callback_(data->networks);
-                    spdlog::info("[WiFiManager] scan_callback_ completed successfully");
+                // Safely check if manager still exists
+                if (auto manager = data->manager.lock()) {
+                    if (manager->scan_callback_) {
+                        manager->scan_callback_(data->networks);
+                        spdlog::info("[WiFiManager] scan_callback_ completed successfully");
+                    } else {
+                        spdlog::warn(
+                            "[WiFiManager] scan_callback_ was cleared before async dispatch");
+                    }
                 } else {
-                    spdlog::warn("[WiFiManager] scan_callback_ was cleared before async dispatch");
+                    spdlog::debug(
+                        "[WiFiManager] Manager destroyed before async callback - safely ignored");
                 }
-            } else {
-                spdlog::debug("[WiFiManager] Manager destroyed before async callback - safely ignored");
-            }
 
-            delete data;  // Clean up
-        }, callback_data);
+                delete data; // Clean up
+            },
+            callback_data);
 
     } else {
         spdlog::warn("[WiFiManager] Failed to get scan results: {}", result.technical_msg);
         // Store weak_ptr for safe async access
         auto* callback_data = new ScanCallbackData{self_, {}};
 
-        lv_async_call([](void* user_data) {
-            auto* data = static_cast<ScanCallbackData*>(user_data);
+        lv_async_call(
+            [](void* user_data) {
+                auto* data = static_cast<ScanCallbackData*>(user_data);
 
-            spdlog::warn("[WiFiManager] async_call: calling callback with empty results");
-            if (auto manager = data->manager.lock()) {
-                if (manager->scan_callback_) {
-                    manager->scan_callback_({});
+                spdlog::warn("[WiFiManager] async_call: calling callback with empty results");
+                if (auto manager = data->manager.lock()) {
+                    if (manager->scan_callback_) {
+                        manager->scan_callback_({});
+                    }
+                } else {
+                    spdlog::debug(
+                        "[WiFiManager] Manager destroyed before async callback - safely ignored");
                 }
-            } else {
-                spdlog::debug("[WiFiManager] Manager destroyed before async callback - safely ignored");
-            }
 
-            delete data;
-        }, callback_data);
+                delete data;
+            },
+            callback_data);
     }
 
     spdlog::info("[WiFiManager] handle_scan_complete EXIT (dispatch queued)");
@@ -366,7 +382,7 @@ struct ConnectCallbackData {
 };
 
 void WiFiManager::handle_connected(const std::string& event_data) {
-    (void)event_data;  // Could parse IP address from event data
+    (void)event_data; // Could parse IP address from event data
 
     spdlog::info("[WiFiManager] Connected event received (backend thread)");
 
@@ -377,22 +393,25 @@ void WiFiManager::handle_connected(const std::string& event_data) {
 
     // Store weak_ptr for safe async access
     auto* data = new ConnectCallbackData{self_, true, ""};
-    lv_async_call([](void* user_data) {
-        auto* d = static_cast<ConnectCallbackData*>(user_data);
-        if (auto manager = d->manager.lock()) {
-            if (manager->connect_callback_) {
-                manager->connect_callback_(d->success, d->error);
-                manager->connect_callback_ = nullptr;
+    lv_async_call(
+        [](void* user_data) {
+            auto* d = static_cast<ConnectCallbackData*>(user_data);
+            if (auto manager = d->manager.lock()) {
+                if (manager->connect_callback_) {
+                    manager->connect_callback_(d->success, d->error);
+                    manager->connect_callback_ = nullptr;
+                }
+            } else {
+                spdlog::debug(
+                    "[WiFiManager] Manager destroyed before connect callback - safely ignored");
             }
-        } else {
-            spdlog::debug("[WiFiManager] Manager destroyed before connect callback - safely ignored");
-        }
-        delete d;
-    }, data);
+            delete d;
+        },
+        data);
 }
 
 void WiFiManager::handle_disconnected(const std::string& event_data) {
-    (void)event_data;  // Could parse reason from event data
+    (void)event_data; // Could parse reason from event data
 
     spdlog::info("[WiFiManager] Disconnected event received (backend thread)");
 
@@ -403,22 +422,25 @@ void WiFiManager::handle_disconnected(const std::string& event_data) {
 
     // Store weak_ptr for safe async access
     auto* data = new ConnectCallbackData{self_, false, "Disconnected"};
-    lv_async_call([](void* user_data) {
-        auto* d = static_cast<ConnectCallbackData*>(user_data);
-        if (auto manager = d->manager.lock()) {
-            if (manager->connect_callback_) {
-                manager->connect_callback_(d->success, d->error);
-                manager->connect_callback_ = nullptr;
+    lv_async_call(
+        [](void* user_data) {
+            auto* d = static_cast<ConnectCallbackData*>(user_data);
+            if (auto manager = d->manager.lock()) {
+                if (manager->connect_callback_) {
+                    manager->connect_callback_(d->success, d->error);
+                    manager->connect_callback_ = nullptr;
+                }
+            } else {
+                spdlog::debug(
+                    "[WiFiManager] Manager destroyed before disconnect callback - safely ignored");
             }
-        } else {
-            spdlog::debug("[WiFiManager] Manager destroyed before disconnect callback - safely ignored");
-        }
-        delete d;
-    }, data);
+            delete d;
+        },
+        data);
 }
 
 void WiFiManager::handle_auth_failed(const std::string& event_data) {
-    (void)event_data;  // Could parse specific error from event data
+    (void)event_data; // Could parse specific error from event data
 
     spdlog::warn("[WiFiManager] Authentication failed event received (backend thread)");
 
@@ -429,16 +451,19 @@ void WiFiManager::handle_auth_failed(const std::string& event_data) {
 
     // Store weak_ptr for safe async access
     auto* data = new ConnectCallbackData{self_, false, "Authentication failed"};
-    lv_async_call([](void* user_data) {
-        auto* d = static_cast<ConnectCallbackData*>(user_data);
-        if (auto manager = d->manager.lock()) {
-            if (manager->connect_callback_) {
-                manager->connect_callback_(d->success, d->error);
-                manager->connect_callback_ = nullptr;
+    lv_async_call(
+        [](void* user_data) {
+            auto* d = static_cast<ConnectCallbackData*>(user_data);
+            if (auto manager = d->manager.lock()) {
+                if (manager->connect_callback_) {
+                    manager->connect_callback_(d->success, d->error);
+                    manager->connect_callback_ = nullptr;
+                }
+            } else {
+                spdlog::debug(
+                    "[WiFiManager] Manager destroyed before auth_failed callback - safely ignored");
             }
-        } else {
-            spdlog::debug("[WiFiManager] Manager destroyed before auth_failed callback - safely ignored");
-        }
-        delete d;
-    }, data);
+            delete d;
+        },
+        data);
 }

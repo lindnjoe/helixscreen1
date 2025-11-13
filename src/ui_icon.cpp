@@ -22,16 +22,20 @@
  */
 
 #include "ui_icon.h"
+
 #include "ui_theme.h"
+
 #include "lvgl/lvgl.h"
 #include "lvgl/src/others/xml/lv_xml.h"
-#include "lvgl/src/others/xml/lv_xml_widget.h"
+#include "lvgl/src/others/xml/lv_xml_component.h"
 #include "lvgl/src/others/xml/lv_xml_parser.h"
 #include "lvgl/src/others/xml/lv_xml_style.h"
-#include "lvgl/src/others/xml/lv_xml_component.h"
 #include "lvgl/src/others/xml/lv_xml_utils.h"
+#include "lvgl/src/others/xml/lv_xml_widget.h"
 #include "lvgl/src/others/xml/parsers/lv_xml_obj_parser.h"
+
 #include <spdlog/spdlog.h>
+
 #include <cstring>
 
 /**
@@ -55,13 +59,7 @@ static const IconSize SIZE_XL = {64, 64, 256};
  * Variant mapping: semantic name -> {recolor, opacity}
  * Colors are resolved from global theme constants at runtime.
  */
-enum class IconVariant {
-    NONE,
-    PRIMARY,
-    SECONDARY,
-    ACCENT,
-    DISABLED
-};
+enum class IconVariant { NONE, PRIMARY, SECONDARY, ACCENT, DISABLED };
 
 /**
  * Parse size string to IconSize struct
@@ -124,32 +122,32 @@ static void apply_size(lv_obj_t* obj, const IconSize& size) {
  * Uses colors from ui_theme.h (single source of truth)
  */
 static void apply_variant(lv_obj_t* obj, IconVariant variant) {
-    (void)obj;  // Unused parameter
+    (void)obj; // Unused parameter
     lv_color_t color;
     lv_opa_t opa = LV_OPA_COVER;
 
     switch (variant) {
-        case IconVariant::PRIMARY:
-            // Primary text color (white in dark mode)
-            color = UI_COLOR_TEXT_PRIMARY;
-            break;
-        case IconVariant::SECONDARY:
-            // Secondary text color (gray)
-            color = UI_COLOR_TEXT_SECONDARY;
-            break;
-        case IconVariant::ACCENT:
-            // Accent color (red)
-            color = UI_COLOR_PRIMARY;
-            break;
-        case IconVariant::DISABLED:
-            // Primary text color at 50% opacity
-            color = UI_COLOR_TEXT_PRIMARY;
-            opa = LV_OPA_50;
-            break;
-        case IconVariant::NONE:
-        default:
-            lv_obj_set_style_image_recolor_opa(obj, LV_OPA_TRANSP, LV_PART_MAIN);
-            return;
+    case IconVariant::PRIMARY:
+        // Primary text color (white in dark mode)
+        color = UI_COLOR_TEXT_PRIMARY;
+        break;
+    case IconVariant::SECONDARY:
+        // Secondary text color (gray)
+        color = UI_COLOR_TEXT_SECONDARY;
+        break;
+    case IconVariant::ACCENT:
+        // Accent color (red)
+        color = UI_COLOR_PRIMARY;
+        break;
+    case IconVariant::DISABLED:
+        // Primary text color at 50% opacity
+        color = UI_COLOR_TEXT_PRIMARY;
+        opa = LV_OPA_50;
+        break;
+    case IconVariant::NONE:
+    default:
+        lv_obj_set_style_image_recolor_opa(obj, LV_OPA_TRANSP, LV_PART_MAIN);
+        return;
     }
 
     lv_obj_set_style_image_recolor(obj, color, LV_PART_MAIN);
@@ -161,7 +159,7 @@ static void apply_variant(lv_obj_t* obj, IconVariant variant) {
  * Called by LVGL XML parser when <icon> or <lv_image> is encountered
  */
 static void* ui_icon_xml_create(lv_xml_parser_state_t* state, const char** attrs) {
-    (void)attrs;  // Unused parameter
+    (void)attrs; // Unused parameter
     lv_obj_t* parent = (lv_obj_t*)lv_xml_state_get_parent(state);
     lv_obj_t* obj = lv_image_create(parent);
 
@@ -211,16 +209,13 @@ static void ui_icon_xml_apply(lv_xml_parser_state_t* state, const char** attrs) 
             } else {
                 spdlog::warn("[Icon] Icon image '{}' not found in XML registry", value);
             }
-        }
-        else if (strcmp(name, "size") == 0) {
+        } else if (strcmp(name, "size") == 0) {
             parse_size(value, &size);
             size_set = true;
-        }
-        else if (strcmp(name, "variant") == 0) {
+        } else if (strcmp(name, "variant") == 0) {
             variant = parse_variant(value);
             variant_set = true;
-        }
-        else if (strcmp(name, "color") == 0) {
+        } else if (strcmp(name, "color") == 0) {
             custom_color = lv_xml_to_color(value);
             custom_color_set = true;
         }

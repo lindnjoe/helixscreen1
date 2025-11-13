@@ -27,8 +27,9 @@
 #include "moonraker_client.h"
 #include "moonraker_error.h"
 #include "printer_state.h"
-#include <memory>
+
 #include <functional>
+#include <memory>
 #include <vector>
 
 /**
@@ -62,7 +63,7 @@ struct SafetyLimits {
  */
 struct FileInfo {
     std::string filename;
-    std::string path;           // Relative to root
+    std::string path; // Relative to root
     uint64_t size = 0;
     double modified = 0.0;
     std::string permissions;
@@ -81,15 +82,15 @@ struct FileMetadata {
     double print_start_time = 0.0;
     double job_id = 0.0;
     uint32_t layer_count = 0;
-    double object_height = 0.0;     // mm
-    double estimated_time = 0.0;    // seconds
-    double filament_total = 0.0;    // mm
-    double filament_weight_total = 0.0;  // grams
+    double object_height = 0.0;         // mm
+    double estimated_time = 0.0;        // seconds
+    double filament_total = 0.0;        // mm
+    double filament_weight_total = 0.0; // grams
     double first_layer_bed_temp = 0.0;
     double first_layer_extr_temp = 0.0;
     uint64_t gcode_start_byte = 0;
     uint64_t gcode_end_byte = 0;
-    std::vector<std::string> thumbnails;  // Base64 or paths
+    std::vector<std::string> thumbnails; // Base64 or paths
 };
 
 /**
@@ -99,7 +100,7 @@ struct FileMetadata {
  * All methods are asynchronous with success/error callbacks.
  */
 class MoonrakerAPI {
-public:
+  public:
     using SuccessCallback = std::function<void()>;
     using ErrorCallback = std::function<void(const MoonrakerError&)>;
     using FileListCallback = std::function<void(const std::vector<FileInfo>&)>;
@@ -129,11 +130,8 @@ public:
      * @param on_success Callback with file list
      * @param on_error Error callback
      */
-    void list_files(const std::string& root,
-                    const std::string& path,
-                    bool recursive,
-                    FileListCallback on_success,
-                    ErrorCallback on_error);
+    void list_files(const std::string& root, const std::string& path, bool recursive,
+                    FileListCallback on_success, ErrorCallback on_error);
 
     /**
      * @brief Get detailed metadata for a file
@@ -142,9 +140,8 @@ public:
      * @param on_success Callback with metadata
      * @param on_error Error callback
      */
-    void get_file_metadata(const std::string& filename,
-                          FileMetadataCallback on_success,
-                          ErrorCallback on_error);
+    void get_file_metadata(const std::string& filename, FileMetadataCallback on_success,
+                           ErrorCallback on_error);
 
     /**
      * @brief Delete a file
@@ -153,9 +150,8 @@ public:
      * @param on_success Success callback
      * @param on_error Error callback
      */
-    void delete_file(const std::string& filename,
-                    SuccessCallback on_success,
-                    ErrorCallback on_error);
+    void delete_file(const std::string& filename, SuccessCallback on_success,
+                     ErrorCallback on_error);
 
     /**
      * @brief Move or rename a file
@@ -165,10 +161,8 @@ public:
      * @param on_success Success callback
      * @param on_error Error callback
      */
-    void move_file(const std::string& source,
-                  const std::string& dest,
-                  SuccessCallback on_success,
-                  ErrorCallback on_error);
+    void move_file(const std::string& source, const std::string& dest, SuccessCallback on_success,
+                   ErrorCallback on_error);
 
     /**
      * @brief Copy a file
@@ -178,10 +172,8 @@ public:
      * @param on_success Success callback
      * @param on_error Error callback
      */
-    void copy_file(const std::string& source,
-                  const std::string& dest,
-                  SuccessCallback on_success,
-                  ErrorCallback on_error);
+    void copy_file(const std::string& source, const std::string& dest, SuccessCallback on_success,
+                   ErrorCallback on_error);
 
     /**
      * @brief Create a directory
@@ -190,9 +182,8 @@ public:
      * @param on_success Success callback
      * @param on_error Error callback
      */
-    void create_directory(const std::string& path,
-                         SuccessCallback on_success,
-                         ErrorCallback on_error);
+    void create_directory(const std::string& path, SuccessCallback on_success,
+                          ErrorCallback on_error);
 
     /**
      * @brief Delete a directory
@@ -202,10 +193,8 @@ public:
      * @param on_success Success callback
      * @param on_error Error callback
      */
-    void delete_directory(const std::string& path,
-                         bool force,
-                         SuccessCallback on_success,
-                         ErrorCallback on_error);
+    void delete_directory(const std::string& path, bool force, SuccessCallback on_success,
+                          ErrorCallback on_error);
 
     // ========================================================================
     // Job Control Operations
@@ -218,9 +207,8 @@ public:
      * @param on_success Success callback
      * @param on_error Error callback
      */
-    void start_print(const std::string& filename,
-                    SuccessCallback on_success,
-                    ErrorCallback on_error);
+    void start_print(const std::string& filename, SuccessCallback on_success,
+                     ErrorCallback on_error);
 
     /**
      * @brief Pause the current print
@@ -228,8 +216,7 @@ public:
      * @param on_success Success callback
      * @param on_error Error callback
      */
-    void pause_print(SuccessCallback on_success,
-                    ErrorCallback on_error);
+    void pause_print(SuccessCallback on_success, ErrorCallback on_error);
 
     /**
      * @brief Resume a paused print
@@ -237,8 +224,7 @@ public:
      * @param on_success Success callback
      * @param on_error Error callback
      */
-    void resume_print(SuccessCallback on_success,
-                     ErrorCallback on_error);
+    void resume_print(SuccessCallback on_success, ErrorCallback on_error);
 
     /**
      * @brief Cancel the current print
@@ -246,8 +232,7 @@ public:
      * @param on_success Success callback
      * @param on_error Error callback
      */
-    void cancel_print(SuccessCallback on_success,
-                     ErrorCallback on_error);
+    void cancel_print(SuccessCallback on_success, ErrorCallback on_error);
 
     // ========================================================================
     // Motion Control Operations
@@ -260,9 +245,7 @@ public:
      * @param on_success Success callback
      * @param on_error Error callback
      */
-    void home_axes(const std::string& axes,
-                  SuccessCallback on_success,
-                  ErrorCallback on_error);
+    void home_axes(const std::string& axes, SuccessCallback on_success, ErrorCallback on_error);
 
     /**
      * @brief Move an axis by a relative amount
@@ -273,11 +256,8 @@ public:
      * @param on_success Success callback
      * @param on_error Error callback
      */
-    void move_axis(char axis,
-                  double distance,
-                  double feedrate,
-                  SuccessCallback on_success,
-                  ErrorCallback on_error);
+    void move_axis(char axis, double distance, double feedrate, SuccessCallback on_success,
+                   ErrorCallback on_error);
 
     /**
      * @brief Set absolute position for an axis
@@ -288,11 +268,8 @@ public:
      * @param on_success Success callback
      * @param on_error Error callback
      */
-    void move_to_position(char axis,
-                         double position,
-                         double feedrate,
-                         SuccessCallback on_success,
-                         ErrorCallback on_error);
+    void move_to_position(char axis, double position, double feedrate, SuccessCallback on_success,
+                          ErrorCallback on_error);
 
     // ========================================================================
     // Temperature Control Operations
@@ -306,10 +283,8 @@ public:
      * @param on_success Success callback
      * @param on_error Error callback
      */
-    void set_temperature(const std::string& heater,
-                        double temperature,
-                        SuccessCallback on_success,
-                        ErrorCallback on_error);
+    void set_temperature(const std::string& heater, double temperature, SuccessCallback on_success,
+                         ErrorCallback on_error);
 
     /**
      * @brief Set fan speed
@@ -319,10 +294,8 @@ public:
      * @param on_success Success callback
      * @param on_error Error callback
      */
-    void set_fan_speed(const std::string& fan,
-                      double speed,
-                      SuccessCallback on_success,
-                      ErrorCallback on_error);
+    void set_fan_speed(const std::string& fan, double speed, SuccessCallback on_success,
+                       ErrorCallback on_error);
 
     // ========================================================================
     // System Control Operations
@@ -335,9 +308,8 @@ public:
      * @param on_success Success callback
      * @param on_error Error callback
      */
-    void execute_gcode(const std::string& gcode,
-                      SuccessCallback on_success,
-                      ErrorCallback on_error);
+    void execute_gcode(const std::string& gcode, SuccessCallback on_success,
+                       ErrorCallback on_error);
 
     /**
      * @brief Emergency stop
@@ -345,8 +317,7 @@ public:
      * @param on_success Success callback
      * @param on_error Error callback
      */
-    void emergency_stop(SuccessCallback on_success,
-                       ErrorCallback on_error);
+    void emergency_stop(SuccessCallback on_success, ErrorCallback on_error);
 
     /**
      * @brief Restart Klipper firmware
@@ -354,8 +325,7 @@ public:
      * @param on_success Success callback
      * @param on_error Error callback
      */
-    void restart_firmware(SuccessCallback on_success,
-                         ErrorCallback on_error);
+    void restart_firmware(SuccessCallback on_success, ErrorCallback on_error);
 
     /**
      * @brief Restart Klipper host process
@@ -363,8 +333,7 @@ public:
      * @param on_success Success callback
      * @param on_error Error callback
      */
-    void restart_klipper(SuccessCallback on_success,
-                        ErrorCallback on_error);
+    void restart_klipper(SuccessCallback on_success, ErrorCallback on_error);
 
     // ========================================================================
     // Query Operations
@@ -376,8 +345,7 @@ public:
      * @param on_result Callback with ready state
      * @param on_error Error callback
      */
-    void is_printer_ready(BoolCallback on_result,
-                         ErrorCallback on_error);
+    void is_printer_ready(BoolCallback on_result, ErrorCallback on_error);
 
     /**
      * @brief Get current print state
@@ -385,8 +353,7 @@ public:
      * @param on_result Callback with state ("standby", "printing", "paused", "complete", "error")
      * @param on_error Error callback
      */
-    void get_print_state(StringCallback on_result,
-                        ErrorCallback on_error);
+    void get_print_state(StringCallback on_result, ErrorCallback on_error);
 
     // ========================================================================
     // Safety Limits Configuration
@@ -422,16 +389,15 @@ public:
      * - stepper_* position_min/max → absolute position limits
      * - extruder/heater_* min_temp/max_temp → temperature limits
      *
-     * Only updates limits if set_safety_limits() has NOT been called (explicit config takes priority).
-     * Fallback to defaults if Moonraker query fails or values unavailable.
+     * Only updates limits if set_safety_limits() has NOT been called (explicit config takes
+     * priority). Fallback to defaults if Moonraker query fails or values unavailable.
      *
      * @param on_success Success callback
      * @param on_error Error callback
      */
-    void update_safety_limits_from_printer(SuccessCallback on_success,
-                                           ErrorCallback on_error);
+    void update_safety_limits_from_printer(SuccessCallback on_success, ErrorCallback on_error);
 
-private:
+  private:
     MoonrakerClient& client_;
 
     SafetyLimits safety_limits_;

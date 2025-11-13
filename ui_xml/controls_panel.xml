@@ -18,158 +18,63 @@
   You should have received a copy of the GNU General Public License
   along with HelixScreen. If not, see <https://www.gnu.org/licenses/>.
 -->
-
 <!-- Controls Panel Launcher - 6 Card Menu -->
 <component>
-	<view extends="lv_obj"
-	      name="controls_panel"
-	      width="100%"
-	      height="100%"
-	      style_pad_all="#padding_normal"
-	      style_border_width="0"
-	      flex_flow="row_wrap"
-	      style_pad_gap="#padding_normal"
-	      scrollable="true"
-	      scroll_dir="ver">
-
-				<!-- Card 1: Movement & Home -->
-				<ui_card name="card_motion"
-				         width="#launcher_card_width"
-				         height="#launcher_card_height"
-				         flex_flow="column"
-				         flex_main_place="center"
-				         flex_cross_place="center"
-				         style_radius="#border_radius_large"
-				         style_pad_all="#launcher_card_padding">
-
-					<!-- Icon -->
-					<icon src="mat_move"
-					      variant="accent"
-					      style_pad_bottom="#launcher_card_icon_padding"/>
-
-					<!-- Label -->
-					<text_body text="Movement &amp; Home"
-					           style_pad_bottom="#launcher_card_title_padding"/>
-
-					<!-- Subtitle -->
-					<text_small text="XYZ jog &amp; homing"/>
-				</ui_card>
-
-				<!-- Card 2: Nozzle Temperature -->
-				<ui_card name="card_nozzle_temp"
-				         width="#launcher_card_width"
-				         height="#launcher_card_height"
-				         flex_flow="column"
-				         flex_main_place="center"
-				         flex_cross_place="center"
-				         style_radius="#border_radius_large"
-				         style_pad_all="#launcher_card_padding">
-
-					<!-- Icon -->
-					<icon src="mat_heater"
-					      variant="accent"
-					      style_pad_bottom="#launcher_card_icon_padding"/>
-
-					<!-- Label -->
-					<text_body text="Nozzle Temp"
-					           style_pad_bottom="#launcher_card_title_padding"/>
-
-					<!-- Subtitle -->
-					<text_small text="Heat nozzle"/>
-				</ui_card>
-
-				<!-- Card 3: Heatbed Temperature -->
-				<ui_card name="card_bed_temp"
-				         width="#launcher_card_width"
-				         height="#launcher_card_height"
-				         flex_flow="column"
-				         flex_main_place="center"
-				         flex_cross_place="center"
-				         style_radius="#border_radius_large"
-				         style_pad_all="#launcher_card_padding">
-
-					<!-- Icon -->
-					<icon src="mat_bed"
-					      variant="accent"
-					      style_pad_bottom="#launcher_card_icon_padding"/>
-
-					<!-- Label -->
-					<text_body text="Heatbed Temp"
-					           style_pad_bottom="#launcher_card_title_padding"/>
-
-					<!-- Subtitle -->
-					<text_small text="Heat bed"/>
-				</ui_card>
-
-				<!-- Card 4: Extrude/Retract -->
-				<ui_card name="card_extrusion"
-				         width="#launcher_card_width"
-				         height="#launcher_card_height"
-				         flex_flow="column"
-				         flex_main_place="center"
-				         flex_cross_place="center"
-				         style_radius="#border_radius_large"
-				         style_pad_all="#launcher_card_padding">
-
-					<!-- Icon -->
-					<icon src="mat_extrude"
-					      variant="accent"
-					      style_pad_bottom="#launcher_card_icon_padding"/>
-
-					<!-- Label -->
-					<text_body text="Extrude/Retract"
-					           style_pad_bottom="#launcher_card_title_padding"/>
-
-					<!-- Subtitle -->
-					<text_small text="Filament control"/>
-				</ui_card>
-
-				<!-- Card 5: Fan Control (Phase 2 - Placeholder) -->
-				<ui_card name="card_fan"
-				         width="#launcher_card_width"
-				         height="#launcher_card_height"
-				         flex_flow="column"
-				         flex_main_place="center"
-				         flex_cross_place="center"
-				         style_radius="#border_radius_large"
-				         style_pad_all="#launcher_card_padding"
-				         style_opa="128">  <!-- Disabled appearance -->
-
-					<!-- Icon -->
-					<icon src="mat_fan"
-					      variant="secondary"
-					      style_pad_bottom="#launcher_card_icon_padding"/>
-
-					<!-- Label -->
-					<text_body text="Fan Control"
-					           style_pad_bottom="#launcher_card_title_padding"/>
-
-					<!-- Subtitle -->
-					<text_small text="Coming soon"/>
-				</ui_card>
-
-				<!-- Card 6: Motors Disable -->
-				<ui_card name="card_motors"
-				         width="#launcher_card_width"
-				         height="#launcher_card_height"
-				         flex_flow="column"
-				         flex_main_place="center"
-				         flex_cross_place="center"
-				         style_radius="#border_radius_large"
-				         style_pad_all="#launcher_card_padding">
-
-					<!-- Icon -->
-					<icon src="mat_motor_off"
-					      variant="accent"
-					      style_pad_bottom="#launcher_card_icon_padding"/>
-
-					<!-- Label -->
-					<text_body text="Motors Disable"
-					           style_pad_bottom="#launcher_card_title_padding"/>
-
-					<!-- Subtitle -->
-					<text_small text="Release steppers"/>
-		</ui_card>
-
-	</view>
+  <view extends="lv_obj" name="controls_panel" width="100%" height="100%" style_pad_all="#padding_normal" style_border_width="0" flex_flow="row_wrap" style_pad_gap="#padding_normal" scrollable="true" scroll_dir="ver">
+    <!-- Card 1: Movement & Home -->
+    <ui_card name="card_motion" width="#launcher_card_width" height="#launcher_card_height" flex_flow="column" flex_main_place="center" flex_cross_place="center" style_radius="#border_radius_large" style_pad_all="#launcher_card_padding">
+      <!-- Icon -->
+      <icon src="mat_move" variant="accent" style_pad_bottom="#launcher_card_icon_padding"/>
+      <!-- Label -->
+      <text_body text="Movement &amp; Home" style_pad_bottom="#launcher_card_title_padding"/>
+      <!-- Subtitle -->
+      <text_small text="XYZ jog &amp; homing"/>
+    </ui_card>
+    <!-- Card 2: Nozzle Temperature -->
+    <ui_card name="card_nozzle_temp" width="#launcher_card_width" height="#launcher_card_height" flex_flow="column" flex_main_place="center" flex_cross_place="center" style_radius="#border_radius_large" style_pad_all="#launcher_card_padding">
+      <!-- Icon -->
+      <icon src="mat_heater" variant="accent" style_pad_bottom="#launcher_card_icon_padding"/>
+      <!-- Label -->
+      <text_body text="Nozzle Temp" style_pad_bottom="#launcher_card_title_padding"/>
+      <!-- Subtitle -->
+      <text_small text="Heat nozzle"/>
+    </ui_card>
+    <!-- Card 3: Heatbed Temperature -->
+    <ui_card name="card_bed_temp" width="#launcher_card_width" height="#launcher_card_height" flex_flow="column" flex_main_place="center" flex_cross_place="center" style_radius="#border_radius_large" style_pad_all="#launcher_card_padding">
+      <!-- Icon -->
+      <icon src="mat_bed" variant="accent" style_pad_bottom="#launcher_card_icon_padding"/>
+      <!-- Label -->
+      <text_body text="Heatbed Temp" style_pad_bottom="#launcher_card_title_padding"/>
+      <!-- Subtitle -->
+      <text_small text="Heat bed"/>
+    </ui_card>
+    <!-- Card 4: Extrude/Retract -->
+    <ui_card name="card_extrusion" width="#launcher_card_width" height="#launcher_card_height" flex_flow="column" flex_main_place="center" flex_cross_place="center" style_radius="#border_radius_large" style_pad_all="#launcher_card_padding">
+      <!-- Icon -->
+      <icon src="mat_extrude" variant="accent" style_pad_bottom="#launcher_card_icon_padding"/>
+      <!-- Label -->
+      <text_body text="Extrude/Retract" style_pad_bottom="#launcher_card_title_padding"/>
+      <!-- Subtitle -->
+      <text_small text="Filament control"/>
+    </ui_card>
+    <!-- Card 5: Fan Control (Phase 2 - Placeholder) -->
+    <ui_card name="card_fan" width="#launcher_card_width" height="#launcher_card_height" flex_flow="column" flex_main_place="center" flex_cross_place="center" style_radius="#border_radius_large" style_pad_all="#launcher_card_padding" style_opa="128">
+      <!-- Disabled appearance -->
+      <!-- Icon -->
+      <icon src="mat_fan" variant="secondary" style_pad_bottom="#launcher_card_icon_padding"/>
+      <!-- Label -->
+      <text_body text="Fan Control" style_pad_bottom="#launcher_card_title_padding"/>
+      <!-- Subtitle -->
+      <text_small text="Coming soon"/>
+    </ui_card>
+    <!-- Card 6: Motors Disable -->
+    <ui_card name="card_motors" width="#launcher_card_width" height="#launcher_card_height" flex_flow="column" flex_main_place="center" flex_cross_place="center" style_radius="#border_radius_large" style_pad_all="#launcher_card_padding">
+      <!-- Icon -->
+      <icon src="mat_motor_off" variant="accent" style_pad_bottom="#launcher_card_icon_padding"/>
+      <!-- Label -->
+      <text_body text="Motors Disable" style_pad_bottom="#launcher_card_title_padding"/>
+      <!-- Subtitle -->
+      <text_small text="Release steppers"/>
+    </ui_card>
+  </view>
 </component>

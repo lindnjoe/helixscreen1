@@ -22,11 +22,15 @@
  */
 
 #include "ui_nav.h"
-#include "ui_theme.h"
+
 #include "ui_fonts.h"
+#include "ui_theme.h"
+
 #include "lvgl/lvgl.h"
+
 #include <spdlog/spdlog.h>
-#include <cstdlib>  // for atoi
+
+#include <cstdlib> // for atoi
 #include <vector>
 
 // Active panel tracking
@@ -63,9 +67,9 @@ static void active_panel_observer_cb(lv_observer_t* /*observer*/, lv_subject_t* 
         lv_subject_set_color(&icon_color_subjects[i], UI_COLOR_PRIMARY);
 
         if (i == new_active_panel) {
-            lv_subject_set_int(&icon_opacity_subjects[i], LV_OPA_COVER);  // 100% opacity (active)
+            lv_subject_set_int(&icon_opacity_subjects[i], LV_OPA_COVER); // 100% opacity (active)
         } else {
-            lv_subject_set_int(&icon_opacity_subjects[i], LV_OPA_50);     // 50% opacity (inactive)
+            lv_subject_set_int(&icon_opacity_subjects[i], LV_OPA_50); // 50% opacity (inactive)
         }
     }
 
@@ -110,7 +114,7 @@ static void nav_button_clicked_cb(lv_event_t* e) {
             for (uint32_t i = 0; i < lv_obj_get_child_count(screen); i++) {
                 lv_obj_t* child = lv_obj_get_child(screen, i);
                 if (lv_obj_has_flag(child, LV_OBJ_FLAG_HIDDEN)) {
-                    continue;  // Already hidden
+                    continue; // Already hidden
                 }
 
                 // Don't hide app_layout (contains navbar + panels)
@@ -151,7 +155,8 @@ static void nav_button_clicked_cb(lv_event_t* e) {
         if (new_panel) {
             lv_obj_remove_flag(new_panel, LV_OBJ_FLAG_HIDDEN);
             panel_stack.push_back(new_panel);
-            spdlog::debug("Showing panel {} (stack depth: {})", (void*)new_panel, panel_stack.size());
+            spdlog::debug("Showing panel {} (stack depth: {})", (void*)new_panel,
+                          panel_stack.size());
         }
 
         // Update active panel state (triggers icon colors, etc.)
@@ -177,9 +182,9 @@ void ui_nav_init() {
 
         // Home icon starts active (100% opacity), others inactive (50% opacity)
         if (i == UI_PANEL_HOME) {
-            lv_subject_init_int(&icon_opacity_subjects[i], LV_OPA_COVER);  // Active: 100%
+            lv_subject_init_int(&icon_opacity_subjects[i], LV_OPA_COVER); // Active: 100%
         } else {
-            lv_subject_init_int(&icon_opacity_subjects[i], LV_OPA_50);     // Inactive: 50%
+            lv_subject_init_int(&icon_opacity_subjects[i], LV_OPA_50); // Inactive: 50%
         }
     }
 
@@ -230,7 +235,7 @@ void ui_nav_wire_events(lv_obj_t* navbar) {
     // Determine responsive sizing based on screen height using theme constants
     lv_display_t* display = lv_display_get_default();
     int32_t screen_height = lv_display_get_vertical_resolution(display);
-    uint16_t icon_scale;  // 256 = 100%, 128 = 50%, etc.
+    uint16_t icon_scale; // 256 = 100%, 128 = 50%, etc.
     lv_coord_t button_size;
     lv_coord_t nav_padding;
     lv_coord_t nav_width;
@@ -251,24 +256,24 @@ void ui_nav_wire_events(lv_obj_t* navbar) {
         button_size = UI_NAV_BUTTON_SIZE_SMALL;
         nav_padding = UI_NAV_PADDING_SMALL;
         nav_width = UI_NAV_WIDTH_SMALL;
-        spdlog::debug("Small nav sizing (h={}): width={}, buttons={}, padding={}",
-                      screen_height, nav_width, button_size, nav_padding);
+        spdlog::debug("Small nav sizing (h={}): width={}, buttons={}, padding={}", screen_height,
+                      nav_width, button_size, nav_padding);
     } else if (screen_height <= UI_SCREEN_MEDIUM_H) {
         // Medium screens (600px): 70px buttons, 12px padding, 94px width
         icon_scale = 192;
         button_size = UI_NAV_BUTTON_SIZE_MEDIUM;
         nav_padding = UI_NAV_PADDING_MEDIUM;
         nav_width = UI_NAV_WIDTH_MEDIUM;
-        spdlog::debug("Medium nav sizing (h={}): width={}, buttons={}, padding={}",
-                      screen_height, nav_width, button_size, nav_padding);
+        spdlog::debug("Medium nav sizing (h={}): width={}, buttons={}, padding={}", screen_height,
+                      nav_width, button_size, nav_padding);
     } else {
         // Large screens (720px+): 70px buttons, 16px padding, 102px width
         icon_scale = 256;
         button_size = UI_NAV_BUTTON_SIZE_LARGE;
         nav_padding = UI_NAV_PADDING_LARGE;
         nav_width = UI_NAV_WIDTH_LARGE;
-        spdlog::debug("Large nav sizing (h={}): width={}, buttons={}, padding={}",
-                      screen_height, nav_width, button_size, nav_padding);
+        spdlog::debug("Large nav sizing (h={}): width={}, buttons={}, padding={}", screen_height,
+                      nav_width, button_size, nav_padding);
     }
 
     // Apply responsive width and padding to navbar container
@@ -276,8 +281,10 @@ void ui_nav_wire_events(lv_obj_t* navbar) {
     lv_obj_set_style_pad_all(navbar, nav_padding, LV_PART_MAIN);
 
     // Name-based widget lookup for navigation buttons and icons (order matches ui_panel_id_t enum)
-    const char* button_names[] = {"nav_btn_home", "nav_btn_print_select", "nav_btn_controls", "nav_btn_filament", "nav_btn_settings", "nav_btn_advanced"};
-    const char* icon_names[] = {"nav_icon_home", "nav_icon_print_select", "nav_icon_controls", "nav_icon_filament", "nav_icon_settings", "nav_icon_advanced"};
+    const char* button_names[] = {"nav_btn_home",     "nav_btn_print_select", "nav_btn_controls",
+                                  "nav_btn_filament", "nav_btn_settings",     "nav_btn_advanced"};
+    const char* icon_names[] = {"nav_icon_home",     "nav_icon_print_select", "nav_icon_controls",
+                                "nav_icon_filament", "nav_icon_settings",     "nav_icon_advanced"};
 
     // Bind colors to icon widgets and add click event handlers to buttons
     for (int i = 0; i < UI_PANEL_COUNT; i++) {
@@ -285,7 +292,8 @@ void ui_nav_wire_events(lv_obj_t* navbar) {
         lv_obj_t* icon_widget = lv_obj_find_by_name(navbar, icon_names[i]);
 
         if (!btn || !icon_widget) {
-            spdlog::error("Failed to find nav button/icon {}: btn={}, icon={}", i, (void*)btn, (void*)icon_widget);
+            spdlog::error("Failed to find nav button/icon {}: btn={}, icon={}", i, (void*)btn,
+                          (void*)icon_widget);
             continue;
         }
 
@@ -302,10 +310,12 @@ void ui_nav_wire_events(lv_obj_t* navbar) {
         lv_image_set_scale(icon_widget, icon_scale);
 
         // Bind img_recolor to icon color subject
-        lv_subject_add_observer_obj(&icon_color_subjects[i], icon_image_color_observer_cb, icon_widget, NULL);
+        lv_subject_add_observer_obj(&icon_color_subjects[i], icon_image_color_observer_cb,
+                                    icon_widget, NULL);
 
         // Bind opacity to icon opacity subject
-        lv_subject_add_observer_obj(&icon_opacity_subjects[i], icon_image_opacity_observer_cb, icon_widget, NULL);
+        lv_subject_add_observer_obj(&icon_opacity_subjects[i], icon_image_opacity_observer_cb,
+                                    icon_widget, NULL);
 
         // Make icon widget non-clickable so clicks pass through to button
         lv_obj_add_flag(icon_widget, LV_OBJ_FLAG_EVENT_BUBBLE);
@@ -322,9 +332,9 @@ void ui_nav_wire_events(lv_obj_t* navbar) {
         lv_subject_set_color(&icon_color_subjects[i], UI_COLOR_PRIMARY);
 
         if (i == active_panel) {
-            lv_subject_set_int(&icon_opacity_subjects[i], LV_OPA_COVER);  // Active: 100%
+            lv_subject_set_int(&icon_opacity_subjects[i], LV_OPA_COVER); // Active: 100%
         } else {
-            lv_subject_set_int(&icon_opacity_subjects[i], LV_OPA_50);     // Inactive: 50%
+            lv_subject_set_int(&icon_opacity_subjects[i], LV_OPA_50); // Inactive: 50%
         }
     }
 }
@@ -373,7 +383,8 @@ void ui_nav_set_panels(lv_obj_t** panels) {
     panel_stack.clear();
     if (panel_widgets[active_panel]) {
         panel_stack.push_back(panel_widgets[active_panel]);
-        spdlog::debug("Panel stack initialized with active panel {}", (void*)panel_widgets[active_panel]);
+        spdlog::debug("Panel stack initialized with active panel {}",
+                      (void*)panel_widgets[active_panel]);
     }
 
     spdlog::info("Panel widgets registered for show/hide management");
@@ -397,7 +408,8 @@ void ui_nav_push_overlay(lv_obj_t* overlay_panel) {
     lv_obj_move_foreground(overlay_panel);
     panel_stack.push_back(overlay_panel);
 
-    spdlog::debug("Showing overlay panel {} (stack depth: {})", (void*)overlay_panel, panel_stack.size());
+    spdlog::debug("Showing overlay panel {} (stack depth: {})", (void*)overlay_panel,
+                  panel_stack.size());
 }
 
 bool ui_nav_go_back() {
@@ -407,7 +419,8 @@ bool ui_nav_go_back() {
     // This handles cases where panels were shown via command line or other means
     lv_obj_t* screen = lv_screen_active();
     if (screen) {
-        spdlog::debug("Scanning {} screen children for overlays to hide", lv_obj_get_child_count(screen));
+        spdlog::debug("Scanning {} screen children for overlays to hide",
+                      lv_obj_get_child_count(screen));
         for (uint32_t i = 0; i < lv_obj_get_child_count(screen); i++) {
             lv_obj_t* child = lv_obj_get_child(screen, i);
 
@@ -490,8 +503,8 @@ bool ui_nav_go_back() {
     }
 
     lv_obj_remove_flag(previous_panel, LV_OBJ_FLAG_HIDDEN);
-    spdlog::debug("Showing previous panel {} (stack depth: {}, is_main={})",
-                  (void*)previous_panel, panel_stack.size(), is_main_panel);
+    spdlog::debug("Showing previous panel {} (stack depth: {}, is_main={})", (void*)previous_panel,
+                  panel_stack.size(), is_main_panel);
 
     return true;
 }
