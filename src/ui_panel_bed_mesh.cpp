@@ -165,39 +165,6 @@ static void back_button_cb(lv_event_t* e) {
     }
 }
 
-// Create test mesh data (10x10 dome/bowl shape)
-static void create_test_mesh_data(std::vector<std::vector<float>>& mesh_data) {
-    const int rows = 10;
-    const int cols = 10;
-
-    mesh_data.clear();
-    mesh_data.resize(rows);
-
-    // Create dome shape: highest in center, lower at edges
-    float center_x = cols / 2.0f;
-    float center_y = rows / 2.0f;
-    float max_radius = std::min(center_x, center_y);
-
-    for (int row = 0; row < rows; row++) {
-        mesh_data[row].resize(cols);
-        for (int col = 0; col < cols; col++) {
-            // Distance from center
-            float dx = col - center_x;
-            float dy = row - center_y;
-            float dist = std::sqrt(dx * dx + dy * dy);
-
-            // Dome shape: height decreases with distance from center
-            // Z values from 0.0 to 0.5mm (realistic bed mesh range)
-            float normalized_dist = dist / max_radius;
-            float height = 0.5f * (1.0f - normalized_dist * normalized_dist);
-
-            mesh_data[row][col] = height;
-        }
-    }
-
-    spdlog::info("[BedMesh] Created test mesh data: {}x{} dome shape", rows, cols);
-}
-
 // Update UI subjects when bed mesh data changes
 static void on_bed_mesh_update(const MoonrakerClient::BedMeshProfile& mesh) {
     if (mesh.probed_matrix.empty()) {
@@ -248,7 +215,13 @@ void ui_panel_bed_mesh_init_subjects() {
     lv_subject_init_string(&bed_mesh_z_range, z_range_buf, z_range_prev_buf, sizeof(z_range_buf),
                            "");
 
-    spdlog::debug("[BedMesh] Subjects initialized");
+    // Register subjects for XML bindings
+    lv_xml_register_subject(NULL, "bed_mesh_available", &bed_mesh_available);
+    lv_xml_register_subject(NULL, "bed_mesh_profile_name", &bed_mesh_profile_name);
+    lv_xml_register_subject(NULL, "bed_mesh_dimensions", &bed_mesh_dimensions);
+    lv_xml_register_subject(NULL, "bed_mesh_z_range", &bed_mesh_z_range);
+
+    spdlog::debug("[BedMesh] Subjects initialized and registered");
 }
 
 void ui_panel_bed_mesh_setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
@@ -346,15 +319,12 @@ void ui_panel_bed_mesh_setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
         spdlog::debug("[BedMesh] Registered Moonraker callback for mesh updates");
     }
 
-    // Load initial mesh data from MoonrakerClient
+    // Load initial mesh data from MoonrakerClient (mock or real)
     if (client && client->has_bed_mesh()) {
         on_bed_mesh_update(client->get_active_bed_mesh());
     } else {
-        // Fall back to test mesh if no real data
-        spdlog::warn("[BedMesh] No mesh data from Moonraker, using test mesh");
-        std::vector<std::vector<float>> test_mesh;
-        create_test_mesh_data(test_mesh);
-        ui_panel_bed_mesh_set_data(test_mesh);
+        spdlog::info("[BedMesh] No mesh data available from Moonraker");
+        // Panel will show "No mesh data" via subjects initialized in init_subjects()
     }
 
     // Register cleanup handler
@@ -389,7 +359,22 @@ void ui_panel_bed_mesh_set_data(const std::vector<std::vector<float>>& mesh_data
         return;
     }
 
-    // Info labels are updated reactively via subjects
+    // Update subjects for info labels
+    snprintf(dimensions_buf, sizeof(dimensions_buf), "%dx%d points", cols, rows);
+    lv_subject_copy_string(&bed_mesh_dimensions, dimensions_buf);
+
+    // Calculate Z range from mesh data
+    float min_z = std::numeric_limits<float>::max();
+    float max_z = std::numeric_limits<float>::lowest();
+    for (const auto& row : mesh_data) {
+        for (float val : row) {
+            min_z = std::min(min_z, val);
+            max_z = std::max(max_z, val);
+        }
+    }
+
+    snprintf(z_range_buf, sizeof(z_range_buf), "Z: %.3f to %.3f mm", min_z, max_z);
+    lv_subject_copy_string(&bed_mesh_z_range, z_range_buf);
 }
 
 void ui_panel_bed_mesh_redraw() {
