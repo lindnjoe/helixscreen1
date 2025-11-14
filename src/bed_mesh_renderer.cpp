@@ -71,6 +71,8 @@ static void render_quad(lv_obj_t* canvas, const bed_mesh_quad_3d_t& quad, int ca
                         int canvas_height, const bed_mesh_view_state_t* view, bool use_gradient);
 static void render_grid_lines(lv_obj_t* canvas, const bed_mesh_renderer_t* renderer,
                               int canvas_width, int canvas_height);
+static void render_axis_labels(lv_obj_t* canvas, const bed_mesh_renderer_t* renderer,
+                               int canvas_width, int canvas_height);
 
 // Public API implementation
 
@@ -302,6 +304,9 @@ bool bed_mesh_renderer_render(bed_mesh_renderer_t* renderer, lv_obj_t* canvas) {
 
     // Render wireframe grid on top
     render_grid_lines(canvas, renderer, canvas_width, canvas_height);
+
+    // Render axis labels
+    render_axis_labels(canvas, renderer, canvas_width, canvas_height);
 
     // Invalidate canvas for LVGL redraw
     lv_obj_invalidate(canvas);
@@ -820,6 +825,133 @@ static void render_grid_lines(lv_obj_t* canvas, const bed_mesh_renderer_t* rende
                 lv_draw_line(&layer, &line_dsc);
             }
         }
+    }
+
+    // Finish layer and apply to canvas
+    lv_canvas_finish_layer(canvas, &layer);
+}
+
+/**
+ * Render axis labels (X, Y, Z indicators)
+ * Draws labels at key positions on the mesh to indicate axis orientation
+ */
+static void render_axis_labels(lv_obj_t* canvas, const bed_mesh_renderer_t* renderer,
+                               int canvas_width, int canvas_height) {
+    if (!renderer || !renderer->has_mesh_data) {
+        return;
+    }
+
+    // Initialize canvas layer for drawing
+    lv_layer_t layer;
+    lv_canvas_init_layer(canvas, &layer);
+
+    // Center mesh Z values (matching grid/quad calculations)
+    double z_center = (renderer->mesh_min_z + renderer->mesh_max_z) / 2.0;
+    double grid_z = -z_center * renderer->view_state.z_scale; // At base of mesh
+
+    // Configure axis line drawing style (brighter than grid lines)
+    lv_draw_line_dsc_t axis_line_dsc;
+    lv_draw_line_dsc_init(&axis_line_dsc);
+    axis_line_dsc.color = lv_color_make(180, 180, 180); // Light gray
+    axis_line_dsc.width = 1;
+    axis_line_dsc.opa = LV_OPA_80;
+
+    // Draw X-axis line (from left to right along front edge)
+    double x_axis_start_x = (0 - renderer->cols / 2.0) * BED_MESH_SCALE;
+    double x_axis_end_x = ((renderer->cols - 1) - renderer->cols / 2.0) * BED_MESH_SCALE;
+    double x_axis_y = ((renderer->rows - 1) - renderer->rows / 2.0) * BED_MESH_SCALE; // Front edge
+
+    bed_mesh_point_3d_t x_start = project_3d_to_2d(x_axis_start_x, x_axis_y, grid_z, canvas_width,
+                                                   canvas_height, &renderer->view_state);
+    bed_mesh_point_3d_t x_end = project_3d_to_2d(x_axis_end_x, x_axis_y, grid_z, canvas_width,
+                                                 canvas_height, &renderer->view_state);
+
+    axis_line_dsc.p1.x = static_cast<lv_value_precise_t>(x_start.screen_x);
+    axis_line_dsc.p1.y = static_cast<lv_value_precise_t>(x_start.screen_y);
+    axis_line_dsc.p2.x = static_cast<lv_value_precise_t>(x_end.screen_x);
+    axis_line_dsc.p2.y = static_cast<lv_value_precise_t>(x_end.screen_y);
+    lv_draw_line(&layer, &axis_line_dsc);
+
+    // Draw Y-axis line (from front to back along left edge)
+    double y_axis_start_y = ((renderer->rows - 1) - renderer->rows / 2.0) * BED_MESH_SCALE;
+    double y_axis_end_y = (0 - renderer->rows / 2.0) * BED_MESH_SCALE;
+    double y_axis_x = (0 - renderer->cols / 2.0) * BED_MESH_SCALE; // Left edge
+
+    bed_mesh_point_3d_t y_start = project_3d_to_2d(y_axis_x, y_axis_start_y, grid_z, canvas_width,
+                                                   canvas_height, &renderer->view_state);
+    bed_mesh_point_3d_t y_end = project_3d_to_2d(y_axis_x, y_axis_end_y, grid_z, canvas_width,
+                                                 canvas_height, &renderer->view_state);
+
+    axis_line_dsc.p1.x = static_cast<lv_value_precise_t>(y_start.screen_x);
+    axis_line_dsc.p1.y = static_cast<lv_value_precise_t>(y_start.screen_y);
+    axis_line_dsc.p2.x = static_cast<lv_value_precise_t>(y_end.screen_x);
+    axis_line_dsc.p2.y = static_cast<lv_value_precise_t>(y_end.screen_y);
+    lv_draw_line(&layer, &axis_line_dsc);
+
+    // Draw Z-axis line (vertical from origin)
+    double z_axis_x = (0 - renderer->cols / 2.0) * BED_MESH_SCALE;
+    double z_axis_y = ((renderer->rows - 1) - renderer->rows / 2.0) * BED_MESH_SCALE;
+    double z_axis_bottom = grid_z;
+    double z_axis_top = (renderer->mesh_max_z - z_center) * renderer->view_state.z_scale * 1.1;
+
+    bed_mesh_point_3d_t z_start = project_3d_to_2d(z_axis_x, z_axis_y, z_axis_bottom, canvas_width,
+                                                   canvas_height, &renderer->view_state);
+    bed_mesh_point_3d_t z_end = project_3d_to_2d(z_axis_x, z_axis_y, z_axis_top, canvas_width,
+                                                 canvas_height, &renderer->view_state);
+
+    axis_line_dsc.p1.x = static_cast<lv_value_precise_t>(z_start.screen_x);
+    axis_line_dsc.p1.y = static_cast<lv_value_precise_t>(z_start.screen_y);
+    axis_line_dsc.p2.x = static_cast<lv_value_precise_t>(z_end.screen_x);
+    axis_line_dsc.p2.y = static_cast<lv_value_precise_t>(z_end.screen_y);
+    lv_draw_line(&layer, &axis_line_dsc);
+
+    // Configure label drawing style
+    lv_draw_label_dsc_t label_dsc;
+    lv_draw_label_dsc_init(&label_dsc);
+    label_dsc.color = lv_color_white();
+    label_dsc.font = &lv_font_montserrat_14;
+    label_dsc.opa = LV_OPA_90;
+    label_dsc.align = LV_TEXT_ALIGN_CENTER;
+
+    // Position labels at the end of each axis line
+    bed_mesh_point_3d_t x_pos = x_end; // Right end of X-axis
+    bed_mesh_point_3d_t y_pos = y_end; // Back end of Y-axis
+    bed_mesh_point_3d_t z_pos = z_end; // Top of Z-axis
+
+    // Draw X label
+    if (x_pos.screen_x >= 10 && x_pos.screen_x < canvas_width - 10 && x_pos.screen_y >= 10 &&
+        x_pos.screen_y < canvas_height - 10) {
+        label_dsc.text = "X";
+        lv_area_t x_area;
+        x_area.x1 = x_pos.screen_x + 5;
+        x_area.y1 = x_pos.screen_y - 7;
+        x_area.x2 = x_area.x1 + 14;
+        x_area.y2 = x_area.y1 + 14;
+        lv_draw_label(&layer, &label_dsc, &x_area);
+    }
+
+    // Draw Y label
+    if (y_pos.screen_x >= 10 && y_pos.screen_x < canvas_width - 10 && y_pos.screen_y >= 10 &&
+        y_pos.screen_y < canvas_height - 10) {
+        label_dsc.text = "Y";
+        lv_area_t y_area;
+        y_area.x1 = y_pos.screen_x - 15;
+        y_area.y1 = y_pos.screen_y - 20;
+        y_area.x2 = y_area.x1 + 14;
+        y_area.y2 = y_area.y1 + 14;
+        lv_draw_label(&layer, &label_dsc, &y_area);
+    }
+
+    // Draw Z label
+    if (z_pos.screen_x >= 10 && z_pos.screen_x < canvas_width - 10 && z_pos.screen_y >= 10 &&
+        z_pos.screen_y < canvas_height - 10) {
+        label_dsc.text = "Z";
+        lv_area_t z_area;
+        z_area.x1 = z_pos.screen_x - 25;
+        z_area.y1 = z_pos.screen_y - 7;
+        z_area.x2 = z_area.x1 + 14;
+        z_area.y2 = z_area.y1 + 14;
+        lv_draw_label(&layer, &label_dsc, &z_area);
     }
 
     // Finish layer and apply to canvas

@@ -34,13 +34,7 @@
 
 #include <cstdlib>
 
-// Canvas dimensions (600×400 RGB888 = 720,000 bytes)
-#define BED_MESH_CANVAS_WIDTH 600
-#define BED_MESH_CANVAS_HEIGHT 400
-
-// Rotation angle defaults
-#define ROTATION_X_DEFAULT (-45)
-#define ROTATION_Z_DEFAULT 45
+// Canvas dimensions and rotation defaults are now in ui_bed_mesh.h
 
 /**
  * Widget instance data stored in user_data
@@ -171,8 +165,8 @@ static void* bed_mesh_xml_create(lv_xml_parser_state_t* state, const char** attr
     }
 
     // Set default rotation angles
-    data->rotation_x = ROTATION_X_DEFAULT;
-    data->rotation_z = ROTATION_Z_DEFAULT;
+    data->rotation_x = BED_MESH_ROTATION_X_DEFAULT;
+    data->rotation_z = BED_MESH_ROTATION_Z_DEFAULT;
     bed_mesh_renderer_set_rotation(data->renderer, data->rotation_x, data->rotation_z);
 
     // Set canvas buffer

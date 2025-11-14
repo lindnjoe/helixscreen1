@@ -30,6 +30,18 @@
 extern "C" {
 #endif
 
+// Bed mesh canvas dimensions
+#define BED_MESH_CANVAS_WIDTH 600
+#define BED_MESH_CANVAS_HEIGHT 400
+
+// Rotation angle ranges and defaults
+#define BED_MESH_ROTATION_X_MIN (-85)
+#define BED_MESH_ROTATION_X_MAX (-10)
+#define BED_MESH_ROTATION_X_DEFAULT (-80)
+#define BED_MESH_ROTATION_Z_MIN 0
+#define BED_MESH_ROTATION_Z_MAX 360
+#define BED_MESH_ROTATION_Z_DEFAULT 45
+
 /**
  * @brief Register <bed_mesh> widget with LVGL XML system
  *

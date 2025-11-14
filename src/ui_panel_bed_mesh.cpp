@@ -39,17 +39,7 @@
 
 using json = nlohmann::json;
 
-// Canvas dimensions (must match ui_bed_mesh widget: 600×400 RGB888)
-#define CANVAS_WIDTH 600
-#define CANVAS_HEIGHT 400
-
-// Rotation angle ranges
-#define ROTATION_X_MIN (-85)
-#define ROTATION_X_MAX (-10)
-#define ROTATION_X_DEFAULT (-45)
-#define ROTATION_Z_MIN 0
-#define ROTATION_Z_MAX 360
-#define ROTATION_Z_DEFAULT 45
+// Rotation constants are now in ui_bed_mesh.h
 
 // Static state
 static lv_obj_t* canvas = nullptr;
@@ -61,8 +51,8 @@ static lv_obj_t* bed_mesh_panel = nullptr;
 static lv_obj_t* parent_obj = nullptr;
 
 // Current rotation angles (for slider state tracking)
-static int current_rotation_x = ROTATION_X_DEFAULT;
-static int current_rotation_z = ROTATION_Z_DEFAULT;
+static int current_rotation_x = BED_MESH_ROTATION_X_DEFAULT;
+static int current_rotation_z = BED_MESH_ROTATION_Z_DEFAULT;
 
 // Reactive subjects for bed mesh data
 static lv_subject_t bed_mesh_available;    // 0 = no mesh, 1 = mesh loaded
@@ -98,8 +88,9 @@ static void rotation_x_slider_cb(lv_event_t* e) {
     // Read slider value (0-100)
     int32_t slider_value = lv_slider_get_value(slider);
 
-    // Map to rotation angle range (-85 to -10)
-    current_rotation_x = ROTATION_X_MIN + (slider_value * (ROTATION_X_MAX - ROTATION_X_MIN)) / 100;
+    // Map to rotation angle range
+    current_rotation_x = BED_MESH_ROTATION_X_MIN +
+                         (slider_value * (BED_MESH_ROTATION_X_MAX - BED_MESH_ROTATION_X_MIN)) / 100;
 
     // Update label
     if (rotation_x_label) {
@@ -123,8 +114,8 @@ static void rotation_z_slider_cb(lv_event_t* e) {
     // Read slider value (0-100)
     int32_t slider_value = lv_slider_get_value(slider);
 
-    // Map to rotation angle range (0 to 360)
-    current_rotation_z = (slider_value * 360) / 100;
+    // Map to rotation angle range
+    current_rotation_z = (slider_value * BED_MESH_ROTATION_Z_MAX) / 100;
 
     // Update label
     if (rotation_y_label) {
@@ -255,9 +246,9 @@ void ui_panel_bed_mesh_setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     rotation_x_slider = lv_obj_find_by_name(panel, "rotation_x_slider");
     if (rotation_x_slider) {
         lv_slider_set_range(rotation_x_slider, 0, 100);
-        // Map default angle to slider value: (-45 - (-85)) / ((-10) - (-85)) = 40/75 ≈ 53
-        int32_t default_x_value =
-            ((ROTATION_X_DEFAULT - ROTATION_X_MIN) * 100) / (ROTATION_X_MAX - ROTATION_X_MIN);
+        // Map default angle to slider value
+        int32_t default_x_value = ((BED_MESH_ROTATION_X_DEFAULT - BED_MESH_ROTATION_X_MIN) * 100) /
+                                  (BED_MESH_ROTATION_X_MAX - BED_MESH_ROTATION_X_MIN);
         lv_slider_set_value(rotation_x_slider, default_x_value, LV_ANIM_OFF);
         lv_obj_add_event_cb(rotation_x_slider, rotation_x_slider_cb, LV_EVENT_VALUE_CHANGED,
                             nullptr);
@@ -269,8 +260,8 @@ void ui_panel_bed_mesh_setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     rotation_z_slider = lv_obj_find_by_name(panel, "rotation_z_slider");
     if (rotation_z_slider) {
         lv_slider_set_range(rotation_z_slider, 0, 100);
-        // Map default angle to slider value: 45 / 360 * 100 ≈ 12.5
-        int32_t default_z_value = (ROTATION_Z_DEFAULT * 100) / 360;
+        // Map default angle to slider value
+        int32_t default_z_value = (BED_MESH_ROTATION_Z_DEFAULT * 100) / BED_MESH_ROTATION_Z_MAX;
         lv_slider_set_value(rotation_z_slider, default_z_value, LV_ANIM_OFF);
         lv_obj_add_event_cb(rotation_z_slider, rotation_z_slider_cb, LV_EVENT_VALUE_CHANGED,
                             nullptr);
