@@ -629,6 +629,22 @@ static void fill_triangle_solid(lv_obj_t* canvas, int x1, int y1, int x2, int y2
     }
 }
 
+/**
+ * Interpolate position and color along a triangle edge
+ * Handles divide-by-zero case when edge vertices have same Y coordinate
+ */
+static void interpolate_edge(int y, int y0, int x0, const bed_mesh_rgb_t& c0, int y1, int x1,
+                             const bed_mesh_rgb_t& c1, int* x_out, bed_mesh_rgb_t* c_out) {
+    if (y1 == y0) {
+        *x_out = x0;
+        *c_out = c0;
+    } else {
+        double t = (y - y0) / static_cast<double>(y1 - y0);
+        *x_out = x0 + static_cast<int>(t * (x1 - x0));
+        *c_out = lerp_color(c0, c1, t);
+    }
+}
+
 static void fill_triangle_gradient(lv_obj_t* canvas, int x1, int y1, lv_color_t c1, int x2, int y2,
                                    lv_color_t c2, int x3, int y3, lv_color_t c3) {
     // Get canvas dimensions for bounds checking
@@ -678,29 +694,15 @@ static void fill_triangle_gradient(lv_obj_t* canvas, int x1, int y1, lv_color_t 
         int x_long = v[0].x + static_cast<int>(t_long * (v[2].x - v[0].x));
         bed_mesh_rgb_t c_long = lerp_color(v[0].color, v[2].color, t_long);
 
-        // Interpolate along short edge
+        // Interpolate along short edge (upper half: v0->v1, lower half: v1->v2)
         int x_short;
         bed_mesh_rgb_t c_short;
         if (y < v[1].y) {
-            // Upper half: v0 -> v1
-            if (v[1].y == v[0].y) {
-                x_short = v[0].x;
-                c_short = v[0].color;
-            } else {
-                double t = (y - v[0].y) / static_cast<double>(v[1].y - v[0].y);
-                x_short = v[0].x + static_cast<int>(t * (v[1].x - v[0].x));
-                c_short = lerp_color(v[0].color, v[1].color, t);
-            }
+            interpolate_edge(y, v[0].y, v[0].x, v[0].color, v[1].y, v[1].x, v[1].color, &x_short,
+                             &c_short);
         } else {
-            // Lower half: v1 -> v2
-            if (v[2].y == v[1].y) {
-                x_short = v[1].x;
-                c_short = v[1].color;
-            } else {
-                double t = (y - v[1].y) / static_cast<double>(v[2].y - v[1].y);
-                x_short = v[1].x + static_cast<int>(t * (v[2].x - v[1].x));
-                c_short = lerp_color(v[1].color, v[2].color, t);
-            }
+            interpolate_edge(y, v[1].y, v[1].x, v[1].color, v[2].y, v[2].x, v[2].color, &x_short,
+                             &c_short);
         }
 
         // Ensure left/right ordering and clip to canvas bounds
@@ -912,6 +914,26 @@ static void render_grid_lines(lv_obj_t* canvas, const bed_mesh_renderer_t* rende
 }
 
 /**
+ * Draw a single axis line from 3D start to 3D end point
+ * Projects coordinates to 2D screen space and renders the line
+ */
+static void draw_axis_line(lv_layer_t* layer, lv_draw_line_dsc_t* line_dsc, double start_x,
+                           double start_y, double start_z, double end_x, double end_y, double end_z,
+                           int canvas_width, int canvas_height,
+                           const bed_mesh_view_state_t* view_state) {
+    bed_mesh_point_3d_t start =
+        project_3d_to_2d(start_x, start_y, start_z, canvas_width, canvas_height, view_state);
+    bed_mesh_point_3d_t end =
+        project_3d_to_2d(end_x, end_y, end_z, canvas_width, canvas_height, view_state);
+
+    line_dsc->p1.x = static_cast<lv_value_precise_t>(start.screen_x);
+    line_dsc->p1.y = static_cast<lv_value_precise_t>(start.screen_y);
+    line_dsc->p2.x = static_cast<lv_value_precise_t>(end.screen_x);
+    line_dsc->p2.y = static_cast<lv_value_precise_t>(end.screen_y);
+    lv_draw_line(layer, line_dsc);
+}
+
+/**
  * Render axis labels (X, Y, Z indicators)
  * Draws labels at key positions on the mesh to indicate axis orientation
  */
@@ -942,17 +964,8 @@ static void render_axis_labels(lv_obj_t* canvas, const bed_mesh_renderer_t* rend
     double x_axis_length = x_axis_base_end_x - x_axis_start_x;
     double x_axis_end_x = x_axis_base_end_x + x_axis_length * 0.1; // Extend 10%
     double x_axis_y = mesh_row_to_world_y(0, renderer->rows);      // Front edge (row=0)
-
-    bed_mesh_point_3d_t x_start = project_3d_to_2d(x_axis_start_x, x_axis_y, grid_z, canvas_width,
-                                                   canvas_height, &renderer->view_state);
-    bed_mesh_point_3d_t x_end = project_3d_to_2d(x_axis_end_x, x_axis_y, grid_z, canvas_width,
-                                                 canvas_height, &renderer->view_state);
-
-    axis_line_dsc.p1.x = static_cast<lv_value_precise_t>(x_start.screen_x);
-    axis_line_dsc.p1.y = static_cast<lv_value_precise_t>(x_start.screen_y);
-    axis_line_dsc.p2.x = static_cast<lv_value_precise_t>(x_end.screen_x);
-    axis_line_dsc.p2.y = static_cast<lv_value_precise_t>(x_end.screen_y);
-    lv_draw_line(&layer, &axis_line_dsc);
+    draw_axis_line(&layer, &axis_line_dsc, x_axis_start_x, x_axis_y, grid_z, x_axis_end_x, x_axis_y,
+                   grid_z, canvas_width, canvas_height, &renderer->view_state);
 
     // Draw Y-axis line (from front to back along left edge, extend 10% beyond mesh)
     double y_axis_start_y = mesh_row_to_world_y(0, renderer->rows); // Front edge (row=0)
@@ -960,17 +973,8 @@ static void render_axis_labels(lv_obj_t* canvas, const bed_mesh_renderer_t* rend
     double y_axis_length = y_axis_start_y - y_axis_base_end_y;
     double y_axis_end_y = y_axis_base_end_y - y_axis_length * 0.1; // Extend 10%
     double y_axis_x = mesh_col_to_world_x(0, renderer->cols);      // Left edge
-
-    bed_mesh_point_3d_t y_start = project_3d_to_2d(y_axis_x, y_axis_start_y, grid_z, canvas_width,
-                                                   canvas_height, &renderer->view_state);
-    bed_mesh_point_3d_t y_end = project_3d_to_2d(y_axis_x, y_axis_end_y, grid_z, canvas_width,
-                                                 canvas_height, &renderer->view_state);
-
-    axis_line_dsc.p1.x = static_cast<lv_value_precise_t>(y_start.screen_x);
-    axis_line_dsc.p1.y = static_cast<lv_value_precise_t>(y_start.screen_y);
-    axis_line_dsc.p2.x = static_cast<lv_value_precise_t>(y_end.screen_x);
-    axis_line_dsc.p2.y = static_cast<lv_value_precise_t>(y_end.screen_y);
-    lv_draw_line(&layer, &axis_line_dsc);
+    draw_axis_line(&layer, &axis_line_dsc, y_axis_x, y_axis_start_y, grid_z, y_axis_x, y_axis_end_y,
+                   grid_z, canvas_width, canvas_height, &renderer->view_state);
 
     // Draw Z-axis line (vertical from origin at front-left corner)
     double z_axis_x = mesh_col_to_world_x(0, renderer->cols); // Left edge
@@ -978,17 +982,8 @@ static void render_axis_labels(lv_obj_t* canvas, const bed_mesh_renderer_t* rend
     double z_axis_bottom = grid_z;
     double z_axis_top =
         mesh_z_to_world_z(renderer->mesh_max_z, z_center, renderer->view_state.z_scale) * 1.1;
-
-    bed_mesh_point_3d_t z_start = project_3d_to_2d(z_axis_x, z_axis_y, z_axis_bottom, canvas_width,
-                                                   canvas_height, &renderer->view_state);
-    bed_mesh_point_3d_t z_end = project_3d_to_2d(z_axis_x, z_axis_y, z_axis_top, canvas_width,
-                                                 canvas_height, &renderer->view_state);
-
-    axis_line_dsc.p1.x = static_cast<lv_value_precise_t>(z_start.screen_x);
-    axis_line_dsc.p1.y = static_cast<lv_value_precise_t>(z_start.screen_y);
-    axis_line_dsc.p2.x = static_cast<lv_value_precise_t>(z_end.screen_x);
-    axis_line_dsc.p2.y = static_cast<lv_value_precise_t>(z_end.screen_y);
-    lv_draw_line(&layer, &axis_line_dsc);
+    draw_axis_line(&layer, &axis_line_dsc, z_axis_x, z_axis_y, z_axis_bottom, z_axis_x, z_axis_y,
+                   z_axis_top, canvas_width, canvas_height, &renderer->view_state);
 
     // Configure label drawing style
     lv_draw_label_dsc_t label_dsc;
@@ -998,10 +993,13 @@ static void render_axis_labels(lv_obj_t* canvas, const bed_mesh_renderer_t* rend
     label_dsc.opa = LV_OPA_90;
     label_dsc.align = LV_TEXT_ALIGN_CENTER;
 
-    // Position labels at the end of each axis line
-    bed_mesh_point_3d_t x_pos = x_end; // Right end of X-axis
-    bed_mesh_point_3d_t y_pos = y_end; // Back end of Y-axis
-    bed_mesh_point_3d_t z_pos = z_end; // Top of Z-axis
+    // Position labels at the end of each axis line (reproject endpoints for label positioning)
+    bed_mesh_point_3d_t x_pos = project_3d_to_2d(x_axis_end_x, x_axis_y, grid_z, canvas_width,
+                                                 canvas_height, &renderer->view_state);
+    bed_mesh_point_3d_t y_pos = project_3d_to_2d(y_axis_x, y_axis_end_y, grid_z, canvas_width,
+                                                 canvas_height, &renderer->view_state);
+    bed_mesh_point_3d_t z_pos = project_3d_to_2d(z_axis_x, z_axis_y, z_axis_top, canvas_width,
+                                                 canvas_height, &renderer->view_state);
 
     // Draw X label
     if (x_pos.screen_x >= 10 && x_pos.screen_x < canvas_width - 10 && x_pos.screen_y >= 10 &&
