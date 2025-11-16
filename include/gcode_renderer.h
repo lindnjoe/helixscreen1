@@ -55,7 +55,7 @@ enum class LODLevel {
  */
 struct RenderOptions {
     bool show_extrusions{true};     ///< Render extrusion moves
-    bool show_travels{true};        ///< Render travel moves
+    bool show_travels{false};       ///< Render travel moves (hidden by default)
     bool show_object_bounds{false}; ///< Render object boundary polygons
     std::string highlighted_object; ///< Object to highlight (empty = none)
     LODLevel lod{LODLevel::FULL};   ///< Level of detail
