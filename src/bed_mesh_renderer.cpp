@@ -476,8 +476,9 @@ static double compute_fov_scale(int rows, int cols, int canvas_width, int canvas
     double available_diagonal =
         std::sqrt(available_width * available_width + available_height * available_height);
 
-    // Scale to fit mesh in canvas
-    double fov_scale = (available_diagonal * BED_MESH_CAMERA_DISTANCE) / mesh_diagonal;
+    // Scale to fit mesh in canvas, then apply default zoom-out
+    double fov_scale =
+        (available_diagonal * BED_MESH_CAMERA_DISTANCE) / mesh_diagonal * BED_MESH_CAMERA_ZOOM_OUT;
 
     return fov_scale;
 }
@@ -672,43 +673,41 @@ static void fill_triangle_gradient(lv_obj_t* canvas, int x1, int y1, lv_color_t 
     int y_end = std::min(v[2].y, canvas_height - 1);
 
     for (int y = y_start; y <= y_end; y++) {
-        // Compute scanline X coordinates
-        int x_left_raw, x_right_raw;
-        compute_scanline_x(y, v[0].y, v[0].x, v[1].y, v[1].x, v[2].y, v[2].x, &x_left_raw,
-                           &x_right_raw);
-
-        // Interpolate colors along edges
+        // Interpolate along long edge (v0 -> v2)
         double t_long = (y - v[0].y) / static_cast<double>(v[2].y - v[0].y);
+        int x_long = v[0].x + static_cast<int>(t_long * (v[2].x - v[0].x));
         bed_mesh_rgb_t c_long = lerp_color(v[0].color, v[2].color, t_long);
 
+        // Interpolate along short edge
+        int x_short;
         bed_mesh_rgb_t c_short;
         if (y < v[1].y) {
             // Upper half: v0 -> v1
             if (v[1].y == v[0].y) {
+                x_short = v[0].x;
                 c_short = v[0].color;
             } else {
                 double t = (y - v[0].y) / static_cast<double>(v[1].y - v[0].y);
+                x_short = v[0].x + static_cast<int>(t * (v[1].x - v[0].x));
                 c_short = lerp_color(v[0].color, v[1].color, t);
             }
         } else {
             // Lower half: v1 -> v2
             if (v[2].y == v[1].y) {
+                x_short = v[1].x;
                 c_short = v[1].color;
             } else {
                 double t = (y - v[1].y) / static_cast<double>(v[2].y - v[1].y);
+                x_short = v[1].x + static_cast<int>(t * (v[2].x - v[1].x));
                 c_short = lerp_color(v[1].color, v[2].color, t);
             }
         }
 
-        // Clip to canvas bounds and determine color ordering
-        int x_left = std::max(x_left_raw, 0);
-        int x_right = std::min(x_right_raw, canvas_width - 1);
-        bed_mesh_rgb_t c_left = (x_left_raw == x_right_raw)  ? c_long
-                                : (x_left_raw < x_right_raw) ? c_long
-                                                             : c_short;
-        bed_mesh_rgb_t c_right = (x_left_raw == x_right_raw)  ? c_short
-                                 : (x_left_raw < x_right_raw) ? c_short
-                                                              : c_long;
+        // Ensure left/right ordering and clip to canvas bounds
+        int x_left = std::max(std::min(x_long, x_short), 0);
+        int x_right = std::min(std::max(x_long, x_short), canvas_width - 1);
+        bed_mesh_rgb_t c_left = (x_long < x_short) ? c_long : c_short;
+        bed_mesh_rgb_t c_right = (x_long < x_short) ? c_short : c_long;
 
         int line_width = x_right - x_left + 1;
         if (line_width <= 0)
@@ -941,8 +940,8 @@ static void render_axis_labels(lv_obj_t* canvas, const bed_mesh_renderer_t* rend
     double x_axis_start_x = mesh_col_to_world_x(0, renderer->cols);
     double x_axis_base_end_x = mesh_col_to_world_x(renderer->cols - 1, renderer->cols);
     double x_axis_length = x_axis_base_end_x - x_axis_start_x;
-    double x_axis_end_x = x_axis_base_end_x + x_axis_length * 0.1;             // Extend 10%
-    double x_axis_y = mesh_row_to_world_y(renderer->rows - 1, renderer->rows); // Front edge
+    double x_axis_end_x = x_axis_base_end_x + x_axis_length * 0.1; // Extend 10%
+    double x_axis_y = mesh_row_to_world_y(0, renderer->rows);      // Front edge (row=0)
 
     bed_mesh_point_3d_t x_start = project_3d_to_2d(x_axis_start_x, x_axis_y, grid_z, canvas_width,
                                                    canvas_height, &renderer->view_state);
@@ -956,8 +955,8 @@ static void render_axis_labels(lv_obj_t* canvas, const bed_mesh_renderer_t* rend
     lv_draw_line(&layer, &axis_line_dsc);
 
     // Draw Y-axis line (from front to back along left edge, extend 10% beyond mesh)
-    double y_axis_start_y = mesh_row_to_world_y(renderer->rows - 1, renderer->rows);
-    double y_axis_base_end_y = mesh_row_to_world_y(0, renderer->rows);
+    double y_axis_start_y = mesh_row_to_world_y(0, renderer->rows); // Front edge (row=0)
+    double y_axis_base_end_y = mesh_row_to_world_y(renderer->rows - 1, renderer->rows); // Back edge
     double y_axis_length = y_axis_start_y - y_axis_base_end_y;
     double y_axis_end_y = y_axis_base_end_y - y_axis_length * 0.1; // Extend 10%
     double y_axis_x = mesh_col_to_world_x(0, renderer->cols);      // Left edge
@@ -973,9 +972,9 @@ static void render_axis_labels(lv_obj_t* canvas, const bed_mesh_renderer_t* rend
     axis_line_dsc.p2.y = static_cast<lv_value_precise_t>(y_end.screen_y);
     lv_draw_line(&layer, &axis_line_dsc);
 
-    // Draw Z-axis line (vertical from origin)
-    double z_axis_x = mesh_col_to_world_x(0, renderer->cols);
-    double z_axis_y = mesh_row_to_world_y(renderer->rows - 1, renderer->rows);
+    // Draw Z-axis line (vertical from origin at front-left corner)
+    double z_axis_x = mesh_col_to_world_x(0, renderer->cols); // Left edge
+    double z_axis_y = mesh_row_to_world_y(0, renderer->rows); // Front edge (row=0)
     double z_axis_bottom = grid_z;
     double z_axis_top =
         mesh_z_to_world_z(renderer->mesh_max_z, z_center, renderer->view_state.z_scale) * 1.1;

@@ -51,9 +51,10 @@ extern "C" {
  */
 
 // Rendering configuration constants
-#define BED_MESH_SCALE 50.0                   // Base spacing between mesh points (world units)
-#define BED_MESH_CAMERA_DISTANCE 450.0        // Virtual camera distance from origin
-#define BED_MESH_DEFAULT_Z_SCALE 60.0         // Default height amplification factor
+#define BED_MESH_SCALE 50.0            // Base spacing between mesh points (world units)
+#define BED_MESH_CAMERA_DISTANCE 450.0 // Virtual camera distance (moderate perspective: ~33% depth)
+#define BED_MESH_CAMERA_ZOOM_OUT 0.85  // Default zoom level (0.85 = 15% zoomed out from auto-fit)
+#define BED_MESH_DEFAULT_Z_SCALE 60.0  // Default height amplification factor
 #define BED_MESH_DEFAULT_Z_TARGET_HEIGHT 80.0 // Target projected height range (world units)
 #define BED_MESH_MIN_Z_SCALE 35.0             // Min Z scale (prevents flatness)
 #define BED_MESH_MAX_Z_SCALE 120.0            // Max Z scale (prevents extreme projection)
