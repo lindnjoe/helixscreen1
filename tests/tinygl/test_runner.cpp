@@ -290,6 +290,117 @@ void generate_reference_images(TinyGLTestFramework& framework) {
     }
 }
 
+void test_phong_vs_gouraud(TinyGLTestFramework& framework) {
+    print_separator("Phong vs Gouraud Comparison");
+
+    std::cout << "\n🔬 Comparing Phong (per-pixel) vs Gouraud (per-vertex) shading...\n\n";
+
+    // Test configuration with lighting
+    SceneConfig config;
+    config.enable_lighting = true;
+    config.enable_smooth_shading = true;
+    config.num_lights = 1;
+    config.ambient_intensity = 0.2f;
+    config.specular_intensity = 0.3f;
+    config.specular_shininess = 32.0f;
+
+    // Test scenes: low poly spheres show the biggest difference
+    std::vector<std::pair<std::string, std::unique_ptr<TestScene>>> test_scenes;
+    test_scenes.push_back({"Sphere_Subdiv_1", std::make_unique<SphereTesselationScene>(1)});  // 80 triangles
+    test_scenes.push_back({"Sphere_Subdiv_2", std::make_unique<SphereTesselationScene>(2)});  // 320 triangles
+    test_scenes.push_back({"Gouraud_Artifacts", std::make_unique<GouraudArtifactScene>()});
+
+    struct ComparisonResult {
+        std::string scene_name;
+        int triangle_count;
+        double gouraud_ms;
+        double phong_ms;
+        double slowdown_percent;
+    };
+
+    std::vector<ComparisonResult> results;
+
+    for (auto& [name, scene] : test_scenes) {
+        std::cout << "Testing: " << name << " (" << scene->get_triangle_count() << " triangles)\n";
+
+        // === GOURAUD SHADING ===
+        framework.set_phong_shading(false);
+        auto gouraud_perf = framework.benchmark_scene(scene.get(), config, 100);
+        framework.render_scene(scene.get(), config);
+        framework.save_screenshot("tests/tinygl/output/" + name + "_gouraud.ppm");
+
+        // === PHONG SHADING ===
+        framework.set_phong_shading(true);
+        auto phong_perf = framework.benchmark_scene(scene.get(), config, 100);
+        framework.render_scene(scene.get(), config);
+        framework.save_screenshot("tests/tinygl/output/" + name + "_phong.ppm");
+
+        // Reset to Gouraud
+        framework.set_phong_shading(false);
+
+        // Calculate slowdown
+        double slowdown = ((phong_perf.frame_time_ms - gouraud_perf.frame_time_ms) / gouraud_perf.frame_time_ms) * 100.0;
+
+        results.push_back({
+            name,
+            static_cast<int>(scene->get_triangle_count()),
+            gouraud_perf.frame_time_ms,
+            phong_perf.frame_time_ms,
+            slowdown
+        });
+
+        std::cout << "  Gouraud: " << std::fixed << std::setprecision(3) << gouraud_perf.frame_time_ms
+                  << " ms (" << (int)(1000.0 / gouraud_perf.frame_time_ms) << " FPS)\n";
+        std::cout << "  Phong:   " << std::fixed << std::setprecision(3) << phong_perf.frame_time_ms
+                  << " ms (" << (int)(1000.0 / phong_perf.frame_time_ms) << " FPS)\n";
+        std::cout << "  Slowdown: " << std::showpos << std::fixed << std::setprecision(1) << slowdown << "%\n\n";
+    }
+
+    // Summary table
+    std::cout << "═══════════════════ Performance Summary ═══════════════════\n\n";
+    std::cout << std::left << std::setw(25) << "Scene"
+              << std::right << std::setw(10) << "Triangles"
+              << std::setw(12) << "Gouraud"
+              << std::setw(12) << "Phong"
+              << std::setw(12) << "Slowdown\n";
+    std::cout << std::string(71, '-') << "\n";
+
+    for (const auto& r : results) {
+        std::cout << std::left << std::setw(25) << r.scene_name
+                  << std::right << std::setw(10) << r.triangle_count
+                  << std::setw(11) << std::fixed << std::setprecision(2) << r.gouraud_ms << "ms"
+                  << std::setw(11) << std::fixed << std::setprecision(2) << r.phong_ms << "ms"
+                  << std::setw(10) << std::showpos << std::fixed << std::setprecision(1) << r.slowdown_percent << "%\n";
+    }
+
+    // Calculate average slowdown
+    double avg_slowdown = 0.0;
+    for (const auto& r : results) {
+        avg_slowdown += r.slowdown_percent;
+    }
+    avg_slowdown /= results.size();
+
+    std::cout << std::string(71, '-') << "\n";
+    std::cout << std::left << std::setw(25) << "AVERAGE SLOWDOWN:"
+              << std::right << std::setw(46) << std::showpos << std::fixed
+              << std::setprecision(1) << avg_slowdown << "%\n\n";
+
+    // Recommendations
+    std::cout << "📊 Analysis:\n";
+    if (avg_slowdown < 30.0) {
+        std::cout << "  ✅ Phong slowdown is ACCEPTABLE (<30%). Visual quality improvement worth the cost.\n";
+    } else if (avg_slowdown < 50.0) {
+        std::cout << "  ⚠️  Phong slowdown is MODERATE (30-50%). Consider hybrid mode for optimization.\n";
+    } else {
+        std::cout << "  ❌ Phong slowdown is HIGH (>50%). Hybrid mode strongly recommended.\n";
+    }
+
+    std::cout << "\n💡 Visual Quality:\n";
+    std::cout << "  • Phong eliminates lighting \"bands\" on low-poly curved surfaces\n";
+    std::cout << "  • Most noticeable on spheres with <320 triangles\n";
+    std::cout << "  • Compare *_gouraud.ppm vs *_phong.ppm images in tests/tinygl/output/\n";
+}
+
 void print_test_summary() {
     print_separator("Test Summary");
 
@@ -348,6 +459,7 @@ int main(int argc, char** argv) {
             std::cout << "  banding     - Color banding tests\n";
             std::cout << "  performance - Performance benchmarks\n";
             std::cout << "  lighting    - Lighting configuration tests\n";
+            std::cout << "  phong       - Phong vs Gouraud comparison\n";
             std::cout << "  reference   - Generate reference images\n\n";
             std::cout << "Options:\n";
             std::cout << "  --verify    - Verify rendering against reference images\n";
@@ -397,6 +509,8 @@ int main(int argc, char** argv) {
         test_performance_scaling(framework);
     } else if (test_name == "lighting") {
         test_lighting_configurations(framework);
+    } else if (test_name == "phong") {
+        test_phong_vs_gouraud(framework);
     } else if (test_name == "reference") {
         generate_reference_images(framework);
     } else if (test_name == "all") {

@@ -110,6 +110,9 @@ public:
     // Get TinyGL context for direct manipulation
     ZBuffer* get_zbuffer() { return zb_; }
 
+    // Enable/disable Phong shading
+    void set_phong_shading(bool enable);
+
 private:
     int width_;
     int height_;

@@ -128,6 +128,10 @@ void TinyGLTestFramework::clear_buffers() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
+void TinyGLTestFramework::set_phong_shading(bool enable) {
+    glPhongShading(enable ? GL_TRUE : GL_FALSE);
+}
+
 void TinyGLTestFramework::render_scene(TestScene* scene, const SceneConfig& config) {
     setup_standard_lighting(config);
     clear_buffers();
