@@ -160,12 +160,13 @@ bool GCodeParser::parse_movement_command(const std::string& line) {
         (new_position.x != current_position_.x || new_position.y != current_position_.y)) {
         // Determine if this is an extrusion move
         bool is_extruding = false;
+        float e_delta = 0.0f;
         if (has_extrusion) {
-            float e_delta = new_e - current_e_;
+            e_delta = new_e - current_e_;
             is_extruding = (e_delta > 0.00001f); // Small threshold for floating point
         }
 
-        add_segment(current_position_, new_position, is_extruding);
+        add_segment(current_position_, new_position, is_extruding, e_delta);
     }
 
     // Update state
@@ -404,6 +405,45 @@ void GCodeParser::parse_metadata_comment(const std::string& line) {
         metadata_slicer_name_ = value;
         spdlog::trace("Parsed slicer: {}", value);
     }
+    // Parse extrusion width metadata
+    // OrcaSlicer/PrusaSlicer/SuperSlicer: "; perimeters extrusion width = 0.45mm"
+    // Cura: ";SETTING_3 line_width = 0.4" or ";SETTING_3 wall_line_width_0 = 0.4"
+    else if (contains_all({"extrusion", "width"}) ||
+             (key_lower.find("line_width") != std::string::npos) ||
+             (key_lower.find("linewidth") != std::string::npos)) {
+        // Extract numeric value (handle "0.45mm" format and plain "0.4")
+        std::string numeric_value = value;
+        // Remove "mm" suffix if present
+        size_t mm_pos = numeric_value.find("mm");
+        if (mm_pos != std::string::npos) {
+            numeric_value = numeric_value.substr(0, mm_pos);
+        }
+
+        try {
+            float width = std::stof(numeric_value);
+
+            // Categorize by feature type
+            if (contains_all({"first", "layer"}) || contains_all({"initial", "layer"})) {
+                metadata_first_layer_extrusion_width_ = width;
+                spdlog::trace("Parsed first layer extrusion width: {}mm", width);
+            } else if (contains_all({"perimeter"}) || key_lower.find("wall") != std::string::npos) {
+                // Handles "perimeter" (Prusa/Orca) and "wall" (Cura)
+                metadata_perimeter_extrusion_width_ = width;
+                spdlog::trace("Parsed perimeter/wall extrusion width: {}mm", width);
+            } else if (contains_all({"infill"})) {
+                metadata_infill_extrusion_width_ = width;
+                spdlog::trace("Parsed infill extrusion width: {}mm", width);
+            } else {
+                // General extrusion width (fallback for "line_width", etc.)
+                if (metadata_extrusion_width_ == 0.0f) {
+                    metadata_extrusion_width_ = width;
+                    spdlog::trace("Parsed default extrusion width: {}mm", width);
+                }
+            }
+        } catch (...) {
+            // Failed to parse width value
+        }
+    }
 }
 
 bool GCodeParser::extract_param(const std::string& line, char param, float& out_value) {
@@ -464,7 +504,8 @@ bool GCodeParser::extract_string_param(const std::string& line, const std::strin
     return true;
 }
 
-void GCodeParser::add_segment(const glm::vec3& start, const glm::vec3& end, bool is_extrusion) {
+void GCodeParser::add_segment(const glm::vec3& start, const glm::vec3& end, bool is_extrusion,
+                              float e_delta) {
     if (layers_.empty()) {
         start_new_layer(start.z);
     }
@@ -474,7 +515,36 @@ void GCodeParser::add_segment(const glm::vec3& start, const glm::vec3& end, bool
     segment.end = end;
     segment.is_extrusion = is_extrusion;
     segment.object_name = current_object_;
-    segment.extrusion_amount = 0.0f; // TODO: Calculate from E delta
+    segment.extrusion_amount = e_delta;
+
+    // Calculate actual extrusion width from E-delta and XY distance
+    if (is_extrusion && e_delta > 0.00001f) {
+        // Calculate XY distance
+        float dx = end.x - start.x;
+        float dy = end.y - start.y;
+        float xy_distance = std::sqrt(dx * dx + dy * dy);
+
+        if (xy_distance > 0.00001f) {
+            // Calculate filament cross-sectional area
+            float filament_radius = metadata_filament_diameter_ / 2.0f;
+            float filament_area = M_PI * filament_radius * filament_radius;
+
+            // Calculate extruded volume: volume = e_delta * filament_area
+            float volume = e_delta * filament_area;
+
+            // Calculate width: volume = width * layer_height * xy_distance
+            // Therefore: width = volume / (layer_height * xy_distance)
+            segment.width = volume / (metadata_layer_height_ * xy_distance);
+
+            // Sanity check: width should be reasonable (0.1mm to 2.0mm)
+            if (segment.width < 0.1f || segment.width > 2.0f) {
+                spdlog::debug("Calculated out-of-range extrusion width: {:.3f}mm (e={:.3f}, "
+                              "dist={:.3f}, layer_h={:.3f}) - using default",
+                              segment.width, e_delta, xy_distance, metadata_layer_height_);
+                segment.width = 0.0f; // Use default
+            }
+        }
+    }
 
     // Update layer data
     Layer& current_layer = layers_.back();
@@ -570,6 +640,12 @@ ParsedGCodeFile GCodeParser::finalize() {
     result.total_filament_mm = metadata_filament_length_;
     result.filament_weight_g = metadata_filament_weight_;
     result.filament_cost = metadata_filament_cost_;
+
+    // Transfer extrusion width metadata
+    result.extrusion_width_mm = metadata_extrusion_width_;
+    result.perimeter_extrusion_width_mm = metadata_perimeter_extrusion_width_;
+    result.infill_extrusion_width_mm = metadata_infill_extrusion_width_;
+    result.first_layer_extrusion_width_mm = metadata_first_layer_extrusion_width_;
     result.estimated_print_time_minutes = metadata_print_time_;
     result.total_layer_count = metadata_layer_count_;
 

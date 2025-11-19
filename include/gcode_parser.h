@@ -95,7 +95,8 @@ struct ToolpathSegment {
     bool is_extrusion{false};          ///< true if extruding, false if travel move
     std::string object_name;           ///< Object name (from EXCLUDE_OBJECT_START) or
                                        ///< empty
-    float extrusion_amount{0.0f};      ///< E-axis delta (for future use)
+    float extrusion_amount{0.0f};      ///< E-axis delta (mm of filament)
+    float width{0.0f};                 ///< Calculated extrusion width (mm) - 0 means use default
 };
 
 /**
@@ -152,6 +153,13 @@ struct ParsedGCodeFile {
     float filament_weight_g{0.0f};  ///< Total filament weight in grams
     float filament_cost{0.0f};      ///< Estimated filament cost
     int total_layer_count{0};       ///< Total layer count from metadata
+
+    // Extrusion width metadata (from OrcaSlicer/PrusaSlicer headers)
+    float extrusion_width_mm{0.0f}; ///< Default extrusion width (0 = use nozzle-based default)
+    float perimeter_extrusion_width_mm{0.0f};   ///< Perimeter width
+    float infill_extrusion_width_mm{0.0f};      ///< Infill width
+    float first_layer_extrusion_width_mm{0.0f}; ///< First layer width
+    float filament_diameter_mm{1.75f};          ///< Filament diameter (default: 1.75mm)
 
     /**
      * @brief Get layer at specific index
@@ -296,8 +304,10 @@ class GCodeParser {
      * @param start Start point
      * @param end End point
      * @param is_extrusion true if extruding
+     * @param e_delta Extruder delta (mm of filament), used to calculate width
      */
-    void add_segment(const glm::vec3& start, const glm::vec3& end, bool is_extrusion);
+    void add_segment(const glm::vec3& start, const glm::vec3& end, bool is_extrusion,
+                     float e_delta = 0.0f);
 
     /**
      * @brief Start new layer at given Z height
@@ -335,6 +345,14 @@ class GCodeParser {
     float metadata_filament_cost_{0.0f};
     float metadata_print_time_{0.0f};
     int metadata_layer_count_{0};
+
+    // Extrusion width metadata
+    float metadata_extrusion_width_{0.0f};
+    float metadata_perimeter_extrusion_width_{0.0f};
+    float metadata_infill_extrusion_width_{0.0f};
+    float metadata_first_layer_extrusion_width_{0.0f};
+    float metadata_filament_diameter_{1.75f}; ///< Filament diameter (default: 1.75mm)
+    float metadata_layer_height_{0.2f};       ///< Layer height (default: 0.2mm)
 
     // Progress tracking
     size_t lines_parsed_{0}; ///< Line counter

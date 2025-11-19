@@ -366,7 +366,13 @@ GeometryBuilder::generate_ribbon_vertices(const ToolpathSegment& segment, Ribbon
                                           const QuantizationParams& quant,
                                           std::optional<TubeCap> prev_start_cap) {
     // Determine tube dimensions based on move type
-    float width = segment.is_extrusion ? extrusion_width_mm_ : travel_width_mm_;
+    // Use per-segment width if available (calculated from E-delta), otherwise use default
+    float width;
+    if (segment.is_extrusion && segment.width > 0.0f) {
+        width = segment.width; // Use calculated width from G-code
+    } else {
+        width = segment.is_extrusion ? extrusion_width_mm_ : travel_width_mm_;
+    }
     float half_width = width * 0.5f;
     float half_height = width * 0.5f; // Square cross-section
 
