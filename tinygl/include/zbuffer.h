@@ -354,6 +354,10 @@ void *gl_zalloc(GLint size);
 #else
 #include<string.h>
 #include<stdlib.h>
+static void gl_free(void* p) __attribute__((unused));
+static void* gl_malloc(GLint size) __attribute__((unused));
+static void* gl_zalloc(GLint size) __attribute__((unused));
+
 static void gl_free(void* p) { free(p); }
 static void* gl_malloc(GLint size) { return malloc(size); }
 static void* gl_zalloc(GLint size) { return calloc(1, size); }
