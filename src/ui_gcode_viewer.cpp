@@ -284,7 +284,7 @@ void ui_gcode_viewer_load_file(lv_obj_t* obj, const char* file_path) {
                      st->gcode_file->objects.size());
 
         // Auto-apply filament color if enabled and available
-        if (st->use_filament_color && !st->gcode_file->filament_color_hex.empty()) {
+        if (st->use_filament_color && st->gcode_file->filament_color_hex.length() >= 2) {
             lv_color_t color = lv_color_hex(
                 std::strtol(st->gcode_file->filament_color_hex.c_str() + 1, nullptr, 16));
             st->renderer->set_extrusion_color(color);
@@ -320,7 +320,7 @@ void ui_gcode_viewer_set_gcode_data(lv_obj_t* obj, void* gcode_data) {
                  st->gcode_file->layers.size(), st->gcode_file->total_segments);
 
     // Auto-apply filament color if enabled and available
-    if (st->use_filament_color && !st->gcode_file->filament_color_hex.empty()) {
+    if (st->use_filament_color && st->gcode_file->filament_color_hex.length() >= 2) {
         lv_color_t color =
             lv_color_hex(std::strtol(st->gcode_file->filament_color_hex.c_str() + 1, nullptr, 16));
         st->renderer->set_extrusion_color(color);
@@ -488,7 +488,7 @@ void ui_gcode_viewer_use_filament_color(lv_obj_t* obj, bool enable) {
     st->use_filament_color = enable;
 
     // If enabling and we have a loaded file with filament color, apply it now
-    if (enable && st->gcode_file && !st->gcode_file->filament_color_hex.empty()) {
+    if (enable && st->gcode_file && st->gcode_file->filament_color_hex.length() >= 2) {
         lv_color_t color =
             lv_color_hex(std::strtol(st->gcode_file->filament_color_hex.c_str() + 1, nullptr, 16));
         st->renderer->set_extrusion_color(color);
