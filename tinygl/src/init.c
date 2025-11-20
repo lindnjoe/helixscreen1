@@ -69,12 +69,12 @@ static void endSharedState(GLContext* c) {
 #if TGL_FEATURE_TINYGL_RUNTIME_COMPAT_TEST == 1
 
 #define TGL_FLOAT_ERR(a, b) ((a - b) / b)
-static int TinyGLRuntimeCompatibilityTest() {
+static int TinyGLRuntimeCompatibilityTest(void) {
 	GLfloat t = -0, tf2;
 	GLint t2 = 1 << 31;
 	memcpy(&tf2, &t2, 4);
 	if (tf2 != t) return 1;
-	t2 = 3212836864;
+	t2 = (GLint)3212836864;  /* Intentional overflow for bit pattern test */
 	t = -1;
 	memcpy(&tf2, &t2, 4);
 	if (tf2 != t)return 1;

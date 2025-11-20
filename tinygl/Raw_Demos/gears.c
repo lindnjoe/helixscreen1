@@ -303,6 +303,7 @@ int main(int argc, char** argv) {
 	unsigned int setenspec = 1;
 	unsigned int dotext = 1;
 	unsigned int blending = 0;
+	unsigned int dithering = 0;
 	if (argc > 1) {
 		char* larg = "";
 		for (int i = 1; i < argc; i++) {
@@ -316,6 +317,8 @@ int main(int argc, char** argv) {
 				flat = 0;
 			if (!strcmp(argv[i],"-blend"))
 				blending = 1;
+			if (!strcmp(argv[i],"-dither"))
+				dithering = 1;
 			if (!strcmp(argv[i],"-nospecular"))
 				setenspec = 0;
 			if (!strcmp(argv[i],"-lines"))
@@ -381,6 +384,7 @@ if(flat)	glShadeModel(GL_FLAT); else glShadeModel(GL_SMOOTH);
 
 	initScene();
 	if(setenspec) glSetEnableSpecular(GL_TRUE); else glSetEnableSpecular(GL_FALSE);
+	if(dithering) glSetEnableDithering(GL_TRUE); else glSetEnableDithering(GL_FALSE);
 	// variables for timing:
 	unsigned int frames = 0;
 	//unsigned int tLastFps = tNow;

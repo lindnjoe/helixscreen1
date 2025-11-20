@@ -29,6 +29,7 @@ Things to keep in mind:
 #if TGL_FEATURE_POLYGON_STIPPLE == 1
 	GLint the_y;
 #endif
+	GLint dither_y;  /* Y coordinate for dithering (always tracked) */
 	GLint error, derror;
 	GLint x1, dxdy_min, dxdy_max;
 	/* warning: x2 is multiplied by 2^16 */
@@ -192,10 +193,11 @@ Things to keep in mind:
 	} 
 	/* screen coordinates */
 
-	pp1 = (PIXEL*)(zb->pbuf) + zb->xsize * p0->y; 
+	pp1 = (PIXEL*)(zb->pbuf) + zb->xsize * p0->y;
 #if TGL_FEATURE_POLYGON_STIPPLE == 1
 	the_y = p0->y;
 #endif
+	dither_y = p0->y;  /* Initialize Y for dithering */
 	pz1 = zb->zbuf + p0->y * zb->xsize;
 
 	DRAW_INIT();
@@ -469,6 +471,7 @@ Things to keep in mind:
 #if TGL_FEATURE_POLYGON_STIPPLE == 1
 			the_y++;
 #endif
+			dither_y++;  /* Increment Y for dithering */
 			pz1 += zb->xsize;
 		}
 	}

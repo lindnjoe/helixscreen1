@@ -797,6 +797,7 @@ void glDrawArrays(	GLenum mode,
  					GLsizei count);
 
 void glSetEnableSpecular(GLint s);
+void glSetEnableDithering(GLint enable);  /* Enable/disable ordered dithering */
 void* glGetTexturePixmap(GLint text, GLint level, GLint* xsize, GLint* ysize); 
 void glDrawText(const GLubyte* text, GLint x, GLint y, GLuint pixel); 
 void glTextSize(GLTEXTSIZE mode); 

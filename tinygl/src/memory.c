@@ -2,7 +2,7 @@
  * Memory allocator for TinyGL
  */
 
-static inline void required_for_compilation_(){
+static inline void required_for_compilation_(void){
 	return;
 }
 

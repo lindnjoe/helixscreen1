@@ -8,7 +8,7 @@ void gl_print_matrix(const GLfloat* m) {
 	}
 }
 
-static void gl_matrix_update() {
+static void gl_matrix_update(void) {
 	GLContext* c = gl_get_context();
 	c->matrix_model_projection_updated = (c->matrix_mode <= 1);
 }
