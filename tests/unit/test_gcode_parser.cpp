@@ -5,12 +5,11 @@
 
 #include "gcode_parser.h"
 
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_floating_point.hpp>
+#include "../catch_amalgamated.hpp"
 #include <sstream>
 
 using namespace gcode;
-using Catch::Matchers::WithinAbs;
+using Catch::Approx;
 
 TEST_CASE("GCodeParser - Basic movement parsing", "[gcode][parser]") {
     GCodeParser parser;
