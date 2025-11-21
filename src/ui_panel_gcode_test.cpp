@@ -31,7 +31,7 @@ static lv_obj_t* stats_label = nullptr;
 static lv_obj_t* file_picker_overlay = nullptr;
 
 // Path to default sample G-code file
-static const char* TEST_GCODE_PATH = "assets/single_line_test.gcode";
+static const char* TEST_GCODE_PATH = "assets/OrcaCube AD5M.gcode";
 static const char* ASSETS_DIR = "assets";
 
 // Store available files
