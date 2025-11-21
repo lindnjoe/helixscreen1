@@ -9,11 +9,14 @@
 
 ### Recently Completed
 
-**G-Code Viewer Command-Line Options (2025-11-20)**
+**G-Code Viewer Command-Line Options (2025-11-20/21)**
 - ✅ Added `--gcode-file <path>` to load specific G-code file on startup
-- ✅ Added `--gcode-az <deg>` to set camera azimuth angle
-- ✅ Added `--gcode-el <deg>` to set camera elevation angle
-- ✅ Added `--gcode-zoom <n>` to set camera zoom level
+- ✅ Added `--camera <params>` to set camera params in compact format: "az:90.5,el:4.0,zoom:15.5"
+  - Each parameter is optional, comma-separated
+  - Supports flexible parsing with whitespace tolerance
+- ✅ Added `--gcode-az <deg>` to set camera azimuth angle (individual arg)
+- ✅ Added `--gcode-el <deg>` to set camera elevation angle (individual arg)
+- ✅ Added `--gcode-zoom <n>` to set camera zoom level (individual arg)
 - ✅ Added `--gcode-debug-colors` to enable per-face debug coloring
 - ✅ Exposed camera setters (set_azimuth/set_elevation/set_zoom_level) in GCodeCamera
 - ✅ Added ui_gcode_viewer API functions for camera control and debug colors
@@ -30,8 +33,15 @@
 
 **Usage Examples:**
 ```bash
-# Custom camera angles
+# Custom camera angles (compact format - NEW!)
+./build/bin/helix-ui-proto -p gcode-test --camera "az:90,el:-10,zoom:5"
+
+# Custom camera angles (individual args)
 ./build/bin/helix-ui-proto -p gcode-test --gcode-az 90 --gcode-el -10 --gcode-zoom 5
+
+# Partial camera params (only set what you need)
+./build/bin/helix-ui-proto -p gcode-test --camera "az:45"
+./build/bin/helix-ui-proto -p gcode-test --camera "el:30,zoom:2.0"
 
 # Load specific file with debug colors
 ./build/bin/helix-ui-proto -p gcode-test --gcode-file assets/test_gcode/multi_color_cube.gcode --gcode-debug-colors

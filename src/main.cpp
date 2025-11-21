@@ -384,6 +384,76 @@ static bool parse_command_line_args(
             }
         } else if (strcmp(argv[i], "--gcode-debug-colors") == 0) {
             g_runtime_config.gcode_debug_colors = true;
+        } else if (strcmp(argv[i], "--camera") == 0) {
+            if (i + 1 < argc) {
+                const char* camera_str = argv[++i];
+
+                // Check for empty string
+                if (camera_str[0] == '\0') {
+                    printf("Error: --camera requires a non-empty string argument\n");
+                    printf("Format: --camera \"az:90.5,el:4.0,zoom:15.5\" (each parameter optional)\n");
+                    return false;
+                }
+
+                // Parse comma-separated "az:90.5,el:4.0,zoom:15.5" format
+                // Each component is optional
+                char* str_copy = strdup(camera_str);
+                char* token = strtok(str_copy, ",");
+
+                while (token != nullptr) {
+                    // Trim leading whitespace
+                    while (*token == ' ') token++;
+
+                    // Parse key:value pairs
+                    if (strncmp(token, "az:", 3) == 0) {
+                        char* endptr;
+                        double val = strtod(token + 3, &endptr);
+                        if (*endptr == '\0' || *endptr == ' ') {
+                            g_runtime_config.gcode_camera_azimuth = (float)val;
+                            g_runtime_config.gcode_camera_azimuth_set = true;
+                        } else {
+                            printf("Error: Invalid azimuth value in --camera: %s\n", token);
+                            free(str_copy);
+                            return false;
+                        }
+                    } else if (strncmp(token, "el:", 3) == 0) {
+                        char* endptr;
+                        double val = strtod(token + 3, &endptr);
+                        if (*endptr == '\0' || *endptr == ' ') {
+                            g_runtime_config.gcode_camera_elevation = (float)val;
+                            g_runtime_config.gcode_camera_elevation_set = true;
+                        } else {
+                            printf("Error: Invalid elevation value in --camera: %s\n", token);
+                            free(str_copy);
+                            return false;
+                        }
+                    } else if (strncmp(token, "zoom:", 5) == 0) {
+                        char* endptr;
+                        double val = strtod(token + 5, &endptr);
+                        if ((*endptr == '\0' || *endptr == ' ') && val > 0) {
+                            g_runtime_config.gcode_camera_zoom = (float)val;
+                            g_runtime_config.gcode_camera_zoom_set = true;
+                        } else {
+                            printf("Error: Invalid zoom value in --camera (must be positive): %s\n", token);
+                            free(str_copy);
+                            return false;
+                        }
+                    } else {
+                        printf("Error: Unknown camera parameter in --camera: %s\n", token);
+                        printf("Valid parameters: az:<degrees>, el:<degrees>, zoom:<factor>\n");
+                        free(str_copy);
+                        return false;
+                    }
+
+                    token = strtok(nullptr, ",");
+                }
+
+                free(str_copy);
+            } else {
+                printf("Error: --camera requires a string argument\n");
+                printf("Format: --camera \"az:90.5,el:4.0,zoom:15.5\" (each parameter optional)\n");
+                return false;
+            }
         } else if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "-vv") == 0 ||
                    strcmp(argv[i], "-vvv") == 0) {
             // Count the number of 'v' characters for verbosity level
@@ -425,6 +495,8 @@ static bool parse_command_line_args(
             printf("    --real-files       Use real files from printer (requires --test)\n");
             printf("\nG-code Viewer Options:\n");
             printf("  --gcode-file <path>  Load specific G-code file on startup\n");
+            printf("  --camera <params>    Set camera params: \"az:90.5,el:4.0,zoom:15.5\"\n");
+            printf("                       (each parameter optional, comma-separated)\n");
             printf("  --gcode-az <deg>     Set camera azimuth angle (degrees)\n");
             printf("  --gcode-el <deg>     Set camera elevation angle (degrees)\n");
             printf("  --gcode-zoom <n>     Set camera zoom level (positive number)\n");

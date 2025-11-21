@@ -155,6 +155,41 @@ The test panel demonstrates:
 - Real-time statistics display
 - Touch gesture support (drag to rotate)
 
+#### 4. Command-Line Options
+
+Control the G-code viewer camera from the command line:
+
+```bash
+# Load a specific G-code file
+./build/bin/helix-ui-proto -p gcode-test --gcode-file /path/to/file.gcode
+
+# Set camera using compact format (all parameters optional)
+./build/bin/helix-ui-proto -p gcode-test --camera "az:90.5,el:4.0,zoom:15.5"
+
+# Set camera using individual arguments
+./build/bin/helix-ui-proto -p gcode-test --gcode-az 90.5 --gcode-el 4.0 --gcode-zoom 15.5
+
+# Partial parameters work too
+./build/bin/helix-ui-proto -p gcode-test --camera "az:45"
+./build/bin/helix-ui-proto -p gcode-test --camera "el:30,zoom:2.0"
+
+# Mix both styles (last value wins)
+./build/bin/helix-ui-proto -p gcode-test --camera "az:45" --gcode-el 30
+
+# Enable debug coloring (each face gets a unique color)
+./build/bin/helix-ui-proto -p gcode-test --gcode-debug-colors
+```
+
+**Camera Parameters:**
+- `az` (azimuth): Horizontal rotation in degrees (0-360)
+  - 0° = front view, 90° = right view, 180° = back, 270° = left
+- `el` (elevation): Vertical rotation in degrees (-90 to 90)
+  - 0° = side view, 90° = top view, -90° = bottom view
+- `zoom`: Zoom factor (positive number, 1.0 = default)
+  - Values > 1.0 zoom in, < 1.0 zoom out
+
+**Default View:** Isometric (az:45°, el:30°, zoom:1.0)
+
 **Source files:**
 - `ui_xml/gcode_test_panel.xml` - Panel layout
 - `src/ui_panel_gcode_test.cpp` - Event handlers
