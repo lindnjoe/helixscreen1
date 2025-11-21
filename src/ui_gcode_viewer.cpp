@@ -804,6 +804,7 @@ void ui_gcode_viewer_set_specular(lv_obj_t* obj, float intensity, float shinines
  * @brief XML create handler for gcode_viewer widget
  */
 static void* gcode_viewer_xml_create(lv_xml_parser_state_t* state, const char** attrs) {
+    (void)attrs;  // Required by callback signature, but widget has no XML attributes
     void* parent = lv_xml_state_get_parent(state);
     if (!parent) {
         spdlog::error("[GCodeViewer] XML create: no parent object");

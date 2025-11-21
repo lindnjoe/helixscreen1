@@ -458,8 +458,9 @@ RibbonGeometry GeometryBuilder::build(const ParsedGCodeFile& gcode,
     }
 
     if (total_segs > 0) {
-        spdlog::debug("Top layer Z={:.2f}mm: {} segments ({} extrusion, {} travel)",
-                      max_z, total_segs, extrusion_segs, travel_segs);
+        spdlog::debug("Top layer Z={:.2f}mm: {} segments ({} extrusion, {} travel, angles: {}°±45°, {}°h, {}°v, {} other)",
+                      max_z, total_segs, extrusion_segs, travel_segs,
+                      diagonal_45_segs, horizontal_segs, vertical_segs, other_angle_segs);
     }
 
     // Store quantization parameters for dequantization during rendering

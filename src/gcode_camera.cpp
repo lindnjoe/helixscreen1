@@ -172,18 +172,6 @@ void GCodeCamera::set_viewport_size(int width, int height) {
     update_matrices();
 }
 
-glm::vec3 GCodeCamera::screen_to_world_ray(const glm::vec2& screen_pos) const {
-    // Convert screen coordinates to normalized device coordinates [-1, 1]
-    float x = (2.0f * screen_pos.x) / viewport_width_ - 1.0f;
-    float y = 1.0f - (2.0f * screen_pos.y) / viewport_height_; // Flip Y
-
-    // For orthographic projection, ray direction is constant (parallel)
-    // Ray direction = inverse view direction
-    glm::vec3 camera_pos = compute_camera_position();
-    glm::vec3 ray_dir = glm::normalize(target_ - camera_pos);
-
-    return ray_dir;
-}
 
 glm::vec3 GCodeCamera::compute_camera_position() const {
     // Convert spherical coordinates (azimuth, elevation, distance) to Cartesian

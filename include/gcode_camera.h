@@ -223,20 +223,6 @@ class GCodeCamera {
     }
 
     // ==============================================
-    // Ray Casting (for object picking)
-    // ==============================================
-
-    /**
-     * @brief Convert screen coordinates to world-space ray
-     * @param screen_pos Screen coordinates (top-left origin)
-     * @return Normalized ray direction in world space
-     *
-     * Used for touch/click object picking. Cast ray from screen point
-     * through camera and test intersection with objects.
-     */
-    glm::vec3 screen_to_world_ray(const glm::vec2& screen_pos) const;
-
-    // ==============================================
     // State Query
     // ==============================================
 
