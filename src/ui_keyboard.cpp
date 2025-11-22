@@ -136,9 +136,13 @@ static bool g_shift_just_pressed =
 static bool g_one_shot_shift = false; // Single-press: one uppercase letter then revert
 static bool g_caps_lock = false;      // Two consecutive presses: stay uppercase
 
+// Shift key visual indicator (overlay image on shift button)
+static lv_obj_t* g_shift_indicator = NULL;
+
 // Forward declarations for helper functions (not event callbacks)
 static void overlay_cleanup();
 static void apply_keyboard_mode();
+static void update_shift_indicator();
 
 //=============================================================================
 // IMPROVED KEYBOARD LAYOUTS
@@ -805,6 +809,34 @@ static void apply_keyboard_mode() {
 }
 
 /**
+ * @brief Update shift indicator overlay image based on current shift state
+ *
+ * Shows one of three Material Design icons overlaid on the shift button:
+ * - shift_normal: Normal/lowercase mode (outline arrow)
+ * - shift_oneshot: One-shot shift mode (filled arrow)
+ * - shift_capslock: Caps lock mode (filled arrow with underline)
+ */
+static void update_shift_indicator() {
+    if (!g_shift_indicator || !g_keyboard) {
+        return;
+    }
+
+    // Determine which icon to show based on shift state
+    const void* icon_src = NULL;
+    if (g_caps_lock) {
+        icon_src = lv_xml_get_image(NULL, "mat_shift_capslock");
+    } else if (g_one_shot_shift) {
+        icon_src = lv_xml_get_image(NULL, "mat_shift_oneshot");
+    } else {
+        icon_src = lv_xml_get_image(NULL, "mat_shift_normal");
+    }
+
+    if (icon_src) {
+        lv_image_set_src(g_shift_indicator, icon_src);
+    }
+}
+
+/**
  * @brief Keyboard event callback - handles ready/cancel events and mode switching
  *
  * CRITICAL: Non-printing buttons (mode buttons, shift, backspace, enter, spacebar) are marked
@@ -901,6 +933,7 @@ static void keyboard_event_cb(lv_event_t* e) {
                     spdlog::debug("[Keyboard] Shift: One-shot uppercase");
                 }
                 apply_keyboard_mode();
+                update_shift_indicator();
 
             } else if (btn_text && strcmp(btn_text, LV_SYMBOL_NEW_LINE) == 0) {
                 // Enter key - LVGL already handled it, just close keyboard
@@ -938,6 +971,7 @@ static void keyboard_event_cb(lv_event_t* e) {
                 g_one_shot_shift = false;
                 g_mode = MODE_ALPHA_LC;
                 apply_keyboard_mode();
+                update_shift_indicator();
                 spdlog::debug("[Keyboard] One-shot shift: Reverting to lowercase after character");
             }
         }
@@ -1101,6 +1135,20 @@ void ui_keyboard_init(lv_obj_t* parent) {
     // Position at bottom-middle (default)
     lv_obj_align(g_keyboard, LV_ALIGN_BOTTOM_MID, 0, 0);
 
+    // Create shift indicator overlay (will be positioned relative to keyboard)
+    // The shift button is in row 3 (rows 0-indexed), on the left side
+    g_shift_indicator = lv_image_create(parent);
+    const void* initial_icon = lv_xml_get_image(NULL, "mat_shift_normal");
+    lv_image_set_src(g_shift_indicator, initial_icon);
+
+    // Position the indicator on top of the shift button
+    // We'll position it relative to the keyboard's bottom-left corner
+    // The shift button is approximately 60px from left, 150px from bottom on a 800x480 keyboard
+    lv_obj_align_to(g_shift_indicator, g_keyboard, LV_ALIGN_OUT_BOTTOM_LEFT, 60, -150);
+
+    // Make indicator follow keyboard visibility
+    lv_obj_add_flag(g_shift_indicator, LV_OBJ_FLAG_HIDDEN);
+
     // Start hidden
     lv_obj_add_flag(g_keyboard, LV_OBJ_FLAG_HIDDEN);
 
@@ -1172,6 +1220,9 @@ void ui_keyboard_show(lv_obj_t* textarea) {
 
     // Reset keyboard to lowercase mode on each show
     g_mode = MODE_ALPHA_LC;
+    g_one_shot_shift = false;
+    g_shift_just_pressed = false;
+    g_caps_lock = false;
     apply_keyboard_mode();
 
     // Assign textarea to keyboard (standard LVGL API)
@@ -1179,6 +1230,13 @@ void ui_keyboard_show(lv_obj_t* textarea) {
 
     // Show keyboard
     lv_obj_remove_flag(g_keyboard, LV_OBJ_FLAG_HIDDEN);
+
+    // Show shift indicator
+    if (g_shift_indicator) {
+        lv_obj_remove_flag(g_shift_indicator, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_move_foreground(g_shift_indicator);
+        update_shift_indicator();
+    }
 
     // Move keyboard to foreground to ensure it appears above modals
     lv_obj_move_foreground(g_keyboard);
@@ -1268,6 +1326,11 @@ void ui_keyboard_hide() {
 
     // Hide keyboard
     lv_obj_add_flag(g_keyboard, LV_OBJ_FLAG_HIDDEN);
+
+    // Hide shift indicator
+    if (g_shift_indicator) {
+        lv_obj_add_flag(g_shift_indicator, LV_OBJ_FLAG_HIDDEN);
+    }
 
     // Move all screen children (except keyboard) back to y=0 with animation
     uint32_t child_count = lv_obj_get_child_count(screen);

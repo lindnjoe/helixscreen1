@@ -11,7 +11,8 @@ This document covers development environment setup, build processes, and daily d
 brew install cmake bear imagemagick python3 node
 # Optional (auto-built from submodules if not installed):
 #   brew install sdl2 spdlog libhv
-npm install  # Install lv_font_conv and lv_img_conv
+npm install         # Install lv_font_conv and lv_img_conv
+make venv-setup     # Set up Python venv with pypng and lz4 for icon conversion
 ```
 
 **Minimum macOS Version:** macOS 10.15 (Catalina) or newer required for CoreWLAN/CoreLocation WiFi APIs. The build system enforces this via `-mmacosx-version-min=10.15` deployment target.
@@ -23,7 +24,8 @@ npm install  # Install lv_font_conv and lv_img_conv
 sudo apt install cmake bear imagemagick python3 clang make npm
 # Optional (auto-built from submodules if not installed):
 #   sudo apt install libsdl2-dev spdlog libhv-dev
-npm install  # Install lv_font_conv and lv_img_conv
+npm install         # Install lv_font_conv and lv_img_conv
+make venv-setup     # Set up Python venv with pypng and lz4 for icon conversion
 ```
 
 **Fedora/RHEL/CentOS (dnf):**
@@ -31,7 +33,8 @@ npm install  # Install lv_font_conv and lv_img_conv
 sudo dnf install cmake bear ImageMagick python3 clang make npm
 # Optional (auto-built from submodules if not installed):
 #   sudo dnf install SDL2-devel spdlog-devel libhv-devel
-npm install  # Install lv_font_conv and lv_img_conv
+npm install         # Install lv_font_conv and lv_img_conv
+make venv-setup     # Set up Python venv with pypng and lz4 for icon conversion
 ```
 
 ### Dependency Overview
@@ -40,7 +43,8 @@ npm install  # Install lv_font_conv and lv_img_conv
 - **`clang`** - C/C++ compiler with C++17 support
 - **`cmake`** - Build system for SDL2 (version 3.16+)
 - **`make`** - GNU Make build system
-- **`python3`** - Icon generation scripts
+- **`python3`** - Icon generation scripts and build tools
+  - **`pypng`** / **`lz4`** - Python packages for PNG to C array conversion (installed via `make venv-setup` into `.venv/`)
 - **`node`** / **`npm`** - Package manager for JavaScript dependencies
 - **`lv_font_conv`** - Font converter (installed via `npm install`)
 
@@ -60,9 +64,15 @@ npm install  # Install lv_font_conv and lv_img_conv
 ### Automated Dependency Management
 
 ```bash
-make check-deps      # Check what's missing
-make install-deps    # Auto-install (interactive, with confirmation)
+make check-deps      # Check what's missing (includes Python venv check)
+make install-deps    # Auto-install (interactive, includes venv setup)
+make venv-setup      # Manually set up Python venv with pypng and lz4
 ```
+
+The build system automatically:
+- Checks for Python virtual environment (`.venv/`)
+- Verifies pypng and lz4 packages are installed
+- Sets up the venv when running `make install-deps`
 
 For complete dependency management details, see **[BUILD_SYSTEM.md](docs/BUILD_SYSTEM.md)**.
 

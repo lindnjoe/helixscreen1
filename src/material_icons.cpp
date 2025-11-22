@@ -29,7 +29,7 @@
 #include <spdlog/spdlog.h>
 
 void material_icons_register() {
-    spdlog::info("Registering Material Design icons (72 total)...");
+    spdlog::info("Registering Material Design icons (75 total)...");
 
     // Navigation & Movement
     lv_xml_register_image(NULL, "mat_home", &home);
@@ -130,6 +130,13 @@ void material_icons_register() {
     lv_xml_register_image(NULL, "mat_wifi_strength_3_lock", &wifi_strength_3_lock);
     lv_xml_register_image(NULL, "mat_wifi_strength_4_lock", &wifi_strength_4_lock);
     spdlog::debug("WiFi icons registered (13 total)");
+
+    // Keyboard Shift States
+    spdlog::debug("Registering keyboard shift state icons...");
+    lv_xml_register_image(NULL, "mat_shift_normal", &shift_normal);
+    lv_xml_register_image(NULL, "mat_shift_oneshot", &shift_oneshot);
+    lv_xml_register_image(NULL, "mat_shift_capslock", &shift_capslock);
+    spdlog::debug("Keyboard shift state icons registered (3 total)");
 
     spdlog::info("Material Design icons registered successfully");
 }

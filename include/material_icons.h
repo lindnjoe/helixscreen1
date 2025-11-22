@@ -126,5 +126,10 @@ LV_IMG_DECLARE(hourglass);
 // Misc
 LV_IMG_DECLARE(spoolman_img);
 
+// Keyboard Shift States
+LV_IMG_DECLARE(shift_normal);
+LV_IMG_DECLARE(shift_oneshot);
+LV_IMG_DECLARE(shift_capslock);
+
 // Register all Material Design icons with LVGL XML system
 void material_icons_register();

@@ -4,6 +4,11 @@
 # HelixScreen UI Prototype - Dependency Management Module
 # Handles dependency checking, installation, and libhv building
 
+# Python virtual environment for build-time dependencies
+VENV := .venv
+VENV_PYTHON := $(VENV)/bin/python3
+VENV_PIP := $(VENV)/bin/pip3
+
 # Dependency checker - comprehensive validation with install instructions
 check-deps:
 	$(ECHO) "$(CYAN)Checking build dependencies...$(RESET)"
@@ -74,6 +79,25 @@ check-deps:
 		echo "         $(YELLOW)brew install python3$(RESET) (macOS)"; \
 	else \
 		echo "$(GREEN)✓ python3 found:$(RESET) $$(python3 --version)"; \
+		if [ ! -f "$(VENV_PYTHON)" ]; then \
+			echo "$(YELLOW)⚠ Python venv not set up$(RESET)"; WARN=1; \
+			echo "  Run: $(YELLOW)make venv-setup$(RESET)"; \
+		else \
+			echo "$(GREEN)✓ Python venv:$(RESET) $(VENV)"; \
+			MISSING_PY_PKGS=""; \
+			if ! $(VENV_PYTHON) -c "import png" >/dev/null 2>&1; then \
+				MISSING_PY_PKGS="$$MISSING_PY_PKGS pypng"; \
+			fi; \
+			if ! $(VENV_PYTHON) -c "import lz4" >/dev/null 2>&1; then \
+				MISSING_PY_PKGS="$$MISSING_PY_PKGS lz4"; \
+			fi; \
+			if [ -n "$$MISSING_PY_PKGS" ]; then \
+				echo "$(YELLOW)⚠ Missing Python packages:$$MISSING_PY_PKGS$(RESET)"; WARN=1; \
+				echo "  Run: $(YELLOW)make venv-setup$(RESET)"; \
+			else \
+				echo "$(GREEN)✓ Python packages (pypng, lz4) installed$(RESET)"; \
+			fi; \
+		fi; \
 	fi; \
 	if ! command -v npm >/dev/null 2>&1; then \
 		echo "$(RED)✗ npm not found$(RESET) (needed for font generation)"; ERROR=1; \
@@ -367,6 +391,17 @@ install-deps:
 		echo "$(GREEN)✓ npm packages already installed$(RESET)"; \
 	fi; \
 	echo ""; \
+	if ! command -v python3 >/dev/null 2>&1; then \
+		echo "$(YELLOW)⚠ python3 not available - skipping venv setup$(RESET)"; \
+	else \
+		if [ ! -f "$(VENV_PYTHON)" ]; then \
+			echo "$(CYAN)Setting up Python venv and installing packages...$(RESET)"; \
+			$(MAKE) venv-setup && echo "$(GREEN)✓ Python venv set up$(RESET)" || echo "$(RED)✗ venv setup failed$(RESET)"; \
+		else \
+			echo "$(GREEN)✓ Python venv already set up$(RESET)"; \
+		fi; \
+	fi; \
+	echo ""; \
 	if [ ! -f "$(LIBHV_LIB)" ]; then \
 		echo "$(CYAN)Building libhv...$(RESET)"; \
 		$(MAKE) libhv-build && echo "$(GREEN)✓ libhv built$(RESET)" || echo "$(RED)✗ libhv build failed$(RESET)"; \
@@ -435,3 +470,24 @@ $(WPA_CLIENT_LIB):
 	$(Q)$(MAKE) -C $(WPA_DIR)/wpa_supplicant -j$(NPROC) libwpa_client.a
 	$(ECHO) "$(GREEN)✓ libwpa_client.a built successfully$(RESET)"
 endif
+
+# Python virtual environment setup
+venv-setup:
+	$(ECHO) "$(CYAN)Setting up Python virtual environment...$(RESET)"
+	$(Q)if [ ! -d "$(VENV)" ]; then \
+		python3 -m venv $(VENV) || { echo "$(RED)✗ Failed to create venv$(RESET)"; exit 1; }; \
+		echo "$(GREEN)✓ Virtual environment created$(RESET)"; \
+	else \
+		echo "$(GREEN)✓ Virtual environment exists$(RESET)"; \
+	fi
+	$(Q)if [ -f "requirements.txt" ]; then \
+		echo "$(CYAN)Installing Python packages from requirements.txt...$(RESET)"; \
+		$(VENV_PIP) install -r requirements.txt || { echo "$(RED)✗ Failed to install requirements$(RESET)"; exit 1; }; \
+		echo "$(GREEN)✓ Python packages installed$(RESET)"; \
+	else \
+		echo "$(YELLOW)⚠ requirements.txt not found$(RESET)"; \
+	fi
+	$(ECHO) "$(GREEN)✓ Python venv setup complete$(RESET)"
+
+$(VENV_PYTHON):
+	$(Q)$(MAKE) venv-setup
