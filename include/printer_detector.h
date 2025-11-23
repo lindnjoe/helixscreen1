@@ -31,8 +31,8 @@
  */
 struct PrinterDetectionResult {
     std::string type_name; ///< Printer type name (e.g., "FlashForge AD5M Pro", "Voron 2.4")
-    int confidence;     ///< Confidence score 0-100 (≥70 = high confidence, <70 = low confidence)
-    std::string reason; ///< Human-readable detection reasoning
+    int confidence;        ///< Confidence score 0-100 (≥70 = high confidence, <70 = low confidence)
+    std::string reason;    ///< Human-readable detection reasoning
 
     /**
      * @brief Check if detection succeeded
