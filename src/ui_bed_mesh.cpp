@@ -32,7 +32,7 @@
 
 #include <spdlog/spdlog.h>
 
-#include <cstdlib>
+#include <memory>
 
 // Canvas dimensions and rotation defaults are now in ui_bed_mesh.h
 
@@ -257,8 +257,8 @@ static void bed_mesh_delete_cb(lv_event_t* e) {
             spdlog::debug("[bed_mesh] Destroyed renderer");
         }
 
-        // Free widget data struct
-        free(data);
+        // Delete widget data struct (allocated with unique_ptr, released to LVGL)
+        delete data;
         lv_obj_set_user_data(obj, NULL);
     }
 }
@@ -287,34 +287,28 @@ static void* bed_mesh_xml_create(lv_xml_parser_state_t* state, const char** attr
     lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(obj, LV_OBJ_FLAG_CLICKABLE); // Touch events work automatically!
 
-    // Allocate widget data struct
-    bed_mesh_widget_data_t* data = (bed_mesh_widget_data_t*)malloc(sizeof(bed_mesh_widget_data_t));
-    if (!data) {
-        spdlog::error("[bed_mesh] Failed to allocate widget data");
-        lv_obj_delete(obj);
-        return NULL;
-    }
+    // Allocate widget data struct with RAII (exception-safe)
+    auto data_ptr = std::make_unique<bed_mesh_widget_data_t>();
 
     // Create renderer
-    data->renderer = bed_mesh_renderer_create();
-    if (!data->renderer) {
+    data_ptr->renderer = bed_mesh_renderer_create();
+    if (!data_ptr->renderer) {
         spdlog::error("[bed_mesh] Failed to create renderer");
-        free(data);
         lv_obj_delete(obj);
-        return NULL;
+        return NULL;  // unique_ptr automatically cleans up
     }
 
     // Set default rotation angles
-    data->rotation_x = BED_MESH_ROTATION_X_DEFAULT;
-    data->rotation_z = BED_MESH_ROTATION_Z_DEFAULT;
-    bed_mesh_renderer_set_rotation(data->renderer, data->rotation_x, data->rotation_z);
+    data_ptr->rotation_x = BED_MESH_ROTATION_X_DEFAULT;
+    data_ptr->rotation_z = BED_MESH_ROTATION_Z_DEFAULT;
+    bed_mesh_renderer_set_rotation(data_ptr->renderer, data_ptr->rotation_x, data_ptr->rotation_z);
 
     // Initialize touch drag state
-    data->is_dragging = false;
-    data->last_drag_pos = {0, 0};
+    data_ptr->is_dragging = false;
+    data_ptr->last_drag_pos = {0, 0};
 
-    // Store widget data in user_data for cleanup and API access
-    lv_obj_set_user_data(obj, data);
+    // Transfer ownership to LVGL user_data (will be cleaned up in delete callback)
+    lv_obj_set_user_data(obj, data_ptr.release());
 
     // Register event handlers
     lv_obj_add_event_cb(obj, bed_mesh_draw_cb, LV_EVENT_DRAW_POST, NULL);     // Custom drawing
