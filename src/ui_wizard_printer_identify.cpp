@@ -447,8 +447,11 @@ void ui_wizard_printer_identify_cleanup() {
                       type_index);
 
         // Persist config changes to disk
-        config->save();
-        spdlog::info("[Wizard Printer] Saved printer identification settings to config");
+        if (config->save()) {
+            spdlog::info("[Wizard Printer] Saved printer identification settings to config");
+        } else {
+            spdlog::error("[Wizard Printer] Failed to save printer configuration to disk!");
+        }
     } catch (const std::exception& e) {
         spdlog::error("[Wizard Printer] Failed to save config: {}", e.what());
     }

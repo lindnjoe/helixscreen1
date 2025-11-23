@@ -129,9 +129,11 @@ class Config {
      * @brief Save current configuration to file
      *
      * Writes in-memory config to disk with pretty formatting.
-     * File is written atomically (temp file + rename).
+     * Includes error handling and validation.
+     *
+     * @return true if save succeeded, false on error
      */
-    void save();
+    bool save();
 
     /**
      * @brief Get default printer path prefix

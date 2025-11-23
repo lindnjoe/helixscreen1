@@ -30,6 +30,27 @@
  *
  * Defines all JSON configuration paths used by wizard screens to eliminate
  * hardcoded string literals and reduce typo risk.
+ *
+ * @note LEGACY PATH STRUCTURE
+ *
+ * These paths use a legacy flat structure under /printer/... for backward
+ * compatibility with existing configurations. This differs from the expected
+ * structure checked by Config::is_wizard_required() which looks for:
+ * /printers/{printer_name}/hardware_map/...
+ *
+ * **Current behavior:**
+ * - Wizard saves to: /printer/bed_heater, /printer/hotend_heater, etc.
+ * - Config validation checks: /printers/default_printer/hardware_map/...
+ * - Wizard completion flag: /wizard_completed (added to fix auto-reopen bug)
+ *
+ * **Migration:** Config::is_wizard_required() includes migration logic that:
+ * 1. Checks for /wizard_completed flag first (primary method)
+ * 2. Falls back to detecting /printer/... paths (legacy detection)
+ * 3. Auto-migrates by setting wizard_completed=true if legacy config found
+ *
+ * **Future:** New wizard screens should consider using the structured
+ * /printers/{name}/hardware_map/... paths, but existing paths maintained
+ * for backward compatibility.
  */
 
 namespace WizardConfigPaths {
@@ -54,8 +75,11 @@ constexpr const char* PART_FAN = "/printer/part_fan";
 constexpr const char* LED_STRIP = "/printer/led_strip";
 
 // Network configuration
-constexpr const char* MOONRAKER_HOST = "/moonraker_host";
-constexpr const char* MOONRAKER_PORT = "/moonraker_port";
+// Note: Connection screen constructs full path dynamically using default_printer
+// e.g., "/printers/" + default_printer + "/moonraker_host"
+// These constants are for direct access in ui_wizard_complete()
+constexpr const char* MOONRAKER_HOST = "/printers/default_printer/moonraker_host";
+constexpr const char* MOONRAKER_PORT = "/printers/default_printer/moonraker_port";
 constexpr const char* WIFI_SSID = "/wifi/ssid";
 constexpr const char* WIFI_PASSWORD = "/wifi/password";
 } // namespace WizardConfigPaths

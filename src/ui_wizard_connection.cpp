@@ -264,9 +264,12 @@ static void on_test_connection_clicked(lv_event_t* e) {
 
                 config->set(printer_path + "/moonraker_host", saved_ip);
                 config->set(printer_path + "/moonraker_port", std::stoi(saved_port));
-                config->save();
-                spdlog::info("[Wizard Connection] Saved configuration: {}:{}", saved_ip,
-                             saved_port);
+                if (config->save()) {
+                    spdlog::info("[Wizard Connection] Saved configuration: {}:{}", saved_ip,
+                                 saved_port);
+                } else {
+                    spdlog::error("[Wizard Connection] Failed to save configuration to disk!");
+                }
             } catch (const std::exception& e) {
                 spdlog::error("[Wizard Connection] Failed to save config: {}", e.what());
             }

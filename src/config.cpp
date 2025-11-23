@@ -135,31 +135,44 @@ json& Config::get_json(const std::string& json_path) {
     return data[json::json_pointer(json_path)];
 }
 
-void Config::save() {
+bool Config::save() {
     spdlog::info("Saving config to {}", path);
-    std::ofstream o(path);
-    o << std::setw(2) << data << std::endl;
+
+    try {
+        std::ofstream o(path);
+        if (!o.is_open()) {
+            spdlog::error("Failed to open config file for writing: {}", path);
+            return false;
+        }
+
+        o << std::setw(2) << data << std::endl;
+
+        if (!o.good()) {
+            spdlog::error("Error writing to config file: {}", path);
+            return false;
+        }
+
+        o.close();
+        spdlog::debug("Config saved successfully to {}", path);
+        return true;
+
+    } catch (const std::exception& e) {
+        spdlog::error("Exception while saving config to {}: {}", path, e.what());
+        return false;
+    }
 }
 
 bool Config::is_wizard_required() {
-    // Check if moonraker_host is default/empty
-    auto& host = data[json::json_pointer(df() + "moonraker_host")];
-    if (host.is_null() || host.get<std::string>() == "127.0.0.1") {
-        return true;
+    // Check explicit wizard completion flag
+    auto& wizard_completed = data[json::json_pointer("/wizard_completed")];
+
+    if (!wizard_completed.is_null() && wizard_completed.is_boolean()) {
+        bool is_completed = wizard_completed.get<bool>();
+        spdlog::trace("[Config] Wizard completed flag = {}", is_completed);
+        return !is_completed; // Wizard required if flag is false
     }
 
-    // Check if hardware_map exists
-    auto& hardware_map = data[json::json_pointer(df() + "hardware_map")];
-    if (hardware_map.is_null() || !hardware_map.is_object()) {
-        return true;
-    }
-
-    // Check if required hardware components are mapped
-    auto& bed = hardware_map["heated_bed"];
-    auto& hotend = hardware_map["hotend"];
-    if (bed.is_null() || hotend.is_null()) {
-        return true;
-    }
-
-    return false;
+    // No flag set - wizard has never been run
+    spdlog::debug("[Config] No wizard_completed flag found, wizard required");
+    return true;
 }

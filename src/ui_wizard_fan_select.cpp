@@ -201,7 +201,9 @@ void ui_wizard_fan_select_cleanup() {
     // Persist to disk
     Config* config = Config::get_instance();
     if (config) {
-        config->save();
+        if (!config->save()) {
+            spdlog::error("[Wizard Fan] Failed to save fan configuration to disk!");
+        }
     }
 
     // Reset UI references

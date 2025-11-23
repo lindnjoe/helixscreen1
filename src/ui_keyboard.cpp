@@ -752,8 +752,7 @@ static void apply_keyboard_mode() {
         return;
     }
 
-    fprintf(stderr, "DEBUG: apply_keyboard_mode() called, g_mode=%d\n", (int)g_mode);
-    fflush(stderr);
+    spdlog::trace("[Keyboard] apply_keyboard_mode() called, mode={}", (int)g_mode);
 
     switch (g_mode) {
     case MODE_ALPHA_LC:
@@ -761,8 +760,6 @@ static void apply_keyboard_mode() {
         lv_buttonmatrix_set_map(g_keyboard, kb_map_alpha_lc);
         lv_buttonmatrix_set_ctrl_map(g_keyboard, kb_ctrl_alpha_lc);
         spdlog::debug("[Keyboard] Switched to alpha lowercase");
-        fprintf(stderr, "DEBUG: Set keyboard to MODE_ALPHA_LC\n");
-        fflush(stderr);
         break;
     case MODE_ALPHA_UC:
         // Apply custom uppercase map directly to buttonmatrix
@@ -771,15 +768,11 @@ static void apply_keyboard_mode() {
             lv_buttonmatrix_set_map(g_keyboard, kb_map_alpha_uc);
             lv_buttonmatrix_set_ctrl_map(g_keyboard, kb_ctrl_alpha_uc);
             spdlog::debug("[Keyboard] Switched to alpha uppercase (CAPS LOCK)");
-            fprintf(stderr, "DEBUG: Set keyboard to MODE_ALPHA_UC (CAPS)\n");
-            fflush(stderr);
         } else {
             // One-shot mode: use upload symbol
             lv_buttonmatrix_set_map(g_keyboard, kb_map_alpha_uc_oneshot);
             lv_buttonmatrix_set_ctrl_map(g_keyboard, kb_ctrl_alpha_uc);
             spdlog::debug("[Keyboard] Switched to alpha uppercase (one-shot)");
-            fprintf(stderr, "DEBUG: Set keyboard to MODE_ALPHA_UC (oneshot)\n");
-            fflush(stderr);
         }
         break;
     case MODE_NUMBERS_SYMBOLS:
@@ -787,16 +780,12 @@ static void apply_keyboard_mode() {
         lv_buttonmatrix_set_map(g_keyboard, kb_map_numbers_symbols);
         lv_buttonmatrix_set_ctrl_map(g_keyboard, kb_ctrl_numbers_symbols);
         spdlog::debug("[Keyboard] Switched to numbers/symbols");
-        fprintf(stderr, "DEBUG: Set keyboard to MODE_NUMBERS_SYMBOLS\n");
-        fflush(stderr);
         break;
     case MODE_ALT_SYMBOLS:
         // Apply alternative symbols map directly to buttonmatrix
         lv_buttonmatrix_set_map(g_keyboard, kb_map_alt_symbols);
         lv_buttonmatrix_set_ctrl_map(g_keyboard, kb_ctrl_alt_symbols);
         spdlog::debug("[Keyboard] Switched to alternative symbols (#+= mode)");
-        fprintf(stderr, "DEBUG: Set keyboard to MODE_ALT_SYMBOLS\n");
-        fflush(stderr);
         break;
     }
 
@@ -830,11 +819,8 @@ static void keyboard_event_cb(lv_event_t* e) {
         // Check if this is a non-printing button
         bool is_non_printing = lv_buttonmatrix_has_button_ctrl(keyboard, btn_id, LV_BUTTONMATRIX_CTRL_CUSTOM_1);
 
-        spdlog::info("[Keyboard] VALUE_CHANGED: btn_id={}, btn_text='{}', is_non_printing={}",
-                     btn_id, btn_text ? btn_text : "NULL", is_non_printing);
-        fprintf(stderr, "DEBUG: VALUE_CHANGED btn=%u text='%s' non_print=%d\n",
-                btn_id, btn_text ? btn_text : "NULL", is_non_printing);
-        fflush(stderr);
+        spdlog::trace("[Keyboard] VALUE_CHANGED: btn_id={}, btn_text='{}', is_non_printing={}",
+                      btn_id, btn_text ? btn_text : "NULL", is_non_printing);
 
         if (is_non_printing) {
             // LVGL's default handler has already inserted the button text

@@ -269,50 +269,69 @@ TEST_CASE_METHOD(ConfigTestFixture, "Config: set() overwrites value of different
 }
 
 // ============================================================================
-// is_wizard_required() logic
+// is_wizard_required() logic - NEW: wizard_completed flag
 // ============================================================================
 
-TEST_CASE_METHOD(ConfigTestFixture, "Config: is_wizard_required() returns true when host is 127.0.0.1", "[config][wizard]") {
+TEST_CASE_METHOD(ConfigTestFixture, "Config: is_wizard_required() returns false when wizard_completed is true", "[config][wizard]") {
     setup_minimal_config();
 
-    REQUIRE(config.is_wizard_required() == true);
-}
-
-TEST_CASE_METHOD(ConfigTestFixture, "Config: is_wizard_required() returns true when hardware_map missing", "[config][wizard]") {
-    setup_incomplete_config();
-
-    REQUIRE(config.is_wizard_required() == true);
-}
-
-TEST_CASE_METHOD(ConfigTestFixture, "Config: is_wizard_required() returns true when hardware_map has null bed", "[config][wizard]") {
-    setup_default_config();
-
-    // Remove heated_bed from hardware_map
-    set_data_null("/printers/test_printer/hardware_map/heated_bed");
-
-    REQUIRE(config.is_wizard_required() == true);
-}
-
-TEST_CASE_METHOD(ConfigTestFixture, "Config: is_wizard_required() returns true when hardware_map has null hotend", "[config][wizard]") {
-    setup_default_config();
-
-    // Remove hotend from hardware_map
-    set_data_null("/printers/test_printer/hardware_map/hotend");
-
-    REQUIRE(config.is_wizard_required() == true);
-}
-
-TEST_CASE_METHOD(ConfigTestFixture, "Config: is_wizard_required() returns false when fully configured", "[config][wizard]") {
-    setup_default_config();
+    // Set wizard_completed flag
+    config.set<bool>("/wizard_completed", true);
 
     REQUIRE(config.is_wizard_required() == false);
 }
 
-TEST_CASE_METHOD(ConfigTestFixture, "Config: is_wizard_required() returns true when moonraker_host is null", "[config][wizard]") {
+TEST_CASE_METHOD(ConfigTestFixture, "Config: is_wizard_required() returns true when wizard_completed is false", "[config][wizard]") {
     setup_default_config();
 
-    set_data_null("/printers/test_printer/moonraker_host");
+    // Explicitly set wizard_completed to false
+    config.set<bool>("/wizard_completed", false);
 
+    REQUIRE(config.is_wizard_required() == true);
+}
+
+TEST_CASE_METHOD(ConfigTestFixture, "Config: is_wizard_required() returns true when wizard_completed flag missing", "[config][wizard]") {
+    setup_minimal_config();
+
+    // No wizard_completed flag set
+    REQUIRE(config.is_wizard_required() == true);
+}
+
+TEST_CASE_METHOD(ConfigTestFixture, "Config: wizard_completed flag overrides hardware config", "[config][wizard]") {
+    setup_default_config();
+
+    // Even with full hardware config, if wizard_completed is false, wizard should run
+    config.set<bool>("/wizard_completed", false);
+
+    REQUIRE(config.is_wizard_required() == true);
+}
+
+TEST_CASE_METHOD(ConfigTestFixture, "Config: wizard_completed=true skips wizard even with minimal config", "[config][wizard]") {
+    setup_minimal_config();
+
+    // Even with minimal config (127.0.0.1 host), wizard_completed=true should skip wizard
+    config.set<bool>("/wizard_completed", true);
+
+    REQUIRE(config.is_wizard_required() == false);
+}
+
+TEST_CASE_METHOD(ConfigTestFixture, "Config: is_wizard_required() handles invalid wizard_completed type", "[config][wizard]") {
+    setup_default_config();
+
+    // Set wizard_completed to invalid type (string instead of bool)
+    config.set<std::string>("/wizard_completed", "true");
+
+    // Should return true (wizard required) because flag is not a valid boolean
+    REQUIRE(config.is_wizard_required() == true);
+}
+
+TEST_CASE_METHOD(ConfigTestFixture, "Config: is_wizard_required() handles null wizard_completed", "[config][wizard]") {
+    setup_default_config();
+
+    // Set wizard_completed to null
+    set_data_null("/wizard_completed");
+
+    // Should return true (wizard required) because flag is null
     REQUIRE(config.is_wizard_required() == true);
 }
 

@@ -160,7 +160,9 @@ void ui_wizard_bed_select_cleanup() {
     // Persist to disk
     Config* config = Config::get_instance();
     if (config) {
-        config->save();
+        if (!config->save()) {
+            spdlog::error("[Wizard Bed] Failed to save bed configuration to disk!");
+        }
     }
 
     // Reset UI references

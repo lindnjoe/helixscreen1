@@ -133,7 +133,9 @@ void ui_wizard_led_select_cleanup() {
     // Persist to disk
     Config* config = Config::get_instance();
     if (config) {
-        config->save();
+        if (!config->save()) {
+            spdlog::error("[Wizard LED] Failed to save LED configuration to disk!");
+        }
     }
 
     // Reset UI references

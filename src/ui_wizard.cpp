@@ -472,18 +472,32 @@ static void ui_wizard_load_screen(int step) {
 void ui_wizard_complete() {
     spdlog::info("[Wizard] Completing wizard and transitioning to main UI");
 
-    // 1. Cleanup current wizard screen
+    // 1. Mark wizard as completed in config
+    Config* config = Config::get_instance();
+    if (config) {
+        spdlog::info("[Wizard] Setting wizard_completed flag");
+        config->set<bool>("/wizard_completed", true);
+        if (!config->save()) {
+            spdlog::error("[Wizard] Failed to save wizard_completed flag!");
+        }
+    } else {
+        spdlog::error("[Wizard] Failed to get config instance to mark wizard complete");
+    }
+
+    // 2. Cleanup current wizard screen
     ui_wizard_cleanup_current_screen();
 
-    // 2. Delete wizard container (main UI is already created underneath)
+    // 3. Delete wizard container (main UI is already created underneath)
     if (wizard_container) {
         spdlog::debug("[Wizard] Deleting wizard container");
         lv_obj_del(wizard_container);
         wizard_container = nullptr;
     }
 
-    // 3. Connect to Moonraker using saved configuration
-    Config* config = Config::get_instance();
+    // 4. Connect to Moonraker using saved configuration
+    if (!config) {
+        config = Config::get_instance();
+    }
     MoonrakerClient* client = get_moonraker_client();
 
     if (!config || !client) {
