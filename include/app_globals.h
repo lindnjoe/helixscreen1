@@ -24,6 +24,8 @@
 #ifndef APP_GLOBALS_H
 #define APP_GLOBALS_H
 
+#include "lvgl.h"
+
 // Forward declarations
 class MoonrakerClient;
 class MoonrakerAPI;
@@ -36,15 +38,54 @@ class PrinterState;
 MoonrakerClient* get_moonraker_client();
 
 /**
+ * @brief Set global MoonrakerClient instance (called by main.cpp during init)
+ * @param client Pointer to MoonrakerClient instance
+ */
+void set_moonraker_client(MoonrakerClient* client);
+
+/**
  * @brief Get global MoonrakerAPI instance
  * @return Pointer to global MoonrakerAPI (may be nullptr if not initialized)
  */
 MoonrakerAPI* get_moonraker_api();
 
 /**
+ * @brief Set global MoonrakerAPI instance (called by main.cpp during init)
+ * @param api Pointer to MoonrakerAPI instance
+ */
+void set_moonraker_api(MoonrakerAPI* api);
+
+/**
  * @brief Get global PrinterState instance
  * @return Reference to global PrinterState (always valid)
  */
 PrinterState& get_printer_state();
+
+/**
+ * @brief Set global PrinterState instance (called by main.cpp during init)
+ * @param state Pointer to PrinterState instance
+ */
+void set_printer_state(PrinterState* state);
+
+/**
+ * @brief Get the global notification subject
+ *
+ * Any module can emit notifications by calling:
+ * ```cpp
+ * NotificationData notif = {severity, title, message, show_modal};
+ * lv_subject_set_pointer(&get_notification_subject(), &notif);
+ * ```
+ *
+ * @return Reference to the global notification subject
+ */
+lv_subject_t& get_notification_subject();
+
+/**
+ * @brief Initialize all global subjects
+ *
+ * Must be called during app initialization after LVGL is initialized.
+ * Initializes reactive subjects used throughout the application.
+ */
+void app_globals_init_subjects();
 
 #endif // APP_GLOBALS_H

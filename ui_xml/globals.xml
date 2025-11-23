@@ -169,6 +169,12 @@
     <color name="secondary_color" value="#37AEB3"/>
     <color name="error_color" value="#AD2724"/>
     <!-- Error/validation feedback (red) -->
+    <color name="warning_color" value="#FF9800"/>
+    <!-- Warning feedback (orange) -->
+    <color name="success_color" value="#4CAF50"/>
+    <!-- Success feedback (green) -->
+    <color name="info_color" value="#2196F3"/>
+    <!-- Info feedback (blue) -->
     <!-- App background colors (theme-specific variants) -->
     <color name="app_bg_color_light" value="#FFFFFF"/>
     <!-- Light mode: white -->

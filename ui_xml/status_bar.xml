@@ -1,0 +1,77 @@
+<?xml version="1.0"?>
+<!--
+  Copyright (C) 2025 356C LLC
+  Author: Preston Brown <pbrown@brown-house.net>
+
+  This file is part of HelixScreen.
+
+  HelixScreen is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  HelixScreen is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with HelixScreen. If not, see <https://www.gnu.org/licenses/>.
+-->
+<!-- Status Bar Component - Persistent icons at top of screen -->
+<component>
+  <view extends="lv_obj" name="status_bar" width="100%" height="#header_height"
+        style_bg_opa="0" style_border_width="0" style_pad_all="#padding_small" style_pad_gap="#gap_normal"
+        flex_flow="row" style_flex_main_place="start" style_flex_cross_place="center">
+
+    <!-- Network status icon -->
+    <lv_label name="status_network_icon" text="&#xF0"
+              style_text_font="#font_heading"
+              style_text_color="#text_secondary"
+              clickable="true">
+      <event_cb trigger="clicked" callback="status_network_icon_clicked"/>
+    </lv_label>
+
+    <!-- Printer status icon -->
+    <lv_label name="status_printer_icon" text="&#xF0"
+              style_text_font="#font_heading"
+              style_text_color="#text_secondary"
+              clickable="true">
+      <event_cb trigger="clicked" callback="status_printer_icon_clicked"/>
+    </lv_label>
+
+    <!-- Notification alert icon (hidden by default) -->
+    <lv_label name="status_notification_icon" text="&#xF0"
+              style_text_font="#font_heading"
+              style_text_color="#text_secondary"
+              clickable="true"
+              hidden="true">
+      <event_cb trigger="clicked" callback="status_notification_icon_clicked"/>
+    </lv_label>
+
+    <!-- Notification history button with unread badge -->
+    <lv_obj name="status_notification_history_container"
+            style_bg_opa="0" style_border_width="0"
+            style_pad_all="0" clickable="true">
+      <event_cb trigger="clicked" callback="status_notification_history_clicked"/>
+
+      <lv_label name="status_notification_history_icon" text="&#xF0F3;"
+                style_text_font="#font_heading"
+                style_text_color="#text_secondary"/>
+
+      <!-- Unread badge (hidden when count is 0) -->
+      <lv_obj name="notification_badge"
+              width="20" height="20"
+              align="top_right"
+              style_radius="10"
+              style_bg_color="#error_color"
+              style_border_width="0"
+              hidden="true">
+        <lv_label name="notification_badge_count" text="0"
+                  align="center"
+                  style_text_font="montserrat_12"
+                  style_text_color="#FFFFFF"/>
+      </lv_obj>
+    </lv_obj>
+  </view>
+</component>
