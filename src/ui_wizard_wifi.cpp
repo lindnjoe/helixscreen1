@@ -23,6 +23,7 @@
 
 #include "ui_wizard_wifi.h"
 
+#include "ui_error_reporting.h"
 #include "ui_icon.h"
 #include "ui_keyboard.h"
 #include "ui_modal.h"
@@ -154,7 +155,7 @@ static const char* get_status_text(const char* status_name) {
     const char* text = lv_xml_get_const(scope, enum_key);
 
     if (!text) {
-        spdlog::warn("[WiFi Screen] Enum constant '{}' not found, using fallback", enum_key);
+        LOG_WARN_INTERNAL("Enum constant '{}' not found, using fallback", enum_key);
         return status_name;
     }
 
@@ -207,7 +208,7 @@ static void init_wifi_item_colors() {
         // Fallback to defaults if scope not found
         wifi_item_bg_color = lv_color_hex(0x262626);
         wifi_item_text_color = lv_color_hex(0xE3E3E3);
-        spdlog::warn("[WiFi] wifi_network_item component not registered yet - using hardcoded "
+        LOG_WARN_INTERNAL("wifi_network_item component not registered yet - using hardcoded "
                      "default colors (bg=#262626, text=#E3E3E3). Call init_wifi_item_colors() "
                      "after component registration for theme support.");
     }
@@ -318,7 +319,7 @@ void ui_wizard_wifi_register_responsive_constants() {
                                       : (greater_res <= UI_BREAKPOINT_MEDIUM_MAX) ? "80"
                                                                                   : "100";
         snprintf(list_item_height_buf, sizeof(list_item_height_buf), "%s", fallback_height);
-        spdlog::warn("[WiFi Screen] Failed to get font '{}', using fallback list_item_height={}",
+        LOG_WARN_INTERNAL("Failed to get font '{}', using fallback list_item_height={}",
                      list_item_font, fallback_height);
     }
     const char* list_item_height = list_item_height_buf;
@@ -354,7 +355,7 @@ lv_obj_t* ui_wizard_wifi_create(lv_obj_t* parent) {
     spdlog::debug("[WiFi Screen] Creating WiFi setup screen");
 
     if (!parent) {
-        spdlog::error("[WiFi Screen] Cannot create: null parent");
+        LOG_ERROR_INTERNAL("Cannot create WiFi screen: null parent");
         return nullptr;
     }
 
@@ -370,7 +371,7 @@ lv_obj_t* ui_wizard_wifi_create(lv_obj_t* parent) {
     wifi_screen_root = (lv_obj_t*)lv_xml_create(parent, "wizard_wifi_setup", nullptr);
 
     if (!wifi_screen_root) {
-        spdlog::error("[WiFi Screen] Failed to create wizard_wifi_setup from XML");
+        LOG_ERROR_INTERNAL("Failed to create wizard_wifi_setup from XML");
         return nullptr;
     }
 
@@ -383,7 +384,7 @@ lv_obj_t* ui_wizard_wifi_create(lv_obj_t* parent) {
     // Find network list container
     network_list_container = lv_obj_find_by_name(wifi_screen_root, "network_list_container");
     if (!network_list_container) {
-        spdlog::error("[WiFi Screen] Network list container not found in XML");
+        LOG_ERROR_INTERNAL("Network list container not found in XML");
         return nullptr;
     }
 
@@ -449,7 +450,7 @@ void ui_wizard_wifi_cleanup() {
 
 void ui_wizard_wifi_show_password_modal(const char* ssid) {
     if (!ssid) {
-        spdlog::error("[WiFi Screen] Cannot show password modal: null SSID");
+        LOG_ERROR_INTERNAL("Cannot show password modal: null SSID");
         return;
     }
 
@@ -472,7 +473,7 @@ void ui_wizard_wifi_show_password_modal(const char* ssid) {
     password_modal = ui_modal_show("wifi_password_modal", &config, attrs);
 
     if (!password_modal) {
-        spdlog::error("[WiFi Screen] Failed to create password modal");
+        LOG_ERROR_INTERNAL("Failed to create password modal");
         return;
     }
 
@@ -569,8 +570,8 @@ static void on_wifi_toggle_changed(lv_event_t* e) {
             });
             spdlog::debug("[WiFi Screen] start_scan call completed");
         } else {
-            spdlog::error("[WiFi Screen] WiFi manager not initialized");
-            update_wifi_status("WiFi Error");
+            LOG_ERROR_INTERNAL("WiFi manager not initialized");
+            NOTIFY_ERROR("WiFi unavailable");
         }
     } else {
         // Disable WiFi
@@ -594,7 +595,7 @@ static void on_network_item_clicked(lv_event_t* e) {
     // Get network item data from user_data
     NetworkItemData* item_data = (NetworkItemData*)lv_obj_get_user_data(item);
     if (!item_data) {
-        spdlog::error("[WiFi Screen] No network data found in clicked item");
+        LOG_ERROR_INTERNAL("No network data found in clicked item");
         return;
     }
 
@@ -628,12 +629,12 @@ static void on_network_item_clicked(lv_event_t* e) {
                     char msg[128];
                     snprintf(msg, sizeof(msg), "Failed to connect: %s", error.c_str());
                     update_wifi_status(msg);
-                    spdlog::error("[WiFi Screen] Connection failed: {}", error);
+                    LOG_ERROR_INTERNAL("Connection failed: {}", error);
                 }
             });
         } else {
-            spdlog::error("[WiFi Screen] WiFi manager not initialized");
-            update_wifi_status("WiFi Error");
+            LOG_ERROR_INTERNAL("WiFi manager not initialized");
+            NOTIFY_ERROR("WiFi unavailable");
         }
     }
 }
@@ -660,14 +661,14 @@ static void on_modal_connect_clicked(lv_event_t* e) {
     spdlog::debug("[WiFi Screen] Password modal connect clicked");
 
     if (!password_modal) {
-        spdlog::error("[WiFi Screen] Password modal not found");
+        LOG_ERROR_INTERNAL("Password modal not found");
         return;
     }
 
     // Get password from textarea
     lv_obj_t* password_input = lv_obj_find_by_name(password_modal, "password_input");
     if (!password_input) {
-        spdlog::error("[WiFi Screen] Password input not found in modal");
+        LOG_ERROR_INTERNAL("Password input not found in modal");
         return;
     }
 
@@ -729,12 +730,12 @@ static void on_modal_connect_clicked(lv_event_t* e) {
                 }
 
                 update_wifi_status("Connection failed");
-                spdlog::error("[WiFi Screen] Connection failed: {}", error);
+                LOG_ERROR_INTERNAL("Connection failed: {}", error);
             }
         });
     } else {
-        spdlog::error("[WiFi Screen] WiFi manager not initialized");
-        update_wifi_status("WiFi Error");
+        LOG_ERROR_INTERNAL("WiFi manager not initialized");
+        NOTIFY_ERROR("WiFi unavailable");
     }
 }
 
@@ -753,7 +754,7 @@ static void update_wifi_status(const char* status) {
 
 static void update_ethernet_status() {
     if (!ethernet_manager) {
-        spdlog::warn("[WiFi Screen] Ethernet manager not initialized");
+        LOG_WARN_INTERNAL("Ethernet manager not initialized");
         lv_subject_copy_string(&ethernet_status, "Unknown");
         return;
     }
@@ -777,7 +778,7 @@ static void populate_network_list(const std::vector<WiFiNetwork>& networks) {
     spdlog::debug("[WiFi Screen] Populating network list with {} networks", networks.size());
 
     if (!network_list_container) {
-        spdlog::error("[WiFi Screen] Network list container not found");
+        LOG_ERROR_INTERNAL("Network list container not found");
         return;
     }
 
@@ -806,7 +807,7 @@ static void populate_network_list(const std::vector<WiFiNetwork>& networks) {
         lv_obj_t* item =
             (lv_obj_t*)lv_xml_create(network_list_container, "wifi_network_item", nullptr);
         if (!item) {
-            spdlog::error("[WiFi Screen] Failed to create network item for SSID: {}", network.ssid);
+            LOG_ERROR_INTERNAL("Failed to create network item for SSID: {}", network.ssid);
             continue;
         }
 
@@ -883,7 +884,7 @@ static void clear_network_list() {
     for (int32_t i = child_count - 1; i >= 0; i--) {
         lv_obj_t* child = lv_obj_get_child(network_list_container, i);
         if (!child) {
-            spdlog::warn("[WiFi Screen] Child at index {} is NULL", i);
+            LOG_WARN_INTERNAL("Child at index {} is NULL", i);
             continue;
         }
 

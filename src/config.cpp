@@ -3,6 +3,8 @@
 
 #include "config.h"
 
+#include "ui_error_reporting.h"
+
 #include <fstream>
 #include <iomanip>
 #include <sys/stat.h>
@@ -142,14 +144,16 @@ bool Config::save() {
     try {
         std::ofstream o(path);
         if (!o.is_open()) {
-            spdlog::error("Failed to open config file for writing: {}", path);
+            NOTIFY_ERROR("Could not save configuration file");
+            LOG_ERROR_INTERNAL("Failed to open config file for writing: {}", path);
             return false;
         }
 
         o << std::setw(2) << data << std::endl;
 
         if (!o.good()) {
-            spdlog::error("Error writing to config file: {}", path);
+            NOTIFY_ERROR("Error writing configuration file");
+            LOG_ERROR_INTERNAL("Error writing to config file: {}", path);
             return false;
         }
 
@@ -158,7 +162,8 @@ bool Config::save() {
         return true;
 
     } catch (const std::exception& e) {
-        spdlog::error("Exception while saving config to {}: {}", path, e.what());
+        NOTIFY_ERROR("Failed to save configuration: {}", e.what());
+        LOG_ERROR_INTERNAL("Exception while saving config to {}: {}", path, e.what());
         return false;
     }
 }

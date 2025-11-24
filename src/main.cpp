@@ -649,8 +649,12 @@ static void register_xml_components() {
     lv_xml_register_component_from_file("A:ui_xml/toast_notification.xml");
     lv_xml_register_component_from_file("A:ui_xml/error_dialog.xml");
     lv_xml_register_component_from_file("A:ui_xml/warning_dialog.xml");
-    lv_xml_register_component_from_file("A:ui_xml/notification_history_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/notification_history_item.xml");
+    spdlog::info("[XML] Registering notification_history_panel.xml...");
+    auto nh_panel_ret = lv_xml_register_component_from_file("A:ui_xml/notification_history_panel.xml");
+    spdlog::info("[XML] notification_history_panel.xml registration returned: {}", (int)nh_panel_ret);
+    spdlog::info("[XML] Registering notification_history_item.xml...");
+    auto nh_item_ret = lv_xml_register_component_from_file("A:ui_xml/notification_history_item.xml");
+    spdlog::info("[XML] notification_history_item.xml registration returned: {}", (int)nh_item_ret);
     lv_xml_register_component_from_file("A:ui_xml/confirmation_dialog.xml");
     lv_xml_register_component_from_file("A:ui_xml/tip_detail_dialog.xml");
     lv_xml_register_component_from_file("A:ui_xml/numeric_keypad_modal.xml");
@@ -899,7 +903,8 @@ static void save_screenshot() {
     if (write_bmp(filename, snapshot->data, snapshot->header.w, snapshot->header.h)) {
         spdlog::info("Screenshot saved: {}", filename);
     } else {
-        spdlog::error("Failed to save screenshot");
+        NOTIFY_ERROR("Failed to save screenshot");
+        LOG_ERROR_INTERNAL("Failed to save screenshot to {}", filename);
     }
 
     // Free snapshot buffer
@@ -1206,6 +1211,9 @@ int main(int argc, char** argv) {
 
     // Initialize reactive subjects BEFORE creating XML
     initialize_subjects();
+
+    // Register status bar event callbacks BEFORE creating XML (so LVGL can find them)
+    ui_status_bar_register_callbacks();
 
     // Create entire UI from XML (single component contains everything)
     lv_obj_t* app_layout = (lv_obj_t*)lv_xml_create(screen, "app_layout", NULL);

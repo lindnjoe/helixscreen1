@@ -394,8 +394,12 @@ static void notification_observer_cb(lv_observer_t* observer, lv_subject_t* subj
 
     // Get notification data from subject
     NotificationData* data = (NotificationData*)lv_subject_get_pointer(subject);
-    if (!data || !data->message) {
-        spdlog::warn("Notification observer received invalid data");
+    if (!data) {
+        // Silently ignore - this happens during initialization when subject is nullptr
+        return;
+    }
+    if (!data->message) {
+        spdlog::warn("Notification observer received data with null message");
         return;
     }
 

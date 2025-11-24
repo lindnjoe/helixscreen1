@@ -23,6 +23,8 @@
 
 #include "printer_detector.h"
 
+#include "ui_error_reporting.h"
+
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
@@ -50,7 +52,8 @@ struct PrinterDatabase {
         try {
             std::ifstream file("config/printer_database.json");
             if (!file.is_open()) {
-                spdlog::error("[PrinterDetector] Failed to open config/printer_database.json");
+                NOTIFY_ERROR("Could not load printer database");
+                LOG_ERROR_INTERNAL("[PrinterDetector] Failed to open config/printer_database.json");
                 return false;
             }
 
@@ -60,7 +63,8 @@ struct PrinterDatabase {
                          data.value("version", "unknown"));
             return true;
         } catch (const std::exception& e) {
-            spdlog::error("[PrinterDetector] Failed to parse printer database: {}", e.what());
+            NOTIFY_ERROR("Printer database format error");
+            LOG_ERROR_INTERNAL("[PrinterDetector] Failed to parse printer database: {}", e.what());
             return false;
         }
     }
@@ -189,7 +193,7 @@ PrinterDetectionResult PrinterDetector::detect(const PrinterHardwareData& hardwa
 
     // Load database if not already loaded
     if (!g_database.load()) {
-        spdlog::error("[PrinterDetector] Cannot perform detection without database");
+        LOG_ERROR_INTERNAL("[PrinterDetector] Cannot perform detection without database");
         return {"", 0, "Failed to load printer database"};
     }
 
@@ -197,7 +201,8 @@ PrinterDetectionResult PrinterDetector::detect(const PrinterHardwareData& hardwa
     PrinterDetectionResult best_match{"", 0, "No distinctive hardware detected"};
 
     if (!g_database.data.contains("printers") || !g_database.data["printers"].is_array()) {
-        spdlog::error("[PrinterDetector] Invalid database format: missing 'printers' array");
+        NOTIFY_ERROR("Printer database is corrupt");
+        LOG_ERROR_INTERNAL("[PrinterDetector] Invalid database format: missing 'printers' array");
         return {"", 0, "Invalid printer database format"};
     }
 

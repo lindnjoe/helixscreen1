@@ -100,8 +100,7 @@ lv_obj_t* ui_panel_notification_history_create(lv_obj_t* parent) {
     lv_xml_register_event_cb(NULL, "filter_info_clicked", filter_info_clicked);
 
     // Create panel from XML
-    lv_xml_create(parent, "notification_history_panel", nullptr);
-    panel_obj = lv_obj_find_by_name(parent, "notification_history_panel");
+    panel_obj = (lv_obj_t*)lv_xml_create(parent, "notification_history_panel", nullptr);
     if (!panel_obj) {
         spdlog::error("Failed to create notification_history_panel from XML");
         return nullptr;

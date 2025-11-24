@@ -85,11 +85,14 @@ static void status_notification_history_clicked(lv_event_t* e) {
     }
 }
 
+void ui_status_bar_register_callbacks() {
+    // Register notification history callback (must be called BEFORE app_layout XML is created)
+    lv_xml_register_event_cb(NULL, "status_notification_history_clicked", status_notification_history_clicked);
+    spdlog::debug("[StatusBar] Event callbacks registered");
+}
+
 void ui_status_bar_init() {
     spdlog::debug("[StatusBar] ui_status_bar_init() called");
-
-    // Register notification history callback
-    lv_xml_register_event_cb(NULL, "status_notification_history_clicked", status_notification_history_clicked);
 
     // First, find the status_bar container itself
     lv_obj_t* status_bar = lv_obj_find_by_name(lv_screen_active(), "status_bar");

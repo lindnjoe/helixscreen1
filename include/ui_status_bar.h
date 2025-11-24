@@ -46,6 +46,13 @@ enum class NotificationStatus {
 };
 
 /**
+ * @brief Register status bar event callbacks
+ *
+ * Must be called BEFORE app_layout XML is created so LVGL can find the callbacks.
+ */
+void ui_status_bar_register_callbacks();
+
+/**
  * @brief Initialize the status bar system
  *
  * Must be called after the status_bar XML component is created.

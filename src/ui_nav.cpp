@@ -523,8 +523,8 @@ bool ui_nav_go_back() {
         spdlog::debug("Popped panel from stack (remaining depth: {})", panel_stack.size());
     }
 
-    // Hide backdrop if no more overlays remain
-    if (panel_stack.empty() && overlay_backdrop) {
+    // Hide backdrop if no more overlays remain (stack size <=1 means only main panel left)
+    if (panel_stack.size() <= 1 && overlay_backdrop) {
         lv_obj_add_flag(overlay_backdrop, LV_OBJ_FLAG_HIDDEN);
         spdlog::debug("Hiding overlay backdrop (no more overlays)");
     }

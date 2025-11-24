@@ -209,7 +209,8 @@ bool GCodeParser::parse_exclude_object_command(const std::string& line) {
                     obj.center.x = std::stof(center_str.substr(0, comma));
                     obj.center.y = std::stof(center_str.substr(comma + 1));
                 } catch (...) {
-                    spdlog::warn("Failed to parse CENTER for object: {}", name);
+                    // Internal parsing error - no user notification needed
+                    spdlog::debug("Failed to parse CENTER for object: {}", name);
                 }
             }
         }

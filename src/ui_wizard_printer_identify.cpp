@@ -23,6 +23,7 @@
 
 #include "ui_wizard_printer_identify.h"
 
+#include "ui_error_reporting.h"
 #include "ui_event_safety.h"
 #include "ui_keyboard.h"
 #include "ui_subject_registry.h"
@@ -444,10 +445,12 @@ void ui_wizard_printer_identify_cleanup() {
         if (config->save()) {
             spdlog::info("[Wizard Printer] Saved printer identification settings to config");
         } else {
-            spdlog::error("[Wizard Printer] Failed to save printer configuration to disk!");
+            NOTIFY_ERROR("Failed to save printer configuration");
+            LOG_ERROR_INTERNAL("[Wizard Printer] Failed to save printer configuration to disk!");
         }
     } catch (const std::exception& e) {
-        spdlog::error("[Wizard Printer] Failed to save config: {}", e.what());
+        NOTIFY_ERROR("Error saving printer settings: {}", e.what());
+        LOG_ERROR_INTERNAL("[Wizard Printer] Failed to save config: {}", e.what());
     }
 
     // Reset UI references

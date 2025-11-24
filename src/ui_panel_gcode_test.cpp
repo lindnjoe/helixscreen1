@@ -12,6 +12,7 @@
 
 #include "ui_panel_gcode_test.h"
 
+#include "ui_error_reporting.h"
 #include "ui_event_safety.h"
 #include "ui_gcode_viewer.h"
 #include "ui_theme.h"
@@ -50,7 +51,7 @@ static void scan_gcode_files() {
 
     DIR* dir = opendir(ASSETS_DIR);
     if (!dir) {
-        spdlog::error("[GCodeTest] Failed to open assets directory");
+        LOG_ERROR_INTERNAL("[GCodeTest] Failed to open assets directory");
         return;
     }
 
@@ -80,7 +81,7 @@ static void on_gcode_load_complete(lv_obj_t* viewer, void* user_data, bool succe
     (void)user_data; // Not used
 
     if (!success) {
-        spdlog::error("[GCodeTest] G-code load callback: failed");
+        LOG_ERROR_INTERNAL("[GCodeTest] G-code load callback: failed");
         if (stats_label) {
             lv_label_set_text(stats_label, "Error loading file");
         }
@@ -149,7 +150,7 @@ static void on_file_selected(lv_event_t* e) {
     uint32_t index = (uint32_t)(uintptr_t)lv_event_get_user_data(e);
 
     if (index >= gcode_files.size()) {
-        spdlog::error("[GCodeTest] Invalid file index: {}", index);
+        LOG_ERROR_INTERNAL("[GCodeTest] Invalid file index: {}", index);
         return;
     }
 
@@ -418,7 +419,7 @@ lv_obj_t* ui_panel_gcode_test_create(lv_obj_t* parent) {
     // Load XML component (use registered component name, not file path)
     panel_root = (lv_obj_t*)lv_xml_create(parent, "gcode_test_panel", nullptr);
     if (!panel_root) {
-        spdlog::error("[GCodeTest] Failed to load XML component");
+        LOG_ERROR_INTERNAL("[GCodeTest] Failed to load XML component");
         return nullptr;
     }
 
@@ -427,7 +428,7 @@ lv_obj_t* ui_panel_gcode_test_create(lv_obj_t* parent) {
     stats_label = lv_obj_find_by_name(panel_root, "stats_label");
 
     if (!gcode_viewer) {
-        spdlog::error("[GCodeTest] Failed to find gcode_viewer widget");
+        LOG_ERROR_INTERNAL("[GCodeTest] Failed to find gcode_viewer widget");
         return panel_root;
     }
 
