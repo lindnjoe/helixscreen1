@@ -331,3 +331,27 @@ PrinterState& get_printer_state() {
     static PrinterState instance;
     return instance;
 }
+
+// Stub implementations for notification functions (tests don't display UI)
+void ui_notification_init() {
+    // No-op in tests
+}
+
+void ui_notification_info(const char* message) {
+    spdlog::debug("[Test Stub] ui_notification_info: {}", message ? message : "(null)");
+}
+
+void ui_notification_success(const char* message) {
+    spdlog::debug("[Test Stub] ui_notification_success: {}", message ? message : "(null)");
+}
+
+void ui_notification_warning(const char* message) {
+    spdlog::debug("[Test Stub] ui_notification_warning: {}", message ? message : "(null)");
+}
+
+void ui_notification_error(const char* message, const char* title, bool modal) {
+    spdlog::debug("[Test Stub] ui_notification_error: {} (title={}, modal={})",
+                  message ? message : "(null)",
+                  title ? title : "(null)",
+                  modal);
+}

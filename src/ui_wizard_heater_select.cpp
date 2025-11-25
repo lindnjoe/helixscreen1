@@ -31,6 +31,7 @@
 #include "config.h"
 #include "lvgl/lvgl.h"
 #include "moonraker_client.h"
+#include "ui_error_reporting.h"
 #include "ui_notification.h"
 #include "wizard_config_paths.h"
 
@@ -181,7 +182,7 @@ void ui_wizard_heater_select_cleanup() {
 
     // Persist to disk
     if (!config->save()) {
-        spdlog::error("[Wizard Heater] Failed to save heater configuration to disk!");
+        NOTIFY_ERROR("Failed to save heater configuration");
     }
 
     // Reset UI references

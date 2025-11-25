@@ -34,8 +34,7 @@ TEST_WIZARD_DEPS := \
     $(OBJ_DIR)/ui_wizard.o \
     $(OBJ_DIR)/ui_wizard_wifi.o \
     $(OBJ_DIR)/ui_wizard_connection.o \
-    $(OBJ_DIR)/ui_wizard_bed_select.o \
-    $(OBJ_DIR)/ui_wizard_hotend_select.o \
+    $(OBJ_DIR)/ui_wizard_heater_select.o \
     $(OBJ_DIR)/ui_wizard_fan_select.o \
     $(OBJ_DIR)/ui_wizard_led_select.o \
     $(OBJ_DIR)/ui_wizard_printer_identify.o \
@@ -45,6 +44,8 @@ TEST_WIZARD_DEPS := \
 
 # UI components (theme, modals, navigation)
 # Note: ui_icon.o and ui_switch.o excluded - their tests include the .cpp directly
+# Note: ui_notification.o and ui_toast.o excluded - they require full UI init
+#       ui_notification_history.o is the pure C++ circular buffer that tests need
 TEST_UI_DEPS := \
     $(OBJ_DIR)/ui_nav.o \
     $(OBJ_DIR)/ui_temp_graph.o \
@@ -59,6 +60,7 @@ TEST_UI_DEPS := \
     $(OBJ_DIR)/ui_jog_pad.o \
     $(OBJ_DIR)/ui_component_header_bar.o \
     $(OBJ_DIR)/ui_bed_mesh.o \
+    $(OBJ_DIR)/ui_notification_history.o \
     $(FONT_OBJS)
 
 # UI panel components (all panels for smoke tests)

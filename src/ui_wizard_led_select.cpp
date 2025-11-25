@@ -31,6 +31,7 @@
 #include "config.h"
 #include "lvgl/lvgl.h"
 #include "moonraker_client.h"
+#include "ui_error_reporting.h"
 #include "wizard_config_paths.h"
 
 #include <spdlog/spdlog.h>
@@ -132,7 +133,7 @@ void ui_wizard_led_select_cleanup() {
     Config* config = Config::get_instance();
     if (config) {
         if (!config->save()) {
-            spdlog::error("[Wizard LED] Failed to save LED configuration to disk!");
+            NOTIFY_ERROR("Failed to save LED configuration");
         }
     }
 

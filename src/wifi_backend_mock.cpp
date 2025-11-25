@@ -24,6 +24,8 @@
 #include "wifi_backend_mock.h"
 
 #include "safe_log.h"
+#include "ui_error_reporting.h"
+
 #include "spdlog/spdlog.h"
 
 #include <algorithm>
@@ -116,7 +118,7 @@ void WifiBackendMock::fire_event(const std::string& event_name, const std::strin
 
 WiFiError WifiBackendMock::trigger_scan() {
     if (!running_) {
-        spdlog::warn("[WifiBackend] Mock: trigger_scan called but not running");
+        LOG_WARN_INTERNAL("[WifiBackend] Mock: trigger_scan called but not running");
         return WiFiError(WiFiResult::NOT_INITIALIZED, "Mock backend not running",
                          "WiFi scanner not ready", "Initialize the WiFi system first");
     }
@@ -182,7 +184,7 @@ void WifiBackendMock::scan_thread_func() {
 
 WiFiError WifiBackendMock::connect_network(const std::string& ssid, const std::string& password) {
     if (!running_) {
-        spdlog::warn("[WifiBackend] Mock: connect_network called but not running");
+        LOG_WARN_INTERNAL("[WifiBackend] Mock: connect_network called but not running");
         return WiFiError(WiFiResult::NOT_INITIALIZED, "Mock backend not running",
                          "WiFi system not ready", "Initialize the WiFi system first");
     }
@@ -193,13 +195,13 @@ WiFiError WifiBackendMock::connect_network(const std::string& ssid, const std::s
         [&ssid](const MockWiFiNetwork& mock_net) { return mock_net.network.ssid == ssid; });
 
     if (it == mock_networks_.end()) {
-        spdlog::warn("[WifiBackend] Mock: Network '{}' not found in scan results", ssid);
+        LOG_WARN_INTERNAL("[WifiBackend] Mock: Network '{}' not found in scan results", ssid);
         return WiFiErrorHelper::network_not_found(ssid);
     }
 
     // Validate password for secured networks
     if (it->network.is_secured && password.empty()) {
-        spdlog::warn("[WifiBackend] Mock: No password provided for secured network '{}'", ssid);
+        LOG_WARN_INTERNAL("[WifiBackend] Mock: No password provided for secured network '{}'", ssid);
         return WiFiError(
             WiFiResult::INVALID_PARAMETERS, "Password required for secured network: " + ssid,
             "This network requires a password", "Enter the network password and try again");
@@ -274,8 +276,8 @@ void WifiBackendMock::connect_thread_func() {
                            });
 
     if (it == mock_networks_.end()) {
-        spdlog::error("[WifiBackend] Mock: Network '{}' disappeared during connection",
-                      connecting_ssid_);
+        LOG_ERROR_INTERNAL("[WifiBackend] Mock: Network '{}' disappeared during connection",
+                          connecting_ssid_);
         fire_event("DISCONNECTED", "reason=network_not_found");
         return;
     }

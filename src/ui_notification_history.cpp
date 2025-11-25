@@ -26,7 +26,8 @@ void NotificationHistory::add(const NotificationHistoryEntry& entry) {
     if (entries_.size() < MAX_ENTRIES) {
         // Buffer not full yet - just append
         entries_.push_back(entry);
-        head_index_ = entries_.size();
+        // head_index_ tracks next write position (wraps to 0 when at capacity)
+        head_index_ = entries_.size() % MAX_ENTRIES;
     } else {
         // Buffer is full - overwrite oldest entry
         if (!buffer_full_) {
@@ -67,8 +68,7 @@ std::vector<NotificationHistoryEntry> NotificationHistory::get_all() const {
 }
 
 std::vector<NotificationHistoryEntry> NotificationHistory::get_filtered(int severity) const {
-    std::lock_guard<std::mutex> lock(mutex_);
-
+    // Don't hold lock while calling get_all() - it has its own lock
     auto all_entries = get_all();
 
     if (severity < 0) {

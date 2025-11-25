@@ -35,6 +35,7 @@
 #include "config.h"
 #include "lvgl/src/xml/lv_xml.h"
 #include "moonraker_api.h"
+#include "ui_error_reporting.h"
 
 #include <spdlog/spdlog.h>
 
@@ -615,11 +616,9 @@ void ui_panel_print_select_refresh_files() {
         },
         // Error callback
         [](const MoonrakerError& error) {
-            spdlog::error("Failed to refresh file list: {} ({})", error.message,
-                          error.get_type_string());
-
-            // Show error to user (you might want to display this in UI)
-            // For now, just log it
+            NOTIFY_ERROR("Failed to refresh file list");
+            LOG_ERROR_INTERNAL("File list refresh error: {} ({})", error.message,
+                              error.get_type_string());
         });
 }
 
@@ -1143,13 +1142,12 @@ void ui_panel_print_select_show_delete_confirmation() {
                         },
                         // Error callback
                         [](const MoonrakerError& error) {
-                            spdlog::error("Failed to delete file: {} ({})", error.message,
-                                          error.get_type_string());
+                            NOTIFY_ERROR("Failed to delete file");
+                            LOG_ERROR_INTERNAL("File delete error: {} ({})", error.message,
+                                              error.get_type_string());
 
                             // Hide confirmation dialog but keep detail view open
                             hide_delete_confirmation();
-
-                            // TODO: Show error message to user
                         });
                 } else {
                     spdlog::warn("MoonrakerAPI not available - cannot delete file");

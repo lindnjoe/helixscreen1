@@ -38,6 +38,7 @@
 #include "lvgl/lvgl.h"
 #include "lvgl/src/xml/lv_xml.h"
 #include "moonraker_client.h"
+#include "ui_error_reporting.h"
 #include "wizard_config_paths.h"
 
 #include <spdlog/spdlog.h>
@@ -451,10 +452,10 @@ void ui_wizard_complete() {
         spdlog::debug("[Wizard] Setting wizard_completed flag");
         config->set<bool>("/wizard_completed", true);
         if (!config->save()) {
-            spdlog::error("[Wizard] Failed to save wizard_completed flag!");
+            NOTIFY_ERROR("Failed to save setup completion");
         }
     } else {
-        spdlog::error("[Wizard] Failed to get config instance to mark wizard complete");
+        LOG_ERROR_INTERNAL("[Wizard] Failed to get config instance to mark wizard complete");
     }
 
     // 2. Cleanup current wizard screen
