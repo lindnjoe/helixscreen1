@@ -39,10 +39,13 @@ For the developer implementing this system, here's a sequential task list:
 - [x] Implement reactive network status icon (observer pattern, Font Awesome sitemap - 2025-11-23)
 - [x] Verify UI appearance (toasts, history panel) - severity_card widget for XML-first styling
 - [x] Audit Moonraker error sites (~100% already migrated)
-- [x] Audit WiFi error sites (~96% already migrated)
+- [x] Audit WiFi error sites (~100% migrated)
 - [x] Convert wizard config save errors to NOTIFY_ERROR (6 sites)
 - [x] Convert print file operation errors to NOTIFY_ERROR (3 sites)
 - [x] Standardize WiFi mock backend to LOG_*_INTERNAL (7 sites)
+- [x] Add INIT_FAILED event to wpa_supplicant backend (6 failure points)
+- [x] Register INIT_FAILED callback in WiFiManager for user notification
+- [x] Convert wizard WiFi connection errors to NOTIFY_ERROR (2 sites)
 - [x] Test all conversions
 
 ### Phase 3: Comprehensive Migration (FUTURE)

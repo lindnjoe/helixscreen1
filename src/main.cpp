@@ -81,6 +81,57 @@
 #include <memory>
 #include <mutex>
 #include <queue>
+#include <unistd.h>
+
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
+
+// Ensure we're running from the project root directory.
+// If the executable is in build/bin/, change to the project root so relative paths work.
+static void ensure_project_root_cwd() {
+    char exe_path[PATH_MAX];
+
+#ifdef __APPLE__
+    uint32_t size = sizeof(exe_path);
+    if (_NSGetExecutablePath(exe_path, &size) != 0) {
+        return; // Failed to get path, assume CWD is correct
+    }
+    // Resolve symlinks
+    char resolved[PATH_MAX];
+    if (realpath(exe_path, resolved)) {
+        strncpy(exe_path, resolved, PATH_MAX);
+    }
+#elif defined(__linux__)
+    ssize_t len = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
+    if (len == -1) {
+        return; // Failed to get path, assume CWD is correct
+    }
+    exe_path[len] = '\0';
+#else
+    return; // Unsupported platform, assume CWD is correct
+#endif
+
+    // Get directory containing executable
+    char* last_slash = strrchr(exe_path, '/');
+    if (!last_slash) return;
+    *last_slash = '\0';
+
+    // Check if we're in build/bin/ and go up two levels
+    size_t dir_len = strlen(exe_path);
+    const char* suffix = "/build/bin";
+    size_t suffix_len = strlen(suffix);
+
+    if (dir_len >= suffix_len &&
+        strcmp(exe_path + dir_len - suffix_len, suffix) == 0) {
+        // Strip /build/bin to get project root
+        exe_path[dir_len - suffix_len] = '\0';
+
+        if (chdir(exe_path) == 0) {
+            spdlog::debug("Changed working directory to: {}", exe_path);
+        }
+    }
+}
 
 // LVGL display and input
 static lv_display_t* display = nullptr;
@@ -952,29 +1003,23 @@ static void initialize_moonraker_client(Config* config) {
     spdlog::debug("Moonraker timeouts configured: connection={}ms, request={}ms, keepalive={}ms",
                   connection_timeout, request_timeout, keepalive_interval);
 
-    // Set up state change callback to automatically update PrinterState
+    // Set up state change callback to queue updates for main thread
+    // CRITICAL: This callback runs on the Moonraker event loop thread, NOT the main thread.
+    // LVGL is NOT thread-safe, so we must NOT call any LVGL functions here.
+    // Instead, queue the state change and process it on the main thread.
     moonraker_client->set_state_change_callback(
         [](ConnectionState old_state, ConnectionState new_state) {
-            spdlog::debug("[main] State change callback invoked: {} -> {}",
+            spdlog::debug("[main] State change callback invoked: {} -> {} (queueing for main thread)",
                           static_cast<int>(old_state), static_cast<int>(new_state));
 
-            const char* messages[] = {
-                "Disconnected",     // DISCONNECTED
-                "Connecting...",    // CONNECTING
-                "Connected",        // CONNECTED
-                "Reconnecting...",  // RECONNECTING
-                "Connection Failed" // FAILED
-            };
-
-            // Convert enum to integer for subject (0-4)
-            int state_int = static_cast<int>(new_state);
-            spdlog::debug("[main] Calling get_printer_state().set_printer_connection_state({}, \"{}\")",
-                          state_int, messages[state_int]);
-            get_printer_state().set_printer_connection_state(state_int, messages[state_int]);
-
-            // Log state transitions
-            spdlog::debug("[main] Connection state changed: {} -> {}",
-                          messages[static_cast<int>(old_state)], messages[state_int]);
+            // Queue state change for main thread processing (same mutex as notifications)
+            // Use a special JSON object with "_connection_state" marker
+            std::lock_guard<std::mutex> lock(notification_mutex);
+            json state_change;
+            state_change["_connection_state"] = true;
+            state_change["old_state"] = static_cast<int>(old_state);
+            state_change["new_state"] = static_cast<int>(new_state);
+            notification_queue.push(state_change);
         });
 
     // Register notification callback to queue updates for main thread
@@ -1046,6 +1091,9 @@ static void update_mock_printer_data() {
 
 // Main application
 int main(int argc, char** argv) {
+    // Ensure we're running from the project root for relative path access
+    ensure_project_root_cwd();
+
     // Parse command-line arguments
     int initial_panel = -1;          // -1 means auto-select based on screen size
     bool show_motion = false;        // Special flag for motion sub-screen
@@ -1594,7 +1642,24 @@ int main(int argc, char** argv) {
             while (!notification_queue.empty()) {
                 json notification = notification_queue.front();
                 notification_queue.pop();
-                get_printer_state().update_from_notification(notification);
+
+                // Check for connection state change (queued from state_change_callback)
+                if (notification.contains("_connection_state")) {
+                    int new_state = notification["new_state"].get<int>();
+                    static const char* messages[] = {
+                        "Disconnected",     // DISCONNECTED
+                        "Connecting...",    // CONNECTING
+                        "Connected",        // CONNECTED
+                        "Reconnecting...",  // RECONNECTING
+                        "Connection Failed" // FAILED
+                    };
+                    spdlog::debug("[main] Processing queued connection state change: {}",
+                                  messages[new_state]);
+                    get_printer_state().set_printer_connection_state(new_state, messages[new_state]);
+                } else {
+                    // Regular Moonraker notification
+                    get_printer_state().update_from_notification(notification);
+                }
             }
         }
 
