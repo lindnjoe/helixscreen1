@@ -253,31 +253,6 @@ $(TEST_CARDS_OBJ): $(SRC_DIR)/test_dynamic_cards.cpp
 	$(ECHO) "$(BLUE)[TEST]$(RESET) $<"
 	$(Q)$(CXX) $(CXXFLAGS) $(INCLUDES) $(LV_CONF) -c $< -o $@
 
-# Print select panel test with mock data
-TEST_PRINT_SELECT_BIN := $(BIN_DIR)/test_print_select_panel
-TEST_PRINT_SELECT_OBJ := $(OBJ_DIR)/tests/test_print_select_panel.o
-MOCK_FILES_OBJ := $(OBJ_DIR)/tests/mock_print_files.o
-
-test-print-select: $(TEST_PRINT_SELECT_BIN)
-	$(ECHO) "$(CYAN)Running print select panel test...$(RESET)"
-	$(Q)$(TEST_PRINT_SELECT_BIN)
-
-$(TEST_PRINT_SELECT_BIN): $(TEST_PRINT_SELECT_OBJ) $(MOCK_FILES_OBJ) $(LVGL_OBJS)
-	$(Q)mkdir -p $(BIN_DIR)
-	$(ECHO) "$(MAGENTA)[LD]$(RESET) test_print_select_panel"
-	$(Q)$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
-	$(ECHO) "$(GREEN)✓ Test binary ready$(RESET)"
-
-$(TEST_PRINT_SELECT_OBJ): $(TEST_DIR)/test_print_select_panel.cpp
-	$(Q)mkdir -p $(dir $@)
-	$(ECHO) "$(BLUE)[TEST]$(RESET) $<"
-	$(Q)$(CXX) $(CXXFLAGS) -I$(TEST_DIR) $(INCLUDES) $(LV_CONF) -c $< -o $@
-
-$(MOCK_FILES_OBJ): $(TEST_DIR)/mock_print_files.cpp
-	$(Q)mkdir -p $(dir $@)
-	$(ECHO) "$(BLUE)[TEST]$(RESET) $<"
-	$(Q)$(CXX) $(CXXFLAGS) -I$(TEST_DIR) $(INCLUDES) $(LV_CONF) -c $< -o $@
-
 # LV_SIZE_CONTENT behavior test
 TEST_SIZE_CONTENT_BIN := $(BIN_DIR)/test_size_content
 TEST_SIZE_CONTENT_OBJ := $(OBJ_DIR)/test_size_content.o

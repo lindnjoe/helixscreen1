@@ -403,4 +403,108 @@ class GCodeParser {
     size_t lines_parsed_{0}; ///< Line counter
 };
 
+// ============================================================================
+// Thumbnail Extraction (Standalone Functions)
+// ============================================================================
+
+/**
+ * @brief Thumbnail extracted from G-code file header
+ *
+ * G-code files embed thumbnails as base64-encoded PNG in comment blocks.
+ * Multiple sizes may be present (e.g., 48x48 for printer LCD, 300x300 for web).
+ */
+struct GCodeThumbnail {
+    int width = 0;
+    int height = 0;
+    std::vector<uint8_t> png_data; ///< Decoded PNG binary data
+
+    int pixel_count() const {
+        return width * height;
+    }
+};
+
+/**
+ * @brief Extract all thumbnails from G-code file header
+ *
+ * Parses thumbnail blocks in the format:
+ *   ; thumbnail begin WIDTHxHEIGHT SIZE
+ *   ; <base64 data line 1>
+ *   ; <base64 data line 2>
+ *   ; ...
+ *   ; thumbnail end
+ *
+ * @param filepath Path to the G-code file
+ * @return Vector of thumbnails sorted largest-first. Empty if none found.
+ */
+std::vector<GCodeThumbnail> extract_thumbnails(const std::string& filepath);
+
+/**
+ * @brief Get the largest thumbnail from a G-code file
+ *
+ * @param filepath Path to the G-code file
+ * @return Largest thumbnail, or empty thumbnail if none found
+ */
+GCodeThumbnail get_best_thumbnail(const std::string& filepath);
+
+/**
+ * @brief Extract thumbnail and save to PNG file
+ *
+ * Extracts the largest thumbnail and writes raw PNG bytes to file.
+ *
+ * @param gcode_path Path to the G-code file
+ * @param output_path Path for the output PNG file
+ * @return true if successful, false if no thumbnail or write failed
+ */
+bool save_thumbnail_to_file(const std::string& gcode_path, const std::string& output_path);
+
+/**
+ * @brief Get or create cached thumbnail for a G-code file
+ *
+ * If cached thumbnail exists and is newer than G-code file, returns cache path.
+ * Otherwise extracts thumbnail and saves to cache directory.
+ *
+ * @param gcode_path Path to the G-code file
+ * @param cache_dir Directory for cached thumbnails
+ * @return Path to cached PNG, or empty string if no thumbnail available
+ */
+std::string get_cached_thumbnail(const std::string& gcode_path, const std::string& cache_dir);
+
+/**
+ * @brief Decode base64 string to binary data
+ *
+ * @param encoded Base64 encoded string (may contain whitespace)
+ * @return Decoded binary data
+ */
+std::vector<uint8_t> base64_decode(const std::string& encoded);
+
+/**
+ * @brief Basic metadata extracted from G-code header
+ *
+ * Lightweight struct for quick file listings without full toolpath parsing.
+ */
+struct GCodeHeaderMetadata {
+    std::string filename;
+    uint64_t file_size = 0;
+    double modified_time = 0.0; ///< Unix timestamp
+    std::string slicer;
+    std::string slicer_version;
+    double estimated_time_seconds = 0.0;
+    double filament_used_mm = 0.0;
+    double filament_used_g = 0.0;
+    uint32_t layer_count = 0;
+    double first_layer_bed_temp = 0.0;
+    double first_layer_nozzle_temp = 0.0;
+};
+
+/**
+ * @brief Quick metadata extraction from G-code header only
+ *
+ * Extracts just the header metadata (slicer info, print time, filament)
+ * without parsing the full toolpath. Much faster for file listings.
+ *
+ * @param filepath Path to the G-code file
+ * @return GCodeHeaderMetadata with basic info populated
+ */
+GCodeHeaderMetadata extract_header_metadata(const std::string& filepath);
+
 } // namespace gcode

@@ -50,24 +50,15 @@ enum class PrintSelectViewMode {
 /**
  * @brief Sort column for list view
  */
-enum class PrintSelectSortColumn {
-    FILENAME,
-    SIZE,
-    MODIFIED,
-    PRINT_TIME,
-    FILAMENT
-};
+enum class PrintSelectSortColumn { FILENAME, SIZE, MODIFIED, PRINT_TIME, FILAMENT };
 
 /**
  * @brief Sort direction
  */
-enum class PrintSelectSortDirection {
-    ASCENDING,
-    DESCENDING
-};
+enum class PrintSelectSortDirection { ASCENDING, DESCENDING };
 
 /**
- * @brief File data structure for print files
+ * @brief File data structure for print files and directories
  */
 struct PrintFileData {
     std::string filename;
@@ -76,6 +67,7 @@ struct PrintFileData {
     time_t modified_timestamp; ///< Last modified timestamp
     int print_time_minutes;    ///< Print time in minutes
     float filament_grams;      ///< Filament weight in grams
+    bool is_dir = false;       ///< True if this is a directory
 
     // Formatted strings (cached for performance)
     std::string size_str;
@@ -141,8 +133,12 @@ class PrintSelectPanel : public PanelBase {
      */
     void setup(lv_obj_t* panel, lv_obj_t* parent_screen) override;
 
-    const char* get_name() const override { return "Print Select Panel"; }
-    const char* get_xml_component_name() const override { return "print_select_panel"; }
+    const char* get_name() const override {
+        return "Print Select Panel";
+    }
+    const char* get_xml_component_name() const override {
+        return "print_select_panel";
+    }
 
     //
     // === Public API ===
@@ -165,15 +161,51 @@ class PrintSelectPanel : public PanelBase {
     /**
      * @brief Refresh file list from Moonraker
      *
-     * Fetches files from gcodes directory, updates both views.
+     * Fetches files from current directory, updates both views.
      * Metadata (print time, filament) is fetched asynchronously.
      */
     void refresh_files();
 
     /**
-     * @brief Populate with test data (when Moonraker unavailable)
+     * @brief Navigate into a subdirectory
+     *
+     * @param dirname Directory name to navigate into
      */
-    void populate_test_data();
+    void navigate_to_directory(const std::string& dirname);
+
+    /**
+     * @brief Navigate up to parent directory
+     *
+     * Does nothing if already at root gcodes directory.
+     */
+    void navigate_up();
+
+    /**
+     * @brief Check if currently at root directory
+     *
+     * @return true if at root gcodes directory
+     */
+    bool is_at_root() const {
+        return current_path_.empty();
+    }
+
+    /**
+     * @brief Get current directory path
+     *
+     * @return Current path relative to gcodes root (empty = root)
+     */
+    const std::string& get_current_path() const {
+        return current_path_;
+    }
+
+    /**
+     * @brief Set MoonrakerAPI and trigger file refresh
+     *
+     * Overrides base class to automatically refresh file list when API becomes available.
+     *
+     * @param api Pointer to MoonrakerAPI (may be nullptr to disconnect)
+     */
+    void set_api(MoonrakerAPI* api);
 
     /**
      * @brief Set selected file data and update subjects
@@ -183,8 +215,8 @@ class PrintSelectPanel : public PanelBase {
      * @param print_time Formatted print time
      * @param filament_weight Formatted filament weight
      */
-    void set_selected_file(const char* filename, const char* thumbnail_src,
-                           const char* print_time, const char* filament_weight);
+    void set_selected_file(const char* filename, const char* thumbnail_src, const char* print_time,
+                           const char* filament_weight);
 
     /**
      * @brief Show detail view overlay for selected file
@@ -217,11 +249,12 @@ class PrintSelectPanel : public PanelBase {
 
     static constexpr const char* CARD_COMPONENT_NAME = "print_file_card";
     static constexpr int CARD_GAP = 20;
-    static constexpr int CARD_MIN_WIDTH = 155;  // Lowered from 165 to fit 4 columns on 800px screens
+    static constexpr int CARD_MIN_WIDTH = 155; // Lowered from 165 to fit 4 columns on 800px screens
     static constexpr int CARD_MAX_WIDTH = 230;
     static constexpr int CARD_DEFAULT_HEIGHT = 245;
     static constexpr int ROW_COUNT_3_MIN_HEIGHT = 520;
-    static constexpr const char* DEFAULT_PLACEHOLDER_THUMB = "A:assets/images/thumbnail-placeholder.png";
+    static constexpr const char* DEFAULT_PLACEHOLDER_THUMB =
+        "A:assets/images/thumbnail-placeholder.png";
 
     //
     // === Widget References ===
@@ -260,6 +293,7 @@ class PrintSelectPanel : public PanelBase {
     //
 
     std::vector<PrintFileData> file_list_;
+    std::string current_path_; ///< Current directory path (empty = root gcodes dir)
     PrintSelectViewMode current_view_mode_ = PrintSelectViewMode::CARD;
     PrintSelectSortColumn current_sort_column_ = PrintSelectSortColumn::FILENAME;
     PrintSelectSortDirection current_sort_direction_ = PrintSelectSortDirection::ASCENDING;
@@ -347,11 +381,6 @@ class PrintSelectPanel : public PanelBase {
      */
     void delete_file();
 
-    /**
-     * @brief Construct Moonraker thumbnail URL from relative path
-     */
-    static std::string construct_thumbnail_url(const std::string& relative_path);
-
     //
     // === Static Callbacks (trampolines) ===
     //
@@ -384,4 +413,3 @@ class PrintSelectPanel : public PanelBase {
  * @return Pointer to the global instance
  */
 PrintSelectPanel* get_print_select_panel(PrinterState& printer_state, MoonrakerAPI* api);
-

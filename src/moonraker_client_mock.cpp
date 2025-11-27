@@ -23,9 +23,188 @@
 
 #include "moonraker_client_mock.h"
 
+#include "gcode_parser.h"
+
 #include <spdlog/spdlog.h>
 
+#include <algorithm>
 #include <cmath>
+#include <dirent.h>
+#include <sys/stat.h>
+
+// Directory paths for mock G-code files
+static constexpr const char* TEST_GCODE_DIR = "assets/test_gcodes";
+static constexpr const char* THUMBNAIL_CACHE_DIR = "build/thumbnail_cache";
+
+/**
+ * @brief Scan test directory for G-code files
+ * @return Vector of filenames (not full paths)
+ */
+static std::vector<std::string> scan_mock_gcode_files() {
+    std::vector<std::string> files;
+
+    DIR* dir = opendir(TEST_GCODE_DIR);
+    if (!dir) {
+        spdlog::warn("[MoonrakerClientMock] Cannot open test G-code directory: {}", TEST_GCODE_DIR);
+        return files;
+    }
+
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != nullptr) {
+        std::string name = entry->d_name;
+
+        // Skip hidden files and non-gcode files
+        if (name[0] == '.' || name.length() < 7) {
+            continue;
+        }
+
+        // Check for .gcode extension (case insensitive)
+        std::string ext = name.substr(name.length() - 6);
+        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+        if (ext != ".gcode") {
+            continue;
+        }
+
+        files.push_back(name);
+    }
+
+    closedir(dir);
+    std::sort(files.begin(), files.end());
+
+    spdlog::debug("[MoonrakerClientMock] Found {} mock G-code files", files.size());
+    return files;
+}
+
+/**
+ * @brief Build mock JSON response for server.files.list
+ * @param path Directory path relative to gcodes root (empty = root)
+ * @return JSON response matching Moonraker format
+ */
+static json build_mock_file_list_response(const std::string& path = "") {
+    json files_array = json::array();
+    json dirs_array = json::array();
+
+    if (path.empty()) {
+        // Root directory - add mock subdirectories plus real files
+        auto filenames = scan_mock_gcode_files();
+
+        for (const auto& filename : filenames) {
+            std::string full_path = std::string(TEST_GCODE_DIR) + "/" + filename;
+
+            struct stat file_stat;
+            uint64_t size = 0;
+            double modified = 0.0;
+            if (stat(full_path.c_str(), &file_stat) == 0) {
+                size = static_cast<uint64_t>(file_stat.st_size);
+                modified = static_cast<double>(file_stat.st_mtime);
+            }
+
+            json file_entry = {{"filename", filename},
+                               {"path", filename},
+                               {"size", size},
+                               {"modified", modified},
+                               {"permissions", "rw"}};
+            files_array.push_back(file_entry);
+        }
+
+        // Add mock subdirectories at root
+        dirs_array.push_back({{"dirname", "calibration"},
+                              {"modified", 1700000000.0},
+                              {"size", 4096},
+                              {"permissions", "rw"}});
+        dirs_array.push_back({{"dirname", "my_projects"},
+                              {"modified", 1699900000.0},
+                              {"size", 4096},
+                              {"permissions", "rw"}});
+    } else if (path == "calibration") {
+        // Mock calibration subdirectory
+        files_array.push_back({{"filename", "temp_tower.gcode"},
+                               {"path", "calibration/temp_tower.gcode"},
+                               {"size", 125000},
+                               {"modified", 1698000000.0},
+                               {"permissions", "rw"}});
+        files_array.push_back({{"filename", "bed_level_test.gcode"},
+                               {"path", "calibration/bed_level_test.gcode"},
+                               {"size", 85000},
+                               {"modified", 1697500000.0},
+                               {"permissions", "rw"}});
+    } else if (path == "my_projects") {
+        // Mock my_projects subdirectory with nested folder
+        files_array.push_back({{"filename", "custom_bracket.gcode"},
+                               {"path", "my_projects/custom_bracket.gcode"},
+                               {"size", 250000},
+                               {"modified", 1696000000.0},
+                               {"permissions", "rw"}});
+        dirs_array.push_back({{"dirname", "keycaps"},
+                              {"modified", 1695000000.0},
+                              {"size", 4096},
+                              {"permissions", "rw"}});
+    } else if (path == "my_projects/keycaps") {
+        // Nested subdirectory
+        files_array.push_back({{"filename", "cherry_mx_cap.gcode"},
+                               {"path", "my_projects/keycaps/cherry_mx_cap.gcode"},
+                               {"size", 45000},
+                               {"modified", 1694000000.0},
+                               {"permissions", "rw"}});
+    }
+    // Unknown paths return empty lists
+
+    json response = {{"result", {{"dirs", dirs_array}, {"files", files_array}}}};
+
+    spdlog::debug("[MoonrakerClientMock] Built mock file list for path '{}': {} dirs, {} files",
+                  path.empty() ? "/" : path, dirs_array.size(), files_array.size());
+    return response;
+}
+
+/**
+ * @brief Build mock JSON response for server.files.metadata
+ * @param filename Filename to get metadata for
+ * @return JSON response matching Moonraker format
+ */
+static json build_mock_file_metadata_response(const std::string& filename) {
+    std::string full_path = std::string(TEST_GCODE_DIR) + "/" + filename;
+
+    // Get file info from filesystem
+    struct stat file_stat;
+    uint64_t size = 0;
+    double modified = 0.0;
+    if (stat(full_path.c_str(), &file_stat) == 0) {
+        size = static_cast<uint64_t>(file_stat.st_size);
+        modified = static_cast<double>(file_stat.st_mtime);
+    }
+
+    // Extract metadata from G-code header
+    auto header_meta = gcode::extract_header_metadata(full_path);
+
+    // Get cached thumbnail path (creates cache if needed)
+    std::string thumbnail_path = gcode::get_cached_thumbnail(full_path, THUMBNAIL_CACHE_DIR);
+
+    json thumbnails = json::array();
+    if (!thumbnail_path.empty()) {
+        // Return relative path to cached thumbnail (no LVGL prefix - that's a UI concern)
+        // Format must match Moonraker's response structure: array of objects with relative_path
+        thumbnails.push_back({{"relative_path", thumbnail_path}});
+    }
+
+    json result = {{"filename", filename},
+                   {"size", size},
+                   {"modified", modified},
+                   {"slicer", header_meta.slicer},
+                   {"slicer_version", header_meta.slicer_version},
+                   {"estimated_time", header_meta.estimated_time_seconds},
+                   {"filament_total", header_meta.filament_used_mm},
+                   {"filament_weight_total", header_meta.filament_used_g},
+                   {"layer_count", header_meta.layer_count},
+                   {"first_layer_bed_temp", header_meta.first_layer_bed_temp},
+                   {"first_layer_extr_temp", header_meta.first_layer_nozzle_temp},
+                   {"thumbnails", thumbnails}};
+
+    json response = {{"result", result}};
+
+    spdlog::debug("[MoonrakerClientMock] Built metadata for '{}': {}s, {}g filament", filename,
+                  header_meta.estimated_time_seconds, header_meta.filament_used_g);
+    return response;
+}
 
 MoonrakerClientMock::MoonrakerClientMock(PrinterType type) : printer_type_(type) {
     spdlog::info("[MoonrakerClientMock] Created with printer type: {}", static_cast<int>(type));
@@ -264,7 +443,7 @@ void MoonrakerClientMock::generate_mock_bed_mesh_with_variation() {
     for (char c : active_bed_mesh_.name) {
         offset += static_cast<float>(c) * 0.001f;
     }
-    offset = std::fmod(offset, 0.05f);  // Keep variation small (0-0.05mm)
+    offset = std::fmod(offset, 0.05f); // Keep variation small (0-0.05mm)
 
     for (int row = 0; row < active_bed_mesh_.y_count; row++) {
         std::vector<float> row_vec;
@@ -308,17 +487,13 @@ void MoonrakerClientMock::dispatch_bed_mesh_update() {
     }
 
     json bed_mesh_status = {
-        {"bed_mesh", {
-            {"profile_name", active_bed_mesh_.name},
-            {"probed_matrix", probed_matrix_json},
-            {"mesh_min", {active_bed_mesh_.mesh_min[0], active_bed_mesh_.mesh_min[1]}},
-            {"mesh_max", {active_bed_mesh_.mesh_max[0], active_bed_mesh_.mesh_max[1]}},
-            {"profiles", profiles_json},
-            {"mesh_params", {
-                {"algo", active_bed_mesh_.algo}
-            }}
-        }}
-    };
+        {"bed_mesh",
+         {{"profile_name", active_bed_mesh_.name},
+          {"probed_matrix", probed_matrix_json},
+          {"mesh_min", {active_bed_mesh_.mesh_min[0], active_bed_mesh_.mesh_min[1]}},
+          {"mesh_max", {active_bed_mesh_.mesh_max[0], active_bed_mesh_.mesh_max[1]}},
+          {"profiles", profiles_json},
+          {"mesh_params", {{"algo", active_bed_mesh_.algo}}}}}};
 
     // Dispatch via base class method
     dispatch_status_update(bed_mesh_status);
@@ -341,30 +516,88 @@ int MoonrakerClientMock::send_jsonrpc(const std::string& method,
     return 0; // Success
 }
 
-int MoonrakerClientMock::send_jsonrpc(const std::string& method,
-                                      [[maybe_unused]] const json& params,
-                                      [[maybe_unused]] std::function<void(json)> cb) {
+int MoonrakerClientMock::send_jsonrpc(const std::string& method, const json& params,
+                                      std::function<void(json)> cb) {
     spdlog::debug("[MoonrakerClientMock] Mock send_jsonrpc: {} (with callback)", method);
-    // STUB: Callback NOT invoked - caller will not receive response!
-    // TODO: Implement response simulation for specific methods:
-    //   - server.files.list → mock file list
-    //   - server.files.metadata → mock file metadata
-    //   - printer.objects.query → mock printer state
-    spdlog::warn("[MoonrakerClientMock] STUB: Callback for '{}' NOT INVOKED - response simulation not implemented", method);
-    return 0; // Success
+
+    // Handle file listing API
+    if (method == "server.files.list" && cb) {
+        std::string path;
+        if (params.contains("path")) {
+            path = params["path"].get<std::string>();
+        }
+        json response = build_mock_file_list_response(path);
+        spdlog::info("[MoonrakerClientMock] Returning mock file list for path: '{}'",
+                     path.empty() ? "/" : path);
+        cb(response);
+        return 0;
+    }
+
+    // Handle file metadata API
+    if (method == "server.files.metadata" && cb) {
+        std::string filename;
+        if (params.contains("filename")) {
+            filename = params["filename"].get<std::string>();
+        }
+        if (!filename.empty()) {
+            json response = build_mock_file_metadata_response(filename);
+            spdlog::info("[MoonrakerClientMock] Returning mock metadata for: {}", filename);
+            cb(response);
+            return 0;
+        }
+    }
+
+    // Unimplemented methods - see docs/MOCK_CLIENT_IMPLEMENTATION_PLAN.md
+    spdlog::warn("[MoonrakerClientMock] Method '{}' not implemented - callback not invoked",
+                 method);
+    return 0;
 }
 
-int MoonrakerClientMock::send_jsonrpc(
-    const std::string& method, [[maybe_unused]] const json& params,
-    [[maybe_unused]] std::function<void(json)> success_cb,
-    [[maybe_unused]] std::function<void(const MoonrakerError&)> error_cb,
-    [[maybe_unused]] uint32_t timeout_ms) {
+int MoonrakerClientMock::send_jsonrpc(const std::string& method, const json& params,
+                                      std::function<void(json)> success_cb,
+                                      std::function<void(const MoonrakerError&)> error_cb,
+                                      [[maybe_unused]] uint32_t timeout_ms) {
     spdlog::debug("[MoonrakerClientMock] Mock send_jsonrpc: {} (with success/error callbacks)",
                   method);
-    // STUB: Callbacks NOT invoked - caller will not receive response or error!
-    // TODO: Implement response simulation for specific methods
-    spdlog::warn("[MoonrakerClientMock] STUB: Callbacks for '{}' NOT INVOKED - response simulation not implemented", method);
-    return 0; // Success
+
+    // Handle file listing API
+    if (method == "server.files.list" && success_cb) {
+        std::string path;
+        if (params.contains("path")) {
+            path = params["path"].get<std::string>();
+        }
+        json response = build_mock_file_list_response(path);
+        spdlog::info("[MoonrakerClientMock] Returning mock file list for path: '{}'",
+                     path.empty() ? "/" : path);
+        success_cb(response);
+        return 0;
+    }
+
+    // Handle file metadata API
+    if (method == "server.files.metadata" && success_cb) {
+        std::string filename;
+        if (params.contains("filename")) {
+            filename = params["filename"].get<std::string>();
+        }
+        if (!filename.empty()) {
+            json response = build_mock_file_metadata_response(filename);
+            spdlog::info("[MoonrakerClientMock] Returning mock metadata for: {}", filename);
+            success_cb(response);
+            return 0;
+        } else if (error_cb) {
+            MoonrakerError err;
+            err.type = MoonrakerErrorType::VALIDATION_ERROR;
+            err.message = "Missing filename parameter";
+            err.method = method;
+            error_cb(err);
+            return 0;
+        }
+    }
+
+    // Unimplemented methods - see docs/MOCK_CLIENT_IMPLEMENTATION_PLAN.md
+    spdlog::warn("[MoonrakerClientMock] Method '{}' not implemented - callbacks not invoked",
+                 method);
+    return 0;
 }
 
 int MoonrakerClientMock::gcode_script(const std::string& gcode) {
@@ -435,12 +668,12 @@ int MoonrakerClientMock::gcode_script(const std::string& gcode) {
         std::string after_g28 = gcode.substr(g28_pos + 3);
 
         // Check for specific axis letters (case insensitive search)
-        bool has_x = after_g28.find('X') != std::string::npos ||
-                     after_g28.find('x') != std::string::npos;
-        bool has_y = after_g28.find('Y') != std::string::npos ||
-                     after_g28.find('y') != std::string::npos;
-        bool has_z = after_g28.find('Z') != std::string::npos ||
-                     after_g28.find('z') != std::string::npos;
+        bool has_x =
+            after_g28.find('X') != std::string::npos || after_g28.find('x') != std::string::npos;
+        bool has_y =
+            after_g28.find('Y') != std::string::npos || after_g28.find('y') != std::string::npos;
+        bool has_z =
+            after_g28.find('Z') != std::string::npos || after_g28.find('z') != std::string::npos;
 
         // If no specific axis mentioned, home all
         bool home_all = !has_x && !has_y && !has_z;
@@ -598,11 +831,14 @@ int MoonrakerClientMock::gcode_script(const std::string& gcode) {
 
     // Fan control (NOT IMPLEMENTED)
     if (gcode.find("M106") != std::string::npos) {
-        spdlog::warn("[MoonrakerClientMock] STUB: M106 (fan speed) NOT IMPLEMENTED - fan_speed_ unchanged");
+        spdlog::warn(
+            "[MoonrakerClientMock] STUB: M106 (fan speed) NOT IMPLEMENTED - fan_speed_ unchanged");
     } else if (gcode.find("M107") != std::string::npos) {
-        spdlog::warn("[MoonrakerClientMock] STUB: M107 (fan off) NOT IMPLEMENTED - fan_speed_ unchanged");
+        spdlog::warn(
+            "[MoonrakerClientMock] STUB: M107 (fan off) NOT IMPLEMENTED - fan_speed_ unchanged");
     } else if (gcode.find("SET_FAN_SPEED") != std::string::npos) {
-        spdlog::warn("[MoonrakerClientMock] STUB: SET_FAN_SPEED NOT IMPLEMENTED - fan_speed_ unchanged");
+        spdlog::warn(
+            "[MoonrakerClientMock] STUB: SET_FAN_SPEED NOT IMPLEMENTED - fan_speed_ unchanged");
     }
 
     // Extrusion control (NOT IMPLEMENTED)
@@ -620,7 +856,7 @@ int MoonrakerClientMock::gcode_script(const std::string& gcode) {
         std::string profile_name = "default";
         auto profile_pos = gcode.find("PROFILE=");
         if (profile_pos != std::string::npos) {
-            size_t start = profile_pos + 8;  // Length of "PROFILE="
+            size_t start = profile_pos + 8; // Length of "PROFILE="
             size_t end = gcode.find_first_of(" \t\n", start);
             profile_name = gcode.substr(start, end == std::string::npos ? end : end - start);
         }
@@ -635,8 +871,9 @@ int MoonrakerClientMock::gcode_script(const std::string& gcode) {
             bed_mesh_profiles_.push_back(profile_name);
         }
 
-        spdlog::info("[MoonrakerClientMock] BED_MESH_CALIBRATE: generated new mesh for profile '{}'",
-                     profile_name);
+        spdlog::info(
+            "[MoonrakerClientMock] BED_MESH_CALIBRATE: generated new mesh for profile '{}'",
+            profile_name);
 
         // Dispatch bed mesh update notification
         dispatch_bed_mesh_update();
@@ -645,9 +882,10 @@ int MoonrakerClientMock::gcode_script(const std::string& gcode) {
         // Parse LOAD= or SAVE= or REMOVE= parameter
         if (gcode.find("LOAD=") != std::string::npos) {
             auto load_pos = gcode.find("LOAD=");
-            size_t start = load_pos + 5;  // Length of "LOAD="
+            size_t start = load_pos + 5; // Length of "LOAD="
             size_t end = gcode.find_first_of(" \t\n", start);
-            std::string profile_name = gcode.substr(start, end == std::string::npos ? end : end - start);
+            std::string profile_name =
+                gcode.substr(start, end == std::string::npos ? end : end - start);
 
             // Check if profile exists
             if (std::find(bed_mesh_profiles_.begin(), bed_mesh_profiles_.end(), profile_name) !=
@@ -665,9 +903,10 @@ int MoonrakerClientMock::gcode_script(const std::string& gcode) {
             }
         } else if (gcode.find("SAVE=") != std::string::npos) {
             auto save_pos = gcode.find("SAVE=");
-            size_t start = save_pos + 5;  // Length of "SAVE="
+            size_t start = save_pos + 5; // Length of "SAVE="
             size_t end = gcode.find_first_of(" \t\n", start);
-            std::string profile_name = gcode.substr(start, end == std::string::npos ? end : end - start);
+            std::string profile_name =
+                gcode.substr(start, end == std::string::npos ? end : end - start);
 
             // Add new profile to list if not already present
             if (std::find(bed_mesh_profiles_.begin(), bed_mesh_profiles_.end(), profile_name) ==
@@ -680,9 +919,10 @@ int MoonrakerClientMock::gcode_script(const std::string& gcode) {
             dispatch_bed_mesh_update();
         } else if (gcode.find("REMOVE=") != std::string::npos) {
             auto remove_pos = gcode.find("REMOVE=");
-            size_t start = remove_pos + 7;  // Length of "REMOVE="
+            size_t start = remove_pos + 7; // Length of "REMOVE="
             size_t end = gcode.find_first_of(" \t\n", start);
-            std::string profile_name = gcode.substr(start, end == std::string::npos ? end : end - start);
+            std::string profile_name =
+                gcode.substr(start, end == std::string::npos ? end : end - start);
 
             // Remove profile from list
             auto it = std::find(bed_mesh_profiles_.begin(), bed_mesh_profiles_.end(), profile_name);
@@ -692,8 +932,9 @@ int MoonrakerClientMock::gcode_script(const std::string& gcode) {
                              profile_name);
                 dispatch_bed_mesh_update();
             } else {
-                spdlog::warn("[MoonrakerClientMock] BED_MESH_PROFILE REMOVE: profile '{}' not found",
-                             profile_name);
+                spdlog::warn(
+                    "[MoonrakerClientMock] BED_MESH_PROFILE REMOVE: profile '{}' not found",
+                    profile_name);
             }
         }
     } else if (gcode.find("BED_MESH_CLEAR") != std::string::npos) {
@@ -729,7 +970,8 @@ int MoonrakerClientMock::gcode_script(const std::string& gcode) {
     // Firmware restart (NOT IMPLEMENTED)
     if (gcode.find("FIRMWARE_RESTART") != std::string::npos) {
         spdlog::warn("[MoonrakerClientMock] STUB: FIRMWARE_RESTART NOT IMPLEMENTED");
-    } else if (gcode.find("RESTART") != std::string::npos && gcode.find("FIRMWARE") == std::string::npos) {
+    } else if (gcode.find("RESTART") != std::string::npos &&
+               gcode.find("FIRMWARE") == std::string::npos) {
         spdlog::warn("[MoonrakerClientMock] STUB: RESTART NOT IMPLEMENTED");
     }
 
@@ -814,49 +1056,27 @@ void MoonrakerClientMock::dispatch_initial_state() {
     // Build profiles object (Moonraker format: {"profile_name": {...}, ...})
     json profiles_json = json::object();
     for (const auto& profile : bed_mesh_profiles_) {
-        profiles_json[profile] = json::object();  // Empty profile data (real has full mesh)
+        profiles_json[profile] = json::object(); // Empty profile data (real has full mesh)
     }
 
     json initial_status = {
-        {"extruder", {
-            {"temperature", ext_temp},
-            {"target", ext_target}
-        }},
-        {"heater_bed", {
-            {"temperature", bed_temp_val},
-            {"target", bed_target_val}
-        }},
-        {"toolhead", {
-            {"position", {x, y, z, 0.0}},
-            {"homed_axes", homed}
-        }},
-        {"gcode_move", {
-            {"speed_factor", speed / 100.0},
-            {"extrude_factor", flow / 100.0}
-        }},
-        {"fan", {
-            {"speed", fan / 255.0}
-        }},
-        {"print_stats", {
-            {"state", print_state_str},
-            {"filename", filename}
-        }},
-        {"virtual_sdcard", {
-            {"progress", progress}
-        }},
-        {"bed_mesh", {
-            {"profile_name", active_bed_mesh_.name},
-            {"probed_matrix", probed_matrix_json},
-            {"mesh_min", {active_bed_mesh_.mesh_min[0], active_bed_mesh_.mesh_min[1]}},
-            {"mesh_max", {active_bed_mesh_.mesh_max[0], active_bed_mesh_.mesh_max[1]}},
-            {"profiles", profiles_json},
-            {"mesh_params", {
-                {"algo", active_bed_mesh_.algo}
-            }}
-        }}
-    };
+        {"extruder", {{"temperature", ext_temp}, {"target", ext_target}}},
+        {"heater_bed", {{"temperature", bed_temp_val}, {"target", bed_target_val}}},
+        {"toolhead", {{"position", {x, y, z, 0.0}}, {"homed_axes", homed}}},
+        {"gcode_move", {{"speed_factor", speed / 100.0}, {"extrude_factor", flow / 100.0}}},
+        {"fan", {{"speed", fan / 255.0}}},
+        {"print_stats", {{"state", print_state_str}, {"filename", filename}}},
+        {"virtual_sdcard", {{"progress", progress}}},
+        {"bed_mesh",
+         {{"profile_name", active_bed_mesh_.name},
+          {"probed_matrix", probed_matrix_json},
+          {"mesh_min", {active_bed_mesh_.mesh_min[0], active_bed_mesh_.mesh_min[1]}},
+          {"mesh_max", {active_bed_mesh_.mesh_max[0], active_bed_mesh_.mesh_max[1]}},
+          {"profiles", profiles_json},
+          {"mesh_params", {{"algo", active_bed_mesh_.algo}}}}}};
 
-    spdlog::info("[MoonrakerClientMock] Dispatching initial state: extruder={}/{}°C, bed={}/{}°C, homed_axes='{}'",
+    spdlog::info("[MoonrakerClientMock] Dispatching initial state: extruder={}/{}°C, bed={}/{}°C, "
+                 "homed_axes='{}'",
                  ext_temp, ext_target, bed_temp_val, bed_target_val, homed);
 
     // Use the base class dispatch method (same as real client)
@@ -909,15 +1129,18 @@ void MoonrakerClientMock::temperature_simulation_loop() {
         if (ext_target > 0) {
             if (ext_temp < ext_target) {
                 ext_temp += EXTRUDER_HEAT_RATE * dt;
-                if (ext_temp > ext_target) ext_temp = ext_target;
+                if (ext_temp > ext_target)
+                    ext_temp = ext_target;
             } else if (ext_temp > ext_target) {
                 ext_temp -= EXTRUDER_COOL_RATE * dt;
-                if (ext_temp < ext_target) ext_temp = ext_target;
+                if (ext_temp < ext_target)
+                    ext_temp = ext_target;
             }
         } else {
             if (ext_temp > ROOM_TEMP) {
                 ext_temp -= EXTRUDER_COOL_RATE * dt;
-                if (ext_temp < ROOM_TEMP) ext_temp = ROOM_TEMP;
+                if (ext_temp < ROOM_TEMP)
+                    ext_temp = ROOM_TEMP;
             }
         }
         extruder_temp_.store(ext_temp);
@@ -926,15 +1149,18 @@ void MoonrakerClientMock::temperature_simulation_loop() {
         if (bed_target_val > 0) {
             if (bed_temp_val < bed_target_val) {
                 bed_temp_val += BED_HEAT_RATE * dt;
-                if (bed_temp_val > bed_target_val) bed_temp_val = bed_target_val;
+                if (bed_temp_val > bed_target_val)
+                    bed_temp_val = bed_target_val;
             } else if (bed_temp_val > bed_target_val) {
                 bed_temp_val -= BED_COOL_RATE * dt;
-                if (bed_temp_val < bed_target_val) bed_temp_val = bed_target_val;
+                if (bed_temp_val < bed_target_val)
+                    bed_temp_val = bed_target_val;
             }
         } else {
             if (bed_temp_val > ROOM_TEMP) {
                 bed_temp_val -= BED_COOL_RATE * dt;
-                if (bed_temp_val < ROOM_TEMP) bed_temp_val = ROOM_TEMP;
+                if (bed_temp_val < ROOM_TEMP)
+                    bed_temp_val = ROOM_TEMP;
             }
         }
         bed_temp_.store(bed_temp_val);
@@ -1005,36 +1231,16 @@ void MoonrakerClientMock::temperature_simulation_loop() {
         // Build notification JSON (same format as real Moonraker)
         // Real Moonraker sends: {"params": [status_object, eventtime]}
         json status_obj = {
-            {"extruder", {
-                {"temperature", ext_temp},
-                {"target", ext_target}
-            }},
-            {"heater_bed", {
-                {"temperature", bed_temp_val},
-                {"target", bed_target_val}
-            }},
-            {"toolhead", {
-                {"position", {x, y, z, 0.0}},
-                {"homed_axes", homed}
-            }},
-            {"gcode_move", {
-                {"speed_factor", speed / 100.0},
-                {"extrude_factor", flow / 100.0}
-            }},
-            {"fan", {
-                {"speed", fan / 255.0}
-            }},
-            {"print_stats", {
-                {"state", print_state_str},
-                {"filename", filename}
-            }},
-            {"virtual_sdcard", {
-                {"progress", print_progress_.load()}
-            }}
-        };
+            {"extruder", {{"temperature", ext_temp}, {"target", ext_target}}},
+            {"heater_bed", {{"temperature", bed_temp_val}, {"target", bed_target_val}}},
+            {"toolhead", {{"position", {x, y, z, 0.0}}, {"homed_axes", homed}}},
+            {"gcode_move", {{"speed_factor", speed / 100.0}, {"extrude_factor", flow / 100.0}}},
+            {"fan", {{"speed", fan / 255.0}}},
+            {"print_stats", {{"state", print_state_str}, {"filename", filename}}},
+            {"virtual_sdcard", {{"progress", print_progress_.load()}}}};
         json notification = {
             {"method", "notify_status_update"},
-            {"params", json::array({status_obj, tick * dt})}  // [status, eventtime]
+            {"params", json::array({status_obj, tick * dt})} // [status, eventtime]
         };
 
         // Push notification through all registered callbacks

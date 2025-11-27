@@ -23,9 +23,9 @@
 
 #include "ui_bed_mesh.h"
 #include "ui_card.h"
-#include "ui_dialog.h"
 #include "ui_component_header_bar.h"
 #include "ui_component_keypad.h"
+#include "ui_dialog.h"
 #include "ui_error_reporting.h"
 #include "ui_fonts.h"
 #include "ui_gcode_viewer.h"
@@ -38,7 +38,6 @@
 #include "ui_panel_bed_mesh.h"
 #include "ui_panel_controls.h"
 #include "ui_panel_controls_extrusion.h"
-#include "ui_temp_control_panel.h"
 #include "ui_panel_filament.h"
 #include "ui_panel_gcode_test.h"
 #include "ui_panel_glyphs.h"
@@ -53,6 +52,7 @@
 #include "ui_severity_card.h"
 #include "ui_status_bar.h"
 #include "ui_switch.h"
+#include "ui_temp_control_panel.h"
 #include "ui_text.h"
 #include "ui_theme.h"
 #include "ui_utils.h"
@@ -143,7 +143,8 @@ static void ensure_project_root_cwd() {
 
     // Get directory containing executable
     char* last_slash = strrchr(exe_path, '/');
-    if (!last_slash) return;
+    if (!last_slash)
+        return;
     *last_slash = '\0';
 
     // Check if we're in build/bin/ and go up two levels
@@ -151,8 +152,7 @@ static void ensure_project_root_cwd() {
     const char* suffix = "/build/bin";
     size_t suffix_len = strlen(suffix);
 
-    if (dir_len >= suffix_len &&
-        strcmp(exe_path + dir_len - suffix_len, suffix) == 0) {
+    if (dir_len >= suffix_len && strcmp(exe_path + dir_len - suffix_len, suffix) == 0) {
         // Strip /build/bin to get project root
         exe_path[dir_len - suffix_len] = '\0';
 
@@ -175,6 +175,13 @@ static int SCREEN_HEIGHT = UI_SCREEN_SMALL_H;
 static MoonrakerClient* moonraker_client = nullptr;
 static MoonrakerAPI* moonraker_api = nullptr;
 static std::unique_ptr<TempControlPanel> temp_control_panel;
+
+// Panels that need MoonrakerAPI - stored as pointers for deferred set_api() call
+static PrintSelectPanel* print_select_panel = nullptr;
+static PrintStatusPanel* print_status_panel = nullptr;
+static MotionPanel* motion_panel = nullptr;
+static ExtrusionPanel* extrusion_panel = nullptr;
+static BedMeshPanel* bed_mesh_panel = nullptr;
 
 // Runtime configuration
 static RuntimeConfig g_runtime_config;
@@ -211,10 +218,9 @@ static bool parse_command_line_args(
     bool& show_bed_temp, bool& show_extrusion, bool& show_print_status, bool& show_file_detail,
     bool& show_keypad, bool& show_keyboard, bool& show_step_test, bool& show_test_panel,
     bool& show_gcode_test, bool& show_bed_mesh, bool& show_glyphs, bool& show_gradient_test,
-    bool& force_wizard,
-    int& wizard_step, bool& panel_requested, int& display_num, int& x_pos, int& y_pos,
-    bool& screenshot_enabled, int& screenshot_delay_sec, int& timeout_sec, int& verbosity,
-    bool& dark_mode, bool& theme_requested, int& dpi) {
+    bool& force_wizard, int& wizard_step, bool& panel_requested, int& display_num, int& x_pos,
+    int& y_pos, bool& screenshot_enabled, int& screenshot_delay_sec, int& timeout_sec,
+    int& verbosity, bool& dark_mode, bool& theme_requested, int& dpi) {
     // Parse arguments
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-s") == 0 || strcmp(argv[i], "--size") == 0) {
@@ -731,18 +737,23 @@ static void register_xml_components() {
 
     lv_xml_register_component_from_file("A:ui_xml/icon.xml");
     lv_xml_register_component_from_file("A:ui_xml/header_bar.xml");
-    lv_xml_register_component_from_file("A:ui_xml/overlay_panel_base.xml");  // Base styling only
-    lv_xml_register_component_from_file("A:ui_xml/overlay_panel.xml");  // Depends on header_bar + base
+    lv_xml_register_component_from_file("A:ui_xml/overlay_panel_base.xml"); // Base styling only
+    lv_xml_register_component_from_file(
+        "A:ui_xml/overlay_panel.xml"); // Depends on header_bar + base
     lv_xml_register_component_from_file("A:ui_xml/status_bar.xml");
     lv_xml_register_component_from_file("A:ui_xml/toast_notification.xml");
     lv_xml_register_component_from_file("A:ui_xml/error_dialog.xml");
     lv_xml_register_component_from_file("A:ui_xml/warning_dialog.xml");
     spdlog::debug("[XML] Registering notification_history_panel.xml...");
-    auto nh_panel_ret = lv_xml_register_component_from_file("A:ui_xml/notification_history_panel.xml");
-    spdlog::debug("[XML] notification_history_panel.xml registration returned: {}", (int)nh_panel_ret);
+    auto nh_panel_ret =
+        lv_xml_register_component_from_file("A:ui_xml/notification_history_panel.xml");
+    spdlog::debug("[XML] notification_history_panel.xml registration returned: {}",
+                  (int)nh_panel_ret);
     spdlog::debug("[XML] Registering notification_history_item.xml...");
-    auto nh_item_ret = lv_xml_register_component_from_file("A:ui_xml/notification_history_item.xml");
-    spdlog::debug("[XML] notification_history_item.xml registration returned: {}", (int)nh_item_ret);
+    auto nh_item_ret =
+        lv_xml_register_component_from_file("A:ui_xml/notification_history_item.xml");
+    spdlog::debug("[XML] notification_history_item.xml registration returned: {}",
+                  (int)nh_item_ret);
     lv_xml_register_component_from_file("A:ui_xml/confirmation_dialog.xml");
     lv_xml_register_component_from_file("A:ui_xml/tip_detail_dialog.xml");
     lv_xml_register_component_from_file("A:ui_xml/numeric_keypad_modal.xml");
@@ -785,18 +796,27 @@ static void register_xml_components() {
 // Initialize all reactive subjects for data binding
 static void initialize_subjects() {
     spdlog::debug("Initializing reactive subjects...");
-    app_globals_init_subjects();                              // Global subjects (notification subject, etc.)
-    ui_nav_init();                                            // Navigation system (icon colors, active panel)
-    get_global_home_panel().init_subjects();                  // Home panel data bindings
-    get_print_select_panel(get_printer_state(), nullptr)->init_subjects(); // Print select panel
-    get_global_controls_panel().init_subjects();              // Controls panel launcher
-    get_global_motion_panel().init_subjects();                // Motion sub-screen position display
-    get_global_extrusion_panel().init_subjects();             // Extrusion sub-screen
-    get_global_filament_panel().init_subjects();              // Filament panel
-    get_global_settings_panel().init_subjects();              // Settings panel launcher
-    get_global_print_status_panel().init_subjects();          // Print status screen
-    ui_wizard_init_subjects();                                // Wizard subjects (for first-run config)
-    get_printer_state().init_subjects();                      // Printer state subjects (CRITICAL: must be before XML creation)
+    app_globals_init_subjects();                 // Global subjects (notification subject, etc.)
+    ui_nav_init();                               // Navigation system (icon colors, active panel)
+    get_global_home_panel().init_subjects();     // Home panel data bindings
+    get_global_controls_panel().init_subjects(); // Controls panel launcher
+    get_global_filament_panel().init_subjects(); // Filament panel
+    get_global_settings_panel().init_subjects(); // Settings panel launcher
+    ui_wizard_init_subjects();                   // Wizard subjects (for first-run config)
+    get_printer_state()
+        .init_subjects(); // Printer state subjects (CRITICAL: must be before XML creation)
+
+    // Panels that need MoonrakerAPI - store pointers for deferred set_api()
+    print_select_panel = get_print_select_panel(get_printer_state(), nullptr);
+    print_select_panel->init_subjects();
+    print_status_panel = &get_global_print_status_panel();
+    print_status_panel->init_subjects();
+    motion_panel = &get_global_motion_panel();
+    motion_panel->init_subjects();
+    extrusion_panel = &get_global_extrusion_panel();
+    extrusion_panel->init_subjects();
+    bed_mesh_panel = &get_global_bed_mesh_panel();
+    bed_mesh_panel->init_subjects();
 
     // Initialize TempControlPanel (needs PrinterState ready)
     temp_control_panel = std::make_unique<TempControlPanel>(get_printer_state(), nullptr);
@@ -1043,20 +1063,20 @@ static void initialize_moonraker_client(Config* config) {
     // CRITICAL: This callback runs on the Moonraker event loop thread, NOT the main thread.
     // LVGL is NOT thread-safe, so we must NOT call any LVGL functions here.
     // Instead, queue the state change and process it on the main thread.
-    moonraker_client->set_state_change_callback(
-        [](ConnectionState old_state, ConnectionState new_state) {
-            spdlog::debug("[main] State change callback invoked: {} -> {} (queueing for main thread)",
-                          static_cast<int>(old_state), static_cast<int>(new_state));
+    moonraker_client->set_state_change_callback([](ConnectionState old_state,
+                                                   ConnectionState new_state) {
+        spdlog::debug("[main] State change callback invoked: {} -> {} (queueing for main thread)",
+                      static_cast<int>(old_state), static_cast<int>(new_state));
 
-            // Queue state change for main thread processing (same mutex as notifications)
-            // Use a special JSON object with "_connection_state" marker
-            std::lock_guard<std::mutex> lock(notification_mutex);
-            json state_change;
-            state_change["_connection_state"] = true;
-            state_change["old_state"] = static_cast<int>(old_state);
-            state_change["new_state"] = static_cast<int>(new_state);
-            notification_queue.push(state_change);
-        });
+        // Queue state change for main thread processing (same mutex as notifications)
+        // Use a special JSON object with "_connection_state" marker
+        std::lock_guard<std::mutex> lock(notification_mutex);
+        json state_change;
+        state_change["_connection_state"] = true;
+        state_change["old_state"] = static_cast<int>(old_state);
+        state_change["new_state"] = static_cast<int>(new_state);
+        notification_queue.push(state_change);
+    });
 
     // Register notification callback to queue updates for main thread
     // CRITICAL: Moonraker callbacks run on background thread, but LVGL is NOT thread-safe
@@ -1073,12 +1093,16 @@ static void initialize_moonraker_client(Config* config) {
     // Register with app_globals
     set_moonraker_api(moonraker_api);
 
-    // Update TempControlPanel with API reference
+    // Update all panels with API reference
     temp_control_panel->set_api(moonraker_api);
+    print_select_panel->set_api(moonraker_api);
+    print_status_panel->set_api(moonraker_api);
+    motion_panel->set_api(moonraker_api);
+    extrusion_panel->set_api(moonraker_api);
+    bed_mesh_panel->set_api(moonraker_api);
 
     spdlog::debug("Moonraker client initialized (not connected yet)");
 }
-
 
 // Main application
 int main(int argc, char** argv) {
@@ -1116,13 +1140,13 @@ int main(int argc, char** argv) {
     int dpi = -1;                 // Display DPI (-1 means use LV_DPI_DEF from lv_conf.h)
 
     // Parse command-line arguments (returns false for help/error)
-    if (!parse_command_line_args(
-            argc, argv, initial_panel, show_motion, show_nozzle_temp, show_bed_temp, show_extrusion,
-            show_print_status, show_file_detail, show_keypad, show_keyboard, show_step_test,
-            show_test_panel, show_gcode_test, show_bed_mesh, show_glyphs, show_gradient_test,
-            force_wizard, wizard_step,
-            panel_requested, display_num, x_pos, y_pos, screenshot_enabled, screenshot_delay_sec,
-            timeout_sec, verbosity, dark_mode, theme_requested, dpi)) {
+    if (!parse_command_line_args(argc, argv, initial_panel, show_motion, show_nozzle_temp,
+                                 show_bed_temp, show_extrusion, show_print_status, show_file_detail,
+                                 show_keypad, show_keyboard, show_step_test, show_test_panel,
+                                 show_gcode_test, show_bed_mesh, show_glyphs, show_gradient_test,
+                                 force_wizard, wizard_step, panel_requested, display_num, x_pos,
+                                 y_pos, screenshot_enabled, screenshot_delay_sec, timeout_sec,
+                                 verbosity, dark_mode, theme_requested, dpi)) {
         return 0; // Help shown or parse error
     }
 
@@ -1145,7 +1169,8 @@ int main(int argc, char** argv) {
     spdlog::info("HelixScreen UI Prototype");
     spdlog::info("========================");
     spdlog::debug("Target: {}x{}", SCREEN_WIDTH, SCREEN_HEIGHT);
-    spdlog::debug("DPI: {}{}", (dpi > 0 ? dpi : LV_DPI_DEF), (dpi > 0 ? " (custom)" : " (default)"));
+    spdlog::debug("DPI: {}{}", (dpi > 0 ? dpi : LV_DPI_DEF),
+                  (dpi > 0 ? " (custom)" : " (default)"));
     spdlog::debug("Nav Width: {} pixels", UI_NAV_WIDTH(SCREEN_WIDTH));
     spdlog::debug("Initial Panel: {}", initial_panel);
 
@@ -1281,7 +1306,8 @@ int main(int argc, char** argv) {
     ui_nav_init_overlay_backdrop(screen);
 
     // Find widgets by name (robust to XML structure changes)
-    lv_obj_t* navbar = lv_obj_get_child(app_layout, 0); // navbar is first child (no name attr on component)
+    lv_obj_t* navbar =
+        lv_obj_get_child(app_layout, 0); // navbar is first child (no name attr on component)
     lv_obj_t* content_area = lv_obj_find_by_name(app_layout, "content_area");
 
     if (!navbar || !content_area) {
@@ -1305,14 +1331,9 @@ int main(int argc, char** argv) {
     }
 
     // Find all panel widgets by name (robust to child order changes)
-    static const char* panel_names[UI_PANEL_COUNT] = {
-        "home_panel",
-        "print_select_panel",
-        "controls_panel",
-        "filament_panel",
-        "settings_panel",
-        "advanced_panel"
-    };
+    static const char* panel_names[UI_PANEL_COUNT] = {"home_panel",     "print_select_panel",
+                                                      "controls_panel", "filament_panel",
+                                                      "settings_panel", "advanced_panel"};
 
     lv_obj_t* panels[UI_PANEL_COUNT];
     for (int i = 0; i < UI_PANEL_COUNT; i++) {
@@ -1334,7 +1355,8 @@ int main(int argc, char** argv) {
     get_global_controls_panel().setup(panels[UI_PANEL_CONTROLS], screen);
 
     // Setup print select panel (wires up events, creates overlays, NOTE: data populated later)
-    get_print_select_panel(get_printer_state(), nullptr)->setup(panels[UI_PANEL_PRINT_SELECT], screen);
+    get_print_select_panel(get_printer_state(), nullptr)
+        ->setup(panels[UI_PANEL_PRINT_SELECT], screen);
 
     // Setup filament panel (wire preset/action button handlers)
     get_global_filament_panel().setup(panels[UI_PANEL_FILAMENT], screen);
@@ -1352,7 +1374,8 @@ int main(int argc, char** argv) {
         lv_obj_add_flag(overlay_panels.print_status, LV_OBJ_FLAG_HIDDEN); // Hidden by default
 
         // Wire print status panel to print select (for launching prints)
-        get_print_select_panel(get_printer_state(), nullptr)->set_print_status_panel(overlay_panels.print_status);
+        get_print_select_panel(get_printer_state(), nullptr)
+            ->set_print_status_panel(overlay_panels.print_status);
 
         spdlog::debug("Print status panel created and wired to print select");
     } else {
@@ -1506,7 +1529,8 @@ int main(int argc, char** argv) {
     // Create G-code test panel if requested (independent of wizard state)
     if (show_gcode_test) {
         spdlog::debug("Creating G-code test panel");
-        lv_obj_t* gcode_test = ui_panel_gcode_test_create(screen); // Uses deprecated wrapper (creates + setups)
+        lv_obj_t* gcode_test =
+            ui_panel_gcode_test_create(screen); // Uses deprecated wrapper (creates + setups)
         if (gcode_test) {
             spdlog::debug("G-code test panel created successfully");
         } else {
@@ -1630,7 +1654,8 @@ int main(int argc, char** argv) {
                     };
                     spdlog::debug("[main] Processing queued connection state change: {}",
                                   messages[new_state]);
-                    get_printer_state().set_printer_connection_state(new_state, messages[new_state]);
+                    get_printer_state().set_printer_connection_state(new_state,
+                                                                     messages[new_state]);
                 } else {
                     // Regular Moonraker notification
                     get_printer_state().update_from_notification(notification);

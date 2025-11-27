@@ -3,6 +3,7 @@
 
 #include "ui_panel_print_select.h"
 
+#include "ui_error_reporting.h"
 #include "ui_fonts.h"
 #include "ui_modal.h"
 #include "ui_nav.h"
@@ -16,7 +17,6 @@
 #include "lvgl/src/xml/lv_xml.h"
 #include "moonraker_api.h"
 #include "printer_state.h"
-#include "ui_error_reporting.h"
 
 #include <spdlog/spdlog.h>
 
@@ -46,11 +46,8 @@ namespace {
  */
 std::string strip_gcode_extension(const std::string& filename) {
     // Common G-code extensions (case-insensitive check)
-    static const std::vector<std::string> extensions = {
-        ".gcode", ".GCODE", ".Gcode",
-        ".gco", ".GCO", ".Gco",
-        ".g", ".G"
-    };
+    static const std::vector<std::string> extensions = {".gcode", ".GCODE", ".Gcode", ".gco",
+                                                        ".GCO",   ".Gco",   ".g",     ".G"};
 
     for (const auto& ext : extensions) {
         if (filename.size() > ext.size()) {
@@ -64,7 +61,7 @@ std::string strip_gcode_extension(const std::string& filename) {
     return filename;
 }
 
-}  // namespace
+} // namespace
 
 // ============================================================================
 // Global Instance
@@ -168,10 +165,11 @@ void PrintSelectPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
         const char* name;
         PrintSelectSortColumn column;
     };
-    static const HeaderBinding headers[] = {{"header_filename", PrintSelectSortColumn::FILENAME},
-                                             {"header_size", PrintSelectSortColumn::SIZE},
-                                             {"header_modified", PrintSelectSortColumn::MODIFIED},
-                                             {"header_print_time", PrintSelectSortColumn::PRINT_TIME}};
+    static const HeaderBinding headers[] = {
+        {"header_filename", PrintSelectSortColumn::FILENAME},
+        {"header_size", PrintSelectSortColumn::SIZE},
+        {"header_modified", PrintSelectSortColumn::MODIFIED},
+        {"header_print_time", PrintSelectSortColumn::PRINT_TIME}};
 
     for (const auto& binding : headers) {
         lv_obj_t* header = lv_obj_find_by_name(panel_, binding.name);
@@ -180,7 +178,8 @@ void PrintSelectPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
             // The callback will recover the column from the difference
             lv_obj_add_event_cb(header, on_header_clicked_static, LV_EVENT_CLICKED, this);
             // Store column index in the object's user_data for recovery
-            lv_obj_set_user_data(header, reinterpret_cast<void*>(static_cast<intptr_t>(binding.column)));
+            lv_obj_set_user_data(header,
+                                 reinterpret_cast<void*>(static_cast<intptr_t>(binding.column)));
         }
     }
 
@@ -202,12 +201,13 @@ void PrintSelectPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     // Mark panel as fully initialized (enables resize callbacks)
     panel_initialized_ = true;
 
-    // Try to refresh from Moonraker, fall back to test data if not connected
+    // Refresh from Moonraker when API becomes available (via set_api)
+    // Don't populate anything here - wait for API connection
     if (api_) {
         refresh_files();
     } else {
-        spdlog::info("[{}] MoonrakerAPI not available, using test data", get_name());
-        populate_test_data();
+        spdlog::debug("[{}] MoonrakerAPI not available yet, waiting for set_api()", get_name());
+        update_empty_state();
     }
 
     spdlog::debug("[{}] Setup complete", get_name());
@@ -278,47 +278,67 @@ void PrintSelectPanel::refresh_files() {
         return;
     }
 
-    spdlog::info("[{}] Refreshing file list from Moonraker...", get_name());
+    spdlog::info("[{}] Refreshing file list from Moonraker (path: '{}')...", get_name(),
+                 current_path_.empty() ? "/" : current_path_);
 
     // Capture 'this' for async callbacks
     auto* self = this;
 
-    // Request file list from gcodes directory (non-recursive for now)
+    // Request file list from current directory (non-recursive)
     api_->list_files(
-        "gcodes", "", false,
+        "gcodes", current_path_, false,
         // Success callback
         [self](const std::vector<FileInfo>& files) {
-            spdlog::info("[{}] Received {} files from Moonraker", self->get_name(), files.size());
+            spdlog::info("[{}] Received {} items from Moonraker", self->get_name(), files.size());
 
             // Clear existing file list
             self->file_list_.clear();
 
-            // Convert FileInfo to PrintFileData
+            // Add ".." parent directory entry if not at root
+            if (!self->current_path_.empty()) {
+                PrintFileData parent_dir;
+                parent_dir.filename = "..";
+                parent_dir.is_dir = true;
+                parent_dir.thumbnail_path = self->DEFAULT_PLACEHOLDER_THUMB;
+                parent_dir.size_str = "Go up";
+                parent_dir.print_time_str = "";
+                parent_dir.filament_str = "";
+                parent_dir.modified_str = "";
+                self->file_list_.push_back(parent_dir);
+            }
+
+            // Convert FileInfo to PrintFileData (include directories)
             for (const auto& file : files) {
-                // Skip directories
-                if (file.is_dir)
-                    continue;
-
-                // Only process .gcode files
-                if (file.filename.find(".gcode") == std::string::npos &&
-                    file.filename.find(".g") == std::string::npos) {
-                    continue;
-                }
-
                 PrintFileData data;
                 data.filename = file.filename;
-                data.thumbnail_path = self->DEFAULT_PLACEHOLDER_THUMB;
+                data.is_dir = file.is_dir;
                 data.file_size_bytes = file.size;
                 data.modified_timestamp = static_cast<time_t>(file.modified);
-                data.print_time_minutes = 0;
-                data.filament_grams = 0.0f;
 
-                // Format strings (will be updated when metadata arrives)
-                data.size_str = format_file_size(data.file_size_bytes);
+                if (file.is_dir) {
+                    // Directory - use placeholder for now (TODO: folder icon)
+                    data.thumbnail_path = self->DEFAULT_PLACEHOLDER_THUMB;
+                    data.print_time_minutes = 0;
+                    data.filament_grams = 0.0f;
+                    data.size_str = "Folder";
+                    data.print_time_str = "";
+                    data.filament_str = "";
+                } else {
+                    // Only process .gcode files
+                    if (file.filename.find(".gcode") == std::string::npos &&
+                        file.filename.find(".g") == std::string::npos) {
+                        continue;
+                    }
+
+                    data.thumbnail_path = self->DEFAULT_PLACEHOLDER_THUMB;
+                    data.print_time_minutes = 0;
+                    data.filament_grams = 0.0f;
+                    data.size_str = format_file_size(data.file_size_bytes);
+                    data.print_time_str = format_print_time(data.print_time_minutes);
+                    data.filament_str = format_filament_weight(data.filament_grams);
+                }
+
                 data.modified_str = format_modified_date(data.modified_timestamp);
-                data.print_time_str = format_print_time(data.print_time_minutes);
-                data.filament_str = format_filament_weight(data.filament_grams);
-
                 self->file_list_.push_back(data);
             }
 
@@ -329,11 +349,22 @@ void PrintSelectPanel::refresh_files() {
             self->populate_list_view();
             self->update_empty_state();
 
-            spdlog::info("[{}] File list updated with {} G-code files (fetching metadata...)",
-                         self->get_name(), self->file_list_.size());
+            // Count files vs directories
+            size_t dir_count = 0, file_count = 0;
+            for (const auto& item : self->file_list_) {
+                if (item.is_dir)
+                    dir_count++;
+                else
+                    file_count++;
+            }
+            spdlog::info("[{}] File list updated: {} directories, {} G-code files",
+                         self->get_name(), dir_count, file_count);
 
-            // Now fetch metadata for each file asynchronously
+            // Fetch metadata for files only (not directories)
             for (size_t i = 0; i < self->file_list_.size(); i++) {
+                if (self->file_list_[i].is_dir)
+                    continue; // Skip directories
+
                 const std::string filename = self->file_list_[i].filename;
 
                 self->api_->get_file_metadata(
@@ -364,15 +395,11 @@ void PrintSelectPanel::refresh_files() {
                                       filename, self->file_list_[i].print_time_minutes,
                                       self->file_list_[i].filament_grams);
 
-                        // Handle thumbnails if available
+                        // Use thumbnail if available (add LVGL filesystem prefix)
                         if (!metadata.thumbnails.empty()) {
-                            std::string thumbnail_url =
-                                construct_thumbnail_url(metadata.thumbnails[0]);
-                            if (!thumbnail_url.empty()) {
-                                spdlog::info("[{}] Thumbnail URL for {}: {}", self->get_name(),
-                                             filename, thumbnail_url);
-                                // TODO: Download thumbnail from URL to local file
-                            }
+                            self->file_list_[i].thumbnail_path = "A:" + metadata.thumbnails[0];
+                            spdlog::debug("[{}] Thumbnail for {}: {}", self->get_name(), filename,
+                                          self->file_list_[i].thumbnail_path);
                         }
 
                         // Re-render views to show updated metadata
@@ -381,8 +408,9 @@ void PrintSelectPanel::refresh_files() {
                     },
                     // Metadata error callback
                     [self, filename](const MoonrakerError& error) {
-                        spdlog::warn("[{}] Failed to get metadata for {}: {} ({})", self->get_name(),
-                                     filename, error.message, error.get_type_string());
+                        spdlog::warn("[{}] Failed to get metadata for {}: {} ({})",
+                                     self->get_name(), filename, error.message,
+                                     error.get_type_string());
                     });
             }
         },
@@ -394,62 +422,52 @@ void PrintSelectPanel::refresh_files() {
         });
 }
 
-void PrintSelectPanel::populate_test_data() {
-    // Clear existing file list
-    file_list_.clear();
+void PrintSelectPanel::set_api(MoonrakerAPI* api) {
+    api_ = api;
 
-    // Generate test file data
-    struct TestFile {
-        const char* filename;
-        size_t size_bytes;
-        int days_ago;
-        int print_time_mins;
-        float filament_grams;
-    };
+    // Automatically refresh file list when API becomes available
+    if (api_ && panel_initialized_) {
+        spdlog::info("[{}] API connected, refreshing file list", get_name());
+        refresh_files();
+    }
+}
 
-    TestFile test_files[] = {
-        {"Benchy.gcode", 1024 * 512, 1, 150, 45.0f},
-        {"Calibration_Cube.gcode", 1024 * 128, 2, 45, 12.0f},
-        {"Large_Vase_With_Very_Long_Filename_That_Should_Truncate.gcode", 1024 * 1024 * 2, 3, 30,
-         8.0f},
-        {"Gear_Assembly.gcode", 1024 * 768, 5, 150, 45.0f},
-        {"Flower_Pot.gcode", 1024 * 1024, 7, 240, 85.0f},
-        {"Keychain.gcode", 1024 * 64, 10, 480, 120.0f},
-        {"Lithophane_Test.gcode", 1024 * 1024 * 5, 14, 5, 2.0f},
-        {"Headphone_Stand.gcode", 1024 * 256, 20, 15, 4.5f},
-    };
-
-    time_t now = time(nullptr);
-    for (const auto& file : test_files) {
-        PrintFileData data;
-        data.filename = file.filename;
-        data.thumbnail_path = DEFAULT_PLACEHOLDER_THUMB;
-        data.file_size_bytes = file.size_bytes;
-        data.modified_timestamp = now - (file.days_ago * 86400);
-        data.print_time_minutes = file.print_time_mins;
-        data.filament_grams = file.filament_grams;
-
-        // Format strings
-        data.size_str = format_file_size(data.file_size_bytes);
-        data.modified_str = format_modified_date(data.modified_timestamp);
-        data.print_time_str = format_print_time(data.print_time_minutes);
-        data.filament_str = format_filament_weight(data.filament_grams);
-
-        file_list_.push_back(data);
+void PrintSelectPanel::navigate_to_directory(const std::string& dirname) {
+    // Build new path
+    if (current_path_.empty()) {
+        current_path_ = dirname;
+    } else {
+        current_path_ = current_path_ + "/" + dirname;
     }
 
-    // Apply initial sort and populate views
-    apply_sort();
-    update_sort_indicators();
-    populate_card_view();
-    populate_list_view();
-    update_empty_state();
+    spdlog::info("[{}] Navigating to directory: {}", get_name(), current_path_);
+    refresh_files();
+}
 
-    spdlog::debug("[{}] Populated with {} test files", get_name(), file_list_.size());
+void PrintSelectPanel::navigate_up() {
+    // Don't navigate above root
+    if (current_path_.empty()) {
+        spdlog::debug("[{}] Already at root, cannot navigate up", get_name());
+        return;
+    }
+
+    // Find last path separator and truncate
+    size_t last_slash = current_path_.rfind('/');
+    if (last_slash == std::string::npos) {
+        // No slash found - we're one level deep, go to root
+        current_path_.clear();
+    } else {
+        // Truncate at last slash
+        current_path_ = current_path_.substr(0, last_slash);
+    }
+
+    spdlog::info("[{}] Navigating up to: {}", get_name(),
+                 current_path_.empty() ? "/" : current_path_);
+    refresh_files();
 }
 
 void PrintSelectPanel::set_selected_file(const char* filename, const char* thumbnail_src,
-                                          const char* print_time, const char* filament_weight) {
+                                         const char* print_time, const char* filament_weight) {
     lv_subject_copy_string(&selected_filename_subject_, filename);
 
     // Thumbnail uses POINTER subject - copy to buffer then update pointer
@@ -525,24 +543,6 @@ void PrintSelectPanel::set_print_status_panel(lv_obj_t* panel) {
 // ============================================================================
 // Internal Methods
 // ============================================================================
-
-std::string PrintSelectPanel::construct_thumbnail_url(const std::string& relative_path) {
-    Config* config = Config::get_instance();
-    if (!config) {
-        spdlog::error("Cannot construct thumbnail URL: Config not available");
-        return "";
-    }
-
-    try {
-        std::string host = config->get<std::string>(config->df() + "moonraker_host");
-        int port = config->get<int>(config->df() + "moonraker_port");
-        return "http://" + host + ":" + std::to_string(port) + "/server/files/gcodes/" +
-               relative_path;
-    } catch (const std::exception& e) {
-        spdlog::error("Failed to construct thumbnail URL: {}", e.what());
-        return "";
-    }
-}
 
 CardDimensions PrintSelectPanel::calculate_card_dimensions() {
     if (!card_view_container_) {
@@ -625,15 +625,27 @@ void PrintSelectPanel::populate_card_view() {
         // Strip extension for display (cleaner UI)
         std::string display_name = strip_gcode_extension(file.filename);
 
-        const char* attrs[] = {"thumbnail_src",   file.thumbnail_path.c_str(),
-                               "filename",        display_name.c_str(),
-                               "print_time",      file.print_time_str.c_str(),
-                               "filament_weight", file.filament_str.c_str(),
+        const char* attrs[] = {"thumbnail_src",
+                               file.thumbnail_path.c_str(),
+                               "filename",
+                               display_name.c_str(),
+                               "print_time",
+                               file.print_time_str.c_str(),
+                               "filament_weight",
+                               file.filament_str.c_str(),
                                NULL};
 
-        lv_obj_t* card = static_cast<lv_obj_t*>(lv_xml_create(card_view_container_, CARD_COMPONENT_NAME, attrs));
+        lv_obj_t* card =
+            static_cast<lv_obj_t*>(lv_xml_create(card_view_container_, CARD_COMPONENT_NAME, attrs));
 
         if (card) {
+            // Manually set thumbnail src - XML can only resolve pre-registered images,
+            // not dynamic file paths like cached thumbnails
+            lv_obj_t* thumb_img = lv_obj_find_by_name(card, "thumbnail");
+            if (thumb_img && !file.thumbnail_path.empty()) {
+                lv_image_set_src(thumb_img, file.thumbnail_path.c_str());
+            }
+
             lv_obj_set_width(card, dims.card_width);
             lv_obj_set_height(card, dims.card_height);
             lv_obj_set_style_flex_grow(card, 0, LV_PART_MAIN);
@@ -667,13 +679,18 @@ void PrintSelectPanel::populate_list_view() {
         // Strip extension for display (cleaner UI)
         std::string display_name = strip_gcode_extension(file.filename);
 
-        const char* attrs[] = {"filename",      display_name.c_str(),
-                               "file_size",     file.size_str.c_str(),
-                               "modified_date", file.modified_str.c_str(),
-                               "print_time",    file.print_time_str.c_str(),
+        const char* attrs[] = {"filename",
+                               display_name.c_str(),
+                               "file_size",
+                               file.size_str.c_str(),
+                               "modified_date",
+                               file.modified_str.c_str(),
+                               "print_time",
+                               file.print_time_str.c_str(),
                                NULL};
 
-        lv_obj_t* row = static_cast<lv_obj_t*>(lv_xml_create(list_rows_container_, "print_file_list_row", attrs));
+        lv_obj_t* row = static_cast<lv_obj_t*>(
+            lv_xml_create(list_rows_container_, "print_file_list_row", attrs));
 
         if (row) {
             attach_row_click_handler(row, i);
@@ -782,7 +799,8 @@ void PrintSelectPanel::create_detail_view() {
         return;
     }
 
-    detail_view_widget_ = static_cast<lv_obj_t*>(lv_xml_create(parent_screen_, "print_file_detail", nullptr));
+    detail_view_widget_ =
+        static_cast<lv_obj_t*>(lv_xml_create(parent_screen_, "print_file_detail", nullptr));
 
     if (!detail_view_widget_) {
         LOG_ERROR_INTERNAL("[{}] Failed to create detail view from XML", get_name());
@@ -871,9 +889,21 @@ void PrintSelectPanel::handle_file_click(size_t file_index) {
     }
 
     const auto& file = file_list_[file_index];
-    set_selected_file(file.filename.c_str(), file.thumbnail_path.c_str(),
-                      file.print_time_str.c_str(), file.filament_str.c_str());
-    show_detail_view();
+
+    if (file.is_dir) {
+        if (file.filename == "..") {
+            // Parent directory - navigate up
+            navigate_up();
+        } else {
+            // Directory clicked - navigate into it
+            navigate_to_directory(file.filename);
+        }
+    } else {
+        // File clicked - show detail view
+        set_selected_file(file.filename.c_str(), file.thumbnail_path.c_str(),
+                          file.print_time_str.c_str(), file.filament_str.c_str());
+        show_detail_view();
+    }
 }
 
 void PrintSelectPanel::start_print() {
@@ -962,8 +992,8 @@ void PrintSelectPanel::on_header_clicked_static(lv_event_t* e) {
     auto* target = static_cast<lv_obj_t*>(lv_event_get_target(e));
     if (self && target) {
         // Recover column from widget's user_data
-        auto column =
-            static_cast<PrintSelectSortColumn>(reinterpret_cast<intptr_t>(lv_obj_get_user_data(target)));
+        auto column = static_cast<PrintSelectSortColumn>(
+            reinterpret_cast<intptr_t>(lv_obj_get_user_data(target)));
         self->sort_by(column);
     }
 }

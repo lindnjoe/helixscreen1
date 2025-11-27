@@ -17,7 +17,9 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <fstream>
 #include <sstream>
+#include <sys/stat.h>
 
 namespace gcode {
 
@@ -845,6 +847,323 @@ ParsedGCodeFile GCodeParser::finalize() {
     reset();
 
     return result;
+}
+
+// ============================================================================
+// Thumbnail Extraction Implementation
+// ============================================================================
+
+// Base64 decoding table
+static const unsigned char base64_decode_table[256] = {
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    255, 255, 255, 255, 255, 62,  255, 255, 255, 63,  52,  53,  54,  55,  56,  57,  58,  59,  60,
+    61,  255, 255, 255, 255, 255, 255, 255, 0,   1,   2,   3,   4,   5,   6,   7,   8,   9,   10,
+    11,  12,  13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  255, 255, 255, 255,
+    255, 255, 26,  27,  28,  29,  30,  31,  32,  33,  34,  35,  36,  37,  38,  39,  40,  41,  42,
+    43,  44,  45,  46,  47,  48,  49,  50,  51,  255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    255, 255, 255, 255, 255, 255, 255, 255, 255};
+
+std::vector<uint8_t> base64_decode(const std::string& encoded) {
+    std::vector<uint8_t> result;
+    result.reserve(encoded.size() * 3 / 4);
+
+    uint32_t buffer = 0;
+    int bits_collected = 0;
+
+    for (char c : encoded) {
+        if (std::isspace(c) || c == '=') {
+            continue; // Skip whitespace and padding
+        }
+
+        unsigned char decoded = base64_decode_table[static_cast<unsigned char>(c)];
+        if (decoded == 255) {
+            continue; // Skip invalid characters
+        }
+
+        buffer = (buffer << 6) | decoded;
+        bits_collected += 6;
+
+        if (bits_collected >= 8) {
+            bits_collected -= 8;
+            result.push_back(static_cast<uint8_t>((buffer >> bits_collected) & 0xFF));
+        }
+    }
+
+    return result;
+}
+
+std::vector<GCodeThumbnail> extract_thumbnails(const std::string& filepath) {
+    std::vector<GCodeThumbnail> thumbnails;
+
+    std::ifstream file(filepath);
+    if (!file.is_open()) {
+        spdlog::warn("Cannot open G-code file for thumbnail extraction: {}", filepath);
+        return thumbnails;
+    }
+
+    std::string line;
+    GCodeThumbnail current_thumb;
+    std::string base64_data;
+    bool in_thumbnail_block = false;
+    int lines_read = 0;
+    constexpr int max_header_lines = 2000; // Thumbnails should be in first ~2000 lines
+
+    while (std::getline(file, line) && lines_read < max_header_lines) {
+        lines_read++;
+
+        // Look for thumbnail begin marker
+        // Format: "; thumbnail begin WIDTHxHEIGHT SIZE"
+        size_t begin_pos = line.find("; thumbnail begin ");
+        if (begin_pos != std::string::npos) {
+            // Parse dimensions: "WIDTHxHEIGHT SIZE"
+            std::string dims = line.substr(begin_pos + 18);
+            int w = 0, h = 0, size = 0;
+            if (sscanf(dims.c_str(), "%dx%d %d", &w, &h, &size) >= 2) {
+                current_thumb = GCodeThumbnail();
+                current_thumb.width = w;
+                current_thumb.height = h;
+                base64_data.clear();
+                base64_data.reserve(size * 4 / 3 + 100); // Estimate base64 size
+                in_thumbnail_block = true;
+                spdlog::debug("Found thumbnail {}x{} in {}", w, h, filepath);
+            }
+            continue;
+        }
+
+        // Look for thumbnail end marker
+        if (in_thumbnail_block && line.find("; thumbnail end") != std::string::npos) {
+            // Decode accumulated base64 data
+            current_thumb.png_data = base64_decode(base64_data);
+            if (!current_thumb.png_data.empty()) {
+                thumbnails.push_back(std::move(current_thumb));
+            }
+            in_thumbnail_block = false;
+            continue;
+        }
+
+        // Accumulate base64 data (lines start with "; ")
+        if (in_thumbnail_block && line.size() > 2 && line[0] == ';' && line[1] == ' ') {
+            base64_data += line.substr(2);
+        }
+
+        // Stop if we hit actual G-code (not header comments)
+        if (!line.empty() && line[0] != ';' && line[0] != '\r' && line[0] != '\n') {
+            // Check if it's a G-code command
+            if (line[0] == 'G' || line[0] == 'M' || line[0] == 'T') {
+                break; // Past header, stop searching
+            }
+        }
+    }
+
+    // Sort by pixel count (largest first)
+    std::sort(thumbnails.begin(), thumbnails.end(),
+              [](const GCodeThumbnail& a, const GCodeThumbnail& b) {
+                  return a.pixel_count() > b.pixel_count();
+              });
+
+    spdlog::info("Extracted {} thumbnails from {}", thumbnails.size(), filepath);
+    return thumbnails;
+}
+
+GCodeThumbnail get_best_thumbnail(const std::string& filepath) {
+    auto thumbnails = extract_thumbnails(filepath);
+    if (thumbnails.empty()) {
+        return GCodeThumbnail(); // Empty thumbnail
+    }
+    return std::move(thumbnails[0]); // Largest one (already sorted)
+}
+
+bool save_thumbnail_to_file(const std::string& gcode_path, const std::string& output_path) {
+    GCodeThumbnail thumb = get_best_thumbnail(gcode_path);
+    if (thumb.png_data.empty()) {
+        spdlog::debug("No thumbnail found in {}", gcode_path);
+        return false;
+    }
+
+    std::ofstream out(output_path, std::ios::binary);
+    if (!out.is_open()) {
+        spdlog::error("Cannot write thumbnail to {}", output_path);
+        return false;
+    }
+
+    out.write(reinterpret_cast<const char*>(thumb.png_data.data()), thumb.png_data.size());
+    spdlog::debug("Saved {}x{} thumbnail to {}", thumb.width, thumb.height, output_path);
+    return true;
+}
+
+std::string get_cached_thumbnail(const std::string& gcode_path, const std::string& cache_dir) {
+    // Track if we've already shown errors (only show once per session)
+    static bool cache_dir_error_shown = false;
+    static bool write_error_shown = false;
+
+    // Generate cache filename from gcode path
+    std::string filename = gcode_path;
+    size_t last_slash = filename.find_last_of("/\\");
+    if (last_slash != std::string::npos) {
+        filename = filename.substr(last_slash + 1);
+    }
+
+    // Replace .gcode with .png
+    size_t ext_pos = filename.rfind(".gcode");
+    if (ext_pos != std::string::npos) {
+        filename = filename.substr(0, ext_pos) + ".png";
+    } else {
+        filename += ".png";
+    }
+
+    std::string cache_path = cache_dir + "/" + filename;
+
+    // Check if cache exists and is newer than gcode file
+    struct stat gcode_stat, cache_stat;
+    if (stat(gcode_path.c_str(), &gcode_stat) == 0 && stat(cache_path.c_str(), &cache_stat) == 0) {
+        if (cache_stat.st_mtime >= gcode_stat.st_mtime) {
+            spdlog::debug("Using cached thumbnail: {}", cache_path);
+            return cache_path;
+        }
+    }
+
+    // Ensure cache directory exists (create on-the-fly)
+    struct stat dir_stat;
+    if (stat(cache_dir.c_str(), &dir_stat) != 0) {
+        if (mkdir(cache_dir.c_str(), 0755) != 0) {
+            if (!cache_dir_error_shown) {
+                spdlog::error(
+                    "Cannot create thumbnail cache directory: {} (further errors suppressed)",
+                    cache_dir);
+                cache_dir_error_shown = true;
+            }
+            return ""; // Can't cache, but app continues working
+        }
+        spdlog::info("Created thumbnail cache directory: {}", cache_dir);
+    }
+
+    // Extract and save thumbnail
+    if (save_thumbnail_to_file(gcode_path, cache_path)) {
+        return cache_path;
+    }
+
+    // Log write failures only once
+    if (!write_error_shown) {
+        spdlog::warn("Could not cache some thumbnails (further warnings suppressed)");
+        write_error_shown = true;
+    }
+
+    return ""; // No thumbnail available
+}
+
+GCodeHeaderMetadata extract_header_metadata(const std::string& filepath) {
+    GCodeHeaderMetadata metadata;
+    metadata.filename = filepath;
+
+    // Get file size and modification time
+    struct stat file_stat;
+    if (stat(filepath.c_str(), &file_stat) == 0) {
+        metadata.file_size = file_stat.st_size;
+        metadata.modified_time = static_cast<double>(file_stat.st_mtime);
+    }
+
+    std::ifstream file(filepath);
+    if (!file.is_open()) {
+        return metadata;
+    }
+
+    std::string line;
+    int lines_read = 0;
+    constexpr int max_header_lines = 500; // Metadata should be in first ~500 lines
+
+    while (std::getline(file, line) && lines_read < max_header_lines) {
+        lines_read++;
+
+        // Skip non-comment lines
+        if (line.empty() || line[0] != ';') {
+            // Check if we've hit actual G-code
+            if (!line.empty() && (line[0] == 'G' || line[0] == 'M' || line[0] == 'T')) {
+                break;
+            }
+            continue;
+        }
+
+        // Parse comment metadata
+        // OrcaSlicer format: "; key = value" or "; key: value"
+        size_t eq_pos = line.find('=');
+        size_t colon_pos = line.find(':');
+        size_t sep_pos = std::string::npos;
+
+        if (eq_pos != std::string::npos && (colon_pos == std::string::npos || eq_pos < colon_pos)) {
+            sep_pos = eq_pos;
+        } else if (colon_pos != std::string::npos) {
+            sep_pos = colon_pos;
+        }
+
+        if (sep_pos == std::string::npos || sep_pos < 2) {
+            continue;
+        }
+
+        // Extract key and value
+        std::string key = line.substr(2, sep_pos - 2);
+        std::string value = line.substr(sep_pos + 1);
+
+        // Trim whitespace
+        while (!key.empty() && std::isspace(key.back()))
+            key.pop_back();
+        while (!key.empty() && std::isspace(key.front()))
+            key.erase(0, 1);
+        while (!value.empty() && std::isspace(value.back()))
+            value.pop_back();
+        while (!value.empty() && std::isspace(value.front()))
+            value.erase(0, 1);
+
+        // Map known keys to metadata fields
+        if (key == "generated by" || key == "slicer") {
+            metadata.slicer = value;
+        } else if (key == "slicer_version") {
+            metadata.slicer_version = value;
+        } else if (key == "estimated printing time" ||
+                   key == "estimated printing time (normal mode)") {
+            // Parse time string like "2h 30m 15s" or "150m 30s"
+            int hours = 0, minutes = 0, seconds = 0;
+            if (sscanf(value.c_str(), "%dh %dm %ds", &hours, &minutes, &seconds) >= 1 ||
+                sscanf(value.c_str(), "%dm %ds", &minutes, &seconds) >= 1 ||
+                sscanf(value.c_str(), "%ds", &seconds) >= 1) {
+                metadata.estimated_time_seconds = hours * 3600.0 + minutes * 60.0 + seconds;
+            }
+        } else if (key == "total filament used [g]" || key == "filament used [g]" ||
+                   key == "total filament weight") {
+            try {
+                metadata.filament_used_g = std::stod(value);
+            } catch (...) {
+            }
+        } else if (key == "filament used [mm]" || key == "total filament used [mm]") {
+            try {
+                metadata.filament_used_mm = std::stod(value);
+            } catch (...) {
+            }
+        } else if (key == "total layers" || key == "total layer number") {
+            try {
+                metadata.layer_count = std::stoul(value);
+            } catch (...) {
+            }
+        } else if (key == "first_layer_bed_temperature" || key == "bed_temperature") {
+            try {
+                metadata.first_layer_bed_temp = std::stod(value);
+            } catch (...) {
+            }
+        } else if (key == "first_layer_temperature" || key == "nozzle_temperature") {
+            try {
+                metadata.first_layer_nozzle_temp = std::stod(value);
+            } catch (...) {
+            }
+        }
+    }
+
+    return metadata;
 }
 
 } // namespace gcode
