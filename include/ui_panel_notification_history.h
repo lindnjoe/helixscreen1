@@ -3,8 +3,8 @@
 
 #pragma once
 
-#include "ui_panel_base.h"
 #include "ui_notification_history.h"
+#include "ui_panel_base.h"
 
 /**
  * @file ui_panel_notification_history.h
@@ -67,8 +67,12 @@ class NotificationHistoryPanel : public PanelBase {
      */
     void setup(lv_obj_t* panel, lv_obj_t* parent_screen) override;
 
-    const char* get_name() const override { return "Notification History Panel"; }
-    const char* get_xml_component_name() const override { return "notification_history_panel"; }
+    const char* get_name() const override {
+        return "Notification History Panel";
+    }
+    const char* get_xml_component_name() const override {
+        return "notification_history_panel";
+    }
 
     //
     // === Public API ===
@@ -94,7 +98,9 @@ class NotificationHistoryPanel : public PanelBase {
      *
      * @return Current filter (-1 = all, or ToastSeverity value)
      */
-    int get_filter() const { return current_filter_; }
+    int get_filter() const {
+        return current_filter_;
+    }
 
   private:
     //
@@ -144,7 +150,6 @@ class NotificationHistoryPanel : public PanelBase {
     static void on_filter_warnings_clicked(lv_event_t* e);
     static void on_filter_info_clicked(lv_event_t* e);
 };
-
 
 // Global instance accessor (needed by main.cpp)
 NotificationHistoryPanel& get_global_notification_history_panel();

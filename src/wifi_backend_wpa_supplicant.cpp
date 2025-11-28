@@ -24,6 +24,7 @@
 #include "wifi_backend_wpa_supplicant.h"
 
 #include "ui_error_reporting.h"
+
 #include "spdlog/spdlog.h"
 
 #ifndef __APPLE__
@@ -61,9 +62,12 @@ WiFiError WifiBackendWpaSupplicant::start() {
     if (!preflight_result.success()) {
         // User-facing critical error - wpa_supplicant not running or no permissions
         if (preflight_result.result == WiFiResult::SERVICE_NOT_RUNNING) {
-            NOTIFY_ERROR_MODAL("WiFi Service Not Running", "wpa_supplicant is not running. WiFi features unavailable.");
+            NOTIFY_ERROR_MODAL("WiFi Service Not Running",
+                               "wpa_supplicant is not running. WiFi features unavailable.");
         } else if (preflight_result.result == WiFiResult::PERMISSION_DENIED) {
-            NOTIFY_ERROR_MODAL("WiFi Permission Denied", "{}", preflight_result.user_msg.empty() ? preflight_result.technical_msg : preflight_result.user_msg);
+            NOTIFY_ERROR_MODAL("WiFi Permission Denied", "{}",
+                               preflight_result.user_msg.empty() ? preflight_result.technical_msg
+                                                                 : preflight_result.user_msg);
         } else {
             LOG_ERROR_INTERNAL("Pre-flight check failed: {}", preflight_result.technical_msg);
         }
@@ -156,8 +160,8 @@ WiFiError WifiBackendWpaSupplicant::check_system_prerequisites() {
                             accessible_socket = socket_path;
                             break;
                         } else {
-                            LOG_WARN_INTERNAL("Socket {} permission check failed: {}",
-                                         socket_path, perm_result.technical_msg);
+                            LOG_WARN_INTERNAL("Socket {} permission check failed: {}", socket_path,
+                                              perm_result.technical_msg);
                         }
                     }
                 }
@@ -460,7 +464,7 @@ void WifiBackendWpaSupplicant::_handle_wpa_events(hio_t* io, void* data, int rea
 }
 
 void WifiBackendWpaSupplicant::dispatch_event(const std::string& event_name,
-                                               const std::string& message) {
+                                              const std::string& message) {
     // Dispatch to a specific registered callback (for synthetic events like INIT_FAILED)
     std::lock_guard<std::mutex> lock(callbacks_mutex_);
     auto it = callbacks.find(event_name);
@@ -677,7 +681,8 @@ WiFiError WifiBackendWpaSupplicant::connect_network(const std::string& ssid,
         std::string set_psk_cmd = "SET_NETWORK " + network_id + " psk \"" + clean_password + "\"";
         std::string psk_result = send_command(set_psk_cmd);
         if (psk_result != "OK\n") {
-            LOG_ERROR_INTERNAL("Failed to set PSK"); // Don't log the actual result (may contain password)
+            LOG_ERROR_INTERNAL(
+                "Failed to set PSK"); // Don't log the actual result (may contain password)
             send_command("REMOVE_NETWORK " + network_id);
             NOTIFY_ERROR("Failed to connect to '{}'. Check password.", clean_ssid);
             return WiFiErrorHelper::authentication_failed(ssid);

@@ -133,7 +133,9 @@ class WizardWifiStep {
     /**
      * @brief Get step name for logging
      */
-    const char* get_name() const { return "WiFi Screen"; }
+    const char* get_name() const {
+        return "WiFi Screen";
+    }
 
   private:
     // Screen instances

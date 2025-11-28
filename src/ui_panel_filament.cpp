@@ -3,9 +3,6 @@
 
 #include "ui_panel_filament.h"
 
-#include "app_constants.h"
-#include "app_globals.h"
-#include "printer_state.h"
 #include "ui_component_keypad.h"
 #include "ui_error_reporting.h"
 #include "ui_event_safety.h"
@@ -15,6 +12,10 @@
 #include "ui_theme.h"
 #include "ui_utils.h"
 
+#include "app_constants.h"
+#include "app_globals.h"
+#include "printer_state.h"
+
 #include <spdlog/spdlog.h>
 
 #include <cstring>
@@ -22,10 +23,10 @@
 
 // Material temperature presets (indexed by material ID)
 static const int MATERIAL_TEMPS[] = {
-    AppConstants::MaterialPresets::PLA,            // 0 = PLA (210°C)
-    AppConstants::MaterialPresets::PETG,           // 1 = PETG (240°C)
-    AppConstants::MaterialPresets::ABS,            // 2 = ABS (250°C)
-    AppConstants::MaterialPresets::CUSTOM_DEFAULT  // 3 = Custom default (200°C)
+    AppConstants::MaterialPresets::PLA,           // 0 = PLA (210°C)
+    AppConstants::MaterialPresets::PETG,          // 1 = PETG (240°C)
+    AppConstants::MaterialPresets::ABS,           // 2 = ABS (250°C)
+    AppConstants::MaterialPresets::CUSTOM_DEFAULT // 3 = Custom default (200°C)
 };
 
 // ============================================================================
@@ -35,11 +36,11 @@ static const int MATERIAL_TEMPS[] = {
 FilamentPanel::FilamentPanel(PrinterState& printer_state, MoonrakerAPI* api)
     : PanelBase(printer_state, api) {
     // Initialize buffer contents with default values
-    std::snprintf(temp_display_buf_, sizeof(temp_display_buf_), "%d / %d°C",
-                  nozzle_current_, nozzle_target_);
+    std::snprintf(temp_display_buf_, sizeof(temp_display_buf_), "%d / %d°C", nozzle_current_,
+                  nozzle_target_);
     std::strcpy(status_buf_, "Select material to begin");
-    std::snprintf(warning_temps_buf_, sizeof(warning_temps_buf_),
-                  "Current: %d°C | Target: %d°C", nozzle_current_, nozzle_target_);
+    std::snprintf(warning_temps_buf_, sizeof(warning_temps_buf_), "Current: %d°C | Target: %d°C",
+                  nozzle_current_, nozzle_target_);
 }
 
 // ============================================================================
@@ -53,22 +54,21 @@ void FilamentPanel::init_subjects() {
     }
 
     // Initialize subjects with default values
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(temp_display_subject_, temp_display_buf_,
-                                        temp_display_buf_, "filament_temp_display");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(status_subject_, status_buf_,
-                                        status_buf_, "filament_status");
-    UI_SUBJECT_INIT_AND_REGISTER_INT(material_selected_subject_, -1,
-                                     "filament_material_selected");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(temp_display_subject_, temp_display_buf_, temp_display_buf_,
+                                        "filament_temp_display");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(status_subject_, status_buf_, status_buf_,
+                                        "filament_status");
+    UI_SUBJECT_INIT_AND_REGISTER_INT(material_selected_subject_, -1, "filament_material_selected");
     UI_SUBJECT_INIT_AND_REGISTER_INT(extrusion_allowed_subject_, 0,
-                                     "filament_extrusion_allowed");  // false (cold at start)
+                                     "filament_extrusion_allowed"); // false (cold at start)
     UI_SUBJECT_INIT_AND_REGISTER_INT(safety_warning_visible_subject_, 1,
-                                     "filament_safety_warning_visible");  // true (cold at start)
+                                     "filament_safety_warning_visible"); // true (cold at start)
     UI_SUBJECT_INIT_AND_REGISTER_STRING(warning_temps_subject_, warning_temps_buf_,
                                         warning_temps_buf_, "filament_warning_temps");
 
     subjects_initialized_ = true;
-    spdlog::debug("[{}] Subjects initialized: temp={}/{}°C, material={}",
-                  get_name(), nozzle_current_, nozzle_target_, selected_material_);
+    spdlog::debug("[{}] Subjects initialized: temp={}/{}°C, material={}", get_name(),
+                  nozzle_current_, nozzle_target_, selected_material_);
 }
 
 void FilamentPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
@@ -89,12 +89,12 @@ void FilamentPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
         if (preset_buttons_[i]) {
             if (i < 3) {
                 // Standard presets (PLA, PETG, ABS) - use common trampoline
-                lv_obj_add_event_cb(preset_buttons_[i], on_preset_button_clicked,
-                                    LV_EVENT_CLICKED, this);
+                lv_obj_add_event_cb(preset_buttons_[i], on_preset_button_clicked, LV_EVENT_CLICKED,
+                                    this);
             } else {
                 // Custom preset (opens keypad) - different handler
-                lv_obj_add_event_cb(preset_buttons_[i], on_custom_button_clicked,
-                                    LV_EVENT_CLICKED, this);
+                lv_obj_add_event_cb(preset_buttons_[i], on_custom_button_clicked, LV_EVENT_CLICKED,
+                                    this);
             }
         }
     }
@@ -137,8 +137,8 @@ void FilamentPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
 // ============================================================================
 
 void FilamentPanel::update_temp_display() {
-    std::snprintf(temp_display_buf_, sizeof(temp_display_buf_), "%d / %d°C",
-                  nozzle_current_, nozzle_target_);
+    std::snprintf(temp_display_buf_, sizeof(temp_display_buf_), "%d / %d°C", nozzle_current_,
+                  nozzle_target_);
     lv_subject_copy_string(&temp_display_subject_, temp_display_buf_);
 }
 
@@ -153,7 +153,7 @@ void FilamentPanel::update_status() {
         // Heating in progress
         std::snprintf(status_buf_, sizeof(status_buf_), "⚡ Heating to %d°C...", nozzle_target_);
         lv_subject_copy_string(&status_subject_, status_buf_);
-        return;  // Already updated, exit early
+        return; // Already updated, exit early
     } else {
         // Cold - needs material selection
         status_msg = "❄ Select material to begin";
@@ -163,8 +163,8 @@ void FilamentPanel::update_status() {
 }
 
 void FilamentPanel::update_warning_text() {
-    std::snprintf(warning_temps_buf_, sizeof(warning_temps_buf_),
-                  "Current: %d°C | Target: %d°C", nozzle_current_, nozzle_target_);
+    std::snprintf(warning_temps_buf_, sizeof(warning_temps_buf_), "Current: %d°C | Target: %d°C",
+                  nozzle_current_, nozzle_target_);
     lv_subject_copy_string(&warning_temps_subject_, warning_temps_buf_);
 }
 
@@ -210,8 +210,8 @@ void FilamentPanel::update_safety_state() {
         }
     }
 
-    spdlog::debug("[{}] Safety state updated: allowed={} (temp={}°C)",
-                  get_name(), allowed, nozzle_current_);
+    spdlog::debug("[{}] Safety state updated: allowed={} (temp={}°C)", get_name(), allowed,
+                  nozzle_current_);
 }
 
 void FilamentPanel::update_preset_buttons_visual() {
@@ -241,8 +241,8 @@ void FilamentPanel::handle_preset_button(int material_id) {
     update_temp_display();
     update_status();
 
-    spdlog::info("[{}] Material selected: {} (target={}°C)",
-                 get_name(), material_id, nozzle_target_);
+    spdlog::info("[{}] Material selected: {} (target={}°C)", get_name(), material_id,
+                 nozzle_target_);
 
     // TODO: Send command to printer to set temperature
     // api_->send_gcode(fmt::format("M104 S{}", nozzle_target_));
@@ -260,17 +260,16 @@ void FilamentPanel::handle_custom_button() {
         .allow_decimal = false,
         .allow_negative = false,
         .callback = custom_temp_keypad_cb,
-        .user_data = this  // Pass 'this' for callback
+        .user_data = this // Pass 'this' for callback
     };
 
     ui_keypad_show(&config);
 }
 
 void FilamentPanel::handle_custom_temp_confirmed(float value) {
-    spdlog::info("[{}] Custom temperature confirmed: {}°C",
-                 get_name(), static_cast<int>(value));
+    spdlog::info("[{}] Custom temperature confirmed: {}°C", get_name(), static_cast<int>(value));
 
-    selected_material_ = 3;  // Custom
+    selected_material_ = 3; // Custom
     nozzle_target_ = static_cast<int>(value);
 
     lv_subject_set_int(&material_selected_subject_, selected_material_);
@@ -283,8 +282,8 @@ void FilamentPanel::handle_custom_temp_confirmed(float value) {
 
 void FilamentPanel::handle_load_button() {
     if (!is_extrusion_allowed()) {
-        NOTIFY_WARNING("Nozzle too cold for filament load ({}°C, min: {}°C)",
-                       nozzle_current_, AppConstants::Temperature::MIN_EXTRUSION_TEMP);
+        NOTIFY_WARNING("Nozzle too cold for filament load ({}°C, min: {}°C)", nozzle_current_,
+                       AppConstants::Temperature::MIN_EXTRUSION_TEMP);
         return;
     }
 
@@ -295,8 +294,8 @@ void FilamentPanel::handle_load_button() {
 
 void FilamentPanel::handle_unload_button() {
     if (!is_extrusion_allowed()) {
-        NOTIFY_WARNING("Nozzle too cold for filament unload ({}°C, min: {}°C)",
-                       nozzle_current_, AppConstants::Temperature::MIN_EXTRUSION_TEMP);
+        NOTIFY_WARNING("Nozzle too cold for filament unload ({}°C, min: {}°C)", nozzle_current_,
+                       AppConstants::Temperature::MIN_EXTRUSION_TEMP);
         return;
     }
 
@@ -307,8 +306,8 @@ void FilamentPanel::handle_unload_button() {
 
 void FilamentPanel::handle_purge_button() {
     if (!is_extrusion_allowed()) {
-        NOTIFY_WARNING("Nozzle too cold for purge ({}°C, min: {}°C)",
-                       nozzle_current_, AppConstants::Temperature::MIN_EXTRUSION_TEMP);
+        NOTIFY_WARNING("Nozzle too cold for purge ({}°C, min: {}°C)", nozzle_current_,
+                       AppConstants::Temperature::MIN_EXTRUSION_TEMP);
         return;
     }
 
@@ -331,9 +330,12 @@ void FilamentPanel::on_preset_button_clicked(lv_event_t* e) {
 
         int material_id = -1;
         if (name) {
-            if (strcmp(name, "preset_pla") == 0) material_id = 0;
-            else if (strcmp(name, "preset_petg") == 0) material_id = 1;
-            else if (strcmp(name, "preset_abs") == 0) material_id = 2;
+            if (strcmp(name, "preset_pla") == 0)
+                material_id = 0;
+            else if (strcmp(name, "preset_petg") == 0)
+                material_id = 1;
+            else if (strcmp(name, "preset_abs") == 0)
+                material_id = 2;
         }
 
         if (material_id >= 0) {
@@ -392,8 +394,8 @@ void FilamentPanel::custom_temp_keypad_cb(float value, void* user_data) {
 
 void FilamentPanel::set_temp(int current, int target) {
     // Validate temperature ranges
-    UITemperatureUtils::validate_and_clamp_pair(current, target, nozzle_min_temp_,
-                                                nozzle_max_temp_, "Filament");
+    UITemperatureUtils::validate_and_clamp_pair(current, target, nozzle_min_temp_, nozzle_max_temp_,
+                                                "Filament");
 
     nozzle_current_ = current;
     nozzle_target_ = target;
@@ -405,8 +407,10 @@ void FilamentPanel::set_temp(int current, int target) {
 }
 
 void FilamentPanel::get_temp(int* current, int* target) const {
-    if (current) *current = nozzle_current_;
-    if (target) *target = nozzle_target_;
+    if (current)
+        *current = nozzle_current_;
+    if (target)
+        *target = nozzle_target_;
 }
 
 void FilamentPanel::set_material(int material_id) {
@@ -423,20 +427,18 @@ void FilamentPanel::set_material(int material_id) {
     update_temp_display();
     update_status();
 
-    spdlog::info("[{}] Material set: {} (target={}°C)",
-                 get_name(), material_id, nozzle_target_);
+    spdlog::info("[{}] Material set: {} (target={}°C)", get_name(), material_id, nozzle_target_);
 }
 
 bool FilamentPanel::is_extrusion_allowed() const {
-    return UITemperatureUtils::is_extrusion_safe(
-        nozzle_current_, AppConstants::Temperature::MIN_EXTRUSION_TEMP);
+    return UITemperatureUtils::is_extrusion_safe(nozzle_current_,
+                                                 AppConstants::Temperature::MIN_EXTRUSION_TEMP);
 }
 
 void FilamentPanel::set_limits(int min_temp, int max_temp) {
     nozzle_min_temp_ = min_temp;
     nozzle_max_temp_ = max_temp;
-    spdlog::info("[{}] Nozzle temperature limits updated: {}-{}°C",
-                 get_name(), min_temp, max_temp);
+    spdlog::info("[{}] Nozzle temperature limits updated: {}-{}°C", get_name(), min_temp, max_temp);
 }
 
 // ============================================================================

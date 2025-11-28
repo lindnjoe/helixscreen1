@@ -245,8 +245,7 @@ void ui_panel_setup_standard_layout(lv_obj_t* panel, lv_obj_t* parent_screen,
 // ============================================================================
 
 void ui_overlay_panel_setup_standard(lv_obj_t* panel, lv_obj_t* parent_screen,
-                                     const char* header_name,
-                                     const char* content_name) {
+                                     const char* header_name, const char* content_name) {
     if (!panel || !parent_screen) {
         spdlog::error("[PanelCommon] Invalid parameters for overlay panel setup");
         return;
@@ -306,10 +305,8 @@ lv_obj_t* ui_overlay_panel_wire_back_button(lv_obj_t* panel, const char* header_
     return back_btn;
 }
 
-lv_obj_t* ui_overlay_panel_wire_right_button(lv_obj_t* panel,
-                                             lv_event_cb_t callback,
-                                             const char* header_name,
-                                             void* user_data) {
+lv_obj_t* ui_overlay_panel_wire_right_button(lv_obj_t* panel, lv_event_cb_t callback,
+                                             const char* header_name, void* user_data) {
     if (!panel || !callback || !header_name) {
         spdlog::warn("[PanelCommon] Invalid parameters for overlay right button wiring");
         return nullptr;

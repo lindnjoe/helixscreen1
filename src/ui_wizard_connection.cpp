@@ -71,21 +71,22 @@ WizardConnectionStep::~WizardConnectionStep() {
 // ============================================================================
 
 WizardConnectionStep::WizardConnectionStep(WizardConnectionStep&& other) noexcept
-    : screen_root_(other.screen_root_),
-      connection_ip_(other.connection_ip_),
+    : screen_root_(other.screen_root_), connection_ip_(other.connection_ip_),
       connection_port_(other.connection_port_),
       connection_status_icon_(other.connection_status_icon_),
       connection_status_text_(other.connection_status_text_),
       connection_testing_(other.connection_testing_),
       connection_validated_(other.connection_validated_),
-      subjects_initialized_(other.subjects_initialized_),
-      saved_ip_(std::move(other.saved_ip_)),
+      subjects_initialized_(other.subjects_initialized_), saved_ip_(std::move(other.saved_ip_)),
       saved_port_(std::move(other.saved_port_)) {
     // Move buffers
     std::memcpy(connection_ip_buffer_, other.connection_ip_buffer_, sizeof(connection_ip_buffer_));
-    std::memcpy(connection_port_buffer_, other.connection_port_buffer_, sizeof(connection_port_buffer_));
-    std::memcpy(connection_status_icon_buffer_, other.connection_status_icon_buffer_, sizeof(connection_status_icon_buffer_));
-    std::memcpy(connection_status_text_buffer_, other.connection_status_text_buffer_, sizeof(connection_status_text_buffer_));
+    std::memcpy(connection_port_buffer_, other.connection_port_buffer_,
+                sizeof(connection_port_buffer_));
+    std::memcpy(connection_status_icon_buffer_, other.connection_status_icon_buffer_,
+                sizeof(connection_status_icon_buffer_));
+    std::memcpy(connection_status_text_buffer_, other.connection_status_text_buffer_,
+                sizeof(connection_status_text_buffer_));
 
     // Null out other
     other.screen_root_ = nullptr;
@@ -107,10 +108,14 @@ WizardConnectionStep& WizardConnectionStep::operator=(WizardConnectionStep&& oth
         saved_port_ = std::move(other.saved_port_);
 
         // Move buffers
-        std::memcpy(connection_ip_buffer_, other.connection_ip_buffer_, sizeof(connection_ip_buffer_));
-        std::memcpy(connection_port_buffer_, other.connection_port_buffer_, sizeof(connection_port_buffer_));
-        std::memcpy(connection_status_icon_buffer_, other.connection_status_icon_buffer_, sizeof(connection_status_icon_buffer_));
-        std::memcpy(connection_status_text_buffer_, other.connection_status_text_buffer_, sizeof(connection_status_text_buffer_));
+        std::memcpy(connection_ip_buffer_, other.connection_ip_buffer_,
+                    sizeof(connection_ip_buffer_));
+        std::memcpy(connection_port_buffer_, other.connection_port_buffer_,
+                    sizeof(connection_port_buffer_));
+        std::memcpy(connection_status_icon_buffer_, other.connection_status_icon_buffer_,
+                    sizeof(connection_status_icon_buffer_));
+        std::memcpy(connection_status_text_buffer_, other.connection_status_text_buffer_,
+                    sizeof(connection_status_text_buffer_));
 
         // Null out other
         other.screen_root_ = nullptr;
@@ -153,10 +158,14 @@ void WizardConnectionStep::init_subjects() {
     strncpy(connection_port_buffer_, default_port.c_str(), sizeof(connection_port_buffer_) - 1);
     connection_port_buffer_[sizeof(connection_port_buffer_) - 1] = '\0';
 
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(connection_ip_, connection_ip_buffer_, connection_ip_buffer_, "connection_ip");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(connection_port_, connection_port_buffer_, connection_port_buffer_, "connection_port");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(connection_status_icon_, connection_status_icon_buffer_, "", "connection_status_icon");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(connection_status_text_, connection_status_text_buffer_, "", "connection_status_text");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(connection_ip_, connection_ip_buffer_,
+                                        connection_ip_buffer_, "connection_ip");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(connection_port_, connection_port_buffer_,
+                                        connection_port_buffer_, "connection_port");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(connection_status_icon_, connection_status_icon_buffer_, "",
+                                        "connection_status_icon");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(connection_status_text_, connection_status_text_buffer_, "",
+                                        "connection_status_text");
     UI_SUBJECT_INIT_AND_REGISTER_INT(connection_testing_, 0, "connection_testing");
 
     // Set connection_test_passed to 0 (disabled) for this step
@@ -280,13 +289,9 @@ void WizardConnectionStep::handle_test_connection_clicked() {
     int result = client->connect(
         ws_url.c_str(),
         // On connected callback
-        [self]() {
-            self->on_connection_success();
-        },
+        [self]() { self->on_connection_success(); },
         // On disconnected callback
-        [self]() {
-            self->on_connection_failure();
-        });
+        [self]() { self->on_connection_failure(); });
 
     // Disable automatic reconnection for wizard testing
     client->setReconnect(nullptr);
@@ -359,7 +364,8 @@ void WizardConnectionStep::on_connection_failure() {
 
         const char* error_icon = lv_xml_get_const(nullptr, "icon_xmark_circle");
         lv_subject_copy_string(&connection_status_icon_, error_icon ? error_icon : "");
-        lv_subject_copy_string(&connection_status_text_, "Connection failed. Check IP/port and try again.");
+        lv_subject_copy_string(&connection_status_text_,
+                               "Connection failed. Check IP/port and try again.");
         lv_subject_set_int(&connection_testing_, 0);
         connection_validated_ = false;
         lv_subject_set_int(&connection_test_passed, 0);
@@ -411,7 +417,8 @@ void WizardConnectionStep::register_callbacks() {
 
     // NOTE: We use static trampolines registered via lv_xml_register_event_cb
     // The actual event binding happens in create() where we have 'this' pointer
-    lv_xml_register_event_cb(nullptr, "on_test_connection_clicked", on_test_connection_clicked_static);
+    lv_xml_register_event_cb(nullptr, "on_test_connection_clicked",
+                             on_test_connection_clicked_static);
     lv_xml_register_event_cb(nullptr, "on_ip_input_changed", on_ip_input_changed_static);
     lv_xml_register_event_cb(nullptr, "on_port_input_changed", on_port_input_changed_static);
 

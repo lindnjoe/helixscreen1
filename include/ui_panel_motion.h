@@ -89,8 +89,12 @@ class MotionPanel : public PanelBase {
      */
     void setup(lv_obj_t* panel, lv_obj_t* parent_screen) override;
 
-    const char* get_name() const override { return "Motion Panel"; }
-    const char* get_xml_component_name() const override { return "motion_panel"; }
+    const char* get_name() const override {
+        return "Motion Panel";
+    }
+    const char* get_xml_component_name() const override {
+        return "motion_panel";
+    }
 
     //
     // === Public API ===
@@ -111,7 +115,9 @@ class MotionPanel : public PanelBase {
      * @brief Get currently selected jog distance
      * @return Current jog distance setting
      */
-    jog_distance_t get_distance() const { return current_distance_; }
+    jog_distance_t get_distance() const {
+        return current_distance_;
+    }
 
     /**
      * @brief Set jog distance selection

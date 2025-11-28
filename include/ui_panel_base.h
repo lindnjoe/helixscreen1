@@ -153,21 +153,27 @@ class PanelBase {
      *
      * @param api New API pointer (may be nullptr)
      */
-    void set_api(MoonrakerAPI* api) { api_ = api; }
+    void set_api(MoonrakerAPI* api) {
+        api_ = api;
+    }
 
     /**
      * @brief Get root panel object
      *
      * @return Panel object, or nullptr if not yet setup
      */
-    lv_obj_t* get_panel() const { return panel_; }
+    lv_obj_t* get_panel() const {
+        return panel_;
+    }
 
     /**
      * @brief Check if subjects have been initialized
      *
      * @return true if init_subjects() was called
      */
-    bool are_subjects_initialized() const { return subjects_initialized_; }
+    bool are_subjects_initialized() const {
+        return subjects_initialized_;
+    }
 
   protected:
     //

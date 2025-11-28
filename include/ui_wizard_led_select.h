@@ -77,12 +77,18 @@ class WizardLedSelectStep {
     /**
      * @brief Get step name for logging
      */
-    const char* get_name() const { return "Wizard LED"; }
+    const char* get_name() const {
+        return "Wizard LED";
+    }
 
     // Public access to subjects for helper functions
-    lv_subject_t* get_led_strip_subject() { return &led_strip_selected_; }
+    lv_subject_t* get_led_strip_subject() {
+        return &led_strip_selected_;
+    }
 
-    std::vector<std::string>& get_led_strip_items() { return led_strip_items_; }
+    std::vector<std::string>& get_led_strip_items() {
+        return led_strip_items_;
+    }
 
   private:
     // Screen instance

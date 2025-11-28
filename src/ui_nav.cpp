@@ -613,8 +613,10 @@ void ui_nav_wire_status_icons(lv_obj_t* navbar) {
     uint16_t status_icon_scale = (nav_icon_scale * 3) / 4;
 
     // Status icon button and icon names (must match XML and ui_status_bar_init() expectations)
-    const char* button_names[] = {"status_btn_printer", "status_btn_network", "status_btn_notification"};
-    const char* icon_names[] = {"status_printer_icon", "status_network_icon", "status_notification_icon"};
+    const char* button_names[] = {"status_btn_printer", "status_btn_network",
+                                  "status_btn_notification"};
+    const char* icon_names[] = {"status_printer_icon", "status_network_icon",
+                                "status_notification_icon"};
     const int status_icon_count = 3;
 
     for (int i = 0; i < status_icon_count; i++) {
@@ -622,8 +624,8 @@ void ui_nav_wire_status_icons(lv_obj_t* navbar) {
         lv_obj_t* icon_widget = lv_obj_find_by_name(navbar, icon_names[i]);
 
         if (!btn || !icon_widget) {
-            spdlog::warn("Status icon {}: btn={}, icon={} (may not exist yet)",
-                        button_names[i], (void*)btn, (void*)icon_widget);
+            spdlog::warn("Status icon {}: btn={}, icon={} (may not exist yet)", button_names[i],
+                         (void*)btn, (void*)icon_widget);
             continue;
         }
 
@@ -644,6 +646,6 @@ void ui_nav_wire_status_icons(lv_obj_t* navbar) {
         lv_obj_add_flag(btn, LV_OBJ_FLAG_CLICKABLE);
 
         spdlog::debug("Status icon {} wired: scale={} (75% of nav), button_size={}",
-                     button_names[i], status_icon_scale, button_size);
+                      button_names[i], status_icon_scale, button_size);
     }
 }

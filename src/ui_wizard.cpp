@@ -23,6 +23,7 @@
 
 #include "ui_wizard.h"
 
+#include "ui_error_reporting.h"
 #include "ui_subject_registry.h"
 #include "ui_theme.h"
 #include "ui_wizard_connection.h"
@@ -38,7 +39,6 @@
 #include "lvgl/lvgl.h"
 #include "lvgl/src/xml/lv_xml.h"
 #include "moonraker_client.h"
-#include "ui_error_reporting.h"
 #include "wizard_config_paths.h"
 
 #include <spdlog/spdlog.h>
@@ -77,11 +77,16 @@ void ui_wizard_init_subjects() {
 
     // Initialize subjects with defaults
     UI_SUBJECT_INIT_AND_REGISTER_INT(current_step, 1, "current_step");
-    UI_SUBJECT_INIT_AND_REGISTER_INT(total_steps, 7, "total_steps"); // 7 steps: WiFi, Connection, Printer, Heater, Fan, LED, Summary
+    UI_SUBJECT_INIT_AND_REGISTER_INT(
+        total_steps, 7,
+        "total_steps"); // 7 steps: WiFi, Connection, Printer, Heater, Fan, LED, Summary
 
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(wizard_title, wizard_title_buffer, "Welcome", "wizard_title");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(wizard_progress, wizard_progress_buffer, "Step 1 of 7", "wizard_progress");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(wizard_next_button_text, wizard_next_button_text_buffer, "Next", "wizard_next_button_text");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(wizard_title, wizard_title_buffer, "Welcome",
+                                        "wizard_title");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(wizard_progress, wizard_progress_buffer, "Step 1 of 7",
+                                        "wizard_progress");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(wizard_next_button_text, wizard_next_button_text_buffer,
+                                        "Next", "wizard_next_button_text");
 
     // Initialize connection_test_passed to 1 (enabled by default for all steps)
     // Step 2 (connection) will set it to 0 until test passes
@@ -216,8 +221,8 @@ void ui_wizard_container_register_responsive_constants() {
     }
 
     spdlog::debug("[Wizard] Registered 11 constants to wizard_container and propagated to {} child "
-                 "components (7 wizard screens)",
-                 child_count);
+                  "components (7 wizard screens)",
+                  child_count);
     spdlog::debug("[Wizard] Values: padding={}, gap={}, header_h={}, footer_h={}, button_w={}",
                   padding_value, gap_value, header_height, footer_height, button_width);
 }

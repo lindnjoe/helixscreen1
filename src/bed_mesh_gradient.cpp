@@ -17,6 +17,7 @@
  */
 
 #include "bed_mesh_gradient.h"
+
 #include "bed_mesh_renderer.h" // For BED_MESH_COLOR_COMPRESSION constant
 
 #include <spdlog/spdlog.h>
@@ -109,7 +110,8 @@ static void init_color_gradient_lut() {
         g_color_gradient_lut[i] = lv_color_make(r, g, b);
     }
 
-    spdlog::debug("Initialized bed mesh color gradient LUT with {} samples", COLOR_GRADIENT_LUT_SIZE);
+    spdlog::debug("Initialized bed mesh color gradient LUT with {} samples",
+                  COLOR_GRADIENT_LUT_SIZE);
 }
 
 lv_color_t bed_mesh_gradient_height_to_color(double value, double min_val, double max_val) {

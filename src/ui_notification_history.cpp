@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include "ui_notification_history.h"
+
 #include "ui_error_reporting.h"
 
-#include <spdlog/spdlog.h>
 #include <hv/json.hpp>
-#include <fstream>
+#include <spdlog/spdlog.h>
+
 #include <algorithm>
+#include <fstream>
 
 using json = nlohmann::json;
 
@@ -78,8 +80,7 @@ std::vector<NotificationHistoryEntry> NotificationHistory::get_filtered(int seve
     }
 
     std::vector<NotificationHistoryEntry> result;
-    std::copy_if(all_entries.begin(), all_entries.end(),
-                 std::back_inserter(result),
+    std::copy_if(all_entries.begin(), all_entries.end(), std::back_inserter(result),
                  [severity](const NotificationHistoryEntry& e) {
                      return static_cast<int>(e.severity) == severity;
                  });
@@ -91,9 +92,7 @@ size_t NotificationHistory::get_unread_count() const {
     std::lock_guard<std::mutex> lock(mutex_);
 
     return std::count_if(entries_.begin(), entries_.end(),
-                        [](const NotificationHistoryEntry& e) {
-                            return !e.was_read;
-                        });
+                         [](const NotificationHistoryEntry& e) { return !e.was_read; });
 }
 
 ToastSeverity NotificationHistory::get_highest_unread_severity() const {
@@ -105,7 +104,7 @@ ToastSeverity NotificationHistory::get_highest_unread_severity() const {
     for (const auto& entry : entries_) {
         if (!entry.was_read) {
             if (entry.severity == ToastSeverity::ERROR) {
-                return ToastSeverity::ERROR;  // Can't get higher than this
+                return ToastSeverity::ERROR; // Can't get higher than this
             }
             if (entry.severity == ToastSeverity::WARNING && highest != ToastSeverity::ERROR) {
                 highest = ToastSeverity::WARNING;
@@ -161,11 +160,21 @@ bool NotificationHistory::save_to_disk(const char* path) const {
             // Convert severity to string
             std::string severity_str;
             switch (entry.severity) {
-                case ToastSeverity::INFO:    severity_str = "INFO"; break;
-                case ToastSeverity::SUCCESS: severity_str = "SUCCESS"; break;
-                case ToastSeverity::WARNING: severity_str = "WARNING"; break;
-                case ToastSeverity::ERROR:   severity_str = "ERROR"; break;
-                default:                     severity_str = "UNKNOWN"; break;
+            case ToastSeverity::INFO:
+                severity_str = "INFO";
+                break;
+            case ToastSeverity::SUCCESS:
+                severity_str = "SUCCESS";
+                break;
+            case ToastSeverity::WARNING:
+                severity_str = "WARNING";
+                break;
+            case ToastSeverity::ERROR:
+                severity_str = "ERROR";
+                break;
+            default:
+                severity_str = "UNKNOWN";
+                break;
             }
 
             json entry_json;
@@ -186,7 +195,7 @@ bool NotificationHistory::save_to_disk(const char* path) const {
             return false;
         }
 
-        file << j.dump(2);  // Pretty-print with 2-space indent
+        file << j.dump(2); // Pretty-print with 2-space indent
         file.close();
 
         spdlog::info("Saved {} notification entries to {}", save_count, path);

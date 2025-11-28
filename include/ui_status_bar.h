@@ -39,10 +39,10 @@
  * @brief Active notification status
  */
 enum class NotificationStatus {
-    NONE,     ///< No active notifications
-    INFO,     ///< Info notification active
-    WARNING,  ///< Warning notification active
-    ERROR     ///< Error notification active
+    NONE,    ///< No active notifications
+    INFO,    ///< Info notification active
+    WARNING, ///< Warning notification active
+    ERROR    ///< Error notification active
 };
 
 /**

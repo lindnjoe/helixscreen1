@@ -88,8 +88,12 @@ class ControlsPanel : public PanelBase {
      */
     void setup(lv_obj_t* panel, lv_obj_t* parent_screen) override;
 
-    const char* get_name() const override { return "Controls Panel"; }
-    const char* get_xml_component_name() const override { return "controls_panel"; }
+    const char* get_name() const override {
+        return "Controls Panel";
+    }
+    const char* get_xml_component_name() const override {
+        return "controls_panel";
+    }
 
   private:
     //

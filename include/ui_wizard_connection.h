@@ -118,7 +118,9 @@ class WizardConnectionStep {
     /**
      * @brief Get step name for logging
      */
-    const char* get_name() const { return "Wizard Connection"; }
+    const char* get_name() const {
+        return "Wizard Connection";
+    }
 
   private:
     // Screen instance

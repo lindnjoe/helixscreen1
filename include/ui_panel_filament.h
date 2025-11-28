@@ -75,8 +75,12 @@ class FilamentPanel : public PanelBase {
      */
     void setup(lv_obj_t* panel, lv_obj_t* parent_screen) override;
 
-    const char* get_name() const override { return "Filament Panel"; }
-    const char* get_xml_component_name() const override { return "filament_panel"; }
+    const char* get_name() const override {
+        return "Filament Panel";
+    }
+    const char* get_xml_component_name() const override {
+        return "filament_panel";
+    }
 
     //
     // === Public API ===
@@ -114,7 +118,9 @@ class FilamentPanel : public PanelBase {
      * @brief Get currently selected material
      * @return Material ID (-1=none, 0=PLA, 1=PETG, 2=ABS, 3=Custom)
      */
-    int get_material() const { return selected_material_; }
+    int get_material() const {
+        return selected_material_;
+    }
 
     /**
      * @brief Check if extrusion operations are safe

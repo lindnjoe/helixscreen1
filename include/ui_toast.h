@@ -24,6 +24,7 @@
 #pragma once
 
 #include "lvgl.h"
+
 #include <cstdint>
 
 /**
@@ -43,10 +44,10 @@
  * @brief Toast notification severity levels
  */
 enum class ToastSeverity {
-    INFO,     ///< Informational message (blue)
-    SUCCESS,  ///< Success message (green)
-    WARNING,  ///< Warning message (orange)
-    ERROR     ///< Error message (red)
+    INFO,    ///< Informational message (blue)
+    SUCCESS, ///< Success message (green)
+    WARNING, ///< Warning message (orange)
+    ERROR    ///< Error message (red)
 };
 
 /**

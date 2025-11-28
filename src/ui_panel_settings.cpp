@@ -3,11 +3,12 @@
 
 #include "ui_panel_settings.h"
 
-#include "app_globals.h"
-#include "printer_state.h"
 #include "ui_event_safety.h"
 #include "ui_nav.h"
 #include "ui_panel_bed_mesh.h"
+
+#include "app_globals.h"
+#include "printer_state.h"
 
 #include <spdlog/spdlog.h>
 
@@ -116,7 +117,8 @@ void SettingsPanel::handle_bed_mesh_clicked() {
         spdlog::debug("[{}] Creating bed mesh visualization panel...", get_name());
 
         // Create from XML
-        bed_mesh_panel_ = static_cast<lv_obj_t*>(lv_xml_create(parent_screen_, "bed_mesh_panel", nullptr));
+        bed_mesh_panel_ =
+            static_cast<lv_obj_t*>(lv_xml_create(parent_screen_, "bed_mesh_panel", nullptr));
         if (bed_mesh_panel_) {
             // Setup event handlers and renderer (class-based API)
             get_global_bed_mesh_panel().setup(bed_mesh_panel_, parent_screen_);

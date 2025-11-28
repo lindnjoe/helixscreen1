@@ -3,9 +3,10 @@
 
 #include "ui_panel_step_test.h"
 
+#include "ui_event_safety.h"
+
 #include "app_globals.h"
 #include "printer_state.h"
-#include "ui_event_safety.h"
 
 #include <spdlog/spdlog.h>
 

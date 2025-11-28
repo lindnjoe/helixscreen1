@@ -3,6 +3,8 @@
 
 #include "ui_wizard_heater_select.h"
 
+#include "ui_error_reporting.h"
+#include "ui_notification.h"
 #include "ui_wizard.h"
 #include "ui_wizard_hardware_selector.h"
 #include "ui_wizard_helpers.h"
@@ -11,8 +13,6 @@
 #include "config.h"
 #include "lvgl/lvgl.h"
 #include "moonraker_client.h"
-#include "ui_error_reporting.h"
-#include "ui_notification.h"
 #include "wizard_config_paths.h"
 
 #include <spdlog/spdlog.h>
@@ -58,8 +58,7 @@ WizardHeaterSelectStep::~WizardHeaterSelectStep() {
 // ============================================================================
 
 WizardHeaterSelectStep::WizardHeaterSelectStep(WizardHeaterSelectStep&& other) noexcept
-    : screen_root_(other.screen_root_),
-      bed_heater_selected_(other.bed_heater_selected_),
+    : screen_root_(other.screen_root_), bed_heater_selected_(other.bed_heater_selected_),
       hotend_heater_selected_(other.hotend_heater_selected_),
       bed_heater_items_(std::move(other.bed_heater_items_)),
       hotend_heater_items_(std::move(other.hotend_heater_items_)),
@@ -117,8 +116,8 @@ lv_obj_t* WizardHeaterSelectStep::create(lv_obj_t* parent) {
 
     // Safety check: cleanup should have been called by wizard navigation
     if (screen_root_) {
-        spdlog::warn(
-            "[{}] Screen pointer not null - cleanup may not have been called properly", get_name());
+        spdlog::warn("[{}] Screen pointer not null - cleanup may not have been called properly",
+                     get_name());
         screen_root_ = nullptr; // Reset pointer, wizard framework handles deletion
     }
 
@@ -126,8 +125,9 @@ lv_obj_t* WizardHeaterSelectStep::create(lv_obj_t* parent) {
     screen_root_ = static_cast<lv_obj_t*>(lv_xml_create(parent, "wizard_heater_select", nullptr));
     if (!screen_root_) {
         spdlog::error("[{}] Failed to create screen from XML", get_name());
-        ui_notification_error("Wizard Error",
-                            "Failed to load heater configuration screen. Please restart the application.");
+        ui_notification_error(
+            "Wizard Error",
+            "Failed to load heater configuration screen. Please restart the application.");
         return nullptr;
     }
 
@@ -141,8 +141,7 @@ lv_obj_t* WizardHeaterSelectStep::create(lv_obj_t* parent) {
         "[Wizard Heater]");
 
     // Attach bed heater dropdown callback programmatically
-    lv_obj_t* bed_heater_dropdown =
-        lv_obj_find_by_name(screen_root_, "bed_heater_dropdown");
+    lv_obj_t* bed_heater_dropdown = lv_obj_find_by_name(screen_root_, "bed_heater_dropdown");
     if (bed_heater_dropdown) {
         lv_obj_add_event_cb(bed_heater_dropdown, wizard_hardware_dropdown_changed_cb,
                             LV_EVENT_VALUE_CHANGED, &bed_heater_selected_);
@@ -150,16 +149,15 @@ lv_obj_t* WizardHeaterSelectStep::create(lv_obj_t* parent) {
 
     // Populate hotend heater dropdown (discover + filter + populate + restore)
     wizard_populate_hardware_dropdown(
-        screen_root_, "hotend_heater_dropdown", &hotend_heater_selected_,
-        hotend_heater_items_, [](MoonrakerClient* c) -> const auto& { return c->get_heaters(); },
+        screen_root_, "hotend_heater_dropdown", &hotend_heater_selected_, hotend_heater_items_,
+        [](MoonrakerClient* c) -> const auto& { return c->get_heaters(); },
         "extruder", // Filter for extruder-related heaters
         true,       // Allow "None" option
         WizardConfigPaths::HOTEND_HEATER,
         [](MoonrakerClient* c) { return c->guess_hotend_heater(); }, "[Wizard Heater]");
 
     // Attach hotend heater dropdown callback programmatically
-    lv_obj_t* hotend_heater_dropdown =
-        lv_obj_find_by_name(screen_root_, "hotend_heater_dropdown");
+    lv_obj_t* hotend_heater_dropdown = lv_obj_find_by_name(screen_root_, "hotend_heater_dropdown");
     if (hotend_heater_dropdown) {
         lv_obj_add_event_cb(hotend_heater_dropdown, wizard_hardware_dropdown_changed_cb,
                             LV_EVENT_VALUE_CHANGED, &hotend_heater_selected_);

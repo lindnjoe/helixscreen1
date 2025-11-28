@@ -48,12 +48,12 @@
  * @brief Print state machine states
  */
 enum class PrintState {
-    Idle,       ///< No active print
-    Printing,   ///< Actively printing
-    Paused,     ///< Print paused
-    Complete,   ///< Print finished successfully
-    Cancelled,  ///< Print cancelled by user
-    Error       ///< Print failed with error
+    Idle,      ///< No active print
+    Printing,  ///< Actively printing
+    Paused,    ///< Print paused
+    Complete,  ///< Print finished successfully
+    Cancelled, ///< Print cancelled by user
+    Error      ///< Print failed with error
 };
 
 // Legacy C-style enum for backwards compatibility
@@ -102,8 +102,12 @@ class PrintStatusPanel : public PanelBase {
      */
     void setup(lv_obj_t* panel, lv_obj_t* parent_screen) override;
 
-    const char* get_name() const override { return "Print Status"; }
-    const char* get_xml_component_name() const override { return "print_status_panel"; }
+    const char* get_name() const override {
+        return "Print Status";
+    }
+    const char* get_xml_component_name() const override {
+        return "print_status_panel";
+    }
 
     //
     // === Public API - Print State Updates ===
@@ -161,13 +165,17 @@ class PrintStatusPanel : public PanelBase {
      * @brief Get current print state
      * @return Current PrintState
      */
-    PrintState get_state() const { return current_state_; }
+    PrintState get_state() const {
+        return current_state_;
+    }
 
     /**
      * @brief Get current progress percentage
      * @return Progress 0-100
      */
-    int get_progress() const { return current_progress_; }
+    int get_progress() const {
+        return current_progress_;
+    }
 
     //
     // === Mock Print Simulation ===
@@ -199,7 +207,9 @@ class PrintStatusPanel : public PanelBase {
      * @brief Check if mock print is active
      * @return true if mock simulation is running
      */
-    bool is_mock_active() const { return mock_active_; }
+    bool is_mock_active() const {
+        return mock_active_;
+    }
 
   private:
     //
@@ -292,7 +302,6 @@ class PrintStatusPanel : public PanelBase {
     // Static resize callback (registered with ui_resize_handler)
     static void on_resize_static();
 };
-
 
 // Global instance accessor (needed by main.cpp)
 PrintStatusPanel& get_global_print_status_panel();

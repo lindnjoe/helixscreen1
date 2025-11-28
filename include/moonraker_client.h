@@ -424,7 +424,6 @@ class MoonrakerClient : public hv::WebSocketClient {
     void dispatch_status_update(const json& status);
 
   private:
-
     /**
      * @brief Check for timed out requests and invoke error callbacks
      */

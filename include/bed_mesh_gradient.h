@@ -24,6 +24,7 @@
 #pragma once
 
 #include <lvgl/lvgl.h>
+
 #include <cstdint>
 
 /**

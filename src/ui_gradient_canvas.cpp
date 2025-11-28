@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include "ui_gradient_canvas.h"
+
 #include "ui_error_reporting.h"
 
 #include "lvgl/lvgl.h"
@@ -20,8 +21,8 @@ namespace {
 
 // Default gradient colors (matching original thumbnail-gradient-bg.png)
 // Diagonal gradient: bright at top-right, dark at bottom-left
-constexpr uint8_t DEFAULT_START_GRAY = 80;   // Top-right - brighter
-constexpr uint8_t DEFAULT_END_GRAY = 0;      // Bottom-left - darker
+constexpr uint8_t DEFAULT_START_GRAY = 80; // Top-right - brighter
+constexpr uint8_t DEFAULT_END_GRAY = 0;    // Bottom-left - darker
 
 // Pre-rendered gradient buffer size
 // 256x256 ensures full coverage when clipped to rectangular cards (~170x245)
@@ -29,19 +30,14 @@ constexpr uint8_t DEFAULT_END_GRAY = 0;      // Bottom-left - darker
 constexpr int32_t GRADIENT_BUFFER_SIZE = 256;
 
 // 4x4 Bayer dither matrix (normalized to 0-15)
-constexpr uint8_t BAYER_4X4[4][4] = {
-    { 0,  8,  2, 10},
-    {12,  4, 14,  6},
-    { 3, 11,  1,  9},
-    {15,  7, 13,  5}
-};
+constexpr uint8_t BAYER_4X4[4][4] = {{0, 8, 2, 10}, {12, 4, 14, 6}, {3, 11, 1, 9}, {15, 7, 13, 5}};
 
 // User data for gradient configuration
 struct GradientData {
     uint8_t start_r, start_g, start_b;
     uint8_t end_r, end_g, end_b;
     bool dither;
-    lv_draw_buf_t* draw_buf;  // Pre-rendered gradient buffer
+    lv_draw_buf_t* draw_buf; // Pre-rendered gradient buffer
 };
 
 /**
@@ -52,7 +48,8 @@ static void parse_color_to_rgb(const char* color_str, uint8_t& r, uint8_t& g, ui
         r = g = b = 0;
         return;
     }
-    if (color_str[0] == '#') color_str++;
+    if (color_str[0] == '#')
+        color_str++;
     lv_color_t color = lv_xml_to_color(color_str);
     lv_color32_t c32 = lv_color_to_32(color, LV_OPA_COVER);
     r = c32.red;
@@ -72,7 +69,7 @@ static void parse_color_to_rgb(const char* color_str, uint8_t& r, uint8_t& g, ui
 static inline int16_t bayer_threshold(int32_t x, int32_t y) {
     // Bayer value 0-15, map to -12..+11 for RGB565 quantization dithering
     int16_t bayer_val = BAYER_4X4[y & 3][x & 3];
-    return (bayer_val * 24 / 16) - 12;  // Scale to ±12 range
+    return (bayer_val * 24 / 16) - 12; // Scale to ±12 range
 }
 
 /**
@@ -82,18 +79,21 @@ static inline int16_t bayer_threshold(int32_t x, int32_t y) {
  * Uses ordered dithering for smooth appearance on 16-bit displays.
  */
 static void render_gradient_buffer(GradientData* data) {
-    if (!data || !data->draw_buf) return;
+    if (!data || !data->draw_buf)
+        return;
 
     // Get buffer data pointer and stride directly from struct
     uint8_t* buf_data = data->draw_buf->data;
-    if (!buf_data) return;
+    if (!buf_data)
+        return;
 
     uint32_t stride = data->draw_buf->header.stride;
     int32_t size = GRADIENT_BUFFER_SIZE;
 
     // For diagonal gradient (top-right to bottom-left), max distance is 2*(size-1)
     float max_dist = static_cast<float>(2 * (size - 1));
-    if (max_dist < 1.0f) max_dist = 1.0f;
+    if (max_dist < 1.0f)
+        max_dist = 1.0f;
 
     // Pre-calculate color deltas
     int16_t dr = data->end_r - data->start_r;
@@ -172,9 +172,8 @@ static void* ui_gradient_canvas_xml_create(lv_xml_parser_state_t* state, const c
     data->draw_buf = nullptr;
 
     // Create draw buffer for gradient
-    data->draw_buf = lv_draw_buf_create(
-        GRADIENT_BUFFER_SIZE, GRADIENT_BUFFER_SIZE,
-        LV_COLOR_FORMAT_ARGB8888, 0);
+    data->draw_buf =
+        lv_draw_buf_create(GRADIENT_BUFFER_SIZE, GRADIENT_BUFFER_SIZE, LV_COLOR_FORMAT_ARGB8888, 0);
 
     if (!data->draw_buf) {
         LOG_ERROR_INTERNAL("[GradientCanvas] Failed to create draw buffer");
@@ -202,8 +201,8 @@ static void* ui_gradient_canvas_xml_create(lv_xml_parser_state_t* state, const c
     // Cleanup handler
     lv_obj_add_event_cb(img, gradient_delete_cb, LV_EVENT_DELETE, nullptr);
 
-    spdlog::trace("[GradientCanvas] Created gradient ({}x{} buffer)",
-                  GRADIENT_BUFFER_SIZE, GRADIENT_BUFFER_SIZE);
+    spdlog::trace("[GradientCanvas] Created gradient ({}x{} buffer)", GRADIENT_BUFFER_SIZE,
+                  GRADIENT_BUFFER_SIZE);
     return static_cast<void*>(img);
 }
 
@@ -251,10 +250,10 @@ static void ui_gradient_canvas_xml_apply(lv_xml_parser_state_t* state, const cha
         // Note: No explicit invalidate needed - LVGL will redraw when buffer is accessed
         // Calling lv_obj_invalidate() here can trigger assertion if called during render
 
-        spdlog::debug("[GradientCanvas] Applied (start=#{:02X}{:02X}{:02X}, end=#{:02X}{:02X}{:02X}, dither={})",
-                      data->start_r, data->start_g, data->start_b,
-                      data->end_r, data->end_g, data->end_b,
-                      data->dither);
+        spdlog::debug("[GradientCanvas] Applied (start=#{:02X}{:02X}{:02X}, "
+                      "end=#{:02X}{:02X}{:02X}, dither={})",
+                      data->start_r, data->start_g, data->start_b, data->end_r, data->end_g,
+                      data->end_b, data->dither);
     }
 }
 
@@ -267,7 +266,8 @@ void ui_gradient_canvas_register(void) {
 }
 
 void ui_gradient_canvas_redraw(lv_obj_t* obj) {
-    if (!obj) return;
+    if (!obj)
+        return;
     GradientData* data = static_cast<GradientData*>(lv_obj_get_user_data(obj));
     if (data) {
         render_gradient_buffer(data);
@@ -276,7 +276,8 @@ void ui_gradient_canvas_redraw(lv_obj_t* obj) {
 }
 
 void ui_gradient_canvas_set_dither(lv_obj_t* obj, bool enable) {
-    if (!obj) return;
+    if (!obj)
+        return;
     GradientData* data = static_cast<GradientData*>(lv_obj_get_user_data(obj));
     if (data && data->dither != enable) {
         data->dither = enable;

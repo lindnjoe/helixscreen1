@@ -22,6 +22,7 @@
  */
 
 #include "keyboard_layout_provider.h"
+
 #include "lvgl.h"
 
 /**
@@ -475,33 +476,33 @@ static const lv_buttonmatrix_ctrl_t kb_ctrl_alt_symbols[] = {
 
 const char* const* keyboard_layout_get_map(keyboard_layout_mode_t mode, bool caps_lock_active) {
     switch (mode) {
-        case KEYBOARD_LAYOUT_ALPHA_LC:
-            return kb_map_alpha_lc;
-        case KEYBOARD_LAYOUT_ALPHA_UC:
-            // Choose between caps lock (eject symbol) or one-shot (upload symbol)
-            return caps_lock_active ? kb_map_alpha_uc : kb_map_alpha_uc_oneshot;
-        case KEYBOARD_LAYOUT_NUMBERS_SYMBOLS:
-            return kb_map_numbers_symbols;
-        case KEYBOARD_LAYOUT_ALT_SYMBOLS:
-            return kb_map_alt_symbols;
-        default:
-            return kb_map_alpha_lc; // Fallback to lowercase
+    case KEYBOARD_LAYOUT_ALPHA_LC:
+        return kb_map_alpha_lc;
+    case KEYBOARD_LAYOUT_ALPHA_UC:
+        // Choose between caps lock (eject symbol) or one-shot (upload symbol)
+        return caps_lock_active ? kb_map_alpha_uc : kb_map_alpha_uc_oneshot;
+    case KEYBOARD_LAYOUT_NUMBERS_SYMBOLS:
+        return kb_map_numbers_symbols;
+    case KEYBOARD_LAYOUT_ALT_SYMBOLS:
+        return kb_map_alt_symbols;
+    default:
+        return kb_map_alpha_lc; // Fallback to lowercase
     }
 }
 
 const lv_buttonmatrix_ctrl_t* keyboard_layout_get_ctrl_map(keyboard_layout_mode_t mode) {
     switch (mode) {
-        case KEYBOARD_LAYOUT_ALPHA_LC:
-            return kb_ctrl_alpha_lc;
-        case KEYBOARD_LAYOUT_ALPHA_UC:
-            // Both caps lock and one-shot use the same control map
-            return kb_ctrl_alpha_uc;
-        case KEYBOARD_LAYOUT_NUMBERS_SYMBOLS:
-            return kb_ctrl_numbers_symbols;
-        case KEYBOARD_LAYOUT_ALT_SYMBOLS:
-            return kb_ctrl_alt_symbols;
-        default:
-            return kb_ctrl_alpha_lc; // Fallback to lowercase
+    case KEYBOARD_LAYOUT_ALPHA_LC:
+        return kb_ctrl_alpha_lc;
+    case KEYBOARD_LAYOUT_ALPHA_UC:
+        // Both caps lock and one-shot use the same control map
+        return kb_ctrl_alpha_uc;
+    case KEYBOARD_LAYOUT_NUMBERS_SYMBOLS:
+        return kb_ctrl_numbers_symbols;
+    case KEYBOARD_LAYOUT_ALT_SYMBOLS:
+        return kb_ctrl_alt_symbols;
+    default:
+        return kb_ctrl_alpha_lc; // Fallback to lowercase
     }
 }
 

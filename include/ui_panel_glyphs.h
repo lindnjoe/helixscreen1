@@ -60,8 +60,12 @@ class GlyphsPanel : public PanelBase {
      */
     void setup(lv_obj_t* panel, lv_obj_t* parent_screen) override;
 
-    const char* get_name() const override { return "Glyphs Panel"; }
-    const char* get_xml_component_name() const override { return "glyphs_panel"; }
+    const char* get_name() const override {
+        return "Glyphs Panel";
+    }
+    const char* get_xml_component_name() const override {
+        return "glyphs_panel";
+    }
 
   private:
     /**
@@ -73,7 +77,6 @@ class GlyphsPanel : public PanelBase {
      */
     void populate_glyphs();
 };
-
 
 // Global instance accessor (needed by main.cpp)
 GlyphsPanel& get_global_glyphs_panel();

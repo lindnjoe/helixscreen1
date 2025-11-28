@@ -3,12 +3,13 @@
 
 #include "ui_panel_gcode_test.h"
 
-#include "printer_state.h"
-#include "runtime_config.h"
 #include "ui_error_reporting.h"
 #include "ui_event_safety.h"
 #include "ui_gcode_viewer.h"
 #include "ui_theme.h"
+
+#include "printer_state.h"
+#include "runtime_config.h"
 
 #include <spdlog/spdlog.h>
 
@@ -125,7 +126,7 @@ void GcodeTestPanel::show_file_picker() {
     file_picker_overlay_ = lv_obj_create(lv_screen_active());
     lv_obj_set_size(file_picker_overlay_, LV_PCT(100), LV_PCT(100));
     lv_obj_set_style_bg_color(file_picker_overlay_, lv_color_black(), 0);
-    lv_obj_set_style_bg_opa(file_picker_overlay_, 200, 0);  // Semi-transparent
+    lv_obj_set_style_bg_opa(file_picker_overlay_, 200, 0); // Semi-transparent
     lv_obj_set_style_pad_all(file_picker_overlay_, 40, 0);
 
     // Create card for file list
@@ -163,8 +164,7 @@ void GcodeTestPanel::show_file_picker() {
 
         // Store both 'this' pointer and index in user_data
         // We encode the index in the event user_data
-        lv_obj_add_event_cb(btn, on_file_selected_static, LV_EVENT_CLICKED,
-                            (void*)(uintptr_t)i);
+        lv_obj_add_event_cb(btn, on_file_selected_static, LV_EVENT_CLICKED, (void*)(uintptr_t)i);
         // Store 'this' pointer in the button's user_data for the callback
         lv_obj_set_user_data(btn, this);
 
@@ -255,7 +255,7 @@ void GcodeTestPanel::scan_gcode_files() {
 }
 
 void GcodeTestPanel::update_stats_label(const char* filename, int layer_count,
-                                         const char* filament_type) {
+                                        const char* filament_type) {
     if (!stats_label_) {
         return;
     }
@@ -272,10 +272,8 @@ void GcodeTestPanel::update_stats_label(const char* filename, int layer_count,
             size_t pos = first_semi + 1;
             while (pos < filament_str.length()) {
                 size_t next_semi = filament_str.find(';', pos);
-                std::string next_type =
-                    filament_str.substr(pos, next_semi == std::string::npos
-                                                  ? std::string::npos
-                                                  : next_semi - pos);
+                std::string next_type = filament_str.substr(
+                    pos, next_semi == std::string::npos ? std::string::npos : next_semi - pos);
                 if (next_type != first_type) {
                     all_same = false;
                     break;
@@ -391,7 +389,7 @@ void GcodeTestPanel::apply_runtime_config() {
 // ============================================================================
 
 void GcodeTestPanel::on_gcode_load_complete_static(lv_obj_t* /*viewer*/, void* user_data,
-                                                    bool success) {
+                                                   bool success) {
     auto* self = static_cast<GcodeTestPanel*>(user_data);
     if (self) {
         self->handle_gcode_load_complete(success);
@@ -559,7 +557,7 @@ void GcodeTestPanel::handle_zoom(const char* button_name) {
         return;
     }
 
-    float zoom_step = 1.2f;  // 20% zoom per click
+    float zoom_step = 1.2f; // 20% zoom per click
 
     if (strcmp(button_name, "btn_zoom_in") == 0) {
         ui_gcode_viewer_zoom(gcode_viewer_, zoom_step);
@@ -576,7 +574,7 @@ void GcodeTestPanel::handle_specular_change(lv_obj_t* slider) {
     }
 
     int32_t value = lv_slider_get_value(slider);
-    float intensity = value / 100.0f;  // 0-20 → 0.0-0.2
+    float intensity = value / 100.0f; // 0-20 → 0.0-0.2
 
     // Update value label
     lv_obj_t* container = lv_obj_get_parent(slider);
@@ -652,5 +650,3 @@ lv_obj_t* ui_panel_gcode_test_create(lv_obj_t* parent) {
 
     return panel_root;
 }
-
-

@@ -74,15 +74,15 @@ WizardPrinterIdentifyStep::~WizardPrinterIdentifyStep() {
 // ============================================================================
 
 WizardPrinterIdentifyStep::WizardPrinterIdentifyStep(WizardPrinterIdentifyStep&& other) noexcept
-    : screen_root_(other.screen_root_),
-      printer_name_(other.printer_name_),
+    : screen_root_(other.screen_root_), printer_name_(other.printer_name_),
       printer_type_selected_(other.printer_type_selected_),
       printer_detection_status_(other.printer_detection_status_),
       printer_identify_validated_(other.printer_identify_validated_),
       subjects_initialized_(other.subjects_initialized_) {
     // Move buffers
     std::memcpy(printer_name_buffer_, other.printer_name_buffer_, sizeof(printer_name_buffer_));
-    std::memcpy(printer_detection_status_buffer_, other.printer_detection_status_buffer_, sizeof(printer_detection_status_buffer_));
+    std::memcpy(printer_detection_status_buffer_, other.printer_detection_status_buffer_,
+                sizeof(printer_detection_status_buffer_));
 
     // Null out other
     other.screen_root_ = nullptr;
@@ -90,7 +90,8 @@ WizardPrinterIdentifyStep::WizardPrinterIdentifyStep(WizardPrinterIdentifyStep&&
     other.printer_identify_validated_ = false;
 }
 
-WizardPrinterIdentifyStep& WizardPrinterIdentifyStep::operator=(WizardPrinterIdentifyStep&& other) noexcept {
+WizardPrinterIdentifyStep&
+WizardPrinterIdentifyStep::operator=(WizardPrinterIdentifyStep&& other) noexcept {
     if (this != &other) {
         screen_root_ = other.screen_root_;
         printer_name_ = other.printer_name_;
@@ -101,7 +102,8 @@ WizardPrinterIdentifyStep& WizardPrinterIdentifyStep::operator=(WizardPrinterIde
 
         // Move buffers
         std::memcpy(printer_name_buffer_, other.printer_name_buffer_, sizeof(printer_name_buffer_));
-        std::memcpy(printer_detection_status_buffer_, other.printer_detection_status_buffer_, sizeof(printer_detection_status_buffer_));
+        std::memcpy(printer_detection_status_buffer_, other.printer_detection_status_buffer_,
+                    sizeof(printer_detection_status_buffer_));
 
         // Null out other
         other.screen_root_ = nullptr;
@@ -161,13 +163,15 @@ static PrinterDetectionHint detect_printer_type() {
     int type_index = WizardPrinterIdentifyStep::find_printer_type_index(result.type_name);
 
     if (type_index == PrinterTypes::DEFAULT_PRINTER_TYPE_INDEX && result.confidence > 0) {
-        spdlog::warn("[Wizard Printer] Detected '{}' ({}% confident) but not found in PRINTER_TYPES_ROLLER",
-                     result.type_name, result.confidence);
+        spdlog::warn(
+            "[Wizard Printer] Detected '{}' ({}% confident) but not found in PRINTER_TYPES_ROLLER",
+            result.type_name, result.confidence);
         return {PrinterTypes::DEFAULT_PRINTER_TYPE_INDEX, result.confidence,
                 result.type_name + " (not in dropdown list)"};
     }
 
-    spdlog::debug("[Wizard Printer] Auto-detected: {} (confidence: {})", result.type_name, result.confidence);
+    spdlog::debug("[Wizard Printer] Auto-detected: {} (confidence: {})", result.type_name,
+                  result.confidence);
     return {type_index, result.confidence, result.type_name};
 }
 
@@ -194,7 +198,8 @@ void WizardPrinterIdentifyStep::init_subjects() {
             spdlog::debug("[{}] Loaded from config: name='{}', type='{}', resolved index={}",
                           get_name(), default_name, saved_type, default_type);
         } else {
-            spdlog::debug("[{}] Loaded from config: name='{}', no type saved", get_name(), default_name);
+            spdlog::debug("[{}] Loaded from config: name='{}', no type saved", get_name(),
+                          default_name);
         }
     } catch (const std::exception& e) {
         spdlog::debug("[{}] No existing config, using defaults", get_name());
@@ -204,7 +209,8 @@ void WizardPrinterIdentifyStep::init_subjects() {
     strncpy(printer_name_buffer_, default_name.c_str(), sizeof(printer_name_buffer_) - 1);
     printer_name_buffer_[sizeof(printer_name_buffer_) - 1] = '\0';
 
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(printer_name_, printer_name_buffer_, printer_name_buffer_, "printer_name");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(printer_name_, printer_name_buffer_, printer_name_buffer_,
+                                        "printer_name");
 
     // Run auto-detection if no saved type
     PrinterDetectionHint hint{PrinterTypes::DEFAULT_PRINTER_TYPE_INDEX, 0, ""};
@@ -212,9 +218,11 @@ void WizardPrinterIdentifyStep::init_subjects() {
         hint = detect_printer_type();
         if (hint.confidence >= 70) {
             default_type = hint.type_index;
-            spdlog::debug("[{}] Auto-detection: {} (confidence: {}%)", get_name(), hint.type_name, hint.confidence);
+            spdlog::debug("[{}] Auto-detection: {} (confidence: {}%)", get_name(), hint.type_name,
+                          hint.confidence);
         } else if (hint.confidence > 0) {
-            spdlog::debug("[{}] Auto-detection suggestion: {} (confidence: {}%)", get_name(), hint.type_name, hint.confidence);
+            spdlog::debug("[{}] Auto-detection suggestion: {} (confidence: {}%)", get_name(),
+                          hint.type_name, hint.confidence);
         } else {
             spdlog::debug("[{}] Auto-detection: {}", get_name(), hint.type_name);
         }
@@ -227,8 +235,8 @@ void WizardPrinterIdentifyStep::init_subjects() {
     if (!saved_type.empty()) {
         status_msg = "Loaded from configuration";
     } else if (hint.confidence >= 70) {
-        snprintf(printer_detection_status_buffer_, sizeof(printer_detection_status_buffer_),
-                 "%s", hint.type_name.c_str());
+        snprintf(printer_detection_status_buffer_, sizeof(printer_detection_status_buffer_), "%s",
+                 hint.type_name.c_str());
         status_msg = printer_detection_status_buffer_;
     } else if (hint.confidence > 0) {
         snprintf(printer_detection_status_buffer_, sizeof(printer_detection_status_buffer_),
@@ -238,7 +246,8 @@ void WizardPrinterIdentifyStep::init_subjects() {
         status_msg = "No printer detected - please confirm type";
     }
 
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(printer_detection_status_, printer_detection_status_buffer_, status_msg, "printer_detection_status");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(printer_detection_status_, printer_detection_status_buffer_,
+                                        status_msg, "printer_detection_status");
 
     // Initialize validation state
     printer_identify_validated_ = (default_name.length() > 0);
@@ -248,8 +257,8 @@ void WizardPrinterIdentifyStep::init_subjects() {
     lv_subject_set_int(&connection_test_passed, button_state);
 
     subjects_initialized_ = true;
-    spdlog::debug("[{}] Subjects initialized (validation: {}, button_state: {})",
-                  get_name(), printer_identify_validated_ ? "valid" : "invalid", button_state);
+    spdlog::debug("[{}] Subjects initialized (validation: {}, button_state: {})", get_name(),
+                  printer_identify_validated_ ? "valid" : "invalid", button_state);
 }
 
 // ============================================================================
@@ -308,10 +317,12 @@ void WizardPrinterIdentifyStep::handle_printer_name_changed(lv_event_t* event) {
         lv_color_t error_color = ui_theme_get_color("error_color");
         lv_obj_set_style_border_color(ta, error_color, LV_PART_MAIN);
         lv_obj_set_style_border_width(ta, 2, LV_PART_MAIN);
-        spdlog::debug("[{}] Validation: name too long ({} > {})", get_name(), trimmed.length(), max_length);
+        spdlog::debug("[{}] Validation: name too long ({} > {})", get_name(), trimmed.length(),
+                      max_length);
     } else if (!is_empty) {
         const char* sec_color_str = lv_xml_get_const(NULL, "secondary_color");
-        lv_color_t valid_color = sec_color_str ? ui_theme_parse_color(sec_color_str) : lv_color_hex(0x000000);
+        lv_color_t valid_color =
+            sec_color_str ? ui_theme_parse_color(sec_color_str) : lv_color_hex(0x000000);
         lv_obj_set_style_border_color(ta, valid_color, LV_PART_MAIN);
         lv_obj_set_style_border_width(ta, 1, LV_PART_MAIN);
     } else {
@@ -364,7 +375,8 @@ lv_obj_t* WizardPrinterIdentifyStep::create(lv_obj_t* parent) {
     }
 
     // Create from XML
-    screen_root_ = static_cast<lv_obj_t*>(lv_xml_create(parent, "wizard_printer_identify", nullptr));
+    screen_root_ =
+        static_cast<lv_obj_t*>(lv_xml_create(parent, "wizard_printer_identify", nullptr));
 
     if (!screen_root_) {
         spdlog::error("[{}] Failed to create from XML", get_name());
@@ -382,7 +394,8 @@ lv_obj_t* WizardPrinterIdentifyStep::create(lv_obj_t* parent) {
 
         // Attach change handler with 'this' as user_data
         lv_obj_add_event_cb(roller, on_printer_type_changed_static, LV_EVENT_VALUE_CHANGED, this);
-        spdlog::debug("[{}] Roller configured with {} options", get_name(), PrinterTypes::PRINTER_TYPE_COUNT);
+        spdlog::debug("[{}] Roller configured with {} options", get_name(),
+                      PrinterTypes::PRINTER_TYPE_COUNT);
     } else {
         spdlog::warn("[{}] Roller not found in XML", get_name());
     }
@@ -393,7 +406,8 @@ lv_obj_t* WizardPrinterIdentifyStep::create(lv_obj_t* parent) {
         lv_textarea_set_text(name_ta, printer_name_buffer_);
         lv_obj_add_event_cb(name_ta, on_printer_name_changed_static, LV_EVENT_VALUE_CHANGED, this);
         ui_keyboard_register_textarea(name_ta);
-        spdlog::debug("[{}] Name textarea configured (initial: '{}')", get_name(), printer_name_buffer_);
+        spdlog::debug("[{}] Name textarea configured (initial: '{}')", get_name(),
+                      printer_name_buffer_);
     }
 
     lv_obj_update_layout(screen_root_);
@@ -444,7 +458,8 @@ void WizardPrinterIdentifyStep::cleanup() {
 
         // Save printer type name
         config->set<std::string>(WizardConfigPaths::PRINTER_TYPE, type_name);
-        spdlog::debug("[{}] Saving printer type to config: '{}' (index {})", get_name(), type_name, type_index);
+        spdlog::debug("[{}] Saving printer type to config: '{}' (index {})", get_name(), type_name,
+                      type_index);
 
         // Persist config changes
         if (config->save()) {

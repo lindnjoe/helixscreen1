@@ -3,9 +3,10 @@
 
 #include "ui_panel_glyphs.h"
 
+#include "ui_theme.h"
+
 #include "app_globals.h"
 #include "printer_state.h"
-#include "ui_theme.h"
 
 #include <lvgl/lvgl.h>
 #include <spdlog/spdlog.h>
@@ -226,9 +227,9 @@ lv_obj_t* ui_panel_glyphs_create(lv_obj_t* parent) {
     if (!panel.are_subjects_initialized()) {
         panel.init_subjects();
     }
-    
-    lv_obj_t* glyphs_panel = static_cast<lv_obj_t*>(
-        lv_xml_create(parent, panel.get_xml_component_name(), nullptr));
+
+    lv_obj_t* glyphs_panel =
+        static_cast<lv_obj_t*>(lv_xml_create(parent, panel.get_xml_component_name(), nullptr));
     if (glyphs_panel) {
         panel.setup(glyphs_panel, nullptr);
     }

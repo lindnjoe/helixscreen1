@@ -3,12 +3,13 @@
 
 #include "ui_panel_bed_mesh.h"
 
-#include "app_globals.h"
-#include "moonraker_client.h"
 #include "ui_bed_mesh.h"
 #include "ui_nav.h"
 #include "ui_panel_common.h"
 #include "ui_subject_registry.h"
+
+#include "app_globals.h"
+#include "moonraker_client.h"
 
 #include <spdlog/spdlog.h>
 
@@ -172,7 +173,8 @@ void BedMeshPanel::redraw() {
 
 void BedMeshPanel::setup_profile_dropdown() {
     lv_obj_t* overlay_content = lv_obj_find_by_name(panel_, "overlay_content");
-    if (!overlay_content) return;
+    if (!overlay_content)
+        return;
 
     profile_dropdown_ = lv_obj_find_by_name(overlay_content, "profile_dropdown");
     if (!profile_dropdown_) {
@@ -197,7 +199,8 @@ void BedMeshPanel::setup_profile_dropdown() {
     // Build options string (newline-separated)
     std::string options;
     for (size_t i = 0; i < profiles.size(); i++) {
-        if (i > 0) options += "\n";
+        if (i > 0)
+            options += "\n";
         options += profiles[i];
     }
     lv_dropdown_set_options(profile_dropdown_, options.c_str());
@@ -351,7 +354,8 @@ void BedMeshPanel::update_info_subjects(const std::vector<std::vector<float>>& m
 
 void BedMeshPanel::on_panel_delete(lv_event_t* e) {
     auto* self = static_cast<BedMeshPanel*>(lv_event_get_user_data(e));
-    if (!self) return;
+    if (!self)
+        return;
 
     spdlog::debug("[{}] Panel delete event - cleaning up resources", self->get_name());
 
@@ -362,7 +366,8 @@ void BedMeshPanel::on_panel_delete(lv_event_t* e) {
 
 void BedMeshPanel::on_profile_dropdown_changed(lv_event_t* e) {
     auto* self = static_cast<BedMeshPanel*>(lv_event_get_user_data(e));
-    if (!self) return;
+    if (!self)
+        return;
 
     lv_obj_t* dropdown = static_cast<lv_obj_t*>(lv_event_get_target(e));
 
@@ -400,5 +405,3 @@ BedMeshPanel& get_global_bed_mesh_panel() {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-
-

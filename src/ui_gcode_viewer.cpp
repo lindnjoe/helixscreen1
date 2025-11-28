@@ -307,7 +307,7 @@ static void gcode_viewer_size_changed_cb(lv_event_t* e) {
     lv_obj_invalidate(obj);
 
     spdlog::debug("GCodeViewer SIZE_CHANGED: {}x{}, aspect={:.3f}", width, height,
-                 (float)width / (float)height);
+                  (float)width / (float)height);
 }
 
 /**
@@ -371,7 +371,7 @@ lv_obj_t* ui_gcode_viewer_create(lv_obj_t* parent) {
         st->camera->set_viewport_size(width, height);
         st->renderer->set_viewport_size(width, height);
         spdlog::debug("GCodeViewer INIT: viewport={}x{}, aspect={:.3f}", width, height,
-                     (float)width / (float)height);
+                      (float)width / (float)height);
     } else {
         spdlog::error("GCodeViewer INIT: Invalid size {}x{}, using defaults", width, height);
     }

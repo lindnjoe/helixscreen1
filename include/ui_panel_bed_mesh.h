@@ -3,8 +3,9 @@
 
 #pragma once
 
-#include "moonraker_client.h"  // For MoonrakerClient::BedMeshProfile
 #include "ui_panel_base.h"
+
+#include "moonraker_client.h" // For MoonrakerClient::BedMeshProfile
 
 #include <vector>
 
@@ -88,8 +89,12 @@ class BedMeshPanel : public PanelBase {
      */
     void setup(lv_obj_t* panel, lv_obj_t* parent_screen) override;
 
-    const char* get_name() const override { return "Bed Mesh Panel"; }
-    const char* get_xml_component_name() const override { return "bed_mesh_panel"; }
+    const char* get_name() const override {
+        return "Bed Mesh Panel";
+    }
+    const char* get_xml_component_name() const override {
+        return "bed_mesh_panel";
+    }
 
     //
     // === Public API ===
@@ -126,7 +131,7 @@ class BedMeshPanel : public PanelBase {
     // Subject storage buffers (LVGL requires persistent memory)
     char profile_name_buf_[64];
     char dimensions_buf_[64];
-    char z_range_buf_[96];  // Larger for coordinate display
+    char z_range_buf_[96]; // Larger for coordinate display
     char variance_buf_[64];
 
     //
@@ -152,7 +157,6 @@ class BedMeshPanel : public PanelBase {
     static void on_panel_delete(lv_event_t* e);
     static void on_profile_dropdown_changed(lv_event_t* e);
 };
-
 
 // Global instance accessor (needed by main.cpp)
 BedMeshPanel& get_global_bed_mesh_panel();

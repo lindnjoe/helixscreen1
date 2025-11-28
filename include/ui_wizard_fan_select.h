@@ -78,14 +78,24 @@ class WizardFanSelectStep {
     /**
      * @brief Get step name for logging
      */
-    const char* get_name() const { return "Wizard Fan"; }
+    const char* get_name() const {
+        return "Wizard Fan";
+    }
 
     // Public access to subjects for helper functions
-    lv_subject_t* get_hotend_fan_subject() { return &hotend_fan_selected_; }
-    lv_subject_t* get_part_fan_subject() { return &part_fan_selected_; }
+    lv_subject_t* get_hotend_fan_subject() {
+        return &hotend_fan_selected_;
+    }
+    lv_subject_t* get_part_fan_subject() {
+        return &part_fan_selected_;
+    }
 
-    std::vector<std::string>& get_hotend_fan_items() { return hotend_fan_items_; }
-    std::vector<std::string>& get_part_fan_items() { return part_fan_items_; }
+    std::vector<std::string>& get_hotend_fan_items() {
+        return hotend_fan_items_;
+    }
+    std::vector<std::string>& get_part_fan_items() {
+        return part_fan_items_;
+    }
 
   private:
     // Screen instance

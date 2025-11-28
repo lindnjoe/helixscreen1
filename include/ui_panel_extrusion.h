@@ -72,8 +72,12 @@ class ExtrusionPanel : public PanelBase {
      */
     void setup(lv_obj_t* panel, lv_obj_t* parent_screen) override;
 
-    const char* get_name() const override { return "Extrusion Panel"; }
-    const char* get_xml_component_name() const override { return "extrusion_panel"; }
+    const char* get_name() const override {
+        return "Extrusion Panel";
+    }
+    const char* get_xml_component_name() const override {
+        return "extrusion_panel";
+    }
 
     //
     // === Public API ===
@@ -91,7 +95,9 @@ class ExtrusionPanel : public PanelBase {
      * @brief Get currently selected extrusion amount
      * @return Extrusion amount in mm (5, 10, 25, or 50)
      */
-    int get_amount() const { return selected_amount_; }
+    int get_amount() const {
+        return selected_amount_;
+    }
 
     /**
      * @brief Check if extrusion is allowed (nozzle hot enough)
@@ -178,7 +184,6 @@ class ExtrusionPanel : public PanelBase {
      */
     static void on_nozzle_temp_changed(lv_observer_t* observer, lv_subject_t* subject);
 };
-
 
 // Global instance accessor (needed by main.cpp)
 ExtrusionPanel& get_global_controls_extrusion_panel();

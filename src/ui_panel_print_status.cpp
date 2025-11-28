@@ -3,13 +3,14 @@
 
 #include "ui_panel_print_status.h"
 
-#include "app_globals.h"
-#include "printer_state.h"
 #include "ui_event_safety.h"
 #include "ui_nav.h"
 #include "ui_panel_common.h"
 #include "ui_subject_registry.h"
 #include "ui_utils.h"
+
+#include "app_globals.h"
+#include "printer_state.h"
 
 #include <spdlog/spdlog.h>
 
@@ -359,8 +360,10 @@ void PrintStatusPanel::set_filename(const char* filename) {
 
 void PrintStatusPanel::set_progress(int percent) {
     current_progress_ = percent;
-    if (current_progress_ < 0) current_progress_ = 0;
-    if (current_progress_ > 100) current_progress_ = 100;
+    if (current_progress_ < 0)
+        current_progress_ = 0;
+    if (current_progress_ > 100)
+        current_progress_ = 100;
     update_all_displays();
 }
 
@@ -424,8 +427,10 @@ void PrintStatusPanel::stop_mock_print() {
 }
 
 void PrintStatusPanel::tick_mock_print() {
-    if (!mock_active_) return;
-    if (current_state_ != PrintState::Printing) return;
+    if (!mock_active_)
+        return;
+    if (current_state_ != PrintState::Printing)
+        return;
     if (mock_elapsed_seconds_ >= mock_total_seconds_) {
         // Print complete
         set_state(PrintState::Complete);

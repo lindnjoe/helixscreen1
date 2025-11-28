@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include "ui_toast.h"
+
+#include "ui_notification_history.h"
 #include "ui_severity_card.h"
 #include "ui_status_bar.h"
-#include "ui_notification_history.h"
+
 #include <spdlog/spdlog.h>
 
 // Active toast state
@@ -22,26 +24,30 @@ void ui_toast_init() {
 // Convert ToastSeverity enum to string for XML
 static const char* severity_to_string(ToastSeverity severity) {
     switch (severity) {
-        case ToastSeverity::ERROR:   return "error";
-        case ToastSeverity::WARNING: return "warning";
-        case ToastSeverity::SUCCESS: return "success";
-        case ToastSeverity::INFO:
-        default:                      return "info";
+    case ToastSeverity::ERROR:
+        return "error";
+    case ToastSeverity::WARNING:
+        return "warning";
+    case ToastSeverity::SUCCESS:
+        return "success";
+    case ToastSeverity::INFO:
+    default:
+        return "info";
     }
 }
 
 static NotificationStatus severity_to_notification_status(ToastSeverity severity) {
     switch (severity) {
-        case ToastSeverity::INFO:
-            return NotificationStatus::INFO;
-        case ToastSeverity::SUCCESS:
-            return NotificationStatus::INFO;  // Treat success as info in status bar
-        case ToastSeverity::WARNING:
-            return NotificationStatus::WARNING;
-        case ToastSeverity::ERROR:
-            return NotificationStatus::ERROR;
-        default:
-            return NotificationStatus::NONE;
+    case ToastSeverity::INFO:
+        return NotificationStatus::INFO;
+    case ToastSeverity::SUCCESS:
+        return NotificationStatus::INFO; // Treat success as info in status bar
+    case ToastSeverity::WARNING:
+        return NotificationStatus::WARNING;
+    case ToastSeverity::ERROR:
+        return NotificationStatus::ERROR;
+    default:
+        return NotificationStatus::NONE;
     }
 }
 
@@ -57,11 +63,7 @@ void ui_toast_show(ToastSeverity severity, const char* message, uint32_t duratio
     }
 
     // Create toast via XML component - just pass semantic severity
-    const char* attrs[] = {
-        "severity", severity_to_string(severity),
-        "message", message,
-        nullptr
-    };
+    const char* attrs[] = {"severity", severity_to_string(severity), "message", message, nullptr};
 
     lv_obj_t* screen = lv_screen_active();
     lv_xml_create(screen, "toast_notification", attrs);
@@ -79,7 +81,7 @@ void ui_toast_show(ToastSeverity severity, const char* message, uint32_t duratio
     ui_severity_card_finalize(active_toast);
 
     // Position at top-center below navigation
-    const int32_t top_margin = 80;  // Below nav/header area
+    const int32_t top_margin = 80; // Below nav/header area
     lv_obj_align(active_toast, LV_ALIGN_TOP_MID, 0, top_margin);
 
     // Wire up close button callback
@@ -90,7 +92,7 @@ void ui_toast_show(ToastSeverity severity, const char* message, uint32_t duratio
 
     // Create auto-dismiss timer
     dismiss_timer = lv_timer_create(toast_dismiss_timer_cb, duration_ms, nullptr);
-    lv_timer_set_repeat_count(dismiss_timer, 1);  // Run once then stop
+    lv_timer_set_repeat_count(dismiss_timer, 1); // Run once then stop
 
     // Update status bar notification icon
     ui_status_bar_update_notification(severity_to_notification_status(severity));

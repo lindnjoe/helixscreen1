@@ -71,8 +71,12 @@ class GcodeTestPanel : public PanelBase {
      */
     void setup(lv_obj_t* panel, lv_obj_t* parent_screen) override;
 
-    const char* get_name() const override { return "G-Code Test Panel"; }
-    const char* get_xml_component_name() const override { return "gcode_test_panel"; }
+    const char* get_name() const override {
+        return "G-Code Test Panel";
+    }
+    const char* get_xml_component_name() const override {
+        return "gcode_test_panel";
+    }
 
     //
     // === Panel-Specific API ===
@@ -230,7 +234,6 @@ class GcodeTestPanel : public PanelBase {
  * @return Pointer to the global instance
  */
 GcodeTestPanel* get_gcode_test_panel(PrinterState& printer_state, MoonrakerAPI* api);
-
 
 // Global instance accessor (needed by main.cpp)
 GcodeTestPanel& get_global_gcode_test_panel();

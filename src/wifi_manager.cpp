@@ -45,7 +45,8 @@ WiFiManager::WiFiManager() : scan_timer_(nullptr) {
     // Create platform-appropriate backend (already started by factory)
     backend_ = WifiBackend::create();
     if (!backend_) {
-        NOTIFY_ERROR_MODAL("WiFi Unavailable", "Could not initialize WiFi hardware. Check system configuration.");
+        NOTIFY_ERROR_MODAL("WiFi Unavailable",
+                           "Could not initialize WiFi hardware. Check system configuration.");
         return;
     }
 
@@ -282,7 +283,8 @@ bool WiFiManager::set_enabled(bool enabled) {
     if (enabled) {
         WiFiError result = backend_->start();
         if (!result.success()) {
-            NOTIFY_ERROR("Failed to enable WiFi: {}", result.user_msg.empty() ? result.technical_msg : result.user_msg);
+            NOTIFY_ERROR("Failed to enable WiFi: {}",
+                         result.user_msg.empty() ? result.technical_msg : result.user_msg);
         } else {
             spdlog::debug("[WiFiManager] WiFi backend started successfully");
         }

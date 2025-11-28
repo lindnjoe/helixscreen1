@@ -3,8 +3,6 @@
 
 #include "ui_panel_motion.h"
 
-#include "app_globals.h"
-#include "printer_state.h"
 #include "ui_event_safety.h"
 #include "ui_jog_pad.h"
 #include "ui_nav.h"
@@ -12,6 +10,9 @@
 #include "ui_subject_registry.h"
 #include "ui_theme.h"
 #include "ui_utils.h"
+
+#include "app_globals.h"
+#include "printer_state.h"
 
 #include <spdlog/spdlog.h>
 
@@ -87,7 +88,8 @@ void MotionPanel::setup_distance_buttons() {
         dist_buttons_[i] = lv_obj_find_by_name(panel_, dist_names[i]);
         if (dist_buttons_[i]) {
             // Pass 'this' as user_data for trampoline
-            lv_obj_add_event_cb(dist_buttons_[i], on_distance_button_clicked, LV_EVENT_CLICKED, this);
+            lv_obj_add_event_cb(dist_buttons_[i], on_distance_button_clicked, LV_EVENT_CLICKED,
+                                this);
         }
     }
 
@@ -153,7 +155,8 @@ void MotionPanel::setup_jog_pad() {
 
 void MotionPanel::setup_z_buttons() {
     lv_obj_t* overlay_content = lv_obj_find_by_name(panel_, "overlay_content");
-    if (!overlay_content) return;
+    if (!overlay_content)
+        return;
 
     const char* z_names[] = {"z_up_10", "z_up_1", "z_down_1", "z_down_10"};
     int z_found = 0;
@@ -174,7 +177,8 @@ void MotionPanel::setup_z_buttons() {
 
 void MotionPanel::setup_home_buttons() {
     lv_obj_t* overlay_content = lv_obj_find_by_name(panel_, "overlay_content");
-    if (!overlay_content) return;
+    if (!overlay_content)
+        return;
 
     const char* home_names[] = {"home_all", "home_x", "home_y", "home_z"};
 
@@ -224,7 +228,8 @@ void MotionPanel::handle_distance_button(lv_obj_t* btn) {
 }
 
 void MotionPanel::handle_z_button(const char* name) {
-    spdlog::info("[{}] Z button callback fired! Button name: '{}'", get_name(), name ? name : "(null)");
+    spdlog::info("[{}] Z button callback fired! Button name: '{}'", get_name(),
+                 name ? name : "(null)");
 
     if (!name) {
         spdlog::error("[{}] Button has no name!", get_name());
@@ -249,7 +254,8 @@ void MotionPanel::handle_z_button(const char* name) {
 }
 
 void MotionPanel::handle_home_button(const char* name) {
-    if (!name) return;
+    if (!name)
+        return;
 
     if (strcmp(name, "home_all") == 0) {
         home('A');

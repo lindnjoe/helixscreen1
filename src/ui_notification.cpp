@@ -22,15 +22,19 @@
  */
 
 #include "ui_notification.h"
-#include "ui_toast.h"
+
 #include "ui_modal.h"
-#include "ui_status_bar.h"
 #include "ui_notification_history.h"
+#include "ui_status_bar.h"
+#include "ui_toast.h"
+
 #include "app_globals.h"
+
 #include <spdlog/spdlog.h>
+
+#include <atomic>
 #include <cstring>
 #include <thread>
-#include <atomic>
 
 // Forward declarations
 static void notification_observer_cb(lv_observer_t* observer, lv_subject_t* subject);
@@ -97,14 +101,9 @@ static void async_error_callback(void* user_data) {
                 .position = {.use_alignment = true, .alignment = LV_ALIGN_CENTER},
                 .backdrop_opa = 180,
                 .keyboard = nullptr,
-                .persistent = false
-            };
+                .persistent = false};
 
-            const char* attrs[] = {
-                "title", data->title,
-                "message", data->message,
-                nullptr
-            };
+            const char* attrs[] = {"title", data->title, "message", data->message, nullptr};
 
             lv_obj_t* modal = ui_modal_show("error_dialog", &config, attrs);
 
@@ -306,14 +305,9 @@ void ui_notification_error(const char* title, const char* message, bool modal) {
                 .position = {.use_alignment = true, .alignment = LV_ALIGN_CENTER},
                 .backdrop_opa = 180,
                 .keyboard = nullptr,
-                .persistent = false
-            };
+                .persistent = false};
 
-            const char* attrs[] = {
-                "title", title,
-                "message", message,
-                nullptr
-            };
+            const char* attrs[] = {"title", title, "message", message, nullptr};
 
             lv_obj_t* modal_obj = ui_modal_show("error_dialog", &config, attrs);
 
@@ -409,23 +403,23 @@ static void notification_observer_cb(lv_observer_t* observer, lv_subject_t* subj
     } else {
         // Route to toast based on severity
         switch (data->severity) {
-            case ToastSeverity::INFO:
-                ui_notification_info(data->message);
-                break;
-            case ToastSeverity::SUCCESS:
-                ui_notification_success(data->message);
-                break;
-            case ToastSeverity::WARNING:
-                ui_notification_warning(data->message);
-                break;
-            case ToastSeverity::ERROR:
-                ui_notification_error(nullptr, data->message, false);
-                break;
+        case ToastSeverity::INFO:
+            ui_notification_info(data->message);
+            break;
+        case ToastSeverity::SUCCESS:
+            ui_notification_success(data->message);
+            break;
+        case ToastSeverity::WARNING:
+            ui_notification_warning(data->message);
+            break;
+        case ToastSeverity::ERROR:
+            ui_notification_error(nullptr, data->message, false);
+            break;
         }
     }
 
-    spdlog::debug("Notification routed: modal={}, severity={}, msg={}",
-                  data->show_modal, static_cast<int>(data->severity), data->message);
+    spdlog::debug("Notification routed: modal={}, severity={}, msg={}", data->show_modal,
+                  static_cast<int>(data->severity), data->message);
 }
 
 // Modal OK button callback

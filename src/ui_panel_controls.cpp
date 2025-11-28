@@ -3,14 +3,15 @@
 
 #include "ui_panel_controls.h"
 
-#include "app_globals.h"
-#include "printer_state.h"
 #include "ui_error_reporting.h"
 #include "ui_event_safety.h"
 #include "ui_nav.h"
 #include "ui_panel_extrusion.h"
 #include "ui_panel_motion.h"
 #include "ui_panel_temp_control.h"
+
+#include "app_globals.h"
+#include "printer_state.h"
 
 #include <spdlog/spdlog.h>
 
@@ -124,7 +125,8 @@ void ControlsPanel::handle_motion_clicked() {
         spdlog::debug("[{}] Creating motion panel...", get_name());
 
         // Create from XML
-        motion_panel_ = static_cast<lv_obj_t*>(lv_xml_create(parent_screen_, "motion_panel", nullptr));
+        motion_panel_ =
+            static_cast<lv_obj_t*>(lv_xml_create(parent_screen_, "motion_panel", nullptr));
         if (motion_panel_) {
             // Setup event handlers for motion panel (class-based API)
             get_global_motion_panel().setup(motion_panel_, parent_screen_);
@@ -146,7 +148,8 @@ void ControlsPanel::handle_motion_clicked() {
 }
 
 void ControlsPanel::handle_nozzle_temp_clicked() {
-    spdlog::debug("[{}] Nozzle Temp card clicked - opening Nozzle Temperature sub-screen", get_name());
+    spdlog::debug("[{}] Nozzle Temp card clicked - opening Nozzle Temperature sub-screen",
+                  get_name());
 
     if (!temp_control_panel_) {
         LOG_ERROR_INTERNAL("TempControlPanel not initialized");
@@ -159,7 +162,8 @@ void ControlsPanel::handle_nozzle_temp_clicked() {
         spdlog::debug("[{}] Creating nozzle temperature panel...", get_name());
 
         // Create from XML
-        nozzle_temp_panel_ = static_cast<lv_obj_t*>(lv_xml_create(parent_screen_, "nozzle_temp_panel", nullptr));
+        nozzle_temp_panel_ =
+            static_cast<lv_obj_t*>(lv_xml_create(parent_screen_, "nozzle_temp_panel", nullptr));
         if (nozzle_temp_panel_) {
             // Setup event handlers for nozzle temp panel via TempControlPanel
             temp_control_panel_->setup_nozzle_panel(nozzle_temp_panel_, parent_screen_);
@@ -181,7 +185,8 @@ void ControlsPanel::handle_nozzle_temp_clicked() {
 }
 
 void ControlsPanel::handle_bed_temp_clicked() {
-    spdlog::debug("[{}] Bed Temp card clicked - opening Heatbed Temperature sub-screen", get_name());
+    spdlog::debug("[{}] Bed Temp card clicked - opening Heatbed Temperature sub-screen",
+                  get_name());
 
     if (!temp_control_panel_) {
         LOG_ERROR_INTERNAL("TempControlPanel not initialized");
@@ -194,7 +199,8 @@ void ControlsPanel::handle_bed_temp_clicked() {
         spdlog::debug("[{}] Creating bed temperature panel...", get_name());
 
         // Create from XML
-        bed_temp_panel_ = static_cast<lv_obj_t*>(lv_xml_create(parent_screen_, "bed_temp_panel", nullptr));
+        bed_temp_panel_ =
+            static_cast<lv_obj_t*>(lv_xml_create(parent_screen_, "bed_temp_panel", nullptr));
         if (bed_temp_panel_) {
             // Setup event handlers for bed temp panel via TempControlPanel
             temp_control_panel_->setup_bed_panel(bed_temp_panel_, parent_screen_);
@@ -229,7 +235,8 @@ void ControlsPanel::handle_extrusion_clicked() {
         }
 
         // Create from XML
-        extrusion_panel_ = static_cast<lv_obj_t*>(lv_xml_create(parent_screen_, "extrusion_panel", nullptr));
+        extrusion_panel_ =
+            static_cast<lv_obj_t*>(lv_xml_create(parent_screen_, "extrusion_panel", nullptr));
         if (extrusion_panel_) {
             // Setup event handlers for extrusion panel
             extrusion_panel_instance.setup(extrusion_panel_, parent_screen_);

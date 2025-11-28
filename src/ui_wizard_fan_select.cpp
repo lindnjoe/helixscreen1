@@ -3,6 +3,7 @@
 
 #include "ui_wizard_fan_select.h"
 
+#include "ui_error_reporting.h"
 #include "ui_wizard.h"
 #include "ui_wizard_hardware_selector.h"
 #include "ui_wizard_helpers.h"
@@ -11,7 +12,6 @@
 #include "config.h"
 #include "lvgl/lvgl.h"
 #include "moonraker_client.h"
-#include "ui_error_reporting.h"
 #include "wizard_config_paths.h"
 
 #include <spdlog/spdlog.h>
@@ -57,8 +57,7 @@ WizardFanSelectStep::~WizardFanSelectStep() {
 // ============================================================================
 
 WizardFanSelectStep::WizardFanSelectStep(WizardFanSelectStep&& other) noexcept
-    : screen_root_(other.screen_root_),
-      hotend_fan_selected_(other.hotend_fan_selected_),
+    : screen_root_(other.screen_root_), hotend_fan_selected_(other.hotend_fan_selected_),
       part_fan_selected_(other.part_fan_selected_),
       hotend_fan_items_(std::move(other.hotend_fan_items_)),
       part_fan_items_(std::move(other.part_fan_items_)),
@@ -116,8 +115,8 @@ lv_obj_t* WizardFanSelectStep::create(lv_obj_t* parent) {
 
     // Safety check: cleanup should have been called by wizard navigation
     if (screen_root_) {
-        spdlog::warn(
-            "[{}] Screen pointer not null - cleanup may not have been called properly", get_name());
+        spdlog::warn("[{}] Screen pointer not null - cleanup may not have been called properly",
+                     get_name());
         screen_root_ = nullptr; // Reset pointer, wizard framework handles deletion
     }
 
@@ -191,14 +190,14 @@ lv_obj_t* WizardFanSelectStep::create(lv_obj_t* parent) {
     }
 
     // Find and configure part fan dropdown
-    lv_obj_t* part_dropdown =
-        lv_obj_find_by_name(screen_root_, "part_cooling_fan_dropdown");
+    lv_obj_t* part_dropdown = lv_obj_find_by_name(screen_root_, "part_cooling_fan_dropdown");
     if (part_dropdown) {
         lv_dropdown_set_options(part_dropdown, part_options_str.c_str());
 
         // Restore saved selection (no guessing method for fans)
-        WizardHelpers::restore_dropdown_selection(part_dropdown, &part_fan_selected_, part_fan_items_,
-                                                  WizardConfigPaths::PART_FAN, client,
+        WizardHelpers::restore_dropdown_selection(part_dropdown, &part_fan_selected_,
+                                                  part_fan_items_, WizardConfigPaths::PART_FAN,
+                                                  client,
                                                   nullptr, // No guessing method for part fans
                                                   "[Wizard Fan]");
     }

@@ -4,21 +4,22 @@
 #pragma once
 
 #include "ui_toast.h"
+
 #include <cstdint>
-#include <vector>
 #include <mutex>
 #include <string>
+#include <vector>
 
 /**
  * @brief Single notification history entry
  */
 struct NotificationHistoryEntry {
-    uint64_t timestamp_ms;     ///< LVGL tick time when notification occurred
-    ToastSeverity severity;    ///< INFO, SUCCESS, WARNING, ERROR
-    char title[64];            ///< Title (empty for toasts)
-    char message[256];         ///< Notification message
-    bool was_modal;            ///< true if shown as modal dialog
-    bool was_read;             ///< true if user viewed in history panel
+    uint64_t timestamp_ms;  ///< LVGL tick time when notification occurred
+    ToastSeverity severity; ///< INFO, SUCCESS, WARNING, ERROR
+    char title[64];         ///< Title (empty for toasts)
+    char message[256];      ///< Notification message
+    bool was_modal;         ///< true if shown as modal dialog
+    bool was_read;          ///< true if user viewed in history panel
 };
 
 /**
@@ -28,8 +29,8 @@ struct NotificationHistoryEntry {
  * Thread-safe for concurrent access from UI and background threads.
  */
 class NotificationHistory {
-public:
-    static constexpr size_t MAX_ENTRIES = 100;  ///< Circular buffer size
+  public:
+    static constexpr size_t MAX_ENTRIES = 100; ///< Circular buffer size
 
     /**
      * @brief Get singleton instance
@@ -107,7 +108,7 @@ public:
      */
     bool load_from_disk(const char* path);
 
-private:
+  private:
     NotificationHistory() = default;
     ~NotificationHistory() = default;
     NotificationHistory(const NotificationHistory&) = delete;
@@ -115,6 +116,6 @@ private:
 
     mutable std::mutex mutex_;
     std::vector<NotificationHistoryEntry> entries_;
-    size_t head_index_ = 0;  ///< Circular buffer write position
-    bool buffer_full_ = false;  ///< True when we've wrapped around
+    size_t head_index_ = 0;    ///< Circular buffer write position
+    bool buffer_full_ = false; ///< True when we've wrapped around
 };

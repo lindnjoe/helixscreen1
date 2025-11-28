@@ -62,8 +62,12 @@ class StepTestPanel : public PanelBase {
      */
     void setup(lv_obj_t* panel, lv_obj_t* parent_screen) override;
 
-    const char* get_name() const override { return "Step Test Panel"; }
-    const char* get_xml_component_name() const override { return "step_test_panel"; }
+    const char* get_name() const override {
+        return "Step Test Panel";
+    }
+    const char* get_xml_component_name() const override {
+        return "step_test_panel";
+    }
 
   private:
     //
@@ -108,7 +112,6 @@ class StepTestPanel : public PanelBase {
     static void on_next_clicked(lv_event_t* e);
     static void on_complete_clicked(lv_event_t* e);
 };
-
 
 // Global instance accessor (needed by main.cpp)
 StepTestPanel& get_global_step_test_panel();

@@ -16,17 +16,17 @@
 #include "lvgl/lvgl.h"
 
 // Common STL headers used throughout the project
-#include <string>
-#include <vector>
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <functional>
 #include <map>
 #include <memory>
-#include <functional>
-#include <algorithm>
-#include <cstdint>
-#include <cmath>
+#include <string>
+#include <vector>
 
 // spdlog (used in nearly every file)
-#include "spdlog/spdlog.h"
 #include "spdlog/fmt/fmt.h"
+#include "spdlog/spdlog.h"
 
 #endif // LVGL_PCH_H

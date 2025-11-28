@@ -65,25 +65,19 @@ WizardSummaryStep::~WizardSummaryStep() {
 // ============================================================================
 
 WizardSummaryStep::WizardSummaryStep(WizardSummaryStep&& other) noexcept
-    : screen_root_(other.screen_root_),
-      printer_name_(other.printer_name_),
-      printer_type_(other.printer_type_),
-      wifi_ssid_(other.wifi_ssid_),
-      moonraker_connection_(other.moonraker_connection_),
-      bed_(other.bed_),
-      hotend_(other.hotend_),
-      part_fan_(other.part_fan_),
-      part_fan_visible_(other.part_fan_visible_),
-      hotend_fan_(other.hotend_fan_),
-      hotend_fan_visible_(other.hotend_fan_visible_),
-      led_strip_(other.led_strip_),
-      led_strip_visible_(other.led_strip_visible_),
+    : screen_root_(other.screen_root_), printer_name_(other.printer_name_),
+      printer_type_(other.printer_type_), wifi_ssid_(other.wifi_ssid_),
+      moonraker_connection_(other.moonraker_connection_), bed_(other.bed_), hotend_(other.hotend_),
+      part_fan_(other.part_fan_), part_fan_visible_(other.part_fan_visible_),
+      hotend_fan_(other.hotend_fan_), hotend_fan_visible_(other.hotend_fan_visible_),
+      led_strip_(other.led_strip_), led_strip_visible_(other.led_strip_visible_),
       subjects_initialized_(other.subjects_initialized_) {
     // Move buffers
     std::memcpy(printer_name_buffer_, other.printer_name_buffer_, sizeof(printer_name_buffer_));
     std::memcpy(printer_type_buffer_, other.printer_type_buffer_, sizeof(printer_type_buffer_));
     std::memcpy(wifi_ssid_buffer_, other.wifi_ssid_buffer_, sizeof(wifi_ssid_buffer_));
-    std::memcpy(moonraker_connection_buffer_, other.moonraker_connection_buffer_, sizeof(moonraker_connection_buffer_));
+    std::memcpy(moonraker_connection_buffer_, other.moonraker_connection_buffer_,
+                sizeof(moonraker_connection_buffer_));
     std::memcpy(bed_buffer_, other.bed_buffer_, sizeof(bed_buffer_));
     std::memcpy(hotend_buffer_, other.hotend_buffer_, sizeof(hotend_buffer_));
     std::memcpy(part_fan_buffer_, other.part_fan_buffer_, sizeof(part_fan_buffer_));
@@ -116,7 +110,8 @@ WizardSummaryStep& WizardSummaryStep::operator=(WizardSummaryStep&& other) noexc
         std::memcpy(printer_name_buffer_, other.printer_name_buffer_, sizeof(printer_name_buffer_));
         std::memcpy(printer_type_buffer_, other.printer_type_buffer_, sizeof(printer_type_buffer_));
         std::memcpy(wifi_ssid_buffer_, other.wifi_ssid_buffer_, sizeof(wifi_ssid_buffer_));
-        std::memcpy(moonraker_connection_buffer_, other.moonraker_connection_buffer_, sizeof(moonraker_connection_buffer_));
+        std::memcpy(moonraker_connection_buffer_, other.moonraker_connection_buffer_,
+                    sizeof(moonraker_connection_buffer_));
         std::memcpy(bed_buffer_, other.bed_buffer_, sizeof(bed_buffer_));
         std::memcpy(hotend_buffer_, other.hotend_buffer_, sizeof(hotend_buffer_));
         std::memcpy(part_fan_buffer_, other.part_fan_buffer_, sizeof(part_fan_buffer_));
@@ -244,18 +239,29 @@ void WizardSummaryStep::init_subjects() {
     int led_strip_visible = (led_strip != "None") ? 1 : 0;
 
     // Initialize and register all subjects
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(printer_name_, printer_name_buffer_, printer_name_buffer_, "summary_printer_name");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(printer_type_, printer_type_buffer_, printer_type_buffer_, "summary_printer_type");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(wifi_ssid_, wifi_ssid_buffer_, wifi_ssid_buffer_, "summary_wifi_ssid");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(moonraker_connection_, moonraker_connection_buffer_, moonraker_connection_buffer_, "summary_moonraker_connection");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(printer_name_, printer_name_buffer_, printer_name_buffer_,
+                                        "summary_printer_name");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(printer_type_, printer_type_buffer_, printer_type_buffer_,
+                                        "summary_printer_type");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(wifi_ssid_, wifi_ssid_buffer_, wifi_ssid_buffer_,
+                                        "summary_wifi_ssid");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(moonraker_connection_, moonraker_connection_buffer_,
+                                        moonraker_connection_buffer_,
+                                        "summary_moonraker_connection");
     UI_SUBJECT_INIT_AND_REGISTER_STRING(bed_, bed_buffer_, bed_buffer_, "summary_bed");
     UI_SUBJECT_INIT_AND_REGISTER_STRING(hotend_, hotend_buffer_, hotend_buffer_, "summary_hotend");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(part_fan_, part_fan_buffer_, part_fan_buffer_, "summary_part_fan");
-    UI_SUBJECT_INIT_AND_REGISTER_INT(part_fan_visible_, part_fan_visible, "summary_part_fan_visible");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(hotend_fan_, hotend_fan_buffer_, hotend_fan_buffer_, "summary_hotend_fan");
-    UI_SUBJECT_INIT_AND_REGISTER_INT(hotend_fan_visible_, hotend_fan_visible, "summary_hotend_fan_visible");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(led_strip_, led_strip_buffer_, led_strip_buffer_, "summary_led_strip");
-    UI_SUBJECT_INIT_AND_REGISTER_INT(led_strip_visible_, led_strip_visible, "summary_led_strip_visible");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(part_fan_, part_fan_buffer_, part_fan_buffer_,
+                                        "summary_part_fan");
+    UI_SUBJECT_INIT_AND_REGISTER_INT(part_fan_visible_, part_fan_visible,
+                                     "summary_part_fan_visible");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(hotend_fan_, hotend_fan_buffer_, hotend_fan_buffer_,
+                                        "summary_hotend_fan");
+    UI_SUBJECT_INIT_AND_REGISTER_INT(hotend_fan_visible_, hotend_fan_visible,
+                                     "summary_hotend_fan_visible");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(led_strip_, led_strip_buffer_, led_strip_buffer_,
+                                        "summary_led_strip");
+    UI_SUBJECT_INIT_AND_REGISTER_INT(led_strip_visible_, led_strip_visible,
+                                     "summary_led_strip_visible");
 
     subjects_initialized_ = true;
     spdlog::debug("[{}] Subjects initialized with config values", get_name());
@@ -279,8 +285,8 @@ lv_obj_t* WizardSummaryStep::create(lv_obj_t* parent) {
 
     // Safety check: cleanup should have been called by wizard navigation
     if (screen_root_) {
-        spdlog::warn(
-            "[{}] Screen pointer not null - cleanup may not have been called properly", get_name());
+        spdlog::warn("[{}] Screen pointer not null - cleanup may not have been called properly",
+                     get_name());
         screen_root_ = nullptr; // Reset pointer, wizard framework handles deletion
     }
 

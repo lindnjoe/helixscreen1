@@ -14,7 +14,6 @@
 
 #include <spdlog/spdlog.h>
 
-
 /**
  * XML create handler for ui_dialog
  * Creates an lv_obj widget when <ui_dialog> is encountered in XML

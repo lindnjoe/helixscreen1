@@ -3,9 +3,10 @@
 
 #pragma once
 
-#include "lvgl/lvgl.h"
 #include "ui_heater_config.h"
 #include "ui_temp_graph.h"
+
+#include "lvgl/lvgl.h"
 
 #include <array>
 #include <functional>
@@ -103,12 +104,16 @@ class TempControlPanel {
     /**
      * @brief Get current nozzle target temperature
      */
-    int get_nozzle_target() const { return nozzle_target_; }
+    int get_nozzle_target() const {
+        return nozzle_target_;
+    }
 
     /**
      * @brief Get current bed target temperature
      */
-    int get_bed_target() const { return bed_target_; }
+    int get_bed_target() const {
+        return bed_target_;
+    }
 
     /**
      * @brief Set nozzle temperature limits (from Moonraker heater config)
@@ -125,7 +130,9 @@ class TempControlPanel {
      *
      * Call this when API becomes available after initial construction.
      */
-    void set_api(MoonrakerAPI* api) { api_ = api; }
+    void set_api(MoonrakerAPI* api) {
+        api_ = api;
+    }
 
   private:
     //
@@ -190,8 +197,8 @@ class TempControlPanel {
     int bed_target_ = 0;
 
     // Pending selection (user picked but not confirmed yet)
-    int nozzle_pending_ = -1;  // -1 = no pending selection
-    int bed_pending_ = -1;     // -1 = no pending selection
+    int nozzle_pending_ = -1; // -1 = no pending selection
+    int bed_pending_ = -1;    // -1 = no pending selection
 
     // Temperature limits
     int nozzle_min_temp_;
@@ -240,4 +247,3 @@ class TempControlPanel {
     // Subjects initialized flag
     bool subjects_initialized_ = false;
 };
-

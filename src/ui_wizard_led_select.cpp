@@ -3,6 +3,7 @@
 
 #include "ui_wizard_led_select.h"
 
+#include "ui_error_reporting.h"
 #include "ui_wizard.h"
 #include "ui_wizard_hardware_selector.h"
 #include "ui_wizard_helpers.h"
@@ -11,7 +12,6 @@
 #include "config.h"
 #include "lvgl/lvgl.h"
 #include "moonraker_client.h"
-#include "ui_error_reporting.h"
 #include "wizard_config_paths.h"
 
 #include <spdlog/spdlog.h>
@@ -57,8 +57,7 @@ WizardLedSelectStep::~WizardLedSelectStep() {
 // ============================================================================
 
 WizardLedSelectStep::WizardLedSelectStep(WizardLedSelectStep&& other) noexcept
-    : screen_root_(other.screen_root_),
-      led_strip_selected_(other.led_strip_selected_),
+    : screen_root_(other.screen_root_), led_strip_selected_(other.led_strip_selected_),
       led_strip_items_(std::move(other.led_strip_items_)),
       subjects_initialized_(other.subjects_initialized_) {
     other.screen_root_ = nullptr;
@@ -111,8 +110,8 @@ lv_obj_t* WizardLedSelectStep::create(lv_obj_t* parent) {
 
     // Safety check: cleanup should have been called by wizard navigation
     if (screen_root_) {
-        spdlog::warn(
-            "[{}] Screen pointer not null - cleanup may not have been called properly", get_name());
+        spdlog::warn("[{}] Screen pointer not null - cleanup may not have been called properly",
+                     get_name());
         screen_root_ = nullptr; // Reset pointer, wizard framework handles deletion
     }
 

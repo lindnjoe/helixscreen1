@@ -82,14 +82,24 @@ class WizardHeaterSelectStep {
     /**
      * @brief Get step name for logging
      */
-    const char* get_name() const { return "Wizard Heater"; }
+    const char* get_name() const {
+        return "Wizard Heater";
+    }
 
     // Public access to subjects for helper functions
-    lv_subject_t* get_bed_heater_subject() { return &bed_heater_selected_; }
-    lv_subject_t* get_hotend_heater_subject() { return &hotend_heater_selected_; }
+    lv_subject_t* get_bed_heater_subject() {
+        return &bed_heater_selected_;
+    }
+    lv_subject_t* get_hotend_heater_subject() {
+        return &hotend_heater_selected_;
+    }
 
-    std::vector<std::string>& get_bed_heater_items() { return bed_heater_items_; }
-    std::vector<std::string>& get_hotend_heater_items() { return hotend_heater_items_; }
+    std::vector<std::string>& get_bed_heater_items() {
+        return bed_heater_items_;
+    }
+    std::vector<std::string>& get_hotend_heater_items() {
+        return hotend_heater_items_;
+    }
 
   private:
     // Screen instance

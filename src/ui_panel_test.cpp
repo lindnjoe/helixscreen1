@@ -3,10 +3,11 @@
 
 #include "ui_panel_test.h"
 
-#include "app_globals.h"
-#include "printer_state.h"
 #include "ui_keyboard.h"
 #include "ui_theme.h"
+
+#include "app_globals.h"
+#include "printer_state.h"
 
 #include <spdlog/spdlog.h>
 
@@ -100,26 +101,25 @@ void TestPanel::populate_labels() {
     char buffer[128];
 
     if (screen_size_label) {
-        snprintf(buffer, sizeof(buffer), "Screen Size: %s (%dx%d, max=%d)",
-                 size_category, hor_res, ver_res, greater_res);
+        snprintf(buffer, sizeof(buffer), "Screen Size: %s (%dx%d, max=%d)", size_category, hor_res,
+                 ver_res, greater_res);
         lv_label_set_text(screen_size_label, buffer);
     }
 
     if (switch_size_label) {
-        snprintf(buffer, sizeof(buffer), "Switch Size: %dx%dpx (knob padding varies)",
-                 switch_width, switch_height);
+        snprintf(buffer, sizeof(buffer), "Switch Size: %dx%dpx (knob padding varies)", switch_width,
+                 switch_height);
         lv_label_set_text(switch_size_label, buffer);
     }
 
     if (row_height_label) {
-        snprintf(buffer, sizeof(buffer), "Row Height: %dpx (fits switch + padding)",
-                 row_height);
+        snprintf(buffer, sizeof(buffer), "Row Height: %dpx (fits switch + padding)", row_height);
         lv_label_set_text(row_height_label, buffer);
     }
 
-    spdlog::info("[{}] Setup complete: {} ({}x{}, max={}), switch={}x{}, row={}px",
-                 get_name(), size_category, hor_res, ver_res, greater_res,
-                 switch_width, switch_height, row_height);
+    spdlog::info("[{}] Setup complete: {} ({}x{}, max={}), switch={}x{}, row={}px", get_name(),
+                 size_category, hor_res, ver_res, greater_res, switch_width, switch_height,
+                 row_height);
 }
 
 // ============================================================================

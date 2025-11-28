@@ -23,9 +23,9 @@
 
 #include "wifi_backend_mock.h"
 
-#include "safe_log.h"
 #include "ui_error_reporting.h"
 
+#include "safe_log.h"
 #include "spdlog/spdlog.h"
 
 #include <algorithm>
@@ -201,7 +201,8 @@ WiFiError WifiBackendMock::connect_network(const std::string& ssid, const std::s
 
     // Validate password for secured networks
     if (it->network.is_secured && password.empty()) {
-        LOG_WARN_INTERNAL("[WifiBackend] Mock: No password provided for secured network '{}'", ssid);
+        LOG_WARN_INTERNAL("[WifiBackend] Mock: No password provided for secured network '{}'",
+                          ssid);
         return WiFiError(
             WiFiResult::INVALID_PARAMETERS, "Password required for secured network: " + ssid,
             "This network requires a password", "Enter the network password and try again");
@@ -277,7 +278,7 @@ void WifiBackendMock::connect_thread_func() {
 
     if (it == mock_networks_.end()) {
         LOG_ERROR_INTERNAL("[WifiBackend] Mock: Network '{}' disappeared during connection",
-                          connecting_ssid_);
+                           connecting_ssid_);
         fire_event("DISCONNECTED", "reason=network_not_found");
         return;
     }

@@ -3,16 +3,17 @@
 
 #include "ui_panel_notification_history.h"
 
-#include "app_globals.h"
-#include "printer_state.h"
 #include "ui_event_safety.h"
 #include "ui_nav.h"
 #include "ui_panel_common.h"
 #include "ui_severity_card.h"
 #include "ui_status_bar.h"
 
-#include <spdlog/spdlog.h>
+#include "app_globals.h"
+#include "printer_state.h"
+
 #include <spdlog/fmt/fmt.h>
+#include <spdlog/spdlog.h>
 
 #include <memory>
 
@@ -100,9 +101,8 @@ void NotificationHistoryPanel::refresh() {
     }
 
     // Get entries (filtered or all)
-    auto entries = (current_filter_ < 0)
-        ? history_.get_all()
-        : history_.get_filtered(current_filter_);
+    auto entries =
+        (current_filter_ < 0) ? history_.get_all() : history_.get_filtered(current_filter_);
 
     // Find content container
     lv_obj_t* overlay_content = lv_obj_find_by_name(panel_, "overlay_content");
@@ -121,10 +121,12 @@ void NotificationHistoryPanel::refresh() {
     bool has_entries = !entries.empty();
     if (has_entries) {
         lv_obj_remove_flag(overlay_content, LV_OBJ_FLAG_HIDDEN);
-        if (empty_state) lv_obj_add_flag(empty_state, LV_OBJ_FLAG_HIDDEN);
+        if (empty_state)
+            lv_obj_add_flag(empty_state, LV_OBJ_FLAG_HIDDEN);
     } else {
         lv_obj_add_flag(overlay_content, LV_OBJ_FLAG_HIDDEN);
-        if (empty_state) lv_obj_remove_flag(empty_state, LV_OBJ_FLAG_HIDDEN);
+        if (empty_state)
+            lv_obj_remove_flag(empty_state, LV_OBJ_FLAG_HIDDEN);
     }
 
     // Create list items using severity_card for automatic color styling
@@ -136,20 +138,19 @@ void NotificationHistoryPanel::refresh() {
         const char* title = entry.title[0] ? entry.title : "Notification";
 
         // Build attributes array - just pass semantic severity, widget handles colors
-        const char* attrs[] = {
-            "severity", severity_to_string(entry.severity),
-            "title", title,
-            "message", entry.message,
-            "timestamp", timestamp_str.c_str(),
-            nullptr
-        };
+        const char* attrs[] = {"severity",  severity_to_string(entry.severity),
+                               "title",     title,
+                               "message",   entry.message,
+                               "timestamp", timestamp_str.c_str(),
+                               nullptr};
 
         // Create item from XML (severity_card sets border color automatically)
         lv_xml_create(overlay_content, "notification_history_item", attrs);
 
         // Find the most recently created item (last child)
         uint32_t child_cnt = lv_obj_get_child_count(overlay_content);
-        lv_obj_t* item = (child_cnt > 0) ? lv_obj_get_child(overlay_content, child_cnt - 1) : nullptr;
+        lv_obj_t* item =
+            (child_cnt > 0) ? lv_obj_get_child(overlay_content, child_cnt - 1) : nullptr;
         if (!item) {
             spdlog::error("[{}] Failed to create notification_history_item from XML", get_name());
             continue;
@@ -182,11 +183,15 @@ void NotificationHistoryPanel::set_filter(int filter) {
 
 const char* NotificationHistoryPanel::severity_to_string(ToastSeverity severity) {
     switch (severity) {
-        case ToastSeverity::ERROR:   return "error";
-        case ToastSeverity::WARNING: return "warning";
-        case ToastSeverity::SUCCESS: return "success";
-        case ToastSeverity::INFO:
-        default:                      return "info";
+    case ToastSeverity::ERROR:
+        return "error";
+    case ToastSeverity::WARNING:
+        return "warning";
+    case ToastSeverity::SUCCESS:
+        return "success";
+    case ToastSeverity::INFO:
+    default:
+        return "info";
     }
 }
 
@@ -200,11 +205,11 @@ std::string NotificationHistoryPanel::format_timestamp(uint64_t timestamp_ms) {
 
     uint64_t diff_ms = now - timestamp_ms;
 
-    if (diff_ms < 60000) {  // < 1 min
+    if (diff_ms < 60000) { // < 1 min
         return "Just now";
-    } else if (diff_ms < 3600000) {  // < 1 hour
+    } else if (diff_ms < 3600000) { // < 1 hour
         return fmt::format("{} min ago", diff_ms / 60000);
-    } else if (diff_ms < 86400000) {  // < 1 day
+    } else if (diff_ms < 86400000) { // < 1 day
         uint64_t hours = diff_ms / 3600000;
         return fmt::format("{} hour{} ago", hours, hours > 1 ? "s" : "");
     } else {
@@ -296,8 +301,8 @@ static std::unique_ptr<NotificationHistoryPanel> g_notification_history_panel;
 
 NotificationHistoryPanel& get_global_notification_history_panel() {
     if (!g_notification_history_panel) {
-        g_notification_history_panel = std::make_unique<NotificationHistoryPanel>(
-            get_printer_state(), nullptr);
+        g_notification_history_panel =
+            std::make_unique<NotificationHistoryPanel>(get_printer_state(), nullptr);
     }
     return *g_notification_history_panel;
 }

@@ -23,11 +23,11 @@
 
 #include "ui_keyboard.h"
 
-#include "keyboard_layout_provider.h"
 #include "ui_event_safety.h"
 #include "ui_theme.h"
 
 #include "config.h"
+#include "keyboard_layout_provider.h"
 
 #include <spdlog/spdlog.h>
 
@@ -523,10 +523,12 @@ static size_t get_utf8_length(const char* str) {
 
 // Helper to check if string ends with suffix
 static bool str_ends_with(const char* str, const char* suffix) {
-    if (!str || !suffix) return false;
+    if (!str || !suffix)
+        return false;
     size_t str_len = strlen(str);
     size_t suffix_len = strlen(suffix);
-    if (suffix_len > str_len) return false;
+    if (suffix_len > str_len)
+        return false;
     return strcmp(str + str_len - suffix_len, suffix) == 0;
 }
 
@@ -564,20 +566,23 @@ static void keyboard_event_cb(lv_event_t* e) {
         if (is_non_printing) {
             // LVGL's default handler MIGHT have inserted the button text.
             // We need to check if it did, and if so, delete it.
-            // This prevents deleting user text when LVGL didn't insert anything (e.g. Backspace, Close).
-            
+            // This prevents deleting user text when LVGL didn't insert anything (e.g. Backspace,
+            // Close).
+
             if (g_context_textarea && btn_text) {
                 const char* current_text = lv_textarea_get_text(g_context_textarea);
-                
+
                 if (str_ends_with(current_text, btn_text)) {
                     // LVGL inserted the button text - delete it
                     size_t char_count = get_utf8_length(btn_text);
-                    spdlog::info("[Keyboard] Removing inserted text '{}' ({} chars)", btn_text, char_count);
+                    spdlog::info("[Keyboard] Removing inserted text '{}' ({} chars)", btn_text,
+                                 char_count);
                     for (size_t i = 0; i < char_count; i++) {
                         lv_textarea_delete_char(g_context_textarea);
                     }
                 } else {
-                    spdlog::trace("[Keyboard] Textarea does not end with '{}' - nothing to delete", btn_text);
+                    spdlog::trace("[Keyboard] Textarea does not end with '{}' - nothing to delete",
+                                  btn_text);
                 }
             }
 
@@ -635,7 +640,8 @@ static void keyboard_event_cb(lv_event_t* e) {
 
             } else if (btn_text && strcmp(btn_text, LV_SYMBOL_NEW_LINE) == 0) {
                 // Enter key
-                // If LVGL inserted a newline character, remove it (we want Enter to just close/submit)
+                // If LVGL inserted a newline character, remove it (we want Enter to just
+                // close/submit)
                 if (g_context_textarea) {
                     const char* current_text = lv_textarea_get_text(g_context_textarea);
                     if (str_ends_with(current_text, "\n")) {
@@ -660,7 +666,8 @@ static void keyboard_event_cb(lv_event_t* e) {
         } else {
             // Regular printing key - LVGL has already inserted the text
             // Special case: convert double-space to actual single space character
-            if (btn_text && strcmp(btn_text, keyboard_layout_get_spacebar_text()) == 0 && g_context_textarea) {
+            if (btn_text && strcmp(btn_text, keyboard_layout_get_spacebar_text()) == 0 &&
+                g_context_textarea) {
                 // Delete the double-space that LVGL inserted (2 characters)
                 lv_textarea_delete_char(g_context_textarea);
                 lv_textarea_delete_char(g_context_textarea);

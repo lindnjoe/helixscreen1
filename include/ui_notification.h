@@ -23,8 +23,9 @@
 
 #pragma once
 
-#include "lvgl.h"
 #include "ui_toast.h"
+
+#include "lvgl.h"
 
 /**
  * @brief Unified notification API for HelixScreen
@@ -57,10 +58,10 @@
  * ```
  */
 typedef struct {
-    ToastSeverity severity;  ///< Notification severity level
-    const char* title;       ///< Title for modal dialogs (can be nullptr for toasts)
-    const char* message;     ///< Notification message text
-    bool show_modal;         ///< true = modal dialog, false = toast notification
+    ToastSeverity severity; ///< Notification severity level
+    const char* title;      ///< Title for modal dialogs (can be nullptr for toasts)
+    const char* message;    ///< Notification message text
+    bool show_modal;        ///< true = modal dialog, false = toast notification
 } NotificationData;
 
 /**

@@ -892,9 +892,9 @@ static void project_and_cache_quads(bed_mesh_renderer_t* renderer, int canvas_wi
         double total_depth = 0.0;
 
         for (int i = 0; i < 4; i++) {
-            bed_mesh_point_3d_t projected =
-                bed_mesh_projection_project_3d_to_2d(quad.vertices[i].x, quad.vertices[i].y, quad.vertices[i].z,
-                                 canvas_width, canvas_height, &renderer->view_state);
+            bed_mesh_point_3d_t projected = bed_mesh_projection_project_3d_to_2d(
+                quad.vertices[i].x, quad.vertices[i].y, quad.vertices[i].z, canvas_width,
+                canvas_height, &renderer->view_state);
 
             quad.screen_x[i] = projected.screen_x;
             quad.screen_y[i] = projected.screen_y;
@@ -983,7 +983,6 @@ static void compute_centering_offset(int mesh_min_x, int mesh_max_x, int mesh_mi
                   mesh_center_x, mesh_center_y, layer_center_x, layer_center_y, *out_offset_x,
                   *out_offset_y);
 }
-
 
 static void fill_triangle_solid(lv_layer_t* layer, int x1, int y1, int x2, int y2, int x3, int y3,
                                 int canvas_width, int canvas_height, lv_color_t color) {
@@ -1146,7 +1145,8 @@ static void fill_triangle_gradient(lv_layer_t* layer, int x1, int y1, lv_color_t
                 // Sample color at segment center for better color distribution
                 double interpolation_factor =
                     (segment_index + GRADIENT_SEGMENT_SAMPLE_POSITION) / segment_count;
-                bed_mesh_rgb_t seg_color = bed_mesh_gradient_lerp_color(c_left, c_right, interpolation_factor);
+                bed_mesh_rgb_t seg_color =
+                    bed_mesh_gradient_lerp_color(c_left, c_right, interpolation_factor);
                 lv_color_t color = lv_color_make(seg_color.r, seg_color.g, seg_color.b);
                 dsc.bg_color = color;
 
@@ -1216,29 +1216,29 @@ static void generate_mesh_quads(bed_mesh_renderer_t* renderer) {
             quad.vertices[0].y = base_y_1;
             quad.vertices[0].z = mesh_z_to_world_z(renderer->mesh[row + 1][col], z_center,
                                                    renderer->view_state.z_scale);
-            quad.vertices[0].color = bed_mesh_gradient_height_to_color(renderer->mesh[row + 1][col],
-                                                     renderer->color_min_z, renderer->color_max_z);
+            quad.vertices[0].color = bed_mesh_gradient_height_to_color(
+                renderer->mesh[row + 1][col], renderer->color_min_z, renderer->color_max_z);
 
             quad.vertices[1].x = base_x_1;
             quad.vertices[1].y = base_y_1;
             quad.vertices[1].z = mesh_z_to_world_z(renderer->mesh[row + 1][col + 1], z_center,
                                                    renderer->view_state.z_scale);
-            quad.vertices[1].color = bed_mesh_gradient_height_to_color(renderer->mesh[row + 1][col + 1],
-                                                     renderer->color_min_z, renderer->color_max_z);
+            quad.vertices[1].color = bed_mesh_gradient_height_to_color(
+                renderer->mesh[row + 1][col + 1], renderer->color_min_z, renderer->color_max_z);
 
             quad.vertices[2].x = base_x_0;
             quad.vertices[2].y = base_y_0;
             quad.vertices[2].z =
                 mesh_z_to_world_z(renderer->mesh[row][col], z_center, renderer->view_state.z_scale);
-            quad.vertices[2].color = bed_mesh_gradient_height_to_color(renderer->mesh[row][col],
-                                                     renderer->color_min_z, renderer->color_max_z);
+            quad.vertices[2].color = bed_mesh_gradient_height_to_color(
+                renderer->mesh[row][col], renderer->color_min_z, renderer->color_max_z);
 
             quad.vertices[3].x = base_x_1;
             quad.vertices[3].y = base_y_0;
             quad.vertices[3].z = mesh_z_to_world_z(renderer->mesh[row][col + 1], z_center,
                                                    renderer->view_state.z_scale);
-            quad.vertices[3].color = bed_mesh_gradient_height_to_color(renderer->mesh[row][col + 1],
-                                                     renderer->color_min_z, renderer->color_max_z);
+            quad.vertices[3].color = bed_mesh_gradient_height_to_color(
+                renderer->mesh[row][col + 1], renderer->color_min_z, renderer->color_max_z);
 
             // Compute center color for fast rendering
             bed_mesh_rgb_t avg_color = {
@@ -1370,10 +1370,10 @@ static void draw_axis_line(lv_layer_t* layer, lv_draw_line_dsc_t* line_dsc, doub
                            double start_y, double start_z, double end_x, double end_y, double end_z,
                            int canvas_width, int canvas_height,
                            const bed_mesh_view_state_t* view_state) {
-    bed_mesh_point_3d_t start =
-        bed_mesh_projection_project_3d_to_2d(start_x, start_y, start_z, canvas_width, canvas_height, view_state);
-    bed_mesh_point_3d_t end =
-        bed_mesh_projection_project_3d_to_2d(end_x, end_y, end_z, canvas_width, canvas_height, view_state);
+    bed_mesh_point_3d_t start = bed_mesh_projection_project_3d_to_2d(
+        start_x, start_y, start_z, canvas_width, canvas_height, view_state);
+    bed_mesh_point_3d_t end = bed_mesh_projection_project_3d_to_2d(
+        end_x, end_y, end_z, canvas_width, canvas_height, view_state);
 
     // Clamp line endpoints to canvas bounds to prevent drawing outside widget
     int x1 = std::max(0, std::min(canvas_width - 1, start.screen_x));
@@ -1446,12 +1446,12 @@ static void render_axis_labels(lv_layer_t* layer, const bed_mesh_renderer_t* ren
     label_dsc.align = LV_TEXT_ALIGN_CENTER;
 
     // Position labels at the end of each axis line (reproject endpoints for label positioning)
-    bed_mesh_point_3d_t x_pos = bed_mesh_projection_project_3d_to_2d(x_axis_end_x, x_axis_y, grid_z, canvas_width,
-                                                 canvas_height, &renderer->view_state);
-    bed_mesh_point_3d_t y_pos = bed_mesh_projection_project_3d_to_2d(y_axis_x, y_axis_end_y, grid_z, canvas_width,
-                                                 canvas_height, &renderer->view_state);
-    bed_mesh_point_3d_t z_pos = bed_mesh_projection_project_3d_to_2d(z_axis_x, z_axis_y, z_axis_top, canvas_width,
-                                                 canvas_height, &renderer->view_state);
+    bed_mesh_point_3d_t x_pos = bed_mesh_projection_project_3d_to_2d(
+        x_axis_end_x, x_axis_y, grid_z, canvas_width, canvas_height, &renderer->view_state);
+    bed_mesh_point_3d_t y_pos = bed_mesh_projection_project_3d_to_2d(
+        y_axis_x, y_axis_end_y, grid_z, canvas_width, canvas_height, &renderer->view_state);
+    bed_mesh_point_3d_t z_pos = bed_mesh_projection_project_3d_to_2d(
+        z_axis_x, z_axis_y, z_axis_top, canvas_width, canvas_height, &renderer->view_state);
 
     // Draw X label (with bounds checking to prevent rendering outside canvas)
     if (x_pos.screen_x >= 0 && x_pos.screen_x < canvas_width && x_pos.screen_y >= 0 &&
@@ -1545,8 +1545,8 @@ static void render_numeric_axis_ticks(lv_layer_t* layer, const bed_mesh_renderer
     for (double x_mm = 0; x_mm <= bed_width_mm / 2.0; x_mm += tick_spacing) {
         // Draw positive X tick
         double world_x = x_mm;
-        bed_mesh_point_3d_t pos_tick = bed_mesh_projection_project_3d_to_2d(world_x, x_axis_y, grid_z, canvas_width,
-                                                        canvas_height, &renderer->view_state);
+        bed_mesh_point_3d_t pos_tick = bed_mesh_projection_project_3d_to_2d(
+            world_x, x_axis_y, grid_z, canvas_width, canvas_height, &renderer->view_state);
 
         if (pos_tick.screen_x >= 0 && pos_tick.screen_x < canvas_width && pos_tick.screen_y >= 0 &&
             pos_tick.screen_y < canvas_height) {
@@ -1570,8 +1570,8 @@ static void render_numeric_axis_ticks(lv_layer_t* layer, const bed_mesh_renderer
         // Draw negative X tick (skip 0 to avoid duplicate)
         if (x_mm > 0.1) {
             world_x = -x_mm;
-            bed_mesh_point_3d_t neg_tick = bed_mesh_projection_project_3d_to_2d(world_x, x_axis_y, grid_z, canvas_width,
-                                                            canvas_height, &renderer->view_state);
+            bed_mesh_point_3d_t neg_tick = bed_mesh_projection_project_3d_to_2d(
+                world_x, x_axis_y, grid_z, canvas_width, canvas_height, &renderer->view_state);
 
             if (neg_tick.screen_x >= 0 && neg_tick.screen_x < canvas_width &&
                 neg_tick.screen_y >= 0 && neg_tick.screen_y < canvas_height) {
@@ -1598,8 +1598,8 @@ static void render_numeric_axis_ticks(lv_layer_t* layer, const bed_mesh_renderer
     for (double y_mm = 0; y_mm <= bed_height_mm / 2.0; y_mm += tick_spacing) {
         // Draw positive Y tick
         double world_y = y_mm;
-        bed_mesh_point_3d_t pos_tick = bed_mesh_projection_project_3d_to_2d(y_axis_x, world_y, grid_z, canvas_width,
-                                                        canvas_height, &renderer->view_state);
+        bed_mesh_point_3d_t pos_tick = bed_mesh_projection_project_3d_to_2d(
+            y_axis_x, world_y, grid_z, canvas_width, canvas_height, &renderer->view_state);
 
         if (pos_tick.screen_x >= 0 && pos_tick.screen_x < canvas_width && pos_tick.screen_y >= 0 &&
             pos_tick.screen_y < canvas_height) {
@@ -1622,8 +1622,8 @@ static void render_numeric_axis_ticks(lv_layer_t* layer, const bed_mesh_renderer
         // Draw negative Y tick (skip 0 to avoid duplicate)
         if (y_mm > 0.1) {
             world_y = -y_mm;
-            bed_mesh_point_3d_t neg_tick = bed_mesh_projection_project_3d_to_2d(y_axis_x, world_y, grid_z, canvas_width,
-                                                            canvas_height, &renderer->view_state);
+            bed_mesh_point_3d_t neg_tick = bed_mesh_projection_project_3d_to_2d(
+                y_axis_x, world_y, grid_z, canvas_width, canvas_height, &renderer->view_state);
 
             if (neg_tick.screen_x >= 0 && neg_tick.screen_x < canvas_width &&
                 neg_tick.screen_y >= 0 && neg_tick.screen_y < canvas_height) {

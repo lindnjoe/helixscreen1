@@ -4,8 +4,9 @@
 #pragma once
 
 #include "ui_notification.h"
-#include <spdlog/spdlog.h>
+
 #include <spdlog/fmt/fmt.h>
+#include <spdlog/spdlog.h>
 
 /**
  * @file ui_error_reporting.h
@@ -39,14 +40,12 @@
  * Use for widget creation failures, XML parsing errors, and other internal
  * issues that don't require user action.
  */
-#define LOG_ERROR_INTERNAL(msg, ...) \
-    spdlog::error("[INTERNAL] " msg, ##__VA_ARGS__)
+#define LOG_ERROR_INTERNAL(msg, ...) spdlog::error("[INTERNAL] " msg, ##__VA_ARGS__)
 
 /**
  * @brief Log internal warning (not shown to user)
  */
-#define LOG_WARN_INTERNAL(msg, ...) \
-    spdlog::warn("[INTERNAL] " msg, ##__VA_ARGS__)
+#define LOG_WARN_INTERNAL(msg, ...) spdlog::warn("[INTERNAL] " msg, ##__VA_ARGS__)
 
 // ============================================================================
 // User-Facing Errors (Log + Toast Notification)
@@ -58,11 +57,12 @@
  * Logs error and shows non-blocking toast. Use for recoverable errors
  * that don't require immediate user action.
  */
-#define NOTIFY_ERROR(msg, ...) do { \
-    std::string formatted_msg = fmt::format(msg, ##__VA_ARGS__); \
-    spdlog::error("[USER] {}", formatted_msg); \
-    ui_notification_error(nullptr, formatted_msg.c_str(), false); \
-} while(0)
+#define NOTIFY_ERROR(msg, ...)                                                                     \
+    do {                                                                                           \
+        std::string formatted_msg = fmt::format(msg, ##__VA_ARGS__);                               \
+        spdlog::error("[USER] {}", formatted_msg);                                                 \
+        ui_notification_error(nullptr, formatted_msg.c_str(), false);                              \
+    } while (0)
 
 /**
  * @brief Report warning with toast notification
@@ -70,29 +70,32 @@
  * Logs warning and shows non-blocking toast. Use for potential issues
  * that user should be aware of.
  */
-#define NOTIFY_WARNING(msg, ...) do { \
-    std::string formatted_msg = fmt::format(msg, ##__VA_ARGS__); \
-    spdlog::warn("[USER] {}", formatted_msg); \
-    ui_notification_warning(formatted_msg.c_str()); \
-} while(0)
+#define NOTIFY_WARNING(msg, ...)                                                                   \
+    do {                                                                                           \
+        std::string formatted_msg = fmt::format(msg, ##__VA_ARGS__);                               \
+        spdlog::warn("[USER] {}", formatted_msg);                                                  \
+        ui_notification_warning(formatted_msg.c_str());                                            \
+    } while (0)
 
 /**
  * @brief Report info with toast notification
  */
-#define NOTIFY_INFO(msg, ...) do { \
-    std::string formatted_msg = fmt::format(msg, ##__VA_ARGS__); \
-    spdlog::info("[USER] {}", formatted_msg); \
-    ui_notification_info(formatted_msg.c_str()); \
-} while(0)
+#define NOTIFY_INFO(msg, ...)                                                                      \
+    do {                                                                                           \
+        std::string formatted_msg = fmt::format(msg, ##__VA_ARGS__);                               \
+        spdlog::info("[USER] {}", formatted_msg);                                                  \
+        ui_notification_info(formatted_msg.c_str());                                               \
+    } while (0)
 
 /**
  * @brief Report success with toast notification
  */
-#define NOTIFY_SUCCESS(msg, ...) do { \
-    std::string formatted_msg = fmt::format(msg, ##__VA_ARGS__); \
-    spdlog::info("[USER] {}", formatted_msg); \
-    ui_notification_success(formatted_msg.c_str()); \
-} while(0)
+#define NOTIFY_SUCCESS(msg, ...)                                                                   \
+    do {                                                                                           \
+        std::string formatted_msg = fmt::format(msg, ##__VA_ARGS__);                               \
+        spdlog::info("[USER] {}", formatted_msg);                                                  \
+        ui_notification_success(formatted_msg.c_str());                                            \
+    } while (0)
 
 // ============================================================================
 // Critical Errors (Log + Modal Dialog)
@@ -104,11 +107,12 @@
  * Logs error and shows blocking modal dialog. Use for critical errors
  * that require user acknowledgment (connection failures, hardware errors).
  */
-#define NOTIFY_ERROR_MODAL(title, msg, ...) do { \
-    std::string formatted_msg = fmt::format(msg, ##__VA_ARGS__); \
-    spdlog::error("[CRITICAL] {}: {}", title, formatted_msg); \
-    ui_notification_error(title, formatted_msg.c_str(), true); \
-} while(0)
+#define NOTIFY_ERROR_MODAL(title, msg, ...)                                                        \
+    do {                                                                                           \
+        std::string formatted_msg = fmt::format(msg, ##__VA_ARGS__);                               \
+        spdlog::error("[CRITICAL] {}: {}", title, formatted_msg);                                  \
+        ui_notification_error(title, formatted_msg.c_str(), true);                                 \
+    } while (0)
 
 // ============================================================================
 // Context-Aware Error Reporting
@@ -129,9 +133,8 @@
  * ```
  */
 class ErrorContext {
-public:
-    explicit ErrorContext(const char* operation)
-        : operation_(operation) {}
+  public:
+    explicit ErrorContext(const char* operation) : operation_(operation) {}
 
     /**
      * @brief Report non-critical error in this context
@@ -164,6 +167,6 @@ public:
         ui_notification_warning(msg.c_str());
     }
 
-private:
+  private:
     const char* operation_;
 };

@@ -57,8 +57,12 @@ class TestPanel : public PanelBase {
      */
     void setup(lv_obj_t* panel, lv_obj_t* parent_screen) override;
 
-    const char* get_name() const override { return "Test Panel"; }
-    const char* get_xml_component_name() const override { return "test_panel"; }
+    const char* get_name() const override {
+        return "Test Panel";
+    }
+    const char* get_xml_component_name() const override {
+        return "test_panel";
+    }
 
   private:
     /**
@@ -69,7 +73,6 @@ class TestPanel : public PanelBase {
      */
     void populate_labels();
 };
-
 
 // Global instance accessor (needed by main.cpp)
 TestPanel& get_global_test_panel();

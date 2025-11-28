@@ -50,7 +50,7 @@ struct NetworkItemData {
     lv_subject_t* signal_strength;
     lv_subject_t* is_secured;
     char ssid_buffer[64];
-    WizardWifiStep* parent;  // Back-reference for callbacks
+    WizardWifiStep* parent; // Back-reference for callbacks
 
     NetworkItemData(const WiFiNetwork& net, WizardWifiStep* p) : network(net), parent(p) {
         ssid = new lv_subject_t();
@@ -82,7 +82,8 @@ struct WifiConstant {
 
 static void register_wifi_constants_to_scope(lv_xml_component_scope_t* scope,
                                              const WifiConstant* constants) {
-    if (!scope) return;
+    if (!scope)
+        return;
     for (int i = 0; constants[i].name != NULL; i++) {
         lv_xml_register_const(scope, constants[i].name, constants[i].value);
     }
@@ -114,25 +115,22 @@ WizardWifiStep::~WizardWifiStep() {
 // ============================================================================
 
 WizardWifiStep::WizardWifiStep(WizardWifiStep&& other) noexcept
-    : screen_root_(other.screen_root_),
-      password_modal_(other.password_modal_),
-      network_list_container_(other.network_list_container_),
-      wifi_enabled_(other.wifi_enabled_),
-      wifi_status_(other.wifi_status_),
-      ethernet_status_(other.ethernet_status_),
+    : screen_root_(other.screen_root_), password_modal_(other.password_modal_),
+      network_list_container_(other.network_list_container_), wifi_enabled_(other.wifi_enabled_),
+      wifi_status_(other.wifi_status_), ethernet_status_(other.ethernet_status_),
       wifi_scanning_(other.wifi_scanning_),
       wifi_password_modal_visible_(other.wifi_password_modal_visible_),
       wifi_password_modal_ssid_(other.wifi_password_modal_ssid_),
-      wifi_connecting_(other.wifi_connecting_),
-      wifi_manager_(std::move(other.wifi_manager_)),
+      wifi_connecting_(other.wifi_connecting_), wifi_manager_(std::move(other.wifi_manager_)),
       ethernet_manager_(std::move(other.ethernet_manager_)),
-      current_secured_(other.current_secured_),
-      wifi_item_bg_color_(other.wifi_item_bg_color_),
+      current_secured_(other.current_secured_), wifi_item_bg_color_(other.wifi_item_bg_color_),
       wifi_item_text_color_(other.wifi_item_text_color_),
       subjects_initialized_(other.subjects_initialized_) {
     std::memcpy(wifi_status_buffer_, other.wifi_status_buffer_, sizeof(wifi_status_buffer_));
-    std::memcpy(ethernet_status_buffer_, other.ethernet_status_buffer_, sizeof(ethernet_status_buffer_));
-    std::memcpy(wifi_password_modal_ssid_buffer_, other.wifi_password_modal_ssid_buffer_, sizeof(wifi_password_modal_ssid_buffer_));
+    std::memcpy(ethernet_status_buffer_, other.ethernet_status_buffer_,
+                sizeof(ethernet_status_buffer_));
+    std::memcpy(wifi_password_modal_ssid_buffer_, other.wifi_password_modal_ssid_buffer_,
+                sizeof(wifi_password_modal_ssid_buffer_));
     std::memcpy(current_ssid_, other.current_ssid_, sizeof(current_ssid_));
 
     other.screen_root_ = nullptr;
@@ -161,8 +159,10 @@ WizardWifiStep& WizardWifiStep::operator=(WizardWifiStep&& other) noexcept {
         subjects_initialized_ = other.subjects_initialized_;
 
         std::memcpy(wifi_status_buffer_, other.wifi_status_buffer_, sizeof(wifi_status_buffer_));
-        std::memcpy(ethernet_status_buffer_, other.ethernet_status_buffer_, sizeof(ethernet_status_buffer_));
-        std::memcpy(wifi_password_modal_ssid_buffer_, other.wifi_password_modal_ssid_buffer_, sizeof(wifi_password_modal_ssid_buffer_));
+        std::memcpy(ethernet_status_buffer_, other.ethernet_status_buffer_,
+                    sizeof(ethernet_status_buffer_));
+        std::memcpy(wifi_password_modal_ssid_buffer_, other.wifi_password_modal_ssid_buffer_,
+                    sizeof(wifi_password_modal_ssid_buffer_));
         std::memcpy(current_ssid_, other.current_ssid_, sizeof(current_ssid_));
 
         other.screen_root_ = nullptr;
@@ -233,7 +233,8 @@ void WizardWifiStep::init_wifi_item_colors() {
 }
 
 void WizardWifiStep::apply_connected_network_highlight(lv_obj_t* item) {
-    if (!item) return;
+    if (!item)
+        return;
 
     lv_obj_set_style_border_side(item, LV_BORDER_SIDE_LEFT, LV_PART_MAIN);
     lv_obj_set_style_border_width(item, 4, LV_PART_MAIN);
@@ -252,7 +253,8 @@ void WizardWifiStep::apply_connected_network_highlight(lv_obj_t* item) {
 }
 
 void WizardWifiStep::update_wifi_status(const char* status) {
-    if (!status) return;
+    if (!status)
+        return;
     spdlog::debug("[{}] Updating WiFi status: {}", get_name(), status);
     lv_subject_copy_string(&wifi_status_, status);
 }
@@ -306,8 +308,8 @@ void WizardWifiStep::populate_network_list(const std::vector<WiFiNetwork>& netwo
     // Create network items
     static int item_counter = 0;
     for (const auto& network : sorted_networks) {
-        lv_obj_t* item =
-            static_cast<lv_obj_t*>(lv_xml_create(network_list_container_, "wifi_network_item", nullptr));
+        lv_obj_t* item = static_cast<lv_obj_t*>(
+            lv_xml_create(network_list_container_, "wifi_network_item", nullptr));
         if (!item) {
             LOG_ERROR_INTERNAL("Failed to create network item for SSID: {}", network.ssid);
             continue;
@@ -339,7 +341,8 @@ void WizardWifiStep::populate_network_list(const std::vector<WiFiNetwork>& netwo
         // Set signal icon
         lv_obj_t* signal_icon = lv_obj_find_by_name(item, "signal_icon");
         if (signal_icon) {
-            const char* icon_name = get_wifi_signal_icon(network.signal_strength, network.is_secured);
+            const char* icon_name =
+                get_wifi_signal_icon(network.signal_strength, network.is_secured);
             ui_icon_set_source(signal_icon, icon_name);
             spdlog::trace("[{}] Set signal icon '{}' for {}% ({})", get_name(), icon_name,
                           network.signal_strength, network.is_secured ? "secured" : "open");
@@ -376,7 +379,8 @@ void WizardWifiStep::clear_network_list() {
 
     for (int32_t i = child_count - 1; i >= 0; i--) {
         lv_obj_t* child = lv_obj_get_child(network_list_container_, i);
-        if (!child) continue;
+        if (!child)
+            continue;
 
         const char* name = lv_obj_get_name(child);
         if (name && strncmp(name, "network_item_", 13) == 0) {
@@ -432,7 +436,8 @@ void WizardWifiStep::on_modal_connect_clicked_static(lv_event_t* e) {
 
 void WizardWifiStep::handle_wifi_toggle_changed(lv_event_t* e) {
     lv_obj_t* toggle = static_cast<lv_obj_t*>(lv_event_get_target(e));
-    if (!toggle) return;
+    if (!toggle)
+        return;
 
     bool checked = lv_obj_get_state(toggle) & LV_STATE_CHECKED;
     spdlog::debug("[{}] WiFi toggle changed: {}", get_name(), checked ? "ON" : "OFF");
@@ -452,11 +457,13 @@ void WizardWifiStep::handle_wifi_toggle_changed(lv_event_t* e) {
 
             spdlog::debug("[{}] Starting network scan", get_name());
             wifi_manager_->start_scan([self, weak_mgr](const std::vector<WiFiNetwork>& networks) {
-                spdlog::info("[{}] Scan callback with {} networks", self->get_name(), networks.size());
+                spdlog::info("[{}] Scan callback with {} networks", self->get_name(),
+                             networks.size());
 
                 // Check if manager still exists
                 if (weak_mgr.expired()) {
-                    spdlog::debug("[{}] WiFiManager destroyed, ignoring callback", self->get_name());
+                    spdlog::debug("[{}] WiFiManager destroyed, ignoring callback",
+                                  self->get_name());
                     return;
                 }
 
@@ -481,7 +488,8 @@ void WizardWifiStep::handle_wifi_toggle_changed(lv_event_t* e) {
 
 void WizardWifiStep::handle_network_item_clicked(lv_event_t* e) {
     lv_obj_t* item = static_cast<lv_obj_t*>(lv_event_get_target(e));
-    if (!item) return;
+    if (!item)
+        return;
 
     NetworkItemData* item_data = static_cast<NetworkItemData*>(lv_obj_get_user_data(item));
     if (!item_data) {
@@ -490,14 +498,16 @@ void WizardWifiStep::handle_network_item_clicked(lv_event_t* e) {
     }
 
     const WiFiNetwork& network = item_data->network;
-    spdlog::debug("[{}] Network clicked: {} ({}%)", get_name(), network.ssid, network.signal_strength);
+    spdlog::debug("[{}] Network clicked: {} ({}%)", get_name(), network.ssid,
+                  network.signal_strength);
 
     strncpy(current_ssid_, network.ssid.c_str(), sizeof(current_ssid_) - 1);
     current_ssid_[sizeof(current_ssid_) - 1] = '\0';
     current_secured_ = network.is_secured;
 
     char status_buf[128];
-    snprintf(status_buf, sizeof(status_buf), "%s%s", get_status_text("connecting"), network.ssid.c_str());
+    snprintf(status_buf, sizeof(status_buf), "%s%s", get_status_text("connecting"),
+             network.ssid.c_str());
     update_wifi_status(status_buf);
 
     if (network.is_secured) {
@@ -506,19 +516,21 @@ void WizardWifiStep::handle_network_item_clicked(lv_event_t* e) {
         // Connect to open network
         if (wifi_manager_) {
             WizardWifiStep* self = this;
-            wifi_manager_->connect(network.ssid, "", [self](bool success, const std::string& error) {
-                if (success) {
-                    char msg[128];
-                    snprintf(msg, sizeof(msg), "%s%s", get_status_text("connected"), self->current_ssid_);
-                    self->update_wifi_status(msg);
-                    spdlog::info("[{}] Connected to {}", self->get_name(), self->current_ssid_);
-                } else {
-                    char msg[128];
-                    snprintf(msg, sizeof(msg), "Failed to connect: %s", error.c_str());
-                    self->update_wifi_status(msg);
-                    NOTIFY_ERROR("Failed to connect to '{}': {}", self->current_ssid_, error);
-                }
-            });
+            wifi_manager_->connect(
+                network.ssid, "", [self](bool success, const std::string& error) {
+                    if (success) {
+                        char msg[128];
+                        snprintf(msg, sizeof(msg), "%s%s", get_status_text("connected"),
+                                 self->current_ssid_);
+                        self->update_wifi_status(msg);
+                        spdlog::info("[{}] Connected to {}", self->get_name(), self->current_ssid_);
+                    } else {
+                        char msg[128];
+                        snprintf(msg, sizeof(msg), "Failed to connect: %s", error.c_str());
+                        self->update_wifi_status(msg);
+                        NOTIFY_ERROR("Failed to connect to '{}': {}", self->current_ssid_, error);
+                    }
+                });
         } else {
             LOG_ERROR_INTERNAL("WiFi manager not initialized");
             NOTIFY_ERROR("WiFi unavailable");
@@ -577,34 +589,39 @@ void WizardWifiStep::handle_modal_connect_clicked() {
 
     if (wifi_manager_) {
         WizardWifiStep* self = this;
-        wifi_manager_->connect(current_ssid_, password, [self](bool success, const std::string& error) {
-            lv_subject_set_int(&self->wifi_connecting_, 0);
+        wifi_manager_->connect(
+            current_ssid_, password, [self](bool success, const std::string& error) {
+                lv_subject_set_int(&self->wifi_connecting_, 0);
 
-            lv_obj_t* connect_btn = lv_obj_find_by_name(self->password_modal_, "modal_connect_btn");
-            if (connect_btn) {
-                lv_obj_remove_state(connect_btn, LV_STATE_DISABLED);
-            }
-
-            if (success) {
-                self->hide_password_modal();
-
-                char msg[128];
-                snprintf(msg, sizeof(msg), "%s%s", get_status_text("connected"), self->current_ssid_);
-                self->update_wifi_status(msg);
-                spdlog::info("[{}] Connected to {}", self->get_name(), self->current_ssid_);
-            } else {
-                lv_obj_t* modal_status = lv_obj_find_by_name(self->password_modal_, "modal_status");
-                if (modal_status) {
-                    char error_msg[256];
-                    snprintf(error_msg, sizeof(error_msg), "Connection failed: %s", error.c_str());
-                    lv_label_set_text(modal_status, error_msg);
-                    lv_obj_remove_flag(modal_status, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_t* connect_btn =
+                    lv_obj_find_by_name(self->password_modal_, "modal_connect_btn");
+                if (connect_btn) {
+                    lv_obj_remove_state(connect_btn, LV_STATE_DISABLED);
                 }
 
-                self->update_wifi_status("Connection failed");
-                NOTIFY_ERROR("Failed to connect to '{}': {}", self->current_ssid_, error);
-            }
-        });
+                if (success) {
+                    self->hide_password_modal();
+
+                    char msg[128];
+                    snprintf(msg, sizeof(msg), "%s%s", get_status_text("connected"),
+                             self->current_ssid_);
+                    self->update_wifi_status(msg);
+                    spdlog::info("[{}] Connected to {}", self->get_name(), self->current_ssid_);
+                } else {
+                    lv_obj_t* modal_status =
+                        lv_obj_find_by_name(self->password_modal_, "modal_status");
+                    if (modal_status) {
+                        char error_msg[256];
+                        snprintf(error_msg, sizeof(error_msg), "Connection failed: %s",
+                                 error.c_str());
+                        lv_label_set_text(modal_status, error_msg);
+                        lv_obj_remove_flag(modal_status, LV_OBJ_FLAG_HIDDEN);
+                    }
+
+                    self->update_wifi_status("Connection failed");
+                    NOTIFY_ERROR("Failed to connect to '{}': {}", self->current_ssid_, error);
+                }
+            });
     } else {
         LOG_ERROR_INTERNAL("WiFi manager not initialized");
         NOTIFY_ERROR("WiFi unavailable");
@@ -620,12 +637,16 @@ void WizardWifiStep::init_subjects() {
 
     UI_SUBJECT_INIT_AND_REGISTER_INT(wifi_enabled_, 0, "wifi_enabled");
     UI_SUBJECT_INIT_AND_REGISTER_INT(wifi_scanning_, 0, "wifi_scanning");
-    UI_SUBJECT_INIT_AND_REGISTER_INT(wifi_password_modal_visible_, 0, "wifi_password_modal_visible");
+    UI_SUBJECT_INIT_AND_REGISTER_INT(wifi_password_modal_visible_, 0,
+                                     "wifi_password_modal_visible");
     UI_SUBJECT_INIT_AND_REGISTER_INT(wifi_connecting_, 0, "wifi_connecting");
 
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(wifi_password_modal_ssid_, wifi_password_modal_ssid_buffer_, "", "wifi_password_modal_ssid");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(wifi_status_, wifi_status_buffer_, get_status_text("disabled"), "wifi_status");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(ethernet_status_, ethernet_status_buffer_, "Checking...", "ethernet_status");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(wifi_password_modal_ssid_, wifi_password_modal_ssid_buffer_,
+                                        "", "wifi_password_modal_ssid");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(wifi_status_, wifi_status_buffer_,
+                                        get_status_text("disabled"), "wifi_status");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(ethernet_status_, ethernet_status_buffer_, "Checking...",
+                                        "ethernet_status");
 
     subjects_initialized_ = true;
     spdlog::debug("[{}] Subjects initialized", get_name());
@@ -684,19 +705,17 @@ void WizardWifiStep::register_responsive_constants() {
         snprintf(list_item_height_buf, sizeof(list_item_height_buf), "%d", font_height);
         spdlog::debug("[{}] Calculated list_item_height={}px", get_name(), font_height);
     } else {
-        const char* fallback_height = (greater_res <= UI_BREAKPOINT_SMALL_MAX) ? "60"
+        const char* fallback_height = (greater_res <= UI_BREAKPOINT_SMALL_MAX)    ? "60"
                                       : (greater_res <= UI_BREAKPOINT_MEDIUM_MAX) ? "80"
-                                                                                   : "100";
+                                                                                  : "100";
         snprintf(list_item_height_buf, sizeof(list_item_height_buf), "%s", fallback_height);
         LOG_WARN_INTERNAL("Failed to get font '{}', using fallback", list_item_font);
     }
 
-    WifiConstant constants[] = {
-        {"list_item_padding", list_item_padding},
-        {"list_item_height", list_item_height_buf},
-        {"list_item_font", list_item_font},
-        {NULL, NULL}
-    };
+    WifiConstant constants[] = {{"list_item_padding", list_item_padding},
+                                {"list_item_height", list_item_height_buf},
+                                {"list_item_font", list_item_font},
+                                {NULL, NULL}};
 
     lv_xml_component_scope_t* item_scope = lv_xml_component_get_scope("wifi_network_item");
     register_wifi_constants_to_scope(item_scope, constants);
@@ -747,7 +766,8 @@ lv_obj_t* WizardWifiStep::create(lv_obj_t* parent) {
     // Find WiFi toggle and attach callback with 'this' as user_data
     lv_obj_t* wifi_toggle = lv_obj_find_by_name(screen_root_, "wifi_toggle");
     if (wifi_toggle) {
-        lv_obj_add_event_cb(wifi_toggle, on_wifi_toggle_changed_static, LV_EVENT_VALUE_CHANGED, this);
+        lv_obj_add_event_cb(wifi_toggle, on_wifi_toggle_changed_static, LV_EVENT_VALUE_CHANGED,
+                            this);
         spdlog::debug("[{}] WiFi toggle callback attached", get_name());
     }
 
@@ -786,17 +806,13 @@ void WizardWifiStep::show_password_modal(const char* ssid) {
 
     spdlog::debug("[{}] Showing password modal for SSID: {}", get_name(), ssid);
 
-    ui_modal_keyboard_config_t kbd_config = {
-        .auto_position = true
-    };
+    ui_modal_keyboard_config_t kbd_config = {.auto_position = true};
 
-    ui_modal_config_t config = {
-        .position = {.use_alignment = true, .alignment = LV_ALIGN_CENTER},
-        .backdrop_opa = 180,
-        .keyboard = &kbd_config,
-        .persistent = false,
-        .on_close = nullptr
-    };
+    ui_modal_config_t config = {.position = {.use_alignment = true, .alignment = LV_ALIGN_CENTER},
+                                .backdrop_opa = 180,
+                                .keyboard = &kbd_config,
+                                .persistent = false,
+                                .on_close = nullptr};
 
     const char* attrs[] = {"ssid", ssid, NULL};
     password_modal_ = ui_modal_show("wifi_password_modal", &config, attrs);
@@ -835,7 +851,8 @@ void WizardWifiStep::show_password_modal(const char* ssid) {
 }
 
 void WizardWifiStep::hide_password_modal() {
-    if (!password_modal_) return;
+    if (!password_modal_)
+        return;
 
     spdlog::debug("[{}] Hiding password modal", get_name());
 

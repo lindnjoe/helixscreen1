@@ -3,9 +3,6 @@
 
 #include "ui_panel_extrusion.h"
 
-#include "app_constants.h"
-#include "app_globals.h"
-#include "printer_state.h"
 #include "ui_error_reporting.h"
 #include "ui_event_safety.h"
 #include "ui_nav.h"
@@ -14,6 +11,10 @@
 #include "ui_temperature_utils.h"
 #include "ui_theme.h"
 #include "ui_utils.h"
+
+#include "app_constants.h"
+#include "app_globals.h"
+#include "printer_state.h"
 
 #include <spdlog/spdlog.h>
 
@@ -112,7 +113,8 @@ void ExtrusionPanel::setup_amount_buttons() {
 
 void ExtrusionPanel::setup_action_buttons() {
     lv_obj_t* overlay_content = lv_obj_find_by_name(panel_, "overlay_content");
-    if (!overlay_content) return;
+    if (!overlay_content)
+        return;
 
     // Extrude button
     btn_extrude_ = lv_obj_find_by_name(overlay_content, "btn_extrude");
@@ -234,7 +236,8 @@ void ExtrusionPanel::update_amount_buttons_visual() {
 
 void ExtrusionPanel::handle_amount_button(lv_obj_t* btn) {
     const char* name = lv_obj_get_name(btn);
-    if (!name) return;
+    if (!name)
+        return;
 
     if (std::strcmp(name, "amount_5mm") == 0) {
         selected_amount_ = 5;
@@ -315,7 +318,8 @@ void ExtrusionPanel::on_retract_clicked(lv_event_t* e) {
 void ExtrusionPanel::on_nozzle_temp_changed(lv_observer_t* observer, lv_subject_t* subject) {
     // Get user_data from observer (set when registering)
     auto* self = static_cast<ExtrusionPanel*>(lv_observer_get_user_data(observer));
-    if (!self) return;
+    if (!self)
+        return;
 
     // Get the new temperature value
     // The subject may be int or float depending on implementation
@@ -385,7 +389,6 @@ ExtrusionPanel& get_global_extrusion_panel() {
     }
     return *g_extrusion_panel;
 }
-
 
 // ============================================================================
 // GLOBAL INSTANCE (needed by main.cpp)

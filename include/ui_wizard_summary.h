@@ -99,7 +99,9 @@ class WizardSummaryStep {
     /**
      * @brief Get step name for logging
      */
-    const char* get_name() const { return "Wizard Summary"; }
+    const char* get_name() const {
+        return "Wizard Summary";
+    }
 
   private:
     // Screen instance

@@ -104,7 +104,9 @@ class WizardPrinterIdentifyStep {
     /**
      * @brief Get step name for logging
      */
-    const char* get_name() const { return "Wizard Printer"; }
+    const char* get_name() const {
+        return "Wizard Printer";
+    }
 
     /**
      * @brief Find printer type index by name

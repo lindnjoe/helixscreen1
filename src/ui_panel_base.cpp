@@ -3,9 +3,10 @@
 
 #include "ui_panel_base.h"
 
+#include "ui_theme.h"
+
 #include "moonraker_api.h"
 #include "printer_state.h"
-#include "ui_theme.h"
 
 #include <spdlog/spdlog.h>
 
@@ -31,13 +32,9 @@ PanelBase::~PanelBase() {
 // ============================================================================
 
 PanelBase::PanelBase(PanelBase&& other) noexcept
-    : printer_state_(other.printer_state_),
-      api_(other.api_),
-      panel_(other.panel_),
-      parent_screen_(other.parent_screen_),
-      subjects_initialized_(other.subjects_initialized_),
+    : printer_state_(other.printer_state_), api_(other.api_), panel_(other.panel_),
+      parent_screen_(other.parent_screen_), subjects_initialized_(other.subjects_initialized_),
       observers_(std::move(other.observers_)) {
-
     // Clear source's state to prevent double-cleanup
     other.api_ = nullptr;
     other.panel_ = nullptr;

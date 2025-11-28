@@ -1179,8 +1179,7 @@ bool parse_metadata_line(const std::string& line, GCodeHeaderMetadata& metadata)
         metadata.slicer = value;
     } else if (key == "slicer_version") {
         metadata.slicer_version = value;
-    } else if (key == "estimated printing time" ||
-               key == "estimated printing time (normal mode)") {
+    } else if (key == "estimated printing time" || key == "estimated printing time (normal mode)") {
         // Parse time string like "2h 30m 15s", "36m 25s", or "45s"
         // Use explicit pattern matching based on what's in the string
         int hours = 0, minutes = 0, seconds = 0;

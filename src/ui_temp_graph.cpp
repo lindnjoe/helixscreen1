@@ -77,7 +77,7 @@ static int32_t temp_to_pixel_y(ui_temp_graph_t* graph, float temp) {
     // Map temperature to pixel position within content area (inverted for Y axis)
     // lv_map(value, in_min, in_max, out_min, out_max)
     int32_t content_y = chart_height - lv_map((int32_t)temp, (int32_t)graph->min_temp,
-                                               (int32_t)graph->max_temp, 0, chart_height);
+                                              (int32_t)graph->max_temp, 0, chart_height);
 
     // Add offset to convert from content-relative to object-relative coordinates
     return content_y + y_ofs;
@@ -85,7 +85,8 @@ static int32_t temp_to_pixel_y(ui_temp_graph_t* graph, float temp) {
 
 // Helper: Update all cursor positions (called on resize)
 static void update_all_cursor_positions(ui_temp_graph_t* graph) {
-    if (!graph) return;
+    if (!graph)
+        return;
 
     for (int i = 0; i < UI_TEMP_GRAPH_MAX_SERIES; i++) {
         ui_temp_series_meta_t* meta = &graph->series_meta[i];

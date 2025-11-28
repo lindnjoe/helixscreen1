@@ -67,20 +67,19 @@
  * ## After (6 lines):
  * ```cpp
  * void ui_panel_motion_init_subjects() {
- *     UI_SUBJECT_INIT_AND_REGISTER_STRING(pos_x_subject, pos_x_buf, "X:    --  mm", "motion_pos_x");
- *     UI_SUBJECT_INIT_AND_REGISTER_STRING(pos_y_subject, pos_y_buf, "Y:    --  mm", "motion_pos_y");
- *     UI_SUBJECT_INIT_AND_REGISTER_STRING(pos_z_subject, pos_z_buf, "Z:    --  mm", "motion_pos_z");
- *     spdlog::info("[Motion] Subjects initialized: X/Y/Z position displays");
+ *     UI_SUBJECT_INIT_AND_REGISTER_STRING(pos_x_subject, pos_x_buf, "X:    --  mm",
+ * "motion_pos_x"); UI_SUBJECT_INIT_AND_REGISTER_STRING(pos_y_subject, pos_y_buf, "Y:    --  mm",
+ * "motion_pos_y"); UI_SUBJECT_INIT_AND_REGISTER_STRING(pos_z_subject, pos_z_buf, "Z:    --  mm",
+ * "motion_pos_z"); spdlog::info("[Motion] Subjects initialized: X/Y/Z position displays");
  * }
  * ```
  */
 
 #pragma once
 
-#include <lvgl.h>
-
 #include <cstdio>
 #include <cstring>
+#include <lvgl.h>
 
 /**
  * @brief Initialize and register a string subject with the XML system
@@ -100,11 +99,11 @@
  * UI_SUBJECT_INIT_AND_REGISTER_STRING(temp_subject, temp_buf, "25°C", "temperature");
  * ```
  */
-#define UI_SUBJECT_INIT_AND_REGISTER_STRING(subject, buffer, initial_value, name)                      \
-    do {                                                                                               \
-        snprintf((buffer), sizeof(buffer), "%s", (initial_value));                                     \
-        lv_subject_init_string(&(subject), (buffer), nullptr, sizeof(buffer), (buffer));               \
-        lv_xml_register_subject(NULL, (name), &(subject));                                             \
+#define UI_SUBJECT_INIT_AND_REGISTER_STRING(subject, buffer, initial_value, name)                  \
+    do {                                                                                           \
+        snprintf((buffer), sizeof(buffer), "%s", (initial_value));                                 \
+        lv_subject_init_string(&(subject), (buffer), nullptr, sizeof(buffer), (buffer));           \
+        lv_xml_register_subject(NULL, (name), &(subject));                                         \
     } while (0)
 
 /**
@@ -122,10 +121,10 @@
  * UI_SUBJECT_INIT_AND_REGISTER_INT(count_subject, 0, "item_count");
  * ```
  */
-#define UI_SUBJECT_INIT_AND_REGISTER_INT(subject, initial_value, name)                                 \
-    do {                                                                                               \
-        lv_subject_init_int(&(subject), (initial_value));                                              \
-        lv_xml_register_subject(NULL, (name), &(subject));                                             \
+#define UI_SUBJECT_INIT_AND_REGISTER_INT(subject, initial_value, name)                             \
+    do {                                                                                           \
+        lv_subject_init_int(&(subject), (initial_value));                                          \
+        lv_xml_register_subject(NULL, (name), &(subject));                                         \
     } while (0)
 
 /**
@@ -143,10 +142,10 @@
  * UI_SUBJECT_INIT_AND_REGISTER_POINTER(widget_subject, nullptr, "active_widget");
  * ```
  */
-#define UI_SUBJECT_INIT_AND_REGISTER_POINTER(subject, initial_value, name)                             \
-    do {                                                                                               \
-        lv_subject_init_pointer(&(subject), (initial_value));                                          \
-        lv_xml_register_subject(NULL, (name), &(subject));                                             \
+#define UI_SUBJECT_INIT_AND_REGISTER_POINTER(subject, initial_value, name)                         \
+    do {                                                                                           \
+        lv_subject_init_pointer(&(subject), (initial_value));                                      \
+        lv_xml_register_subject(NULL, (name), &(subject));                                         \
     } while (0)
 
 /**
@@ -164,8 +163,8 @@
  * UI_SUBJECT_INIT_AND_REGISTER_COLOR(color_subject, lv_color_hex(0xFF0000), "accent_color");
  * ```
  */
-#define UI_SUBJECT_INIT_AND_REGISTER_COLOR(subject, initial_value, name)                               \
-    do {                                                                                               \
-        lv_subject_init_color(&(subject), (initial_value));                                            \
-        lv_xml_register_subject(NULL, (name), &(subject));                                             \
+#define UI_SUBJECT_INIT_AND_REGISTER_COLOR(subject, initial_value, name)                           \
+    do {                                                                                           \
+        lv_subject_init_color(&(subject), (initial_value));                                        \
+        lv_xml_register_subject(NULL, (name), &(subject));                                         \
     } while (0)

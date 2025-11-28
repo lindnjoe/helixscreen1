@@ -48,7 +48,8 @@ bool TipsManager::init(const std::string& tips_path) {
         // Validate required fields
         if (!data.contains("categories") || !data["categories"].is_object()) {
             NOTIFY_WARNING("Tips database format error");
-            LOG_ERROR_INTERNAL("[TipsManager] Invalid tips file: missing or invalid 'categories' field");
+            LOG_ERROR_INTERNAL(
+                "[TipsManager] Invalid tips file: missing or invalid 'categories' field");
             return false;
         }
 
@@ -56,8 +57,8 @@ bool TipsManager::init(const std::string& tips_path) {
         build_tips_cache();
 
         spdlog::debug("[TipsManager] Loaded {} tips from {} categories (version: {})",
-                     tips_cache.size(), data["categories"].size(),
-                     data.value("version", "unknown"));
+                      tips_cache.size(), data["categories"].size(),
+                      data.value("version", "unknown"));
 
         return true;
     } catch (const json::parse_error& e) {

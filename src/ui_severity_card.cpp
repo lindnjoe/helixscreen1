@@ -37,15 +37,15 @@ static const char* severity_to_color_const(const char* severity) {
  */
 static const char* severity_to_icon(const char* severity) {
     if (!severity || strcmp(severity, "info") == 0) {
-        return "\xEF\x81\x99";  // F059 - question-circle
+        return "\xEF\x81\x99"; // F059 - question-circle
     } else if (strcmp(severity, "error") == 0) {
-        return LV_SYMBOL_WARNING;  // F071 - exclamation-triangle
+        return LV_SYMBOL_WARNING; // F071 - exclamation-triangle
     } else if (strcmp(severity, "warning") == 0) {
-        return LV_SYMBOL_WARNING;  // F071 - exclamation-triangle
+        return LV_SYMBOL_WARNING; // F071 - exclamation-triangle
     } else if (strcmp(severity, "success") == 0) {
-        return LV_SYMBOL_OK;       // F00C - check
+        return LV_SYMBOL_OK; // F00C - check
     }
-    return "\xEF\x81\x99";  // F059 - question-circle
+    return "\xEF\x81\x99"; // F059 - question-circle
 }
 
 /**
@@ -81,7 +81,7 @@ static void severity_card_xml_apply(lv_xml_parser_state_t* state, const char** a
     }
 
     // Extract severity attribute from attrs
-    const char* severity = "info";  // default
+    const char* severity = "info"; // default
     for (int i = 0; attrs[i]; i += 2) {
         if (strcmp(attrs[i], "severity") == 0) {
             severity = attrs[i + 1];

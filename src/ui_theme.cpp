@@ -23,11 +23,12 @@
 
 #include "ui_theme.h"
 
-#include "helix_theme.h"
 #include "ui_error_reporting.h"
+
+#include "helix_theme.h"
 #include "lvgl/lvgl.h"
-#include "lvgl/src/xml/lv_xml.h"
 #include "lvgl/src/libs/expat/expat.h"
+#include "lvgl/src/xml/lv_xml.h"
 
 #include <spdlog/spdlog.h>
 
@@ -56,13 +57,14 @@ lv_color_t ui_theme_parse_color(const char* hex_str) {
 
 // Expat callback data for collecting color base names with _light suffix
 struct ColorParserData {
-    std::vector<std::string> light_color_bases;  // Base names (without _light suffix)
+    std::vector<std::string> light_color_bases; // Base names (without _light suffix)
 };
 
 // Expat element start handler - finds <color name="xxx_light"> elements
 static void XMLCALL color_element_start(void* user_data, const XML_Char* name,
                                         const XML_Char** attrs) {
-    if (strcmp(name, "color") != 0) return;
+    if (strcmp(name, "color") != 0)
+        return;
 
     ColorParserData* data = static_cast<ColorParserData*>(user_data);
 
@@ -112,8 +114,7 @@ static void ui_theme_register_color_pairs(lv_xml_component_scope_t* scope, bool 
     XML_SetElementHandler(parser, color_element_start, nullptr);
 
     if (XML_Parse(parser, xml_content.c_str(), xml_content.size(), XML_TRUE) == XML_STATUS_ERROR) {
-        NOTIFY_ERROR("XML parse error in globals.xml line {}: {}",
-                     XML_GetCurrentLineNumber(parser),
+        NOTIFY_ERROR("XML parse error in globals.xml line {}: {}", XML_GetCurrentLineNumber(parser),
                      XML_ErrorString(XML_GetErrorCode(parser)));
         XML_ParserFree(parser);
         return;
@@ -194,9 +195,9 @@ void ui_theme_register_responsive_padding(lv_display_t* display) {
         lv_xml_register_const(scope, "padding_tiny", padding_tiny);
         lv_xml_register_const(scope, "gap_normal", gap_normal);
 
-        spdlog::debug("[Theme] Responsive padding: {} ({}px) - normal={}, small={}, tiny={}, gap={}",
-                      size_label, greater_res, padding_normal, padding_small, padding_tiny,
-                      gap_normal);
+        spdlog::debug(
+            "[Theme] Responsive padding: {} ({}px) - normal={}, small={}, tiny={}, gap={}",
+            size_label, greater_res, padding_normal, padding_small, padding_tiny, gap_normal);
     } else {
         spdlog::warn("[Theme] Failed to get globals scope for padding constants");
     }
@@ -219,13 +220,12 @@ void ui_theme_init(lv_display_t* display, bool use_dark_mode_param) {
     ui_theme_register_color_pairs(scope, use_dark_mode);
 
     // Validate critical color pairs were registered (fail-fast if missing)
-    static const char* required_colors[] = {
-        "app_bg_color", "text_primary", "header_text", nullptr
-    };
+    static const char* required_colors[] = {"app_bg_color", "text_primary", "header_text", nullptr};
     for (const char** name = required_colors; *name != nullptr; ++name) {
         if (!lv_xml_get_const(nullptr, *name)) {
-            spdlog::critical("[Theme] FATAL: Missing required color pair {}_light/{}_dark in globals.xml",
-                             *name, *name);
+            spdlog::critical(
+                "[Theme] FATAL: Missing required color pair {}_light/{}_dark in globals.xml", *name,
+                *name);
             std::exit(EXIT_FAILURE);
         }
     }
