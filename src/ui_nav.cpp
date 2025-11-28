@@ -280,49 +280,35 @@ void ui_nav_wire_events(lv_obj_t* navbar) {
     lv_display_t* display = lv_display_get_default();
     int32_t screen_height = lv_display_get_vertical_resolution(display);
     uint16_t icon_scale; // 256 = 100%, 128 = 50%, etc.
-    lv_coord_t button_size;
-    lv_coord_t nav_padding;
     lv_coord_t nav_width;
 
     if (screen_height <= UI_SCREEN_TINY_H) {
-        // Tiny screens (320px): 42px buttons, 0px padding, 52px width
-        // Icons scaled to 60% (64px → 38px) to fit comfortably in 42px buttons
-        icon_scale = 154;
-        button_size = UI_NAV_BUTTON_SIZE_TINY;
-        nav_padding = UI_NAV_PADDING_TINY;
-        nav_width = UI_NAV_WIDTH_TINY;
-        spdlog::debug("Tiny nav sizing (h={}): width={}, buttons={}, padding={}, icon_scale={}",
-                      screen_height, nav_width, button_size, nav_padding, icon_scale);
-    } else if (screen_height <= UI_SCREEN_SMALL_H) {
-        // Small screens (480px): 60px buttons, 8px padding, 76px width
+        // Tiny screens (320px)
         // Icons scaled to 60% (64px → 38px)
         icon_scale = 154;
-        button_size = UI_NAV_BUTTON_SIZE_SMALL;
-        nav_padding = UI_NAV_PADDING_SMALL;
+        nav_width = UI_NAV_WIDTH_TINY;
+        spdlog::debug("Tiny nav sizing (h={}): width={}, icon_scale={}", screen_height, nav_width,
+                      icon_scale);
+    } else if (screen_height <= UI_SCREEN_SMALL_H) {
+        // Small screens (480px)
+        // Icons scaled to 60% (64px → 38px)
+        icon_scale = 154;
         nav_width = UI_NAV_WIDTH_SMALL;
-        spdlog::debug("Small nav sizing (h={}): width={}, buttons={}, padding={}", screen_height,
-                      nav_width, button_size, nav_padding);
+        spdlog::debug("Small nav sizing (h={}): width={}", screen_height, nav_width);
     } else if (screen_height <= UI_SCREEN_MEDIUM_H) {
-        // Medium screens (600px): 70px buttons, 12px padding, 94px width
+        // Medium screens (600px)
         icon_scale = 192;
-        button_size = UI_NAV_BUTTON_SIZE_MEDIUM;
-        nav_padding = UI_NAV_PADDING_MEDIUM;
         nav_width = UI_NAV_WIDTH_MEDIUM;
-        spdlog::debug("Medium nav sizing (h={}): width={}, buttons={}, padding={}", screen_height,
-                      nav_width, button_size, nav_padding);
+        spdlog::debug("Medium nav sizing (h={}): width={}", screen_height, nav_width);
     } else {
-        // Large screens (720px+): 70px buttons, 16px padding, 102px width
+        // Large screens (720px+)
         icon_scale = 256;
-        button_size = UI_NAV_BUTTON_SIZE_LARGE;
-        nav_padding = UI_NAV_PADDING_LARGE;
         nav_width = UI_NAV_WIDTH_LARGE;
-        spdlog::debug("Large nav sizing (h={}): width={}, buttons={}, padding={}", screen_height,
-                      nav_width, button_size, nav_padding);
+        spdlog::debug("Large nav sizing (h={}): width={}", screen_height, nav_width);
     }
 
     // Apply responsive width and padding to navbar container
     lv_obj_set_width(navbar, nav_width);
-    lv_obj_set_style_pad_all(navbar, nav_padding, LV_PART_MAIN);
 
     // Name-based widget lookup for navigation buttons and icons (order matches ui_panel_id_t enum)
     const char* button_names[] = {"nav_btn_home",     "nav_btn_print_select", "nav_btn_controls",
@@ -347,11 +333,8 @@ void ui_nav_wire_events(lv_obj_t* navbar) {
             continue;
         }
 
-        // Apply responsive sizing to button (touch target)
-        lv_obj_set_size(btn, button_size, button_size);
-
         // Apply responsive scaling to Material Design image
-        lv_image_set_scale(icon_widget, icon_scale);
+        // lv_image_set_scale(icon_widget, icon_scale);
 
         // Bind img_recolor to icon color subject
         lv_subject_add_observer_obj(&icon_color_subjects[i], icon_image_color_observer_cb,
@@ -593,21 +576,6 @@ void ui_nav_wire_status_icons(lv_obj_t* navbar) {
     lv_display_t* display = lv_display_get_default();
     int32_t screen_height = lv_display_get_vertical_resolution(display);
     uint16_t nav_icon_scale;
-    lv_coord_t button_size;
-
-    if (screen_height <= UI_SCREEN_TINY_H) {
-        nav_icon_scale = 154;
-        button_size = UI_NAV_BUTTON_SIZE_TINY;
-    } else if (screen_height <= UI_SCREEN_SMALL_H) {
-        nav_icon_scale = 154;
-        button_size = UI_NAV_BUTTON_SIZE_SMALL;
-    } else if (screen_height <= UI_SCREEN_MEDIUM_H) {
-        nav_icon_scale = 192;
-        button_size = UI_NAV_BUTTON_SIZE_MEDIUM;
-    } else {
-        nav_icon_scale = 256;
-        button_size = UI_NAV_BUTTON_SIZE_LARGE;
-    }
 
     // Status icons are 25% smaller than nav icons
     uint16_t status_icon_scale = (nav_icon_scale * 3) / 4;
@@ -629,13 +597,10 @@ void ui_nav_wire_status_icons(lv_obj_t* navbar) {
             continue;
         }
 
-        // Apply responsive sizing to button
-        lv_obj_set_size(btn, button_size, button_size);
-
         // Apply responsive scaling to icon image (25% smaller than nav icons)
         if (lv_obj_check_type(icon_widget, &lv_image_class)) {
-            lv_image_set_scale(icon_widget, status_icon_scale);
-            // NOTE: Don't set colors here - ui_status_bar_init() handles reactive coloring
+            // lv_image_set_scale(icon_widget, status_icon_scale);
+            //  NOTE: Don't set colors here - ui_status_bar_init() handles reactive coloring
         }
 
         // Make icon non-clickable so clicks pass through to button
@@ -645,7 +610,7 @@ void ui_nav_wire_status_icons(lv_obj_t* navbar) {
         // Make button clickable
         lv_obj_add_flag(btn, LV_OBJ_FLAG_CLICKABLE);
 
-        spdlog::debug("Status icon {} wired: scale={} (75% of nav), button_size={}",
-                      button_names[i], status_icon_scale, button_size);
+        spdlog::debug("Status icon {} wired: scale={} (75% of nav)", button_names[i],
+                      status_icon_scale);
     }
 }

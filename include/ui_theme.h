@@ -68,24 +68,6 @@
 // Opacity constants (matching globals.xml values)
 #define UI_DISABLED_OPA 128 // disabled_opa - 50% opacity for disabled/dimmed elements
 
-// Responsive navigation bar sizing (applied in C++ based on screen height)
-// Tiny screens (320px): 42px buttons, 0px padding
-// With space_evenly: 6×42 = 252px buttons, 320 - 252 = 68px for 7 gaps (~9.7px each)
-#define UI_NAV_BUTTON_SIZE_TINY 42
-#define UI_NAV_PADDING_TINY 0
-
-// Small screens (480px): 60px buttons, 8px padding = 6×60 + 2×8 = 376px total
-#define UI_NAV_BUTTON_SIZE_SMALL 60
-#define UI_NAV_PADDING_SMALL 8
-
-// Medium screens (600px): 70px buttons, 12px padding
-#define UI_NAV_BUTTON_SIZE_MEDIUM 70
-#define UI_NAV_PADDING_MEDIUM 12
-
-// Large screens (720px+): 70px buttons, 16px padding
-#define UI_NAV_BUTTON_SIZE_LARGE 70
-#define UI_NAV_PADDING_LARGE 16
-
 // Responsive navigation bar width (applied in C++ based on screen size)
 #define UI_NAV_WIDTH_TINY 64   // Tiny screens: 42px button + margins
 #define UI_NAV_WIDTH_SMALL 76  // Small screens: 60px button + 8px padding each side
