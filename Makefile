@@ -382,7 +382,9 @@ help:
 	echo "  $${G}format-staged$${X}    - Auto-format only staged files (pre-commit)"; \
 	echo "  $${G}check-deps$${X}       - Verify all dependencies are installed"; \
 	echo "  $${G}install-deps$${X}     - Auto-install missing dependencies (interactive)"; \
-	echo "  $${G}apply-patches$${X}    - Apply LVGL patches"; \
+	echo "  $${G}apply-patches$${X}    - Apply LVGL patches (idempotent)"; \
+	echo "  $${G}reset-patches$${X}    - Reset patched files to upstream state"; \
+	echo "  $${G}reapply-patches$${X}  - Force reapply all patches (reset + apply)"; \
 	echo "  $${G}generate-fonts$${X}   - Regenerate FontAwesome fonts from package.json"; \
 	echo "  $${G}icon$${X}             - Generate macOS .icns icon from logo"; \
 	echo "  $${G}material-icons-list$${X} - List all registered Material Design icons"; \

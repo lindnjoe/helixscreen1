@@ -4,6 +4,30 @@
 # HelixScreen UI Prototype - Upstream Patch Management Module
 # Handles automatic application of patches to LVGL and other dependencies
 
+# Files modified by LVGL patches (used by reset-patches)
+LVGL_PATCHED_FILES := \
+	src/drivers/sdl/lv_sdl_window.c \
+	src/themes/default/lv_theme_default.c \
+	src/xml/parsers/lv_xml_image_parser.c \
+	src/xml/lv_xml_style.c
+
+# Reset all patched files in LVGL submodule to upstream state
+reset-patches:
+	$(ECHO) "$(YELLOW)Resetting LVGL patches to upstream state...$(RESET)"
+	$(Q)for file in $(LVGL_PATCHED_FILES); do \
+		if ! git -C $(LVGL_DIR) diff --quiet $$file 2>/dev/null; then \
+			echo "$(YELLOW)→ Resetting:$(RESET) $$file"; \
+			git -C $(LVGL_DIR) checkout $$file; \
+		else \
+			echo "$(DIM)  (clean) $$file$(RESET)"; \
+		fi \
+	done
+	$(ECHO) "$(GREEN)✓ All LVGL patches reset$(RESET)"
+
+# Force reapply all patches (reset first, then apply)
+reapply-patches: reset-patches apply-patches
+	$(ECHO) "$(GREEN)✓ All patches reapplied$(RESET)"
+
 # Apply LVGL patches if not already applied
 apply-patches:
 	$(ECHO) "$(CYAN)Checking LVGL patches...$(RESET)"
