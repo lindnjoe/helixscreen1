@@ -1,6 +1,6 @@
 # LVGL 9 XML UI Prototype - Development Roadmap
 
-**Last Updated:** 2025-11-29
+**Last Updated:** 2025-11-29 (Evening)
 
 ---
 
@@ -261,13 +261,19 @@
   - Reactive tab switching
   - File list updates per storage source
 
-- [x] **Print Status Panel** ✅ COMPLETE (2025-11-18)
+- [x] **Print Status Panel** ✅ COMPLETE (2025-11-18, enhanced 2025-11-29)
   - ✅ Progress bar with real Moonraker data
   - ✅ Print time/remaining time with reactive updates
   - ✅ Bed/nozzle temperatures with live updates from printer
   - ✅ Pause/Resume/Cancel buttons (wired to Moonraker API)
   - ✅ Wired to Print button on file detail view
   - ✅ Responsive flex layout (fixed previous overlap issues)
+  - ✅ **Exclude Object support** (2025-11-29):
+    - Long-press object in G-code viewer to exclude
+    - Confirmation modal before exclusion
+    - 5-second undo window with toast notification
+    - Bidirectional sync with Klipper EXCLUDE_OBJECT
+    - Visual indication (red/strikethrough) in renderer
 
 - [ ] **Filament Panel** - Filament management
   - Load/unload controls
@@ -280,11 +286,11 @@
   - Printer settings
   - System info
 
-- [ ] **Advanced/Tools Panel** - Advanced features
-  - Bed mesh visualization
-  - Console/logs
-  - File manager
-  - System controls
+- [~] **Advanced/Tools Panel** - Advanced features (PARTIAL)
+  - [x] Bed mesh visualization ✅ (3D TinyGL renderer, accessible from Settings)
+  - [ ] Console/logs
+  - [ ] File manager
+  - [ ] System controls
 
 ## 🎨 Phase 6: Enhanced UI Components (FUTURE)
 
@@ -303,6 +309,7 @@
 - [x] **Additional Modal Patterns** ✅ PARTIALLY COMPLETE
   - [x] ModalBase RAII class for safe lifecycle management (2025-11-17)
   - [x] Toast/snackbar notifications - floating design, top-right position (2025-11-27)
+  - [x] Toast with action button (undo pattern) - reactive visibility binding (2025-11-29)
   - [ ] Error message dialogs
   - [ ] Loading indicators
 
@@ -771,6 +778,9 @@ lv_subject_set_int(&safety_warning_subject_, show ? 1 : 0);
 
 | Feature | Phase | Date |
 |---------|-------|------|
+| **Exclude Object feature (touch-to-exclude with undo)** | 6, 8 | 2025-11-29 |
+| **Bed mesh deferred render fix (hidden panels)** | 6 | 2025-11-29 |
+| Deferred render pattern documentation | - | 2025-11-29 |
 | **ObserverGuard RAII pattern for panels** | 14 | 2025-11-29 |
 | **Unit tests for Moonraker mock motion commands** | 10 | 2025-11-29 |
 | Fix LVGL observer immediate-fire crash | 14 | 2025-11-29 |
