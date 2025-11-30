@@ -6,13 +6,20 @@
 
 ## 🎯 Current Priorities
 
-1. **Phase 8:** USB File Upload (detect USB drives, import G-code files)
-2. **Settings Panel:** Complete configuration UI
-3. **Phase 12:** Production readiness
+1. **Settings Panel:** Complete configuration UI
+2. **Phase 12:** Production readiness
+3. **Motors Disable:** Complete Phase 5.6 (Advanced Controls)
 
 **Completed Phases:** 1, 2, 3, 4, 5, 11, 13, 14
 **Mostly Complete:** 6, 7, 8, 15
 **In Progress:** 9, 10
+
+### ✅ USB Feature (Complete - 2025-11-30)
+- USB drive detection with pluggable backend (Linux/Mock)
+- Print-Select source tabs (Printer/USB segmented control)
+- Dynamic USB tab visibility (shown only when drive connected)
+- Toast notifications for USB insert/remove
+- Auto-switch to Printer source when USB removed
 
 ---
 
