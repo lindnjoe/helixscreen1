@@ -15,6 +15,7 @@
 #include "app_globals.h"
 #include "config.h"
 #include "runtime_config.h"
+#include "usb_manager.h"
 #include "lvgl/src/xml/lv_xml.h"
 #include "moonraker_api.h"
 #include "printer_state.h"
@@ -99,6 +100,8 @@ PrintSelectPanel::~PrintSelectPanel() {
     detail_view_widget_ = nullptr;
     confirmation_dialog_widget_ = nullptr;
     print_status_panel_widget_ = nullptr;
+    source_printer_btn_ = nullptr;
+    source_usb_btn_ = nullptr;
 
     // NOTE: Do NOT log here - spdlog may be destroyed first
 }
@@ -161,6 +164,9 @@ void PrintSelectPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
 
     // Wire up view toggle button
     lv_obj_add_event_cb(view_toggle_btn_, on_view_toggle_clicked_static, LV_EVENT_CLICKED, this);
+
+    // Setup source selector buttons (Printer/USB)
+    setup_source_buttons();
 
     // Wire up column header click handlers
     // We need to pack both 'this' and column index into user_data
@@ -1449,4 +1455,184 @@ void PrintSelectPanel::modify_and_print(const std::string& original_filename,
             LOG_ERROR_INTERNAL("[{}] Download failed for {}: {}", self->get_name(),
                                original_filename, error.message);
         });
+}
+
+// ============================================================================
+// USB Source Methods
+// ============================================================================
+
+void PrintSelectPanel::setup_source_buttons() {
+    // Find source selector buttons by name
+    source_printer_btn_ = lv_obj_find_by_name(panel_, "source_printer_btn");
+    source_usb_btn_ = lv_obj_find_by_name(panel_, "source_usb_btn");
+
+    if (!source_printer_btn_ || !source_usb_btn_) {
+        spdlog::warn("[{}] Source selector buttons not found", get_name());
+        return;
+    }
+
+    // Wire up click handlers
+    lv_obj_add_event_cb(source_printer_btn_, on_source_button_clicked_static, LV_EVENT_CLICKED,
+                        this);
+    lv_obj_add_event_cb(source_usb_btn_, on_source_button_clicked_static, LV_EVENT_CLICKED, this);
+
+    // Set initial state - Printer is selected by default
+    update_source_buttons();
+
+    spdlog::debug("[{}] Source selector buttons configured", get_name());
+}
+
+void PrintSelectPanel::update_source_buttons() {
+    if (!source_printer_btn_ || !source_usb_btn_) {
+        return;
+    }
+
+    // Apply LV_STATE_CHECKED to the active source button
+    // Make inactive button transparent for segmented control appearance
+    if (current_source_ == FileSource::PRINTER) {
+        lv_obj_add_state(source_printer_btn_, LV_STATE_CHECKED);
+        lv_obj_remove_state(source_usb_btn_, LV_STATE_CHECKED);
+        // Active tab: normal opacity, Inactive tab: transparent
+        lv_obj_set_style_bg_opa(source_printer_btn_, LV_OPA_COVER, LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(source_usb_btn_, LV_OPA_TRANSP, LV_PART_MAIN);
+    } else {
+        lv_obj_remove_state(source_printer_btn_, LV_STATE_CHECKED);
+        lv_obj_add_state(source_usb_btn_, LV_STATE_CHECKED);
+        // Active tab: normal opacity, Inactive tab: transparent
+        lv_obj_set_style_bg_opa(source_printer_btn_, LV_OPA_TRANSP, LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(source_usb_btn_, LV_OPA_COVER, LV_PART_MAIN);
+    }
+}
+
+void PrintSelectPanel::on_source_printer_clicked() {
+    if (current_source_ == FileSource::PRINTER) {
+        return; // Already on Printer source
+    }
+
+    spdlog::debug("[{}] Switching to Printer source", get_name());
+    current_source_ = FileSource::PRINTER;
+    update_source_buttons();
+
+    // Refresh Moonraker files
+    refresh_files();
+}
+
+void PrintSelectPanel::on_source_usb_clicked() {
+    if (current_source_ == FileSource::USB) {
+        return; // Already on USB source
+    }
+
+    spdlog::debug("[{}] Switching to USB source", get_name());
+    current_source_ = FileSource::USB;
+    update_source_buttons();
+
+    // Refresh USB files
+    refresh_usb_files();
+}
+
+void PrintSelectPanel::refresh_usb_files() {
+    usb_files_.clear();
+    file_list_.clear();
+
+    if (!usb_manager_) {
+        spdlog::warn("[{}] UsbManager not available", get_name());
+        update_empty_state();
+        return;
+    }
+
+    // Get connected USB drives
+    auto drives = usb_manager_->get_drives();
+    if (drives.empty()) {
+        spdlog::debug("[{}] No USB drives detected", get_name());
+        update_empty_state();
+        return;
+    }
+
+    // Scan first drive for G-code files
+    // TODO: If multiple drives, show a drive selector
+    usb_files_ = usb_manager_->scan_for_gcode(drives[0].mount_path);
+
+    spdlog::info("[{}] Found {} G-code files on USB drive '{}'", get_name(), usb_files_.size(),
+                 drives[0].label);
+
+    // Convert USB files to PrintFileData for display
+    for (const auto& usb_file : usb_files_) {
+        PrintFileData file_data;
+        file_data.filename = usb_file.filename;
+        file_data.file_size_bytes = usb_file.size_bytes;
+        file_data.modified_timestamp = static_cast<time_t>(usb_file.modified_time);
+        file_data.print_time_minutes = 0; // USB files don't have Moonraker metadata
+        file_data.filament_grams = 0.0f;
+        file_data.thumbnail_path = DEFAULT_PLACEHOLDER_THUMB;
+        file_data.is_dir = false;
+
+        // Format strings for display
+        if (file_data.file_size_bytes < 1024) {
+            file_data.size_str = std::to_string(file_data.file_size_bytes) + " B";
+        } else if (file_data.file_size_bytes < 1024 * 1024) {
+            file_data.size_str =
+                std::to_string(file_data.file_size_bytes / 1024) + " KB";
+        } else {
+            file_data.size_str =
+                std::to_string(file_data.file_size_bytes / (1024 * 1024)) + " MB";
+        }
+
+        // Format modified date
+        std::tm* tm_info = std::localtime(&file_data.modified_timestamp);
+        if (tm_info) {
+            char buffer[32];
+            std::strftime(buffer, sizeof(buffer), "%b %d, %H:%M", tm_info);
+            file_data.modified_str = buffer;
+        } else {
+            file_data.modified_str = "Unknown";
+        }
+
+        file_data.print_time_str = "--";
+        file_data.filament_str = "--";
+
+        file_list_.push_back(std::move(file_data));
+    }
+
+    // Apply sort and update view
+    apply_sort();
+
+    if (current_view_mode_ == PrintSelectViewMode::CARD) {
+        populate_card_view();
+    } else {
+        populate_list_view();
+    }
+
+    update_empty_state();
+}
+
+void PrintSelectPanel::populate_usb_card_view() {
+    // USB files use the same card view as Moonraker files
+    populate_card_view();
+}
+
+void PrintSelectPanel::populate_usb_list_view() {
+    // USB files use the same list view as Moonraker files
+    populate_list_view();
+}
+
+void PrintSelectPanel::set_usb_manager(UsbManager* manager) {
+    usb_manager_ = manager;
+
+    // If USB source is currently active, refresh the file list
+    if (current_source_ == FileSource::USB && usb_manager_) {
+        refresh_usb_files();
+    }
+
+    spdlog::debug("[{}] UsbManager set", get_name());
+}
+
+void PrintSelectPanel::on_source_button_clicked_static(lv_event_t* e) {
+    auto* self = static_cast<PrintSelectPanel*>(lv_event_get_user_data(e));
+    auto* target = static_cast<lv_obj_t*>(lv_event_get_target(e));
+
+    if (target == self->source_printer_btn_) {
+        self->on_source_printer_clicked();
+    } else if (target == self->source_usb_btn_) {
+        self->on_source_usb_clicked();
+    }
 }

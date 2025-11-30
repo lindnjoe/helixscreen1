@@ -7,6 +7,8 @@
 #include "gcode_file_modifier.h"
 #include "gcode_ops_detector.h"
 #include "ui_panel_base.h"
+#include "usb_backend.h"
+#include "usb_manager.h"
 
 #include <ctime>
 #include <memory>
@@ -62,6 +64,14 @@ enum class PrintSelectSortColumn { FILENAME, SIZE, MODIFIED, PRINT_TIME, FILAMEN
  * @brief Sort direction
  */
 enum class PrintSelectSortDirection { ASCENDING, DESCENDING };
+
+/**
+ * @brief File source for print select panel
+ */
+enum class FileSource {
+    PRINTER = 0, ///< Files from Moonraker (printer storage)
+    USB = 1      ///< Files from USB drive
+};
 
 /**
  * @brief File data structure for print files and directories
@@ -270,6 +280,13 @@ class PrintSelectPanel : public PanelBase {
      */
     void set_print_status_panel(lv_obj_t* panel);
 
+    /**
+     * @brief Set UsbManager for USB file access
+     *
+     * @param manager Pointer to UsbManager (may be nullptr)
+     */
+    void set_usb_manager(UsbManager* manager);
+
   private:
     //
     // === Constants ===
@@ -306,6 +323,10 @@ class PrintSelectPanel : public PanelBase {
     lv_obj_t* z_tilt_checkbox_ = nullptr;
     lv_obj_t* nozzle_clean_checkbox_ = nullptr;
 
+    // Source selector buttons (Printer/USB toggle)
+    lv_obj_t* source_printer_btn_ = nullptr;
+    lv_obj_t* source_usb_btn_ = nullptr;
+
     //
     // === Subject Buffers ===
     //
@@ -339,6 +360,11 @@ class PrintSelectPanel : public PanelBase {
     PrintSelectSortColumn current_sort_column_ = PrintSelectSortColumn::FILENAME;
     PrintSelectSortDirection current_sort_direction_ = PrintSelectSortDirection::ASCENDING;
     bool panel_initialized_ = false; ///< Guard flag for resize callback
+
+    // USB file source state
+    FileSource current_source_ = FileSource::PRINTER; ///< Current file source (Printer or USB)
+    std::vector<UsbGcodeFile> usb_files_;             ///< USB G-code files (when USB source active)
+    class UsbManager* usb_manager_ = nullptr;         ///< USB manager (injected or global)
 
     /// Command sequencer for pre-print operations (created lazily when print starts)
     std::unique_ptr<gcode::CommandSequencer> pre_print_sequencer_;
@@ -465,6 +491,52 @@ class PrintSelectPanel : public PanelBase {
     [[nodiscard]] std::vector<gcode::OperationType> collect_ops_to_disable() const;
 
     //
+    // === USB Source Methods ===
+    //
+
+    /**
+     * @brief Setup source selector buttons (Printer/USB)
+     *
+     * Finds buttons by name, wires up click handlers, sets initial state.
+     */
+    void setup_source_buttons();
+
+    /**
+     * @brief Update source button visual states (LV_STATE_CHECKED)
+     *
+     * Applies checked state to the active source button, removes from inactive.
+     */
+    void update_source_buttons();
+
+    /**
+     * @brief Handle Printer source button click
+     */
+    void on_source_printer_clicked();
+
+    /**
+     * @brief Handle USB source button click
+     */
+    void on_source_usb_clicked();
+
+    /**
+     * @brief Refresh USB file list
+     *
+     * Scans USB drives for G-code files and populates the view.
+     * Shows empty state if no USB drive detected.
+     */
+    void refresh_usb_files();
+
+    /**
+     * @brief Populate card view with USB files
+     */
+    void populate_usb_card_view();
+
+    /**
+     * @brief Populate list view with USB files
+     */
+    void populate_usb_list_view();
+
+    //
     // === Static Callbacks (trampolines) ===
     //
 
@@ -478,6 +550,7 @@ class PrintSelectPanel : public PanelBase {
     static void on_detail_backdrop_clicked_static(lv_event_t* e);
     static void on_confirm_delete_static(lv_event_t* e);
     static void on_cancel_delete_static(lv_event_t* e);
+    static void on_source_button_clicked_static(lv_event_t* e);
 };
 
 // ============================================================================

@@ -36,6 +36,7 @@
 #include "ui_nav.h"
 #include "ui_notification.h"
 #include "ui_panel_bed_mesh.h"
+#include "ui_panel_calibration_pid.h"
 #include "ui_panel_calibration_zoffset.h"
 #include "ui_panel_controls.h"
 #include "ui_panel_extrusion.h"
@@ -73,6 +74,8 @@
 #include "runtime_config.h"
 #include "gcode_file_modifier.h"
 #include "tips_manager.h"
+#include "usb_manager.h"
+#include "usb_backend_mock.h"
 
 #include <spdlog/spdlog.h>
 
@@ -179,6 +182,7 @@ static int SCREEN_HEIGHT = UI_SCREEN_SMALL_H;
 static MoonrakerClient* moonraker_client = nullptr;
 static MoonrakerAPI* moonraker_api = nullptr;
 static std::unique_ptr<TempControlPanel> temp_control_panel;
+static std::unique_ptr<UsbManager> usb_manager;
 
 // Panels that need MoonrakerAPI - stored as pointers for deferred set_api() call
 static PrintSelectPanel* print_select_panel = nullptr;
@@ -807,6 +811,7 @@ static void register_xml_components() {
     lv_xml_register_component_from_file("A:ui_xml/settings_panel.xml");
     // Calibration panels (overlays launched from settings)
     lv_xml_register_component_from_file("A:ui_xml/calibration_zoffset_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/calibration_pid_panel.xml");
     spdlog::debug("[XML] Registering bed_mesh_panel.xml...");
     auto ret = lv_xml_register_component_from_file("A:ui_xml/bed_mesh_panel.xml");
     spdlog::debug("[XML] bed_mesh_panel.xml registration returned: {}", (int)ret);
@@ -851,6 +856,23 @@ static void initialize_subjects() {
     // Panels that need MoonrakerAPI - store pointers for deferred set_api()
     print_select_panel = get_print_select_panel(get_printer_state(), nullptr);
     print_select_panel->init_subjects();
+
+    // Initialize UsbManager with mock backend in test mode
+    usb_manager = std::make_unique<UsbManager>(g_runtime_config.should_mock_usb());
+    if (usb_manager->start()) {
+        spdlog::info("UsbManager started (mock={})", g_runtime_config.should_mock_usb());
+        print_select_panel->set_usb_manager(usb_manager.get());
+
+        // In test mode, add demo drives with sample files
+        if (g_runtime_config.should_mock_usb()) {
+            if (auto* mock = dynamic_cast<UsbBackendMock*>(usb_manager->get_backend())) {
+                mock->add_demo_drives();
+                spdlog::debug("Added demo USB drives for test mode");
+            }
+        }
+    } else {
+        spdlog::warn("Failed to start UsbManager");
+    }
     print_status_panel = &get_global_print_status_panel();
     print_status_panel->init_subjects();
     motion_panel = &get_global_motion_panel();
@@ -1585,7 +1607,17 @@ int main(int argc, char** argv) {
             }
         }
         if (show_pid) {
-            spdlog::info("PID tuning panel not yet implemented");
+            spdlog::debug("Opening PID tuning overlay as requested by command-line flag");
+            lv_obj_t* pid_panel =
+                (lv_obj_t*)lv_xml_create(screen, "calibration_pid_panel", nullptr);
+            if (pid_panel) {
+                get_global_pid_cal_panel().setup(pid_panel, screen, moonraker_client);
+                ui_nav_push_overlay(pid_panel);
+                spdlog::debug("PID tuning overlay pushed to nav stack");
+            } else {
+                spdlog::error(
+                    "Failed to create PID tuning overlay from XML component 'calibration_pid_panel'");
+            }
         }
         if (show_keypad) {
             spdlog::debug("Opening keypad modal as requested by command-line flag");

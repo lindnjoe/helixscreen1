@@ -11,6 +11,7 @@
 #include "ui_event_safety.h"
 #include "ui_nav.h"
 #include "ui_panel_bed_mesh.h"
+#include "ui_panel_calibration_pid.h"
 #include "ui_panel_calibration_zoffset.h"
 
 #include <spdlog/spdlog.h>
@@ -26,6 +27,7 @@
 class BedMeshPanel;
 BedMeshPanel& get_global_bed_mesh_panel();
 ZOffsetCalibrationPanel& get_global_zoffset_cal_panel();
+PIDCalibrationPanel& get_global_pid_cal_panel();
 MoonrakerClient* get_moonraker_client();
 
 // ============================================================================
@@ -50,8 +52,7 @@ void SettingsPanel::init_subjects() {
     // Initialize SettingsManager subjects (for reactive binding)
     SettingsManager::instance().init_subjects();
 
-    // Initialize bed mesh panel subjects (may be lazily created later)
-    get_global_bed_mesh_panel().init_subjects();
+    // Note: BedMeshPanel subjects are initialized in main.cpp during startup
 
     subjects_initialized_ = true;
     spdlog::debug("[{}] Subjects initialized", get_name());
@@ -332,8 +333,33 @@ void SettingsPanel::handle_z_offset_clicked() {
 }
 
 void SettingsPanel::handle_pid_tuning_clicked() {
-    spdlog::debug("[{}] PID Tuning clicked (not yet implemented)", get_name());
-    // TODO: Open PID tuning panel
+    spdlog::debug("[{}] PID Tuning clicked - opening calibration panel", get_name());
+
+    // Create PID calibration panel on first access (lazy initialization)
+    if (!pid_cal_panel_ && parent_screen_) {
+        spdlog::debug("[{}] Creating PID calibration panel...", get_name());
+
+        // Create from XML
+        pid_cal_panel_ = static_cast<lv_obj_t*>(
+            lv_xml_create(parent_screen_, "calibration_pid_panel", nullptr));
+        if (pid_cal_panel_) {
+            // Setup event handlers (class-based API)
+            MoonrakerClient* client = get_moonraker_client();
+            get_global_pid_cal_panel().setup(pid_cal_panel_, parent_screen_, client);
+
+            // Initially hidden
+            lv_obj_add_flag(pid_cal_panel_, LV_OBJ_FLAG_HIDDEN);
+            spdlog::info("[{}] PID calibration panel created", get_name());
+        } else {
+            spdlog::error("[{}] Failed to create PID panel from XML", get_name());
+            return;
+        }
+    }
+
+    // Push PID panel onto navigation history and show it
+    if (pid_cal_panel_) {
+        ui_nav_push_overlay(pid_cal_panel_);
+    }
 }
 
 void SettingsPanel::handle_network_clicked() {

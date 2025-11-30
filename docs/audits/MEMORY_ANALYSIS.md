@@ -1,47 +1,43 @@
 # HelixScreen Memory Usage Analysis
-*Generated: 2025-10-27*
+*Last Updated: 2025-11-30*
 
 ## Executive Summary
 
 **Current Pattern:** Create-once, toggle visibility (all panels loaded at startup)
-**Memory Footprint:** ~58-83 MB RSS (Resident Set Size)
-**Heap Usage:** ~6-6.5 MB of actual UI allocations
+**Memory Footprint:** ~32-35 MB physical, ~68 MB RSS
+**Heap Usage:** ~12.6 MB of actual allocations
 **Leaks:** None detected
-**Recommendation:** ✅ **KEEP CURRENT APPROACH** - on-demand creation would save <2 MB
+**Recommendation:** ✅ **KEEP CURRENT APPROACH** - memory usage is excellent
 
 ---
 
-## Memory Profile Comparison
+## Memory Profile (2025-11-30)
 
 ### Normal Mode (All Panels Pre-Created)
 ```
-Physical Footprint:  58.8 MB
-RSS (Resident):      81.7 MB
-VSZ (Virtual):       393 GB (virtual address space, not real)
-Heap Allocations:    32,620 nodes
-Allocated Data:      6.4 MB
-Peak Memory:         584.7 MB (during initialization/screenshot)
+Physical Footprint:  32.6 MB
+Physical Peak:       36.2 MB
+RSS (Resident):      68 MB
+VSZ (Virtual):       ~35 GB (virtual address space, not real)
+Heap Allocations:    40,143 nodes
+Allocated Data:      12.6 MB
 ```
 
 ### Wizard Mode (On-Demand Panel Creation)
 ```
-Physical Footprint:  57.1 MB
-RSS (Resident):      83.2 MB
-VSZ (Virtual):       395 GB
-Heap Allocations:    32,751 nodes
-Allocated Data:      6.0 MB
-Peak Memory:         582.2 MB
+Physical Footprint:  32.3 MB
+Physical Peak:       34.9 MB
+RSS (Resident):      62 MB
+Heap Allocations:    ~38,000 nodes (estimated)
 ```
 
-### Memory Savings Analysis
+### Memory Comparison (Normal vs Wizard)
 ```
-Physical Footprint:  -1.7 MB (2.9% reduction)
-RSS:                 +1.5 MB (wizard uses MORE!)
-Heap Nodes:          +131 nodes (0.4% increase)
-Allocated Data:      -0.4 MB (6.2% reduction)
+Physical Footprint:  -0.3 MB (negligible)
+RSS:                 -6 MB (wizard uses slightly less)
 ```
 
-**KEY FINDING:** The wizard (dynamic creation) uses **MORE memory** in some metrics, not less. The difference is negligible (<2 MB in all cases).
+**KEY FINDING:** Both modes use approximately the same memory. The create-once pattern has no meaningful memory penalty.
 
 ---
 
@@ -50,39 +46,29 @@ Allocated Data:      -0.4 MB (6.2% reduction)
 ### Where the Memory Goes
 
 **Framework Overhead (Majority):**
-- LVGL runtime: ~15-20 MB
-- SDL2 graphics: ~32 MB (IOAccelerator)
-- System libraries: ~560 MB TEXT (shared, not unique)
-- CoreGraphics/CoreAnimation: ~1-2 MB
-- Total Framework: ~50-55 MB
+- LVGL runtime: ~10-15 MB
+- SDL2 graphics: ~10-15 MB
+- System libraries: shared, not counted in physical footprint
+- Total Framework: ~25-30 MB
 
-**Your UI Panels (Minority):**
-- All XML panels combined: ~6.4 MB
+**UI Panels:**
+- All XML panels + overlays + wizard: ~12.6 MB heap
 - Individual panel estimate: ~400-800 KB each
-- Main panels (6): ~2-4 MB
-- Overlay panels (4): ~1-2 MB
-- Wizard panels (8): ~2-3 MB
 
-**Graphics Buffers:**
-- IOSurface: 3.1 MB
-- IOAccelerator: 3.7 MB (GPU textures)
-- Screenshot buffer: ~2.5 MB (800×480×4 bytes)
-
-### Heap Statistics Detail
+### Heap Statistics Detail (2025-11-30)
 
 ```
 Allocation Size Distribution:
-- 32-byte objects: 9,930 instances (common for LVGL widgets)
-- 48-byte objects: 6,679 instances
-- 64-byte objects: 5,061 instances
-- 128-byte objects: 1,195 instances
+- 32-byte objects: 13,124 instances (LVGL widgets)
+- 48-byte objects: 6,617 instances
+- 64-byte objects: 5,454 instances
+- 80-byte objects: 3,773 instances
+- 128-byte objects: 1,419 instances
 - Larger objects: Sparse (fonts, images, buffers)
 
 Top Memory Consumers:
-- Generic allocations: 3.5 MB (LVGL internal state)
-- CFString objects: 144 KB (2,818 instances)
-- Objective-C classes: 406 KB (1,211 method caches)
-- Total fragmentation: ~48% (5.8 MB overhead from 6.4 MB allocated)
+- Non-object allocations: 9.3 MB (LVGL internal state)
+- CFString objects: 158 KB (3,076 instances)
 ```
 
 ---
@@ -105,15 +91,15 @@ Top Memory Consumers:
 
 ### When to Use Each Pattern
 
-**Create-Once (Recommended for HelixScreen):**
-- ✅ Small number of screens (6 main + 4 overlays)
+**Create-Once (Current HelixScreen approach):**
+- ✅ Moderate number of screens (~10 main + overlays + wizard)
 - ✅ State preservation is critical (temps, positions, settings)
 - ✅ Instant panel switching matters
-- ✅ Known memory ceiling (<100 MB total)
+- ✅ Known memory ceiling (~35 MB physical)
 - ✅ Target hardware has adequate RAM (>256 MB)
 
 **Dynamic Create/Delete (Use When):**
-- ❌ Dozens of panels (we have ~10)
+- ❌ Dozens of panels (we have ~15 total)
 - ❌ Panels with heavy resources (we use lightweight XML)
 - ❌ Panels rarely accessed (all panels are frequently used)
 - ❌ Running on <64 MB RAM (Raspberry Pi 3+ has 1 GB+)
@@ -125,33 +111,21 @@ Top Memory Consumers:
 ### 1. KEEP Current Create-Once Pattern ✅
 
 **Rationale:**
-- Saves <2 MB RAM (0.2% of available 1 GB on Pi)
+- Memory usage is excellent (~35 MB physical)
 - Instant panel switching (0ms vs 50-100ms)
 - State preserved automatically
 - No serialization complexity
 - Predictable memory usage
 - Zero risk of allocation failures at runtime
 
-### 2. Optimize Graphics Buffers Instead 💡
-
-The 584 MB peak during initialization suggests graphics allocations are the real concern:
-
-```cpp
-// Current: Double-buffered 800×480 ARGB (6.2 MB per buffer)
-// Optimize: Use RGB565 format (3.1 MB per buffer, 50% savings)
-lv_snapshot_take(screen, LV_COLOR_FORMAT_RGB565);
-```
-
-**Potential savings:** 3-6 MB (5-10% of total memory)
-
-### 3. Profile on Target Hardware 📊
+### 2. Future: Profile on Target Hardware 📊
 
 macOS SDL2 simulator uses different memory patterns than Linux framebuffer:
-- SDL2 uses GPU acceleration (32 MB IOAccelerator)
-- Framebuffer uses CPU rendering (no GPU overhead)
-- Test on actual Raspberry Pi to get real-world numbers
+- SDL2 uses GPU acceleration
+- Framebuffer uses CPU rendering (different overhead)
+- Test on actual Raspberry Pi for real-world numbers
 
-### 4. Consider Lazy Image Loading 🖼️
+### 3. Future: Consider Lazy Image Loading 🖼️
 
 If print thumbnails become numerous:
 ```cpp
@@ -164,14 +138,10 @@ If print thumbnails become numerous:
 
 ## Conclusion
 
-Your current architecture is **well-optimized** for the use case. The create-once pattern costs ~2 MB extra RAM but provides:
-- Instant responsiveness
-- State preservation
-- Predictable behavior
-- Simple lifecycle
+The current architecture is **well-optimized** for the use case. Physical memory footprint is ~35 MB, well within budget for any modern SBC.
 
 **Don't refactor unless:**
-- Running on <256 MB RAM hardware (unlikely for modern SBCs)
+- Running on <64 MB RAM hardware (extremely unlikely)
 - Need to support 50+ panels
 - Profiling shows OOM crashes on target hardware
 
@@ -184,26 +154,17 @@ Your current architecture is **well-optimized** for the use case. The create-onc
 make -j
 
 # Profile normal mode (all panels)
-./build/bin/helix-ui-proto -s small --panel home &
+./build/bin/helix-ui-proto -s small --panel home --test &
 PID=$!
-sleep 2
-ps -o pid,rss,vsz,comm -p $PID
-heap $PID | head -40
-vmmap --summary $PID
-leaks $PID
+sleep 4
+ps -o pid,rss,vsz -p $PID
+heap $PID | head -35
+vmmap --summary $PID | grep "Physical footprint"
 kill $PID
 
-# Profile wizard mode (dynamic creation)
-./build/bin/helix-ui-proto -s small --wizard &
+# Profile wizard mode
+./build/bin/helix-ui-proto -s small --wizard --test &
 PID=$!
-sleep 3
+sleep 4
 # ... same profiling commands
 ```
-
----
-
-**Next Steps:**
-1. ✅ No refactoring needed for memory reasons
-2. Consider RGB565 color format for screenshot buffers
-3. Profile on Raspberry Pi hardware
-4. Monitor memory if adding many large images/thumbnails
