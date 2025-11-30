@@ -2416,6 +2416,76 @@ See **docs/LV_SIZE_CONTENT_GUIDE.md** for complete technical details.
    - Print status: ui_panel_print_status.cpp:326
    - Step progress: ui_step_progress.cpp:300, 343
 
+#### Custom-Drawn Widgets in Hidden/Lazy Panels
+
+**Problem:** TinyGL or custom-drawn widgets (bed mesh, G-code viewer) don't render on first view when the panel uses lazy initialization with `lv_xml_create()` → `setup()` → `add_flag(HIDDEN)` → `push_overlay()`.
+
+**Root Cause:** When a panel is created while hidden, LVGL doesn't calculate layout until the panel becomes visible. Custom draw callbacks that check dimensions return early on 0x0, and `lv_obj_invalidate()` on hidden widgets doesn't schedule proper redraws.
+
+**Symptom:** Widget shows "No data" or blank on first click, but renders correctly on second click (after layout has been calculated).
+
+**Solution - Deferred Render Pattern:**
+
+```cpp
+// In widget data struct
+typedef struct {
+    // ... other fields ...
+    bool had_valid_size;      // Has widget ever had non-zero dimensions
+    bool mesh_data_pending;   // Data was set before widget had valid size
+} my_widget_data_t;
+
+// In set_data function
+bool my_widget_set_data(lv_obj_t* widget, /* data params */) {
+    my_widget_data_t* data = (my_widget_data_t*)lv_obj_get_user_data(widget);
+
+    // Store data in renderer...
+
+    // Check if widget has valid dimensions yet
+    int width = lv_obj_get_width(widget);
+    int height = lv_obj_get_height(widget);
+
+    if (width <= 0 || height <= 0) {
+        // Defer rendering until SIZE_CHANGED fires with valid dimensions
+        data->mesh_data_pending = true;
+        spdlog::info("Data loaded (deferred - widget {}x{})", width, height);
+    } else {
+        data->mesh_data_pending = false;
+    }
+
+    lv_obj_invalidate(widget);  // Will succeed if valid size, otherwise deferred
+    return true;
+}
+
+// In SIZE_CHANGED callback
+static void my_widget_size_changed_cb(lv_event_t* e) {
+    lv_obj_t* obj = lv_event_get_target_obj(e);
+    my_widget_data_t* data = (my_widget_data_t*)lv_obj_get_user_data(obj);
+
+    int width = lv_obj_get_width(obj);
+    int height = lv_obj_get_height(obj);
+
+    // First time we have valid dimensions?
+    if (data && width > 0 && height > 0 && !data->had_valid_size) {
+        data->had_valid_size = true;
+
+        if (data->mesh_data_pending) {
+            data->mesh_data_pending = false;
+            spdlog::info("Triggering deferred render after gaining valid size");
+        }
+    }
+
+    lv_obj_invalidate(obj);  // Now succeeds with valid dimensions
+}
+```
+
+**Reference Implementation:** See `ui_bed_mesh.cpp` for the complete pattern.
+
+**When This Applies:**
+- Custom widgets using `LV_EVENT_DRAW_POST` with dimension checks
+- TinyGL-based 3D renderers (bed mesh, G-code viewer)
+- Any widget that skips rendering when dimensions are 0x0
+- Lazy-initialized overlay panels (Settings → sub-panels)
+
 #### "No constant was found with name X"
 
 **Cause:** Constant not defined in globals.xml or not registered before component creation.
