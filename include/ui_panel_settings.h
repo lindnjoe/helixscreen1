@@ -81,6 +81,15 @@ class SettingsPanel : public PanelBase {
     // Dropdown
     lv_obj_t* display_sleep_dropdown_ = nullptr;
 
+    // Scroll settings sliders
+    lv_obj_t* scroll_throw_slider_ = nullptr;
+    lv_obj_t* scroll_throw_value_label_ = nullptr;
+    lv_obj_t* scroll_limit_slider_ = nullptr;
+    lv_obj_t* scroll_limit_value_label_ = nullptr;
+
+    // Restart prompt dialog
+    lv_obj_t* restart_prompt_dialog_ = nullptr;
+
     // Action rows (clickable)
     lv_obj_t* display_settings_row_ = nullptr;
     lv_obj_t* bed_mesh_row_ = nullptr;
@@ -109,8 +118,10 @@ class SettingsPanel : public PanelBase {
 
     void setup_toggle_handlers();
     void setup_dropdown();
+    void setup_scroll_sliders();
     void setup_action_handlers();
     void populate_info_rows();
+    void show_restart_prompt();
 
     //
     // === Event Handlers ===
@@ -121,6 +132,9 @@ class SettingsPanel : public PanelBase {
     void handle_led_light_changed(bool enabled);
     void handle_sounds_changed(bool enabled);
     void handle_completion_alert_changed(bool enabled);
+
+    void handle_scroll_throw_changed(int value);
+    void handle_scroll_limit_changed(int value);
 
     void handle_display_settings_clicked();
     void handle_bed_mesh_clicked();

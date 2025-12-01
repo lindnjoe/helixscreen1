@@ -231,7 +231,7 @@ static bool parse_command_line_args(
     bool& show_glyphs, bool& show_gradient_test, bool& force_wizard, int& wizard_step,
     bool& panel_requested, int& display_num, int& x_pos, int& y_pos,
     bool& screenshot_enabled, int& screenshot_delay_sec, int& timeout_sec,
-    int& verbosity, bool& dark_mode, bool& theme_requested, int& dpi) {
+    int& verbosity, int& dark_mode_cli, int& dpi) {
     // Parse arguments
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-s") == 0 || strcmp(argv[i], "--size") == 0) {
@@ -425,11 +425,9 @@ static bool parse_command_line_args(
                 return false;
             }
         } else if (strcmp(argv[i], "--dark") == 0) {
-            dark_mode = true;
-            theme_requested = true;
+            dark_mode_cli = 1;
         } else if (strcmp(argv[i], "--light") == 0) {
-            dark_mode = false;
-            theme_requested = true;
+            dark_mode_cli = 0;
         } else if (strcmp(argv[i], "--test") == 0) {
             g_runtime_config.test_mode = true;
         } else if (strcmp(argv[i], "--skip-splash") == 0) {
@@ -810,7 +808,9 @@ static void register_xml_components() {
     lv_xml_register_component_from_file("A:ui_xml/setting_dropdown_row.xml");
     lv_xml_register_component_from_file("A:ui_xml/setting_action_row.xml");
     lv_xml_register_component_from_file("A:ui_xml/setting_info_row.xml");
+    lv_xml_register_component_from_file("A:ui_xml/setting_slider_row.xml");
     lv_xml_register_component_from_file("A:ui_xml/settings_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/restart_prompt_dialog.xml");
     // Calibration panels (overlays launched from settings)
     lv_xml_register_component_from_file("A:ui_xml/calibration_zoffset_panel.xml");
     lv_xml_register_component_from_file("A:ui_xml/calibration_pid_panel.xml");
@@ -948,6 +948,16 @@ static bool init_lvgl() {
         lv_deinit(); // Clean up partial LVGL state
         return false;
     }
+
+    // Configure scroll behavior from config (improves touchpad scrolling feel)
+    // scroll_throw: momentum decay rate (1-99), higher = faster decay, default LVGL is 10
+    // scroll_limit: pixels before scrolling starts, lower = more responsive, default LVGL is 10
+    Config* cfg = Config::get_instance();
+    int scroll_throw = cfg->get<int>("/input/scroll_throw", 25);
+    int scroll_limit = cfg->get<int>("/input/scroll_limit", 5);
+    lv_indev_set_scroll_throw(indev_mouse, static_cast<uint8_t>(scroll_throw));
+    lv_indev_set_scroll_limit(indev_mouse, static_cast<uint8_t>(scroll_limit));
+    spdlog::debug("Scroll config: throw={}, limit={}", scroll_throw, scroll_limit);
 
     // Create keyboard input device (optional - enables physical keyboard input)
     lv_indev_t* indev_keyboard = lv_sdl_keyboard_create();
@@ -1263,9 +1273,8 @@ int main(int argc, char** argv) {
     int screenshot_delay_sec = 2;    // Screenshot delay in seconds (default: 2)
     int timeout_sec = 0;             // Auto-quit timeout in seconds (0 = disabled)
     int verbosity = 0;               // Verbosity level (0=warn, 1=info, 2=debug, 3=trace)
-    bool dark_mode = true; // Theme mode (true=dark, false=light, default until loaded from config)
-    bool theme_requested = false; // Track if user explicitly set theme via CLI
-    int dpi = -1;                 // Display DPI (-1 means use LV_DPI_DEF from lv_conf.h)
+    int dark_mode_cli = -1; // Theme from CLI: -1=not set, 0=light, 1=dark
+    int dpi = -1;           // Display DPI (-1 means use LV_DPI_DEF from lv_conf.h)
 
     // Parse command-line arguments (returns false for help/error)
     if (!parse_command_line_args(argc, argv, initial_panel, show_motion, show_nozzle_temp,
@@ -1274,8 +1283,7 @@ int main(int argc, char** argv) {
                                  show_gcode_test, show_bed_mesh, show_zoffset, show_pid,
                                  show_glyphs, show_gradient_test, force_wizard, wizard_step,
                                  panel_requested, display_num, x_pos, y_pos, screenshot_enabled,
-                                 screenshot_delay_sec, timeout_sec, verbosity, dark_mode,
-                                 theme_requested, dpi)) {
+                                 screenshot_delay_sec, timeout_sec, verbosity, dark_mode_cli, dpi)) {
         return 0; // Help shown or parse error
     }
 
@@ -1332,9 +1340,15 @@ int main(int argc, char** argv) {
     Config* config = Config::get_instance();
     config->init("helixconfig.json");
 
-    // Load theme preference from config if not set by command-line
-    if (!theme_requested) {
-        dark_mode = config->get<bool>("/dark_mode", true); // Default to dark if not in config
+    // Determine theme: CLI overrides config, config overrides default (dark)
+    bool dark_mode;
+    if (dark_mode_cli >= 0) {
+        // CLI explicitly set --dark or --light (temporary override, not saved)
+        dark_mode = (dark_mode_cli == 1);
+        spdlog::debug("Using CLI theme override: {}", dark_mode ? "dark" : "light");
+    } else {
+        // Load from config (or default to dark)
+        dark_mode = config->get<bool>("/dark_mode", true);
         spdlog::debug("Loaded theme preference from config: {}", dark_mode ? "dark" : "light");
     }
 
@@ -1402,9 +1416,7 @@ int main(int argc, char** argv) {
     ui_theme_init(display,
                   dark_mode); // dark_mode from command-line args (--dark/--light) or config
 
-    // Save theme preference to config for next launch
-    config->set<bool>("/dark_mode", dark_mode);
-    config->save();
+    // Theme preference is saved by the settings panel when user toggles dark mode
 
     // Apply theme background color to screen
     ui_theme_apply_bg_color(screen, "app_bg_color", LV_PART_MAIN);
