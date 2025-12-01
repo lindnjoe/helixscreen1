@@ -62,6 +62,8 @@ void Config::init(const std::string& config_path) {
                 {"default_printer", "default_printer"},
                 {"gcode_viewer",
                  {{"shading_model", "phong"}, {"tube_sides", 4}}}, // G-code viewer settings
+                {"input",
+                 {{"scroll_throw", 25}, {"scroll_limit", 5}}}, // Scroll momentum settings
                 {"printers",
                  {{"default_printer",
                    {{"moonraker_api_key", false},
@@ -208,6 +210,7 @@ void Config::reset_to_defaults() {
             {"wizard_completed", false}, // Force wizard to run again
             {"default_printer", "default_printer"},
             {"gcode_viewer", {{"shading_model", "phong"}, {"tube_sides", 4}}},
+            {"input", {{"scroll_throw", 25}, {"scroll_limit", 5}}},
             {"printers",
              {{"default_printer",
                {{"moonraker_api_key", false},

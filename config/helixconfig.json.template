@@ -73,5 +73,11 @@
     "_shading_comment": "Shading model for G-code 3D preview. Options: 'flat' (faceted, lowest cost), 'smooth' (Gouraud/per-vertex, default), 'phong' (per-pixel, highest quality)",
     "tube_sides": 4,
     "_tube_sides_comment": "Number of sides for tube cross-section. Options: 4 (diamond, fastest, default), 8 (octagonal, balanced), 16 (circular, highest quality, matches OrcaSlicer)"
+  },
+  "input": {
+    "scroll_throw": 25,
+    "scroll_limit": 5,
+    "_scroll_throw_comment": "Scroll momentum decay rate (1-99). Higher = faster decay. Default LVGL is 10, we use 25 for better touchpad feel.",
+    "_scroll_limit_comment": "Pixels of movement before scrolling starts. Lower = more responsive. Default LVGL is 10, we use 5."
   }
 }

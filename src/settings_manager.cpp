@@ -61,6 +61,16 @@ void SettingsManager::init_subjects() {
     bool completion = config->get<bool>("/completion_alert", true);
     lv_subject_init_int(&completion_alert_subject_, completion ? 1 : 0);
 
+    // Scroll throw (default: 25, range 5-50)
+    int scroll_throw = config->get<int>("/input/scroll_throw", 25);
+    scroll_throw = std::max(5, std::min(50, scroll_throw));
+    lv_subject_init_int(&scroll_throw_subject_, scroll_throw);
+
+    // Scroll limit (default: 5, range 1-20)
+    int scroll_limit = config->get<int>("/input/scroll_limit", 5);
+    scroll_limit = std::max(1, std::min(20, scroll_limit));
+    lv_subject_init_int(&scroll_limit_subject_, scroll_limit);
+
     // Register subjects with LVGL XML system for data binding
     lv_xml_register_subject(nullptr, "settings_dark_mode", &dark_mode_subject_);
     lv_xml_register_subject(nullptr, "settings_display_sleep", &display_sleep_subject_);
@@ -68,11 +78,13 @@ void SettingsManager::init_subjects() {
     lv_xml_register_subject(nullptr, "settings_led_enabled", &led_enabled_subject_);
     lv_xml_register_subject(nullptr, "settings_sounds_enabled", &sounds_enabled_subject_);
     lv_xml_register_subject(nullptr, "settings_completion_alert", &completion_alert_subject_);
+    lv_xml_register_subject(nullptr, "settings_scroll_throw", &scroll_throw_subject_);
+    lv_xml_register_subject(nullptr, "settings_scroll_limit", &scroll_limit_subject_);
 
     subjects_initialized_ = true;
     spdlog::info("[SettingsManager] Subjects initialized: dark_mode={}, sleep={}s, sounds={}, "
-                 "completion_alert={}",
-                 dark_mode, sleep_sec, sounds, completion);
+                 "completion_alert={}, scroll_throw={}, scroll_limit={}",
+                 dark_mode, sleep_sec, sounds, completion, scroll_throw, scroll_limit);
 }
 
 void SettingsManager::set_moonraker_client(MoonrakerClient* client) {
@@ -255,4 +267,52 @@ int SettingsManager::index_to_sleep_seconds(int index) {
         return SLEEP_OPTIONS[index];
     }
     return 600; // Default 10 minutes
+}
+
+// =============================================================================
+// INPUT SETTINGS (require restart)
+// =============================================================================
+
+int SettingsManager::get_scroll_throw() const {
+    return lv_subject_get_int(const_cast<lv_subject_t*>(&scroll_throw_subject_));
+}
+
+void SettingsManager::set_scroll_throw(int value) {
+    // Clamp to valid range (5-50)
+    int clamped = std::max(5, std::min(50, value));
+    spdlog::info("[SettingsManager] set_scroll_throw({})", clamped);
+
+    // 1. Update subject
+    lv_subject_set_int(&scroll_throw_subject_, clamped);
+
+    // 2. Persist
+    Config* config = Config::get_instance();
+    config->set<int>("/input/scroll_throw", clamped);
+    config->save();
+
+    // 3. Mark restart needed (this setting only takes effect on startup)
+    restart_pending_ = true;
+    spdlog::debug("[SettingsManager] Scroll throw set to {} (restart required)", clamped);
+}
+
+int SettingsManager::get_scroll_limit() const {
+    return lv_subject_get_int(const_cast<lv_subject_t*>(&scroll_limit_subject_));
+}
+
+void SettingsManager::set_scroll_limit(int value) {
+    // Clamp to valid range (1-20)
+    int clamped = std::max(1, std::min(20, value));
+    spdlog::info("[SettingsManager] set_scroll_limit({})", clamped);
+
+    // 1. Update subject
+    lv_subject_set_int(&scroll_limit_subject_, clamped);
+
+    // 2. Persist
+    Config* config = Config::get_instance();
+    config->set<int>("/input/scroll_limit", clamped);
+    config->save();
+
+    // 3. Mark restart needed (this setting only takes effect on startup)
+    restart_pending_ = true;
+    spdlog::debug("[SettingsManager] Scroll limit set to {} (restart required)", clamped);
 }

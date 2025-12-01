@@ -144,6 +144,51 @@ class SettingsManager {
     void set_led_enabled(bool enabled);
 
     // =========================================================================
+    // INPUT SETTINGS (require restart)
+    // =========================================================================
+
+    /**
+     * @brief Get scroll throw (momentum decay rate)
+     * @return Scroll throw value (1-99, higher = faster decay)
+     */
+    int get_scroll_throw() const;
+
+    /**
+     * @brief Set scroll throw (momentum decay rate)
+     *
+     * Persists to config. Requires restart to take effect.
+     *
+     * @param value Scroll throw (1-99)
+     */
+    void set_scroll_throw(int value);
+
+    /**
+     * @brief Get scroll limit (pixels before scrolling starts)
+     * @return Scroll limit in pixels
+     */
+    int get_scroll_limit() const;
+
+    /**
+     * @brief Set scroll limit (pixels before scrolling starts)
+     *
+     * Persists to config. Requires restart to take effect.
+     *
+     * @param value Scroll limit in pixels
+     */
+    void set_scroll_limit(int value);
+
+    /**
+     * @brief Check if restart is pending due to settings changes
+     * @return true if settings changed that require restart
+     */
+    bool is_restart_pending() const { return restart_pending_; }
+
+    /**
+     * @brief Clear restart pending flag
+     */
+    void clear_restart_pending() { restart_pending_ = false; }
+
+    // =========================================================================
     // NOTIFICATION SETTINGS (placeholders for future hardware)
     // =========================================================================
 
@@ -208,6 +253,12 @@ class SettingsManager {
         return &completion_alert_subject_;
     }
 
+    /** @brief Scroll throw subject (integer: 1-99) */
+    lv_subject_t* subject_scroll_throw() { return &scroll_throw_subject_; }
+
+    /** @brief Scroll limit subject (integer: pixels) */
+    lv_subject_t* subject_scroll_limit() { return &scroll_limit_subject_; }
+
     // =========================================================================
     // DISPLAY SLEEP OPTIONS (for dropdown population)
     // =========================================================================
@@ -247,12 +298,15 @@ class SettingsManager {
     lv_subject_t led_enabled_subject_;
     lv_subject_t sounds_enabled_subject_;
     lv_subject_t completion_alert_subject_;
+    lv_subject_t scroll_throw_subject_;
+    lv_subject_t scroll_limit_subject_;
 
     // External references
     MoonrakerClient* moonraker_client_ = nullptr;
 
     // State
     bool subjects_initialized_ = false;
+    bool restart_pending_ = false;
 };
 
 #endif // __HELIX_SETTINGS_MANAGER_H__

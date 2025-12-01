@@ -11,6 +11,7 @@
     - src: Material icon name (default: "mat_home")
     - size: Semantic size string - xs, sm, md, lg, xl (default: "xl")
     - variant: Color variant - primary, secondary, accent, disabled, none (default: none/no recoloring)
+    - color: Custom color override (e.g., "#header_text", "#FF0000") - takes precedence over variant
 
   Implementation:
     This component is backed by a C++ custom widget (ui_icon) that extends lv_image.
@@ -22,6 +23,7 @@
     <prop name="src" type="string" default="mat_home"/>
     <prop name="size" type="string" default="xl"/>
     <prop name="variant" type="string" default=""/>
+    <prop name="color" type="string" default=""/>
   </api>
   <consts>
     <!-- Size constants (width/height in pixels) -->

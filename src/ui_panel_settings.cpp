@@ -70,6 +70,7 @@ void SettingsPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
 
     // Setup all handlers and bindings
     setup_toggle_handlers();
+    setup_scroll_sliders();
     setup_action_handlers();
     populate_info_rows();
 
@@ -139,6 +140,84 @@ void SettingsPanel::setup_toggle_handlers() {
             lv_obj_add_event_cb(completion_alert_switch_, on_completion_alert_changed,
                                 LV_EVENT_VALUE_CHANGED, this);
             spdlog::debug("[{}]   ✓ Completion alert toggle", get_name());
+        }
+    }
+}
+
+void SettingsPanel::setup_scroll_sliders() {
+    auto& settings = SettingsManager::instance();
+
+    // === Scroll Throw (Momentum) Slider ===
+    lv_obj_t* scroll_throw_row = lv_obj_find_by_name(panel_, "row_scroll_throw");
+    if (scroll_throw_row) {
+        scroll_throw_slider_ = lv_obj_find_by_name(scroll_throw_row, "slider");
+        scroll_throw_value_label_ = lv_obj_find_by_name(scroll_throw_row, "value_label");
+
+        if (scroll_throw_slider_) {
+            // Set initial value from SettingsManager
+            int value = settings.get_scroll_throw();
+            lv_slider_set_value(scroll_throw_slider_, value, LV_ANIM_OFF);
+            if (scroll_throw_value_label_) {
+                lv_label_set_text_fmt(scroll_throw_value_label_, "%d", value);
+            }
+
+            // Store value label pointer for callback
+            lv_obj_set_user_data(scroll_throw_slider_, scroll_throw_value_label_);
+
+            // Wire up value change with lambda
+            lv_obj_add_event_cb(
+                scroll_throw_slider_,
+                [](lv_event_t* e) {
+                    auto* panel = static_cast<SettingsPanel*>(lv_event_get_user_data(e));
+                    auto* slider = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
+                    int value = lv_slider_get_value(slider);
+                    panel->handle_scroll_throw_changed(value);
+
+                    // Update label
+                    auto* label = static_cast<lv_obj_t*>(lv_obj_get_user_data(slider));
+                    if (label) {
+                        lv_label_set_text_fmt(label, "%d", value);
+                    }
+                },
+                LV_EVENT_VALUE_CHANGED, this);
+            spdlog::debug("[{}]   ✓ Scroll throw slider", get_name());
+        }
+    }
+
+    // === Scroll Limit (Sensitivity) Slider ===
+    lv_obj_t* scroll_limit_row = lv_obj_find_by_name(panel_, "row_scroll_limit");
+    if (scroll_limit_row) {
+        scroll_limit_slider_ = lv_obj_find_by_name(scroll_limit_row, "slider");
+        scroll_limit_value_label_ = lv_obj_find_by_name(scroll_limit_row, "value_label");
+
+        if (scroll_limit_slider_) {
+            // Set initial value from SettingsManager
+            int value = settings.get_scroll_limit();
+            lv_slider_set_value(scroll_limit_slider_, value, LV_ANIM_OFF);
+            if (scroll_limit_value_label_) {
+                lv_label_set_text_fmt(scroll_limit_value_label_, "%d", value);
+            }
+
+            // Store value label pointer for callback
+            lv_obj_set_user_data(scroll_limit_slider_, scroll_limit_value_label_);
+
+            // Wire up value change with lambda
+            lv_obj_add_event_cb(
+                scroll_limit_slider_,
+                [](lv_event_t* e) {
+                    auto* panel = static_cast<SettingsPanel*>(lv_event_get_user_data(e));
+                    auto* slider = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
+                    int value = lv_slider_get_value(slider);
+                    panel->handle_scroll_limit_changed(value);
+
+                    // Update label
+                    auto* label = static_cast<lv_obj_t*>(lv_obj_get_user_data(slider));
+                    if (label) {
+                        lv_label_set_text_fmt(label, "%d", value);
+                    }
+                },
+                LV_EVENT_VALUE_CHANGED, this);
+            spdlog::debug("[{}]   ✓ Scroll limit slider", get_name());
         }
     }
 }
@@ -265,6 +344,80 @@ void SettingsPanel::handle_sounds_changed(bool enabled) {
 void SettingsPanel::handle_completion_alert_changed(bool enabled) {
     spdlog::info("[{}] Completion alert toggled: {}", get_name(), enabled ? "ON" : "OFF");
     SettingsManager::instance().set_completion_alert(enabled);
+}
+
+void SettingsPanel::handle_scroll_throw_changed(int value) {
+    spdlog::info("[{}] Scroll throw changed: {}", get_name(), value);
+    SettingsManager::instance().set_scroll_throw(value);
+
+    // Show restart prompt if this is the first restart-required change
+    if (SettingsManager::instance().is_restart_pending()) {
+        show_restart_prompt();
+    }
+}
+
+void SettingsPanel::handle_scroll_limit_changed(int value) {
+    spdlog::info("[{}] Scroll limit changed: {}", get_name(), value);
+    SettingsManager::instance().set_scroll_limit(value);
+
+    // Show restart prompt if this is the first restart-required change
+    if (SettingsManager::instance().is_restart_pending()) {
+        show_restart_prompt();
+    }
+}
+
+void SettingsPanel::show_restart_prompt() {
+    // Only show once per session - check if dialog already exists and is visible
+    if (restart_prompt_dialog_ && !lv_obj_has_flag(restart_prompt_dialog_, LV_OBJ_FLAG_HIDDEN)) {
+        return; // Already showing
+    }
+
+    // Create restart prompt dialog on first access
+    if (!restart_prompt_dialog_ && parent_screen_) {
+        restart_prompt_dialog_ =
+            static_cast<lv_obj_t*>(lv_xml_create(parent_screen_, "restart_prompt_dialog", nullptr));
+        if (restart_prompt_dialog_) {
+            // Wire up Later button
+            lv_obj_t* later_btn = lv_obj_find_by_name(restart_prompt_dialog_, "dialog_later_btn");
+            if (later_btn) {
+                lv_obj_add_event_cb(
+                    later_btn,
+                    [](lv_event_t* e) {
+                        auto* self = static_cast<SettingsPanel*>(lv_event_get_user_data(e));
+                        if (self && self->restart_prompt_dialog_) {
+                            lv_obj_add_flag(self->restart_prompt_dialog_, LV_OBJ_FLAG_HIDDEN);
+                        }
+                    },
+                    LV_EVENT_CLICKED, this);
+            }
+
+            // Wire up Restart Now button
+            lv_obj_t* restart_btn =
+                lv_obj_find_by_name(restart_prompt_dialog_, "dialog_restart_btn");
+            if (restart_btn) {
+                lv_obj_add_event_cb(
+                    restart_btn,
+                    [](lv_event_t*) {
+                        spdlog::info("[SettingsPanel] User requested restart");
+                        // Exit the application - user will restart manually
+                        // In a real embedded system, this would trigger a system restart
+                        exit(0);
+                    },
+                    LV_EVENT_CLICKED, nullptr);
+            }
+
+            // Initially hidden
+            lv_obj_add_flag(restart_prompt_dialog_, LV_OBJ_FLAG_HIDDEN);
+            spdlog::debug("[{}] Restart prompt dialog created", get_name());
+        }
+    }
+
+    // Show the dialog
+    if (restart_prompt_dialog_) {
+        lv_obj_remove_flag(restart_prompt_dialog_, LV_OBJ_FLAG_HIDDEN);
+        // Clear pending flag so we don't show again until next change
+        SettingsManager::instance().clear_restart_pending();
+    }
 }
 
 void SettingsPanel::handle_display_settings_clicked() {

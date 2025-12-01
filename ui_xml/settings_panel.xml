@@ -15,6 +15,21 @@
     <!-- Display Settings (opens overlay for brightness + sleep timeout) -->
     <setting_action_row name="row_display_settings" label="Display Settings" icon="mat_light" description="Brightness and screen timeout"/>
     <!-- ================================================================== -->
+    <!-- INPUT SECTION -->
+    <!-- ================================================================== -->
+    <setting_section_header title="INPUT" icon="mat_fine_tune"/>
+
+    <!-- Scroll Momentum slider -->
+    <setting_slider_row name="row_scroll_throw" label="Scroll Momentum" icon="mat_fine_tune"
+                        description="Higher = faster deceleration"
+                        min="5" max="50" value="25"/>
+
+    <!-- Scroll Sensitivity slider -->
+    <setting_slider_row name="row_scroll_limit" label="Scroll Sensitivity" icon="mat_fine_tune"
+                        description="Lower = more responsive"
+                        min="1" max="20" value="5"/>
+
+    <!-- ================================================================== -->
     <!-- PRINTER SECTION -->
     <!-- ================================================================== -->
     <setting_section_header title="PRINTER" icon="mat_printer_3d"/>
