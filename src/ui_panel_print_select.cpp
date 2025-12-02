@@ -102,6 +102,7 @@ PrintSelectPanel::~PrintSelectPanel() {
     print_status_panel_widget_ = nullptr;
     source_printer_btn_ = nullptr;
     source_usb_btn_ = nullptr;
+    refresh_timer_ = nullptr; // Don't delete - LVGL timer system cleans up
 
     // NOTE: Do NOT log here - spdlog may be destroyed first
 }
@@ -436,9 +437,8 @@ void PrintSelectPanel::refresh_files() {
                                           self->file_list_[i].thumbnail_path);
                         }
 
-                        // Re-render views to show updated metadata
-                        self->populate_card_view();
-                        self->populate_list_view();
+                        // Schedule debounced view refresh (avoids O(n²) rebuilds)
+                        self->schedule_view_refresh();
 
                         // Also update detail view if this file is currently selected
                         if (strcmp(self->selected_filename_buffer_, filename.c_str()) == 0) {
@@ -679,6 +679,29 @@ CardDimensions PrintSelectPanel::calculate_card_dimensions() {
     spdlog::warn("[{}] No optimal card layout found, using fallback: {} columns", get_name(),
                  dims.num_columns);
     return dims;
+}
+
+void PrintSelectPanel::schedule_view_refresh() {
+    // If a timer is already pending, reset it (debounce)
+    if (refresh_timer_) {
+        lv_timer_reset(refresh_timer_);
+        return;
+    }
+
+    // Create a one-shot timer to refresh views after debounce period
+    refresh_timer_ = lv_timer_create(
+        [](lv_timer_t* timer) {
+            auto* self = static_cast<PrintSelectPanel*>(lv_timer_get_user_data(timer));
+            self->refresh_timer_ = nullptr; // Clear before callback (timer auto-deletes)
+
+            // Now actually refresh the views
+            self->populate_card_view();
+            self->populate_list_view();
+        },
+        REFRESH_DEBOUNCE_MS, this);
+
+    // Make it a one-shot timer
+    lv_timer_set_repeat_count(refresh_timer_, 1);
 }
 
 void PrintSelectPanel::populate_card_view() {

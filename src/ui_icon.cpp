@@ -217,7 +217,7 @@ static void ui_icon_xml_apply(lv_xml_parser_state_t* state, const char** attrs) 
             const void* img_src = lv_xml_get_image(NULL, value);
             if (img_src) {
                 lv_image_set_src(obj, img_src);
-                spdlog::debug("[Icon] Set icon source: '{}'", value);
+                spdlog::trace("[Icon] Set icon source: '{}'", value);
             } else {
                 spdlog::warn("[Icon] Icon image '{}' not found in XML registry", value);
             }

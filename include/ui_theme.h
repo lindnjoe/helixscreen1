@@ -110,6 +110,16 @@ void ui_theme_init(lv_display_t* display, bool use_dark_mode);
 void ui_theme_register_responsive_padding(lv_display_t* display);
 
 /**
+ * @brief Register responsive font constants
+ *
+ * Selects font sizes based on screen size breakpoints.
+ * Called automatically by ui_theme_init().
+ *
+ * @param display LVGL display instance
+ */
+void ui_theme_register_responsive_fonts(lv_display_t* display);
+
+/**
  * @brief Toggle between light and dark themes
  *
  * Switches theme mode, re-registers XML color constants, updates theme

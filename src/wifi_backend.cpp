@@ -23,6 +23,7 @@
 
 #include "wifi_backend.h"
 
+#include "runtime_config.h"
 #include "spdlog/spdlog.h"
 #include "wifi_backend_mock.h"
 
@@ -33,6 +34,14 @@
 #endif
 
 std::unique_ptr<WifiBackend> WifiBackend::create() {
+    // In test mode, always use mock unless --real-wifi was specified
+    if (get_runtime_config().should_mock_wifi()) {
+        spdlog::info("[WifiBackend] Test mode: using mock backend");
+        auto mock = std::make_unique<WifiBackendMock>();
+        mock->start();
+        return mock;
+    }
+
 #ifdef __APPLE__
     // macOS: Try CoreWLAN backend first, fallback to mock if unavailable
     spdlog::debug("[WifiBackend] Attempting CoreWLAN backend for macOS");

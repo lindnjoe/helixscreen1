@@ -146,8 +146,20 @@
     <px name="gap_card" value="4"/>
     <!-- Compact gap for card content (label + value pairs) -->
     <!-- Typography - 3 semantic font sizes for design system consistency -->
+    <!-- font_heading variants (section headings, large text) -->
+    <string name="font_heading_small" value="montserrat_20"/>
+    <string name="font_heading_medium" value="montserrat_26"/>
+    <string name="font_heading_large" value="montserrat_28"/>
     <string name="font_heading" value="montserrat_24"/>
+    <!-- font_body variants (standard body text) -->
+    <string name="font_body_small" value="montserrat_14"/>
+    <string name="font_body_medium" value="montserrat_18"/>
+    <string name="font_body_large" value="montserrat_20"/>
     <string name="font_body" value="montserrat_16"/>
+    <!-- font_small variants (hints, helpers, chart labels) -->
+    <string name="font_small_small" value="montserrat_10"/>
+    <string name="font_small_medium" value="montserrat_14"/>
+    <string name="font_small_large" value="montserrat_14"/>
     <string name="font_small" value="montserrat_12"/>
     <!-- Theme colors -->
     <color name="primary_color" value="#AD2724"/>

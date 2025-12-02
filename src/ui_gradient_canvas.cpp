@@ -250,7 +250,7 @@ static void ui_gradient_canvas_xml_apply(lv_xml_parser_state_t* state, const cha
         // Note: No explicit invalidate needed - LVGL will redraw when buffer is accessed
         // Calling lv_obj_invalidate() here can trigger assertion if called during render
 
-        spdlog::debug("[GradientCanvas] Applied (start=#{:02X}{:02X}{:02X}, "
+        spdlog::trace("[GradientCanvas] Applied (start=#{:02X}{:02X}{:02X}, "
                       "end=#{:02X}{:02X}{:02X}, dither={})",
                       data->start_r, data->start_g, data->start_b, data->end_r, data->end_g,
                       data->end_b, data->dither);

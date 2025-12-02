@@ -212,6 +212,61 @@ void ui_theme_register_responsive_padding(lv_display_t* display) {
     }
 }
 
+void ui_theme_register_responsive_fonts(lv_display_t* display) {
+    // Use same breakpoints as padding for consistency
+    int32_t hor_res = lv_display_get_horizontal_resolution(display);
+    int32_t ver_res = lv_display_get_vertical_resolution(display);
+    int32_t greater_res = LV_MAX(hor_res, ver_res);
+
+    const char* size_suffix;
+    const char* size_label;
+
+    if (greater_res <= UI_BREAKPOINT_SMALL_MAX) {
+        size_suffix = "_small";
+        size_label = "SMALL";
+    } else if (greater_res <= UI_BREAKPOINT_MEDIUM_MAX) {
+        size_suffix = "_medium";
+        size_label = "MEDIUM";
+    } else {
+        size_suffix = "_large";
+        size_label = "LARGE";
+    }
+
+    char variant_name[64];
+    lv_xml_component_scope_t* scope = lv_xml_component_get_scope("globals");
+    if (!scope) {
+        spdlog::warn("[Theme] Failed to get globals scope for font constants");
+        return;
+    }
+
+    // Register font_heading variant
+    snprintf(variant_name, sizeof(variant_name), "font_heading%s", size_suffix);
+    const char* font_heading = lv_xml_get_const(NULL, variant_name);
+    if (font_heading) {
+        lv_xml_register_const(scope, "font_heading", font_heading);
+    }
+
+    // Register font_body variant
+    snprintf(variant_name, sizeof(variant_name), "font_body%s", size_suffix);
+    const char* font_body = lv_xml_get_const(NULL, variant_name);
+    if (font_body) {
+        lv_xml_register_const(scope, "font_body", font_body);
+    }
+
+    // Register font_small variant
+    snprintf(variant_name, sizeof(variant_name), "font_small%s", size_suffix);
+    const char* font_small = lv_xml_get_const(NULL, variant_name);
+    if (font_small) {
+        lv_xml_register_const(scope, "font_small", font_small);
+    }
+
+    spdlog::debug("[Theme] Responsive fonts: {} ({}px) - heading={}, body={}, small={}",
+                  size_label, greater_res,
+                  font_heading ? font_heading : "default",
+                  font_body ? font_body : "default",
+                  font_small ? font_small : "default");
+}
+
 void ui_theme_init(lv_display_t* display, bool use_dark_mode_param) {
     theme_display = display;
     use_dark_mode = use_dark_mode_param;
@@ -297,8 +352,9 @@ void ui_theme_init(lv_display_t* display, bool use_dark_mode_param) {
         spdlog::debug("[Theme] Colors: primary={}, secondary={}, screen={}, card={}, grey={}",
                       primary_str, secondary_str, screen_bg_str, card_bg_str, theme_grey_str);
 
-        // Register responsive padding constants AFTER theme init
+        // Register responsive constants AFTER theme init
         ui_theme_register_responsive_padding(display);
+        ui_theme_register_responsive_fonts(display);
     } else {
         spdlog::error("[Theme] Failed to initialize HelixScreen theme");
     }
@@ -421,7 +477,7 @@ lv_color_t ui_theme_get_color(const char* base_name) {
         const char* base_str = lv_xml_get_const(nullptr, base_name);
         if (base_str) {
             lv_color_t color = ui_theme_parse_color(base_str);
-            spdlog::debug("[Theme] ui_theme_get_color({}) = {} (0x{:06X}) (static, no theme variants)",
+            spdlog::trace("[Theme] ui_theme_get_color({}) = {} (0x{:06X}) (static, no theme variants)",
                           base_name, base_str, lv_color_to_u32(color) & 0xFFFFFF);
             return color;
         }
@@ -435,7 +491,7 @@ lv_color_t ui_theme_get_color(const char* base_name) {
     const char* selected_str = use_dark_mode ? dark_str : light_str;
     lv_color_t color = ui_theme_parse_color(selected_str);
 
-    spdlog::debug("[Theme] ui_theme_get_color({}) = {} (0x{:06X}) ({} mode)", base_name,
+    spdlog::trace("[Theme] ui_theme_get_color({}) = {} (0x{:06X}) ({} mode)", base_name,
                   selected_str, lv_color_to_u32(color) & 0xFFFFFF,
                   use_dark_mode ? "dark" : "light");
 

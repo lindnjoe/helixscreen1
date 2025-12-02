@@ -378,6 +378,10 @@ class PrintSelectPanel : public PanelBase {
     PrintSelectSortDirection current_sort_direction_ = PrintSelectSortDirection::ASCENDING;
     bool panel_initialized_ = false; ///< Guard flag for resize callback
 
+    // Debounce timer for view refresh (prevents rebuilding views for each metadata callback)
+    lv_timer_t* refresh_timer_ = nullptr;
+    static constexpr uint32_t REFRESH_DEBOUNCE_MS = 50; ///< Debounce delay for view refresh
+
     // USB file source state
     FileSource current_source_ = FileSource::PRINTER; ///< Current file source (Printer or USB)
     std::vector<UsbGcodeFile> usb_files_;             ///< USB G-code files (when USB source active)
@@ -411,6 +415,16 @@ class PrintSelectPanel : public PanelBase {
      * @brief Repopulate list view with current file_list_
      */
     void populate_list_view();
+
+    /**
+     * @brief Schedule a debounced view refresh
+     *
+     * Instead of rebuilding views immediately, this schedules a single refresh
+     * after REFRESH_DEBOUNCE_MS. Multiple calls within the debounce window
+     * only trigger one actual refresh. This prevents O(n²) widget rebuilds
+     * when metadata arrives for each file.
+     */
+    void schedule_view_refresh();
 
     /**
      * @brief Apply current sort settings to file_list_

@@ -24,6 +24,7 @@
 #include "ethernet_backend.h"
 
 #include "ethernet_backend_mock.h"
+#include "runtime_config.h"
 
 #include <spdlog/spdlog.h>
 
@@ -34,6 +35,12 @@
 #endif
 
 std::unique_ptr<EthernetBackend> EthernetBackend::create() {
+    // In test mode, always use mock unless --real-ethernet was specified
+    if (get_runtime_config().should_mock_ethernet()) {
+        spdlog::info("[EthernetBackend] Test mode: using mock backend");
+        return std::make_unique<EthernetBackendMock>();
+    }
+
 #ifdef __APPLE__
     // macOS: Try native backend first, fallback to mock if no interface
     spdlog::debug("[EthernetBackend] Creating macOS backend");
