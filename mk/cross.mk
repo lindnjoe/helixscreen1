@@ -205,6 +205,64 @@ cross-info:
 	@echo "Docker Setup:"
 	@echo "  make docker-toolchains  - Build all Docker toolchain images"
 	@echo ""
+	@echo "Pi Deployment:"
+	@echo "  make deploy-pi       - Deploy binary to Pi"
+	@echo "  make deploy-pi-run   - Deploy and run in foreground"
+	@echo "  make pi-test         - Full cycle: build + deploy + run"
+	@echo "  make pi-ssh          - SSH into the Pi"
+	@echo ""
 	@echo "Current PLATFORM_TARGET: $(PLATFORM_TARGET)"
 	@echo "Display backend: $(DISPLAY_BACKEND)"
 	@echo "SDL enabled: $(ENABLE_SDL)"
+
+# =============================================================================
+# Pi Deployment Configuration
+# =============================================================================
+
+# Pi deployment settings (can override via environment or command line)
+# Example: make deploy-pi PI_HOST=192.168.1.50 PI_USER=pi
+# PI_USER defaults to empty (uses SSH config or current user)
+# PI_DEPLOY_DIR defaults to ~/helixscreen (full app directory)
+PI_HOST ?= helixpi.local
+PI_USER ?=
+PI_DEPLOY_DIR ?= ~/helixscreen
+
+# Build SSH target: user@host or just host if no user specified
+ifdef PI_USER
+    PI_SSH_TARGET := $(PI_USER)@$(PI_HOST)
+else
+    PI_SSH_TARGET := $(PI_HOST)
+endif
+
+# =============================================================================
+# Pi Deployment Targets
+# =============================================================================
+
+.PHONY: deploy-pi deploy-pi-run pi-ssh pi-test
+
+# Deploy full application to Pi using rsync (binary + assets + config + XML)
+# Uses rsync for efficient delta transfers - only changed files are sent
+deploy-pi: build/pi/bin/helix-ui-proto
+	@echo "$(CYAN)Deploying HelixScreen to $(PI_SSH_TARGET):$(PI_DEPLOY_DIR)...$(RESET)"
+	@echo "  Binary: build/pi/bin/helix-ui-proto"
+	@echo "  Assets: ui_xml/, assets/, config/"
+	ssh $(PI_SSH_TARGET) "mkdir -p $(PI_DEPLOY_DIR)"
+	rsync -avz --progress \
+		build/pi/bin/helix-ui-proto \
+		ui_xml \
+		assets \
+		config \
+		$(PI_SSH_TARGET):$(PI_DEPLOY_DIR)/
+	@echo "$(GREEN)✓ Deployed to $(PI_HOST):$(PI_DEPLOY_DIR)$(RESET)"
+
+# Deploy and run in foreground (kills any existing instance first)
+deploy-pi-run: deploy-pi
+	@echo "$(CYAN)Starting helix-ui-proto on $(PI_HOST)...$(RESET)"
+	ssh -t $(PI_SSH_TARGET) "cd $(PI_DEPLOY_DIR) && killall helix-ui-proto 2>/dev/null || true; ./helix-ui-proto"
+
+# Convenience: SSH into the Pi
+pi-ssh:
+	ssh $(PI_SSH_TARGET)
+
+# Full cycle: build + deploy + run
+pi-test: pi-docker deploy-pi-run
