@@ -42,18 +42,19 @@ int ParsedGCodeFile::find_layer_at_z(float z) const {
 
     while (left <= right) {
         int mid = left + (right - left) / 2;
-        float diff = std::abs(layers[mid].z_height - z);
+        float diff = std::abs(layers[static_cast<size_t>(mid)].z_height - z);
 
         // Update closest if this is better, or if equal distance but prefer lower Z height
         if (diff < min_diff || (std::abs(diff - min_diff) < epsilon &&
-                                layers[mid].z_height < layers[closest].z_height)) {
+                                layers[static_cast<size_t>(mid)].z_height <
+                                    layers[static_cast<size_t>(closest)].z_height)) {
             min_diff = diff;
             closest = mid;
         }
 
-        if (layers[mid].z_height < z) {
+        if (layers[static_cast<size_t>(mid)].z_height < z) {
             left = mid + 1;
-        } else if (layers[mid].z_height > z) {
+        } else if (layers[static_cast<size_t>(mid)].z_height > z) {
             right = mid - 1;
         } else {
             return mid; // Exact match
@@ -686,7 +687,7 @@ void GCodeParser::add_segment(const glm::vec3& start, const glm::vec3& end, bool
         if (xy_distance > 0.00001f) {
             // Calculate filament cross-sectional area
             float filament_radius = metadata_filament_diameter_ / 2.0f;
-            float filament_area = M_PI * filament_radius * filament_radius;
+            float filament_area = static_cast<float>(M_PI) * filament_radius * filament_radius;
 
             // Calculate extruded volume: volume = e_delta * filament_area
             float volume = e_delta * filament_area;
@@ -705,7 +706,7 @@ void GCodeParser::add_segment(const glm::vec3& start, const glm::vec3& end, bool
             float h = metadata_layer_height_;
             float cross_section_area = volume / xy_distance;
             float h_radius = h / 2.0f;
-            float circular_area = M_PI * h_radius * h_radius;
+            float circular_area = static_cast<float>(M_PI) * h_radius * h_radius;
             float calculated_width = (cross_section_area - circular_area) / h + h;
             segment.width = calculated_width * 2.0f; // Empirical correction factor
 
@@ -930,7 +931,8 @@ std::vector<GCodeThumbnail> extract_thumbnails(const std::string& filepath) {
                 current_thumb.width = w;
                 current_thumb.height = h;
                 base64_data.clear();
-                base64_data.reserve(size * 4 / 3 + 100); // Estimate base64 size
+                base64_data.reserve(static_cast<size_t>(size) * 4 / 3 +
+                                    100); // Estimate base64 size
                 in_thumbnail_block = true;
                 spdlog::debug("Found thumbnail {}x{} in {}", w, h, filepath);
             }
@@ -993,7 +995,8 @@ bool save_thumbnail_to_file(const std::string& gcode_path, const std::string& ou
         return false;
     }
 
-    out.write(reinterpret_cast<const char*>(thumb.png_data.data()), thumb.png_data.size());
+    out.write(reinterpret_cast<const char*>(thumb.png_data.data()),
+              static_cast<std::streamsize>(thumb.png_data.size()));
     spdlog::debug("Saved {}x{} thumbnail to {}", thumb.width, thumb.height, output_path);
     return true;
 }
@@ -1226,7 +1229,7 @@ bool parse_metadata_line(const std::string& line, GCodeHeaderMetadata& metadata)
         }
     } else if (key == "total layers" || key == "total layer number") {
         try {
-            metadata.layer_count = std::stoul(value);
+            metadata.layer_count = static_cast<uint32_t>(std::stoul(value));
         } catch (...) {
         }
     } else if (key == "first_layer_bed_temperature" || key == "bed_temperature") {
@@ -1303,7 +1306,7 @@ GCodeHeaderMetadata extract_header_metadata(const std::string& filepath) {
     // Get file size and modification time
     struct stat file_stat;
     if (stat(filepath.c_str(), &file_stat) == 0) {
-        metadata.file_size = file_stat.st_size;
+        metadata.file_size = static_cast<uint64_t>(file_stat.st_size);
         metadata.modified_time = static_cast<double>(file_stat.st_mtime);
     }
 

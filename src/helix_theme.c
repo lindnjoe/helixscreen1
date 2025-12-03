@@ -67,7 +67,7 @@ static lv_color_t compute_input_bg_color(lv_color_t card_bg, bool is_dark) {
     g = (g + g_offset < 0) ? 0 : ((g + g_offset > 255) ? 255 : g + g_offset);
     b = (b + b_offset < 0) ? 0 : ((b + b_offset > 255) ? 255 : b + b_offset);
 
-    return lv_color_hex((r << 16) | (g << 8) | b);
+    return lv_color_hex((uint32_t)((r << 16) | (g << 8) | b));
 }
 
 /**

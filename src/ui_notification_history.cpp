@@ -91,8 +91,9 @@ std::vector<NotificationHistoryEntry> NotificationHistory::get_filtered(int seve
 size_t NotificationHistory::get_unread_count() const {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    return std::count_if(entries_.begin(), entries_.end(),
-                         [](const NotificationHistoryEntry& e) { return !e.was_read; });
+    return static_cast<size_t>(
+        std::count_if(entries_.begin(), entries_.end(),
+                      [](const NotificationHistoryEntry& e) { return !e.was_read; }));
 }
 
 ToastSeverity NotificationHistory::get_highest_unread_severity() const {

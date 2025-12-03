@@ -237,8 +237,8 @@ lv_obj_t* ui_step_progress_create(lv_obj_t* parent, const ui_step_t* steps, int 
     data->horizontal = horizontal;
 
     // Allocate arrays using RAII
-    auto label_buffers_ptr = lvgl_make_unique_array<char*>(step_count);
-    auto states_ptr = lvgl_make_unique_array<ui_step_state_t>(step_count);
+    auto label_buffers_ptr = lvgl_make_unique_array<char*>(static_cast<size_t>(step_count));
+    auto states_ptr = lvgl_make_unique_array<ui_step_state_t>(static_cast<size_t>(step_count));
 
     if (!label_buffers_ptr || !states_ptr) {
         spdlog::error("Failed to allocate step data arrays");
@@ -531,7 +531,7 @@ void ui_step_progress_set_current(lv_obj_t* widget, int step_index) {
     int step_item_index = 0;
     int connector_index = 0;
     for (uint32_t i = 0; i < child_count; i++) {
-        lv_obj_t* child = lv_obj_get_child(widget, i);
+        lv_obj_t* child = lv_obj_get_child(widget, static_cast<int32_t>(i));
 
         // Check if this is a step_item (has children: indicator_column + label)
         if (lv_obj_get_child_count(child) >= 2) {

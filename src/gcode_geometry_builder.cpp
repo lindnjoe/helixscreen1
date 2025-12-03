@@ -745,13 +745,14 @@ GeometryBuilder::generate_ribbon_vertices(const ToolpathSegment& segment, Ribbon
         uint8_t g =
             static_cast<uint8_t>(std::min(255.0f, ((rgb >> 8) & 0xFF) * HIGHLIGHT_BRIGHTNESS));
         uint8_t b = static_cast<uint8_t>(std::min(255.0f, (rgb & 0xFF) * HIGHLIGHT_BRIGHTNESS));
-        rgb = (r << 16) | (g << 8) | b;
+        rgb = (static_cast<uint32_t>(r) << 16) | (static_cast<uint32_t>(g) << 8) |
+              static_cast<uint32_t>(b);
     }
 
     uint8_t color_idx = add_to_color_palette(geometry, rgb);
 
     // Face colors: one color per face (N faces total)
-    std::vector<uint8_t> face_colors(N, color_idx);
+    std::vector<uint8_t> face_colors(static_cast<size_t>(N), color_idx);
 
     if (debug_face_colors_) {
         // Cycle through 4 debug colors for N faces
@@ -764,7 +765,7 @@ GeometryBuilder::generate_ribbon_vertices(const ToolpathSegment& segment, Ribbon
 
         for (int i = 0; i < N; i++) {
             uint32_t color = DEBUG_COLORS[i % 4]; // Cycle: R,Y,B,G,R,Y,B,G,...
-            face_colors[i] = add_to_color_palette(geometry, color);
+            face_colors[static_cast<size_t>(i)] = add_to_color_palette(geometry, color);
         }
 
         static bool logged_once = false;
@@ -784,29 +785,29 @@ GeometryBuilder::generate_ribbon_vertices(const ToolpathSegment& segment, Ribbon
     // Generate N vertex offsets in elliptical arrangement
     // Vertex i is at angle (i * 2π/N) around the ellipse
     // Position offset = cos(angle)*half_width*right + sin(angle)*half_height*perp_up
-    const float angle_step = 2.0f * M_PI / N;
-    std::vector<glm::vec3> vertex_offsets(N);
+    const float angle_step = 2.0f * static_cast<float>(M_PI) / N;
+    std::vector<glm::vec3> vertex_offsets(static_cast<size_t>(N));
 
     for (int i = 0; i < N; i++) {
         float angle = i * angle_step; // 0°, 360°/N, 2×360°/N, ...
-        vertex_offsets[i] =
+        vertex_offsets[static_cast<size_t>(i)] =
             half_width * std::cos(angle) * right + half_height * std::sin(angle) * perp_up;
     }
 
     // Generate N face normals (one per face)
     // Face normal points outward from face center (midpoint between adjacent vertices)
     // Face i connects vertex i to vertex (i+1)%N, so face center is at angle (i+0.5)*angle_step
-    std::vector<glm::vec3> face_normals(N);
+    std::vector<glm::vec3> face_normals(static_cast<size_t>(N));
 
     for (int i = 0; i < N; i++) {
         float face_angle = (i + 0.5f) * angle_step; // Midpoint between vertices i and i+1
         glm::vec3 face_center_offset = half_width * std::cos(face_angle) * right +
                                        half_height * std::sin(face_angle) * perp_up;
-        face_normals[i] = glm::normalize(face_center_offset);
+        face_normals[static_cast<size_t>(i)] = glm::normalize(face_center_offset);
     }
 
     // Phase 3: N-based vertex generation (replaces hardcoded N=4 logic)
-    uint32_t idx_start = geometry.vertices.size();
+    uint32_t idx_start = static_cast<uint32_t>(geometry.vertices.size());
     bool is_first_segment = !prev_start_cap.has_value();
 
     // ========== START CAP VERTICES (first segment only) ==========
@@ -822,14 +823,14 @@ GeometryBuilder::generate_ribbon_vertices(const ToolpathSegment& segment, Ribbon
 
         // Generate N start cap vertices
         for (int i = 0; i < N; i++) {
-            glm::vec3 pos = prev_pos + vertex_offsets[i];
+            glm::vec3 pos = prev_pos + vertex_offsets[static_cast<size_t>(i)];
             geometry.vertices.push_back({
                 quant.quantize_vec3(pos),
                 cap_normal_idx,     // Axial normal pointing backward
                 start_cap_color_idx // MAGENTA for start cap in debug mode
             });
         }
-        idx_start += N;
+        idx_start += static_cast<uint32_t>(N);
     }
 
     // ========== PREV SIDE FACE VERTICES ==========
@@ -838,14 +839,17 @@ GeometryBuilder::generate_ribbon_vertices(const ToolpathSegment& segment, Ribbon
     // winding)
     for (int i = 0; i < N; i++) {
         int next_i = (i + 1) % N;
-        glm::vec3 pos_v1 = prev_pos + vertex_offsets[next_i]; // REVERSED: next_i first
-        glm::vec3 pos_v2 = prev_pos + vertex_offsets[i];      // then i
-        uint16_t normal_idx = add_to_normal_palette(geometry, face_normals[i]);
+        glm::vec3 pos_v1 =
+            prev_pos + vertex_offsets[static_cast<size_t>(next_i)]; // REVERSED: next_i first
+        glm::vec3 pos_v2 = prev_pos + vertex_offsets[static_cast<size_t>(i)]; // then i
+        uint16_t normal_idx = add_to_normal_palette(geometry, face_normals[static_cast<size_t>(i)]);
 
-        geometry.vertices.push_back({quant.quantize_vec3(pos_v1), normal_idx, face_colors[i]});
-        geometry.vertices.push_back({quant.quantize_vec3(pos_v2), normal_idx, face_colors[i]});
+        geometry.vertices.push_back(
+            {quant.quantize_vec3(pos_v1), normal_idx, face_colors[static_cast<size_t>(i)]});
+        geometry.vertices.push_back(
+            {quant.quantize_vec3(pos_v2), normal_idx, face_colors[static_cast<size_t>(i)]});
     }
-    idx_start += 2 * N;
+    idx_start += static_cast<uint32_t>(2 * N);
 
     // ========== CURR SIDE FACE VERTICES ==========
     // Generate 2N curr vertices (2 vertices per face, N faces)
@@ -853,22 +857,25 @@ GeometryBuilder::generate_ribbon_vertices(const ToolpathSegment& segment, Ribbon
     // winding)
     for (int i = 0; i < N; i++) {
         int next_i = (i + 1) % N;
-        glm::vec3 pos_v1 = curr_pos + vertex_offsets[next_i]; // REVERSED: next_i first
-        glm::vec3 pos_v2 = curr_pos + vertex_offsets[i];      // then i
-        uint16_t normal_idx = add_to_normal_palette(geometry, face_normals[i]);
+        glm::vec3 pos_v1 =
+            curr_pos + vertex_offsets[static_cast<size_t>(next_i)]; // REVERSED: next_i first
+        glm::vec3 pos_v2 = curr_pos + vertex_offsets[static_cast<size_t>(i)]; // then i
+        uint16_t normal_idx = add_to_normal_palette(geometry, face_normals[static_cast<size_t>(i)]);
 
-        geometry.vertices.push_back({quant.quantize_vec3(pos_v1), normal_idx, face_colors[i]});
-        geometry.vertices.push_back({quant.quantize_vec3(pos_v2), normal_idx, face_colors[i]});
+        geometry.vertices.push_back(
+            {quant.quantize_vec3(pos_v1), normal_idx, face_colors[static_cast<size_t>(i)]});
+        geometry.vertices.push_back(
+            {quant.quantize_vec3(pos_v2), normal_idx, face_colors[static_cast<size_t>(i)]});
     }
-    idx_start += 2 * N;
+    idx_start += static_cast<uint32_t>(2 * N);
 
     // ========== END CAP TRACKING ==========
     // Track end cap edge positions (first vertex of each face in curr ring)
-    TubeCap end_cap(N);
-    uint32_t end_cap_base = idx_start - 2 * N;
+    TubeCap end_cap(static_cast<size_t>(N));
+    uint32_t end_cap_base = idx_start - static_cast<uint32_t>(2 * N);
     for (int i = 0; i < N; i++) {
         // Track first vertex of each face (vertex i)
-        end_cap[i] = end_cap_base + 2 * i;
+        end_cap[static_cast<size_t>(i)] = end_cap_base + static_cast<uint32_t>(2 * i);
     }
 
     static int debug_count = 0;
@@ -886,8 +893,9 @@ GeometryBuilder::generate_ribbon_vertices(const ToolpathSegment& segment, Ribbon
                      prev_pos.x, prev_pos.y, prev_pos.z, curr_pos.x, curr_pos.y, curr_pos.z);
         spdlog::info("  Curr vertices ({} total):", N);
         for (int i = 0; i < N; i++) {
-            glm::vec3 pos = curr_pos + vertex_offsets[i];
-            spdlog::info("    v{}[{}]: ({:.3f},{:.3f},{:.3f})", i, end_cap[i], pos.x, pos.y, pos.z);
+            glm::vec3 pos = curr_pos + vertex_offsets[static_cast<size_t>(i)];
+            spdlog::info("    v{}[{}]: ({:.3f},{:.3f},{:.3f})", i, end_cap[static_cast<size_t>(i)],
+                         pos.x, pos.y, pos.z);
         }
         debug_count++;
     }
@@ -899,25 +907,25 @@ GeometryBuilder::generate_ribbon_vertices(const ToolpathSegment& segment, Ribbon
 
     if (is_first_segment) {
         // First segment: N (start cap) + 2N (prev) + 2N (curr) = 5N vertices
-        base = idx_start - 5 * N;
+        base = idx_start - static_cast<uint32_t>(5 * N);
         start_cap_base = base;
-        prev_faces_base = base + N;
-        curr_faces_base = base + N + 2 * N;
+        prev_faces_base = base + static_cast<uint32_t>(N);
+        curr_faces_base = base + static_cast<uint32_t>(N + 2 * N);
     } else {
         // Subsequent: 2N (prev) + 2N (curr) = 4N vertices
-        base = idx_start - 4 * N;
+        base = idx_start - static_cast<uint32_t>(4 * N);
         prev_faces_base = base;
-        curr_faces_base = base + 2 * N;
+        curr_faces_base = base + static_cast<uint32_t>(2 * N);
     }
 
     // Generate N side face strips (one strip per face)
     // Each face connects vertex i to vertex (i+1)%N
     for (int i = 0; i < N; i++) {
         geometry.strips.push_back({
-            prev_faces_base + 2 * i,     // prev ring, vertex i
-            prev_faces_base + 2 * i + 1, // prev ring, vertex i+1
-            curr_faces_base + 2 * i,     // curr ring, vertex i
-            curr_faces_base + 2 * i + 1  // curr ring, vertex i+1
+            prev_faces_base + static_cast<uint32_t>(2 * i),     // prev ring, vertex i
+            prev_faces_base + static_cast<uint32_t>(2 * i + 1), // prev ring, vertex i+1
+            curr_faces_base + static_cast<uint32_t>(2 * i),     // curr ring, vertex i
+            curr_faces_base + static_cast<uint32_t>(2 * i + 1)  // curr ring, vertex i+1
         });
     }
 
@@ -929,10 +937,10 @@ GeometryBuilder::generate_ribbon_vertices(const ToolpathSegment& segment, Ribbon
         // Triangle fan: v0 is center, connects to all edges
         for (int i = 1; i < N - 1; i++) {
             geometry.strips.push_back({
-                start_cap_base,         // v0 (fan center)
-                start_cap_base + i,     // vi (current edge)
-                start_cap_base + i + 1, // vi+1 (next edge)
-                start_cap_base + i + 1  // Duplicate (degenerate triangle)
+                start_cap_base,                                // v0 (fan center)
+                start_cap_base + static_cast<uint32_t>(i),     // vi (current edge)
+                start_cap_base + static_cast<uint32_t>(i + 1), // vi+1 (next edge)
+                start_cap_base + static_cast<uint32_t>(i + 1)  // Duplicate (degenerate triangle)
             });
         }
 
@@ -954,16 +962,16 @@ GeometryBuilder::generate_ribbon_vertices(const ToolpathSegment& segment, Ribbon
     if (debug_face_colors_) {
         spdlog::info("END CAP SOURCE INDICES (first {} of {}):", std::min(N, 4), N);
         for (int i = 0; i < std::min(N, 4); i++) {
-            spdlog::info("  end_cap[{}]={}", i, end_cap[i]);
+            spdlog::info("  end_cap[{}]={}", i, end_cap[static_cast<size_t>(i)]);
         }
     }
 
     // Create N end cap vertices with axial normals
     for (int i = 0; i < N; i++) {
-        geometry.vertices.push_back(
-            {geometry.vertices[end_cap[i]].position, end_cap_normal_idx, end_cap_color_idx});
+        geometry.vertices.push_back({geometry.vertices[end_cap[static_cast<size_t>(i)]].position,
+                                     end_cap_normal_idx, end_cap_color_idx});
     }
-    idx_start += N;
+    idx_start += static_cast<uint32_t>(N);
 
     if (debug_face_colors_) {
         spdlog::info("END CAP VERTICES ADDED: {} vertices", N);
@@ -973,10 +981,10 @@ GeometryBuilder::generate_ribbon_vertices(const ToolpathSegment& segment, Ribbon
     // Triangle fan with REVERSED winding (CW instead of CCW) for opposite-facing cap
     for (int i = 1; i < N - 1; i++) {
         geometry.strips.push_back({
-            idx_end_cap_start,             // v0 (fan center)
-            idx_end_cap_start + N - i,     // vN-i (reverse order)
-            idx_end_cap_start + N - i - 1, // vN-i-1
-            idx_end_cap_start + N - i - 1  // Duplicate (degenerate)
+            idx_end_cap_start,                                    // v0 (fan center)
+            idx_end_cap_start + static_cast<uint32_t>(N - i),     // vN-i (reverse order)
+            idx_end_cap_start + static_cast<uint32_t>(N - i - 1), // vN-i-1
+            idx_end_cap_start + static_cast<uint32_t>(N - i - 1)  // Duplicate (degenerate)
         });
     }
 
@@ -998,9 +1006,9 @@ GeometryBuilder::generate_ribbon_vertices(const ToolpathSegment& segment, Ribbon
     // First segment: 2N + (N-2) + (N-2) = 4N - 4
     // Subsequent: 2N + (N-2) = 3N - 2
     if (segment.is_extrusion) {
-        geometry.extrusion_triangle_count += triangle_count;
+        geometry.extrusion_triangle_count += static_cast<size_t>(triangle_count);
     } else {
-        geometry.travel_triangle_count += triangle_count;
+        geometry.travel_triangle_count += static_cast<size_t>(triangle_count);
     }
 
     return end_cap;
@@ -1099,7 +1107,7 @@ void GeometryBuilder::set_filament_color(const std::string& hex_color) {
         hex_str++;
 
     // Parse RGB hex (e.g., "26A69A")
-    uint32_t rgb = std::strtol(hex_str, nullptr, 16);
+    uint32_t rgb = static_cast<uint32_t>(std::strtol(hex_str, nullptr, 16));
     filament_r_ = (rgb >> 16) & 0xFF;
     filament_g_ = (rgb >> 8) & 0xFF;
     filament_b_ = rgb & 0xFF;
@@ -1135,7 +1143,7 @@ uint32_t GeometryBuilder::compute_segment_color(const ToolpathSegment& segment, 
     // Priority 1: Tool-specific color from palette (multi-color prints)
     if (!tool_color_palette_.empty() && segment.tool_index >= 0 &&
         segment.tool_index < static_cast<int>(tool_color_palette_.size())) {
-        const std::string& hex_color = tool_color_palette_[segment.tool_index];
+        const std::string& hex_color = tool_color_palette_[static_cast<size_t>(segment.tool_index)];
         if (!hex_color.empty()) {
             return parse_hex_color(hex_color);
         }

@@ -67,7 +67,7 @@ struct PendingRequest {
     uint32_t get_elapsed_ms() const {
         auto now = std::chrono::steady_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - timestamp);
-        return elapsed.count();
+        return static_cast<uint32_t>(elapsed.count());
     }
 };
 

@@ -148,7 +148,8 @@ OBJ_DIR ?= $(BUILD_DIR)/obj
 
 # LVGL
 LVGL_DIR := lib/lvgl
-LVGL_INC := -I$(LVGL_DIR) -I$(LVGL_DIR)/src
+# Use -isystem to suppress warnings from third-party headers in strict mode
+LVGL_INC := -isystem $(LVGL_DIR) -isystem $(LVGL_DIR)/src
 LVGL_SRCS := $(shell find $(LVGL_DIR)/src -name "*.c" 2>/dev/null)
 LVGL_OBJS := $(patsubst $(LVGL_DIR)/%.c,$(OBJ_DIR)/lvgl/%.o,$(LVGL_SRCS))
 
@@ -158,7 +159,8 @@ THORVG_OBJS := $(patsubst $(LVGL_DIR)/%.cpp,$(OBJ_DIR)/lvgl/%.o,$(THORVG_SRCS))
 
 # cpp-terminal (modern TUI library)
 CPP_TERMINAL_DIR := lib/cpp-terminal
-CPP_TERMINAL_INC := -I$(CPP_TERMINAL_DIR)
+# Use -isystem to suppress warnings from third-party headers in strict mode
+CPP_TERMINAL_INC := -isystem $(CPP_TERMINAL_DIR)
 CPP_TERMINAL_SRCS := $(wildcard $(CPP_TERMINAL_DIR)/cpp-terminal/*.cpp) \
                      $(wildcard $(CPP_TERMINAL_DIR)/cpp-terminal/private/*.cpp)
 CPP_TERMINAL_OBJS := $(patsubst $(CPP_TERMINAL_DIR)/%.cpp,$(OBJ_DIR)/cpp-terminal/%.o,$(CPP_TERMINAL_SRCS))
@@ -220,7 +222,7 @@ endif
 # libhv (WebSocket client for Moonraker) - Use system version if available, otherwise build from submodule
 LIBHV_PKG_CONFIG := $(shell pkg-config --exists libhv 2>/dev/null && echo "yes")
 ifeq ($(LIBHV_PKG_CONFIG),yes)
-    # System libhv found via pkg-config
+    # System libhv found via pkg-config (pkg-config already returns system include paths)
     LIBHV_INC := $(shell pkg-config --cflags libhv)
     LIBHV_LIBS := $(shell pkg-config --libs libhv)
     LIBHV_LIB :=
@@ -228,7 +230,8 @@ else
     # No system libhv - build from submodule to $(BUILD_DIR)/lib/ for architecture isolation
     # This allows concurrent native/pi/ad5m builds without conflicts
     LIBHV_DIR := lib/libhv
-    LIBHV_INC := -I$(LIBHV_DIR)/include -I$(LIBHV_DIR)/cpputil -I$(LIBHV_DIR)
+    # Use -isystem to suppress warnings from third-party headers in strict mode
+    LIBHV_INC := -isystem $(LIBHV_DIR)/include -isystem $(LIBHV_DIR)/cpputil -isystem $(LIBHV_DIR)
     LIBHV_LIB := $(BUILD_DIR)/lib/libhv.a
     LIBHV_LIBS := $(LIBHV_LIB)
 endif
@@ -238,11 +241,13 @@ SPDLOG_SYSTEM_PATHS := /usr/include/spdlog /usr/local/include/spdlog /opt/homebr
 SPDLOG_SYSTEM_AVAILABLE := $(firstword $(wildcard $(SPDLOG_SYSTEM_PATHS)))
 ifneq ($(SPDLOG_SYSTEM_AVAILABLE),)
     # System spdlog found - use it (header-only library)
-    SPDLOG_INC := -I$(dir $(SPDLOG_SYSTEM_AVAILABLE))
+    # Use -isystem to suppress warnings from third-party headers in strict mode
+    SPDLOG_INC := -isystem $(dir $(SPDLOG_SYSTEM_AVAILABLE))
 else
     # No system spdlog - use submodule
     SPDLOG_DIR := lib/spdlog
-    SPDLOG_INC := -I$(SPDLOG_DIR)/include
+    # Use -isystem to suppress warnings from third-party headers in strict mode
+    SPDLOG_INC := -isystem $(SPDLOG_DIR)/include
 endif
 
 # fmt (formatting library required by header-only spdlog)
@@ -263,7 +268,8 @@ ifeq ($(ENABLE_TINYGL_3D),yes)
     TINYGL_DIR := lib/tinygl
     # Output to $(BUILD_DIR)/lib/ for architecture isolation (native/pi/ad5m)
     TINYGL_LIB := $(BUILD_DIR)/lib/libTinyGL.a
-    TINYGL_INC := -I$(TINYGL_DIR)/include
+    # Use -isystem to suppress warnings from third-party headers in strict mode
+    TINYGL_INC := -isystem $(TINYGL_DIR)/include
     TINYGL_DEFINES := -DENABLE_TINYGL_3D
 else
     TINYGL_DIR :=
@@ -276,7 +282,8 @@ endif
 WPA_DIR := lib/wpa_supplicant
 # Output to $(BUILD_DIR)/lib/ for architecture isolation (native/pi/ad5m)
 WPA_CLIENT_LIB := $(BUILD_DIR)/lib/libwpa_client.a
-WPA_INC := -I$(WPA_DIR)/src/common -I$(WPA_DIR)/src/utils
+# Use -isystem to suppress warnings from third-party headers in strict mode
+WPA_INC := -isystem $(WPA_DIR)/src/common -isystem $(WPA_DIR)/src/utils
 
 # Precompiled header for LVGL (30-50% faster clean builds)
 # Only supported by gcc and clang (not MSVC)
@@ -285,7 +292,9 @@ PCH := $(BUILD_DIR)/lvgl_pch.h.gch
 PCH_FLAGS := -include $(PCH_HEADER)
 
 # Include paths
-INCLUDES := -I. -I$(INC_DIR) -Ilib -Ilib/glm $(LVGL_INC) $(LIBHV_INC) $(SPDLOG_INC) $(TINYGL_INC) $(WPA_INC) $(SDL2_INC)
+# Project includes use -I (warnings enabled), library includes use -isystem (warnings suppressed)
+# This allows `make strict` to catch issues in project code while ignoring third-party header warnings
+INCLUDES := -I. -I$(INC_DIR) -isystem lib -isystem lib/glm $(LVGL_INC) $(LIBHV_INC) $(SPDLOG_INC) $(TINYGL_INC) $(WPA_INC) $(SDL2_INC)
 
 # Common linker flags (used by both macOS and Linux)
 LDFLAGS_COMMON := $(SDL2_LIBS) $(LIBHV_LIBS) $(TINYGL_LIB) $(FMT_LIBS) -lm -lpthread

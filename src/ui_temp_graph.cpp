@@ -233,11 +233,12 @@ ui_temp_graph_t* ui_temp_graph_create(lv_obj_t* parent) {
     // Configure chart
     lv_chart_set_type(graph->chart, LV_CHART_TYPE_LINE);
     lv_chart_set_update_mode(graph->chart, LV_CHART_UPDATE_MODE_SHIFT);
-    lv_chart_set_point_count(graph->chart, graph->point_count);
+    lv_chart_set_point_count(graph->chart, static_cast<uint32_t>(graph->point_count));
 
     // Set Y-axis range
-    lv_chart_set_axis_range(graph->chart, LV_CHART_AXIS_PRIMARY_Y, (int32_t)graph->min_temp,
-                            (int32_t)graph->max_temp);
+    lv_chart_set_axis_range(graph->chart, LV_CHART_AXIS_PRIMARY_Y,
+                            static_cast<int32_t>(graph->min_temp),
+                            static_cast<int32_t>(graph->max_temp));
 
     // Style chart background (theme handles colors)
     lv_obj_set_style_bg_opa(graph->chart, LV_OPA_COVER, LV_PART_MAIN);
@@ -441,18 +442,19 @@ void ui_temp_graph_set_series_data(ui_temp_graph_t* graph, int series_id, const 
 
     // Convert float array to int32_t array for LVGL API (using RAII)
     int points_to_copy = count > graph->point_count ? graph->point_count : count;
-    auto values = std::make_unique<int32_t[]>(points_to_copy);
+    auto values = std::make_unique<int32_t[]>(static_cast<size_t>(points_to_copy));
     if (!values) {
         spdlog::error("[TempGraph] Failed to allocate conversion buffer");
         return;
     }
 
-    for (int i = 0; i < points_to_copy; i++) {
-        values[i] = (int32_t)temps[i];
+    for (size_t i = 0; i < static_cast<size_t>(points_to_copy); i++) {
+        values[i] = static_cast<int32_t>(temps[i]);
     }
 
     // Set data using public API
-    lv_chart_set_series_values(graph->chart, meta->chart_series, values.get(), points_to_copy);
+    lv_chart_set_series_values(graph->chart, meta->chart_series, values.get(),
+                               static_cast<size_t>(points_to_copy));
 
     // values automatically freed via ~unique_ptr()
 
@@ -539,7 +541,8 @@ void ui_temp_graph_set_temp_range(ui_temp_graph_t* graph, float min, float max) 
     graph->min_temp = min;
     graph->max_temp = max;
 
-    lv_chart_set_axis_range(graph->chart, LV_CHART_AXIS_PRIMARY_Y, (int32_t)min, (int32_t)max);
+    lv_chart_set_axis_range(graph->chart, LV_CHART_AXIS_PRIMARY_Y, static_cast<int32_t>(min),
+                            static_cast<int32_t>(max));
 
     // Recalculate all cursor positions since value-to-pixel mapping changed
     update_all_cursor_positions(graph);
@@ -555,7 +558,7 @@ void ui_temp_graph_set_point_count(ui_temp_graph_t* graph, int count) {
     }
 
     graph->point_count = count;
-    lv_chart_set_point_count(graph->chart, count);
+    lv_chart_set_point_count(graph->chart, static_cast<uint32_t>(count));
 
     spdlog::debug("[TempGraph] Point count set: {}", count);
 }

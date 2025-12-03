@@ -217,7 +217,7 @@ void MoonrakerAPI::launch_http_thread(std::function<void()> func) {
     http_threads_.remove_if([](std::thread& t) { return !t.joinable(); });
 
     // Launch the new thread
-    http_threads_.emplace_back([this, func = std::move(func)]() {
+    http_threads_.emplace_back([func = std::move(func)]() {
         func();
         // Thread auto-removed during next launch or destructor
     });

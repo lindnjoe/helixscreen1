@@ -142,7 +142,8 @@ void NotificationHistoryPanel::refresh() {
         // Find the most recently created item (last child)
         uint32_t child_cnt = lv_obj_get_child_count(overlay_content);
         lv_obj_t* item =
-            (child_cnt > 0) ? lv_obj_get_child(overlay_content, child_cnt - 1) : nullptr;
+            (child_cnt > 0) ? lv_obj_get_child(overlay_content, static_cast<int32_t>(child_cnt - 1))
+                            : nullptr;
         if (!item) {
             spdlog::error("[{}] Failed to create notification_history_item from XML", get_name());
             continue;

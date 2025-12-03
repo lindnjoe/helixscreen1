@@ -102,7 +102,8 @@ static void render_gradient_buffer(GradientData* data) {
 
     // Render pixel by pixel with diagonal gradient and dithering
     for (int32_t y = 0; y < size; y++) {
-        lv_color32_t* row = reinterpret_cast<lv_color32_t*>(buf_data + y * stride);
+        lv_color32_t* row =
+            reinterpret_cast<lv_color32_t*>(buf_data + static_cast<uint32_t>(y) * stride);
 
         for (int32_t x = 0; x < size; x++) {
             // Diagonal interpolation: top-right (bright) to bottom-left (dark)

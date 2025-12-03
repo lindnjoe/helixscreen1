@@ -341,7 +341,7 @@ void WizardPrinterIdentifyStep::handle_printer_type_changed(lv_event_t* event) {
     LVGL_SAFE_EVENT_CB_BEGIN("[Wizard Printer] handle_printer_type_changed");
 
     lv_obj_t* roller = static_cast<lv_obj_t*>(lv_event_get_target(event));
-    uint16_t selected = lv_roller_get_selected(roller);
+    uint16_t selected = static_cast<uint16_t>(lv_roller_get_selected(roller));
 
     char buf[64];
     lv_roller_get_selected_str(roller, buf, sizeof(buf));
@@ -402,7 +402,7 @@ lv_obj_t* WizardPrinterIdentifyStep::create(lv_obj_t* parent) {
 
         // Set to the saved selection
         int selected = lv_subject_get_int(&printer_type_selected_);
-        lv_roller_set_selected(roller, selected, LV_ANIM_OFF);
+        lv_roller_set_selected(roller, static_cast<uint32_t>(selected), LV_ANIM_OFF);
 
         // Attach change handler with 'this' as user_data
         lv_obj_add_event_cb(roller, on_printer_type_changed_static, LV_EVENT_VALUE_CHANGED, this);

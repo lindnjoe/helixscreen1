@@ -166,7 +166,7 @@ void GCodeRenderer::render(lv_layer_t* layer, const ParsedGCodeFile& gcode,
 
     // Render layers
     for (int i = start_layer; i <= end_layer; ++i) {
-        render_layer(layer, gcode.layers[i], transform);
+        render_layer(layer, gcode.layers[static_cast<size_t>(i)], transform);
     }
 
     spdlog::trace("Rendered {} segments, culled {} segments", segments_rendered_, segments_culled_);
@@ -177,7 +177,7 @@ void GCodeRenderer::render_layer(lv_layer_t* layer, const Layer& gcode_layer,
     // LOD: Skip segments based on level
     int skip_factor = 1 << static_cast<int>(options_.lod); // 1, 2, or 4
 
-    for (size_t i = 0; i < gcode_layer.segments.size(); i += skip_factor) {
+    for (size_t i = 0; i < gcode_layer.segments.size(); i += static_cast<size_t>(skip_factor)) {
         const auto& segment = gcode_layer.segments[i];
 
         if (should_render_segment(segment)) {
@@ -417,9 +417,12 @@ lv_draw_line_dsc_t GCodeRenderer::get_line_style(const ToolpathSegment& segment,
 
     // Apply brightness factor if configured
     if (brightness_factor_ != 1.0f) {
-        uint8_t r = std::clamp(static_cast<int>(dsc.color.red * brightness_factor_), 0, 255);
-        uint8_t g = std::clamp(static_cast<int>(dsc.color.green * brightness_factor_), 0, 255);
-        uint8_t b = std::clamp(static_cast<int>(dsc.color.blue * brightness_factor_), 0, 255);
+        uint8_t r = static_cast<uint8_t>(
+            std::clamp(static_cast<int>(dsc.color.red * brightness_factor_), 0, 255));
+        uint8_t g = static_cast<uint8_t>(
+            std::clamp(static_cast<int>(dsc.color.green * brightness_factor_), 0, 255));
+        uint8_t b = static_cast<uint8_t>(
+            std::clamp(static_cast<int>(dsc.color.blue * brightness_factor_), 0, 255));
         dsc.color = lv_color_make(r, g, b);
     }
 
@@ -465,7 +468,7 @@ std::optional<std::string> GCodeRenderer::pick_object(const glm::vec2& screen_po
             continue;
         }
 
-        const Layer& layer = gcode.layers[layer_idx];
+        const Layer& layer = gcode.layers[static_cast<size_t>(layer_idx)];
 
         for (const auto& segment : layer.segments) {
             // Only check segments that would be rendered

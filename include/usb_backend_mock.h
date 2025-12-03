@@ -25,6 +25,7 @@
 
 #include "usb_backend.h"
 
+#include <map>
 #include <mutex>
 
 /**

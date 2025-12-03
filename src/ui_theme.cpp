@@ -49,7 +49,7 @@ lv_color_t ui_theme_parse_color(const char* hex_str) {
         spdlog::error("[Theme] Invalid hex color string: {}", hex_str ? hex_str : "NULL");
         return lv_color_hex(0x000000);
     }
-    uint32_t hex = strtoul(hex_str + 1, NULL, 16);
+    uint32_t hex = static_cast<uint32_t>(strtoul(hex_str + 1, NULL, 16));
     return lv_color_hex(hex);
 }
 
@@ -113,7 +113,8 @@ static void ui_theme_register_color_pairs(lv_xml_component_scope_t* scope, bool 
     XML_SetUserData(parser, &parser_data);
     XML_SetElementHandler(parser, color_element_start, nullptr);
 
-    if (XML_Parse(parser, xml_content.c_str(), xml_content.size(), XML_TRUE) == XML_STATUS_ERROR) {
+    if (XML_Parse(parser, xml_content.c_str(), static_cast<int>(xml_content.size()), XML_TRUE) ==
+        XML_STATUS_ERROR) {
         NOTIFY_ERROR("XML parse error in globals.xml line {}: {}", XML_GetCurrentLineNumber(parser),
                      XML_ErrorString(XML_GetErrorCode(parser)));
         XML_ParserFree(parser);

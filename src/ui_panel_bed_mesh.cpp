@@ -120,9 +120,9 @@ void BedMeshPanel::set_mesh_data(const std::vector<std::vector<float>>& mesh_dat
     int cols = static_cast<int>(mesh_data[0].size());
 
     // Convert std::vector to C-style array for widget API
-    std::vector<const float*> row_pointers(rows);
+    std::vector<const float*> row_pointers(static_cast<size_t>(rows));
     for (int i = 0; i < rows; i++) {
-        row_pointers[i] = mesh_data[i].data();
+        row_pointers[static_cast<size_t>(i)] = mesh_data[static_cast<size_t>(i)].data();
     }
 
     // Set mesh data in widget (automatically triggers redraw)

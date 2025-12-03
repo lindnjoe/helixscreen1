@@ -420,11 +420,12 @@ void GCodeTinyGLRenderer::build_geometry(const ParsedGCodeFile& gcode) {
     // Filter layers if range is specified
     if (layer_start_ > 0 || layer_end_ >= 0) {
         std::vector<Layer> filtered_layers;
-        int end = (layer_end_ < 0) ? gcode.layers.size()
-                                   : std::min((size_t)layer_end_ + 1, gcode.layers.size());
+        int end = (layer_end_ < 0) ? static_cast<int>(gcode.layers.size())
+                                   : static_cast<int>(std::min(static_cast<size_t>(layer_end_) + 1,
+                                                               gcode.layers.size()));
 
-        for (int i = layer_start_; i < end && i < (int)gcode.layers.size(); i++) {
-            filtered_layers.push_back(gcode.layers[i]);
+        for (int i = layer_start_; i < end && i < static_cast<int>(gcode.layers.size()); i++) {
+            filtered_layers.push_back(gcode.layers[static_cast<size_t>(i)]);
         }
 
         filtered_gcode.layers = std::move(filtered_layers);
@@ -556,7 +557,7 @@ void GCodeTinyGLRenderer::render_layer_range(int start_layer, int end_layer, flo
 
             glBegin(GL_TRIANGLE_STRIP);
             for (int j = 0; j < 4; j++) {
-                const auto& vertex = geometry_->vertices[strip[j]];
+                const auto& vertex = geometry_->vertices[strip[static_cast<size_t>(j)]];
 
                 // Lookup normal from palette
                 const glm::vec3& normal = geometry_->normal_palette[vertex.normal_index];
@@ -593,7 +594,7 @@ void GCodeTinyGLRenderer::render_layer_range(int start_layer, int end_layer, flo
 
         glBegin(GL_TRIANGLE_STRIP);
         for (int j = 0; j < 4; j++) {
-            const auto& vertex = geometry_->vertices[strip[j]];
+            const auto& vertex = geometry_->vertices[strip[static_cast<size_t>(j)]];
 
             // Lookup normal from palette
             const glm::vec3& normal = geometry_->normal_palette[vertex.normal_index];
@@ -622,14 +623,15 @@ void GCodeTinyGLRenderer::draw_to_lvgl(lv_layer_t* layer, const lv_area_t* widge
     }
 
     // Create or recreate LVGL draw buffer if size changed
-    if (!draw_buf_ || draw_buf_->header.w != viewport_width_ ||
-        draw_buf_->header.h != viewport_height_) {
+    if (!draw_buf_ || draw_buf_->header.w != static_cast<uint32_t>(viewport_width_) ||
+        draw_buf_->header.h != static_cast<uint32_t>(viewport_height_)) {
         if (draw_buf_) {
             lv_draw_buf_destroy(draw_buf_);
         }
 
         draw_buf_ =
-            lv_draw_buf_create(viewport_width_, viewport_height_, LV_COLOR_FORMAT_RGB888, 0);
+            lv_draw_buf_create(static_cast<uint32_t>(viewport_width_),
+                               static_cast<uint32_t>(viewport_height_), LV_COLOR_FORMAT_RGB888, 0);
         if (!draw_buf_) {
             spdlog::error("Failed to create LVGL draw buffer");
             return;
@@ -839,7 +841,7 @@ std::optional<std::string> GCodeTinyGLRenderer::pick_object(const glm::vec2& scr
             continue;
         }
 
-        const Layer& layer = gcode.layers[layer_idx];
+        const Layer& layer = gcode.layers[static_cast<size_t>(layer_idx)];
 
         for (const auto& segment : layer.segments) {
             // Only check extrusion segments (TinyGL doesn't render travels)

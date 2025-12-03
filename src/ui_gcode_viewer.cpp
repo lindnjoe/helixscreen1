@@ -734,8 +734,8 @@ static void ui_gcode_viewer_load_file_async(lv_obj_t* obj, const char* file_path
 
                 if (st->use_filament_color && !is_multicolor &&
                     st->gcode_file->filament_color_hex.length() >= 2) {
-                    lv_color_t color = lv_color_hex(
-                        std::strtol(st->gcode_file->filament_color_hex.c_str() + 1, nullptr, 16));
+                    lv_color_t color = lv_color_hex(static_cast<uint32_t>(
+                        std::strtol(st->gcode_file->filament_color_hex.c_str() + 1, nullptr, 16)));
                     st->renderer_->set_extrusion_color(color);
                     spdlog::debug("GCodeViewer: Auto-applied single-color filament: {}",
                                   st->gcode_file->filament_color_hex);
@@ -808,8 +808,8 @@ void ui_gcode_viewer_set_gcode_data(lv_obj_t* obj, void* gcode_data) {
 
     // Auto-apply filament color if enabled and available
     if (st->use_filament_color && st->gcode_file->filament_color_hex.length() >= 2) {
-        lv_color_t color =
-            lv_color_hex(std::strtol(st->gcode_file->filament_color_hex.c_str() + 1, nullptr, 16));
+        lv_color_t color = lv_color_hex(static_cast<uint32_t>(
+            std::strtol(st->gcode_file->filament_color_hex.c_str() + 1, nullptr, 16)));
         st->renderer_->set_extrusion_color(color);
         spdlog::info("GCodeViewer: Auto-applied filament color: {}",
                      st->gcode_file->filament_color_hex);
@@ -1062,8 +1062,8 @@ void ui_gcode_viewer_use_filament_color(lv_obj_t* obj, bool enable) {
 
     // If enabling and we have a loaded file with filament color, apply it now
     if (enable && st->gcode_file && st->gcode_file->filament_color_hex.length() >= 2) {
-        lv_color_t color =
-            lv_color_hex(std::strtol(st->gcode_file->filament_color_hex.c_str() + 1, nullptr, 16));
+        lv_color_t color = lv_color_hex(static_cast<uint32_t>(
+            std::strtol(st->gcode_file->filament_color_hex.c_str() + 1, nullptr, 16)));
         st->renderer_->set_extrusion_color(color);
         lv_obj_invalidate(obj);
         spdlog::debug("GCodeViewer: Applied filament color: {}",

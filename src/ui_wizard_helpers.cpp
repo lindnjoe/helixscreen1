@@ -100,7 +100,7 @@ int restore_dropdown_selection(lv_obj_t* dropdown, lv_subject_t* subject,
 
     // Update dropdown and subject
     if (dropdown) {
-        lv_dropdown_set_selected(dropdown, selected_index);
+        lv_dropdown_set_selected(dropdown, static_cast<uint32_t>(selected_index));
     }
     if (subject) {
         lv_subject_set_int(subject, selected_index);
@@ -127,14 +127,14 @@ bool save_dropdown_selection(lv_subject_t* subject, const std::vector<std::strin
 
     // Get selection index from subject
     int index = lv_subject_get_int(subject);
-    if (index < 0 || index >= static_cast<int>(items.size())) {
+    if (index < 0 || static_cast<size_t>(index) >= items.size()) {
         spdlog::warn("{} Cannot save selection: index {} out of range (0-{})", log_prefix, index,
                      items.size() - 1);
         return false;
     }
 
     // Save item name (not index) to config
-    const std::string& item_name = items[index];
+    const std::string& item_name = items[static_cast<size_t>(index)];
     config->set(config_path, item_name);
     spdlog::debug("{} Saved selection: {}", log_prefix, item_name);
 

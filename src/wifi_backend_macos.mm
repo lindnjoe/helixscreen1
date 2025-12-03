@@ -229,7 +229,7 @@ void WifiBackendMacOS::scan_timer_callback([[maybe_unused]] lv_timer_t* timer) {
 
             WiFiNetwork wifi_net;
             wifi_net.ssid = [ssid UTF8String];
-            wifi_net.signal_strength = rssi_to_percentage([network rssiValue]);
+            wifi_net.signal_strength = rssi_to_percentage(static_cast<int>([network rssiValue]));
 
             // Determine security type
             bool is_secured = false;
@@ -416,7 +416,7 @@ WifiBackend::ConnectionStatus WifiBackendMacOS::get_status() {
                 status.bssid = [bssid UTF8String];
             }
 
-            status.signal_strength = rssi_to_percentage([iface rssiValue]);
+            status.signal_strength = rssi_to_percentage(static_cast<int>([iface rssiValue]));
 
             // Get IP address (requires additional work, simplified for now)
             // Would need to query network interfaces via getifaddrs() or similar

@@ -107,7 +107,7 @@ static void icon_image_color_observer_cb(lv_observer_t* observer, lv_subject_t* 
 static void icon_image_opacity_observer_cb(lv_observer_t* observer, lv_subject_t* subject) {
     lv_obj_t* image = (lv_obj_t*)lv_observer_get_target(observer);
     int32_t opacity = lv_subject_get_int(subject);
-    lv_obj_set_style_opa(image, opacity, LV_PART_MAIN);
+    lv_obj_set_style_opa(image, static_cast<lv_opa_t>(opacity), LV_PART_MAIN);
 }
 
 // Button click event handler - switches active panel
@@ -121,7 +121,7 @@ LVGL_SAFE_EVENT_CB_WITH_EVENT(nav_button_clicked_cb, event, {
         lv_obj_t* screen = lv_screen_active();
         if (screen) {
             for (uint32_t i = 0; i < lv_obj_get_child_count(screen); i++) {
-                lv_obj_t* child = lv_obj_get_child(screen, i);
+                lv_obj_t* child = lv_obj_get_child(screen, static_cast<int32_t>(i));
                 if (lv_obj_has_flag(child, LV_OBJ_FLAG_HIDDEN)) {
                     continue; // Already hidden
                 }
@@ -580,7 +580,7 @@ bool ui_nav_go_back() {
     lv_obj_t* screen = lv_screen_active();
     if (screen) {
         for (uint32_t i = 0; i < lv_obj_get_child_count(screen); i++) {
-            lv_obj_t* child = lv_obj_get_child(screen, i);
+            lv_obj_t* child = lv_obj_get_child(screen, static_cast<int32_t>(i));
 
             // Skip app_layout, backdrop, and the panel we're animating
             if (child == app_layout_widget || child == overlay_backdrop || child == current_top) {

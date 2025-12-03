@@ -392,7 +392,7 @@ void WizardWifiStep::clear_network_list() {
 
     spdlog::debug("[{}] Clearing network list", get_name());
 
-    int32_t child_count = lv_obj_get_child_count(network_list_container_);
+    int32_t child_count = static_cast<int32_t>(lv_obj_get_child_count(network_list_container_));
     spdlog::debug("[{}] Network list has {} children", get_name(), child_count);
 
     for (int32_t i = child_count - 1; i >= 0; i--) {

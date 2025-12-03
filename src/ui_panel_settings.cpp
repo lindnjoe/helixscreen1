@@ -871,7 +871,7 @@ void SettingsPanel::on_display_sleep_changed(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_display_sleep_changed");
     auto* self = static_cast<SettingsPanel*>(lv_event_get_user_data(e));
     if (self && self->display_sleep_dropdown_) {
-        int index = lv_dropdown_get_selected(self->display_sleep_dropdown_);
+        int index = static_cast<int>(lv_dropdown_get_selected(self->display_sleep_dropdown_));
         self->handle_display_sleep_changed(index);
     }
     LVGL_SAFE_EVENT_CB_END();

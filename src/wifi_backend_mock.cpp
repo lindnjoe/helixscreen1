@@ -33,7 +33,7 @@
 
 WifiBackendMock::WifiBackendMock()
     : running_(false), connected_(false), connected_signal_(0),
-      rng_(std::chrono::steady_clock::now().time_since_epoch().count()) {
+      rng_(static_cast<uint32_t>(std::chrono::steady_clock::now().time_since_epoch().count())) {
     spdlog::debug("[WifiBackend] Mock backend initialized");
     init_mock_networks();
 }

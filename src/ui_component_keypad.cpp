@@ -229,7 +229,7 @@ static void handle_esc() {
 
 static void handle_ok() {
     // Parse current value
-    float value = atof(input_buffer);
+    float value = static_cast<float>(atof(input_buffer));
 
     // Clamp to min/max
     if (value < current_config.min_value) {
@@ -272,7 +272,7 @@ static void wire_button_events() {
                     ui_event_safe_call("keypad_digit_clicked", [&]() {
                         // Extract digit from user_data
                         intptr_t digit = (intptr_t)lv_event_get_user_data(e);
-                        append_digit('0' + digit);
+                        append_digit(static_cast<char>('0' + digit));
                     });
                 },
                 LV_EVENT_CLICKED, (void*)(intptr_t)i);

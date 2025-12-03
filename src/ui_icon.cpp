@@ -118,7 +118,7 @@ static IconVariant parse_variant(const char* variant_str) {
  */
 static void apply_size(lv_obj_t* obj, const IconSize& size) {
     lv_obj_set_size(obj, size.width, size.height);
-    lv_image_set_scale(obj, size.scale);
+    lv_image_set_scale(obj, static_cast<uint32_t>(size.scale));
 }
 
 /**

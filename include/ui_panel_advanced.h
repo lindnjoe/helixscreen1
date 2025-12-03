@@ -105,11 +105,6 @@ class AdvancedPanel : public PanelBase {
     // === Lazily-Created Overlay Panels ===
     //
 
-    lv_obj_t* bed_leveling_panel_ = nullptr;
-    lv_obj_t* input_shaping_panel_ = nullptr;
-    lv_obj_t* machine_limits_panel_ = nullptr;
-    lv_obj_t* spoolman_panel_ = nullptr;
-    lv_obj_t* macro_browser_panel_ = nullptr;
     lv_obj_t* zoffset_cal_panel_ = nullptr; // Reuses existing panel
 
     //

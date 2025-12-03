@@ -382,11 +382,12 @@ bool bed_mesh_renderer_set_mesh_data(bed_mesh_renderer_t* renderer, const float*
 
     // Allocate storage
     renderer->mesh.clear();
-    renderer->mesh.resize(rows);
+    renderer->mesh.resize(static_cast<size_t>(rows));
     for (int row = 0; row < rows; row++) {
-        renderer->mesh[row].resize(cols);
+        renderer->mesh[static_cast<size_t>(row)].resize(static_cast<size_t>(cols));
         for (int col = 0; col < cols; col++) {
-            renderer->mesh[row][col] = static_cast<double>(mesh[row][col]);
+            renderer->mesh[static_cast<size_t>(row)][static_cast<size_t>(col)] =
+                static_cast<double>(mesh[row][col]);
         }
     }
 
@@ -654,12 +655,14 @@ bool bed_mesh_renderer_render(bed_mesh_renderer_t* renderer, lv_layer_t* layer, 
     // After initial centering, offset remains stable across rotations
     if (renderer->view_state.center_offset_x == 0 && renderer->view_state.center_offset_y == 0) {
         // Compute bounds with current projection
-        int min_x, max_x, min_y, max_y;
-        compute_projected_mesh_bounds(renderer, &min_x, &max_x, &min_y, &max_y);
+        int inner_min_x, inner_max_x, inner_min_y, inner_max_y;
+        compute_projected_mesh_bounds(renderer, &inner_min_x, &inner_max_x, &inner_min_y,
+                                      &inner_max_y);
 
         // Calculate centering offset using helper function
-        compute_centering_offset(min_x, max_x, min_y, max_y, layer_offset_x, layer_offset_y,
-                                 canvas_width, canvas_height, &renderer->view_state.center_offset_x,
+        compute_centering_offset(inner_min_x, inner_max_x, inner_min_y, inner_max_y, layer_offset_x,
+                                 layer_offset_y, canvas_width, canvas_height,
+                                 &renderer->view_state.center_offset_x,
                                  &renderer->view_state.center_offset_y);
 
         // Re-project with the centering offset applied
@@ -772,7 +775,7 @@ static void compute_mesh_bounds(bed_mesh_renderer_t* renderer) {
 
     for (int row = 0; row < renderer->rows; row++) {
         for (int col = 0; col < renderer->cols; col++) {
-            double z = renderer->mesh[row][col];
+            double z = renderer->mesh[static_cast<size_t>(row)][static_cast<size_t>(col)];
             if (z < min_z)
                 min_z = z;
             if (z > max_z)
@@ -825,8 +828,8 @@ static void project_and_cache_vertices(bed_mesh_renderer_t* renderer, int canvas
 
     // Resize SOA caches if needed (avoid reallocation on every frame)
     if (renderer->projected_screen_x.size() != static_cast<size_t>(renderer->rows)) {
-        renderer->projected_screen_x.resize(renderer->rows);
-        renderer->projected_screen_y.resize(renderer->rows);
+        renderer->projected_screen_x.resize(static_cast<size_t>(renderer->rows));
+        renderer->projected_screen_y.resize(static_cast<size_t>(renderer->rows));
     }
 
     // Center mesh Z values (single source of truth via coordinate transform helper)
@@ -834,24 +837,30 @@ static void project_and_cache_vertices(bed_mesh_renderer_t* renderer, int canvas
 
     // Project all vertices once (projection handles centering internally)
     for (int row = 0; row < renderer->rows; row++) {
-        if (renderer->projected_screen_x[row].size() != static_cast<size_t>(renderer->cols)) {
-            renderer->projected_screen_x[row].resize(renderer->cols);
-            renderer->projected_screen_y[row].resize(renderer->cols);
+        if (renderer->projected_screen_x[static_cast<size_t>(row)].size() !=
+            static_cast<size_t>(renderer->cols)) {
+            renderer->projected_screen_x[static_cast<size_t>(row)].resize(
+                static_cast<size_t>(renderer->cols));
+            renderer->projected_screen_y[static_cast<size_t>(row)].resize(
+                static_cast<size_t>(renderer->cols));
         }
 
         for (int col = 0; col < renderer->cols; col++) {
             // Convert mesh coordinates to world space
             double world_x = mesh_col_to_world_x(col, renderer->cols);
             double world_y = mesh_row_to_world_y(row, renderer->rows);
-            double world_z =
-                mesh_z_to_world_z(renderer->mesh[row][col], z_center, renderer->view_state.z_scale);
+            double world_z = mesh_z_to_world_z(
+                renderer->mesh[static_cast<size_t>(row)][static_cast<size_t>(col)], z_center,
+                renderer->view_state.z_scale);
 
             // Project to screen space and cache only screen coordinates (SOA)
             bed_mesh_point_3d_t projected = bed_mesh_projection_project_3d_to_2d(
                 world_x, world_y, world_z, canvas_width, canvas_height, &renderer->view_state);
 
-            renderer->projected_screen_x[row][col] = projected.screen_x;
-            renderer->projected_screen_y[row][col] = projected.screen_y;
+            renderer->projected_screen_x[static_cast<size_t>(row)][static_cast<size_t>(col)] =
+                projected.screen_x;
+            renderer->projected_screen_y[static_cast<size_t>(row)][static_cast<size_t>(col)] =
+                projected.screen_y;
         }
     }
 }
@@ -923,8 +932,10 @@ static void compute_projected_mesh_bounds(const bed_mesh_renderer_t* renderer, i
 
     for (int row = 0; row < renderer->rows; row++) {
         for (int col = 0; col < renderer->cols; col++) {
-            int screen_x = renderer->projected_screen_x[row][col];
-            int screen_y = renderer->projected_screen_y[row][col];
+            int screen_x =
+                renderer->projected_screen_x[static_cast<size_t>(row)][static_cast<size_t>(col)];
+            int screen_y =
+                renderer->projected_screen_y[static_cast<size_t>(row)][static_cast<size_t>(col)];
             min_x = std::min(min_x, screen_x);
             max_x = std::max(max_x, screen_x);
             min_y = std::min(min_y, screen_y);
@@ -1168,7 +1179,7 @@ static void generate_mesh_quads(bed_mesh_renderer_t* renderer) {
     // Pre-allocate capacity to avoid reallocations during generation
     // Number of quads = (rows-1) × (cols-1)
     int expected_quads = (renderer->rows - 1) * (renderer->cols - 1);
-    renderer->quads.reserve(expected_quads);
+    renderer->quads.reserve(static_cast<size_t>(expected_quads));
 
     // Center mesh around origin for rotation (single source of truth)
     double z_center = compute_mesh_z_center(renderer->mesh_min_z, renderer->mesh_max_z);
@@ -1210,31 +1221,39 @@ static void generate_mesh_quads(bed_mesh_renderer_t* renderer) {
              */
             quad.vertices[0].x = base_x_0;
             quad.vertices[0].y = base_y_1;
-            quad.vertices[0].z = mesh_z_to_world_z(renderer->mesh[row + 1][col], z_center,
-                                                   renderer->view_state.z_scale);
+            quad.vertices[0].z = mesh_z_to_world_z(
+                renderer->mesh[static_cast<size_t>(row + 1)][static_cast<size_t>(col)], z_center,
+                renderer->view_state.z_scale);
             quad.vertices[0].color = bed_mesh_gradient_height_to_color(
-                renderer->mesh[row + 1][col], renderer->color_min_z, renderer->color_max_z);
+                renderer->mesh[static_cast<size_t>(row + 1)][static_cast<size_t>(col)],
+                renderer->color_min_z, renderer->color_max_z);
 
             quad.vertices[1].x = base_x_1;
             quad.vertices[1].y = base_y_1;
-            quad.vertices[1].z = mesh_z_to_world_z(renderer->mesh[row + 1][col + 1], z_center,
-                                                   renderer->view_state.z_scale);
+            quad.vertices[1].z = mesh_z_to_world_z(
+                renderer->mesh[static_cast<size_t>(row + 1)][static_cast<size_t>(col + 1)],
+                z_center, renderer->view_state.z_scale);
             quad.vertices[1].color = bed_mesh_gradient_height_to_color(
-                renderer->mesh[row + 1][col + 1], renderer->color_min_z, renderer->color_max_z);
+                renderer->mesh[static_cast<size_t>(row + 1)][static_cast<size_t>(col + 1)],
+                renderer->color_min_z, renderer->color_max_z);
 
             quad.vertices[2].x = base_x_0;
             quad.vertices[2].y = base_y_0;
-            quad.vertices[2].z =
-                mesh_z_to_world_z(renderer->mesh[row][col], z_center, renderer->view_state.z_scale);
+            quad.vertices[2].z = mesh_z_to_world_z(
+                renderer->mesh[static_cast<size_t>(row)][static_cast<size_t>(col)], z_center,
+                renderer->view_state.z_scale);
             quad.vertices[2].color = bed_mesh_gradient_height_to_color(
-                renderer->mesh[row][col], renderer->color_min_z, renderer->color_max_z);
+                renderer->mesh[static_cast<size_t>(row)][static_cast<size_t>(col)],
+                renderer->color_min_z, renderer->color_max_z);
 
             quad.vertices[3].x = base_x_1;
             quad.vertices[3].y = base_y_0;
-            quad.vertices[3].z = mesh_z_to_world_z(renderer->mesh[row][col + 1], z_center,
-                                                   renderer->view_state.z_scale);
+            quad.vertices[3].z = mesh_z_to_world_z(
+                renderer->mesh[static_cast<size_t>(row)][static_cast<size_t>(col + 1)], z_center,
+                renderer->view_state.z_scale);
             quad.vertices[3].color = bed_mesh_gradient_height_to_color(
-                renderer->mesh[row][col + 1], renderer->color_min_z, renderer->color_max_z);
+                renderer->mesh[static_cast<size_t>(row)][static_cast<size_t>(col + 1)],
+                renderer->color_min_z, renderer->color_max_z);
 
             // Compute center color for fast rendering
             bed_mesh_rgb_t avg_color = {
@@ -1297,10 +1316,10 @@ static void render_grid_lines(lv_layer_t* layer, const bed_mesh_renderer_t* rend
     // Draw horizontal grid lines (connect points in same row)
     for (int row = 0; row < renderer->rows; row++) {
         for (int col = 0; col < renderer->cols - 1; col++) {
-            int p1_x = screen_x[row][col];
-            int p1_y = screen_y[row][col];
-            int p2_x = screen_x[row][col + 1];
-            int p2_y = screen_y[row][col + 1];
+            int p1_x = screen_x[static_cast<size_t>(row)][static_cast<size_t>(col)];
+            int p1_y = screen_y[static_cast<size_t>(row)][static_cast<size_t>(col)];
+            int p2_x = screen_x[static_cast<size_t>(row)][static_cast<size_t>(col + 1)];
+            int p2_y = screen_y[static_cast<size_t>(row)][static_cast<size_t>(col + 1)];
 
             // Bounds check (allow some margin for partially visible lines)
             if (is_line_visible(p1_x, p1_y, p2_x, p2_y, canvas_width, canvas_height)) {
@@ -1325,10 +1344,10 @@ static void render_grid_lines(lv_layer_t* layer, const bed_mesh_renderer_t* rend
     // Draw vertical grid lines (connect points in same column)
     for (int col = 0; col < renderer->cols; col++) {
         for (int row = 0; row < renderer->rows - 1; row++) {
-            int p1_x = screen_x[row][col];
-            int p1_y = screen_y[row][col];
-            int p2_x = screen_x[row + 1][col];
-            int p2_y = screen_y[row + 1][col];
+            int p1_x = screen_x[static_cast<size_t>(row)][static_cast<size_t>(col)];
+            int p1_y = screen_y[static_cast<size_t>(row)][static_cast<size_t>(col)];
+            int p2_x = screen_x[static_cast<size_t>(row + 1)][static_cast<size_t>(col)];
+            int p2_y = screen_y[static_cast<size_t>(row + 1)][static_cast<size_t>(col)];
 
             // Bounds check
             if (is_line_visible(p1_x, p1_y, p2_x, p2_y, canvas_width, canvas_height)) {
@@ -1519,7 +1538,7 @@ static void draw_axis_tick_label(lv_layer_t* layer, lv_draw_label_dsc_t* label_d
     char label_text[8];
     snprintf(label_text, sizeof(label_text), "%.0f", value);
     label_dsc->text = label_text;
-    label_dsc->text_length = strlen(label_text);
+    label_dsc->text_length = static_cast<uint32_t>(strlen(label_text));
 
     // Calculate label area with offsets
     lv_area_t label_area;

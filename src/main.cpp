@@ -1134,7 +1134,7 @@ static void show_splash_screen() {
         // LVGL uses 1/256 scale units (256 = 100%, 128 = 50%, etc.)
         uint32_t width = header.w;  // Copy bit-field to local var for logging
         uint32_t height = header.h; // Copy bit-field to local var for logging
-        int scale = (target_size * 256) / width;
+        uint32_t scale = (static_cast<uint32_t>(target_size) * 256U) / width;
         lv_image_set_scale(logo, scale);
 
         spdlog::debug("Logo: {}x{} scaled to {} (scale factor: {})", width, height, target_size,
@@ -1152,7 +1152,7 @@ static void show_splash_screen() {
     lv_anim_set_duration(&anim, 500); // 500ms = 0.5 seconds
     lv_anim_set_path_cb(&anim, lv_anim_path_ease_in);
     lv_anim_set_exec_cb(&anim, [](void* obj, int32_t value) {
-        lv_obj_set_style_opa((lv_obj_t*)obj, value, LV_PART_MAIN);
+        lv_obj_set_style_opa((lv_obj_t*)obj, static_cast<lv_opa_t>(value), LV_PART_MAIN);
     });
     lv_anim_start(&anim);
 
@@ -1181,7 +1181,7 @@ static bool write_bmp(const char* filename, const uint8_t* data, int width, int 
         return false;
 
     // BMP header (54 bytes total)
-    uint32_t file_size = 54 + (width * height * 4);
+    uint32_t file_size = 54U + (static_cast<uint32_t>(width) * static_cast<uint32_t>(height) * 4U);
     uint32_t pixel_offset = 54;
     uint32_t dib_size = 40;
     uint16_t planes = 1;
@@ -1205,7 +1205,7 @@ static bool write_bmp(const char* filename, const uint8_t* data, int width, int 
     fwrite(&planes, 2, 1, f.get());      // Planes
     fwrite(&bpp, 2, 1, f.get());         // Bits per pixel
     fwrite(&compression, 4, 1, f.get()); // Compression (none)
-    uint32_t image_size = width * height * 4;
+    uint32_t image_size = static_cast<uint32_t>(width) * static_cast<uint32_t>(height) * 4U;
     fwrite(&image_size, 4, 1, f.get()); // Image size
     fwrite(&ppm, 4, 1, f.get());        // X pixels per meter
     fwrite(&ppm, 4, 1, f.get());        // Y pixels per meter
@@ -1214,7 +1214,8 @@ static bool write_bmp(const char* filename, const uint8_t* data, int width, int 
 
     // Write pixel data (BMP is bottom-up, so flip rows)
     for (int y = height - 1; y >= 0; y--) {
-        fwrite(data + (y * width * 4), 4, width, f.get());
+        fwrite(data + (static_cast<size_t>(y) * static_cast<size_t>(width) * 4), 4,
+               static_cast<size_t>(width), f.get());
     }
 
     // File automatically closed by unique_ptr destructor
@@ -1265,16 +1266,16 @@ static void initialize_moonraker_client(Config* config) {
     set_moonraker_client(moonraker_client.get());
 
     // Configure timeouts from config file
-    uint32_t connection_timeout =
-        config->get<int>(config->df() + "moonraker_connection_timeout_ms", 10000);
-    uint32_t request_timeout =
-        config->get<int>(config->df() + "moonraker_request_timeout_ms", 30000);
-    uint32_t keepalive_interval =
-        config->get<int>(config->df() + "moonraker_keepalive_interval_ms", 10000);
-    uint32_t reconnect_min_delay =
-        config->get<int>(config->df() + "moonraker_reconnect_min_delay_ms", 200);
-    uint32_t reconnect_max_delay =
-        config->get<int>(config->df() + "moonraker_reconnect_max_delay_ms", 2000);
+    uint32_t connection_timeout = static_cast<uint32_t>(
+        config->get<int>(config->df() + "moonraker_connection_timeout_ms", 10000));
+    uint32_t request_timeout = static_cast<uint32_t>(
+        config->get<int>(config->df() + "moonraker_request_timeout_ms", 30000));
+    uint32_t keepalive_interval = static_cast<uint32_t>(
+        config->get<int>(config->df() + "moonraker_keepalive_interval_ms", 10000));
+    uint32_t reconnect_min_delay = static_cast<uint32_t>(
+        config->get<int>(config->df() + "moonraker_reconnect_min_delay_ms", 200));
+    uint32_t reconnect_max_delay = static_cast<uint32_t>(
+        config->get<int>(config->df() + "moonraker_reconnect_max_delay_ms", 2000));
 
     moonraker_client->configure_timeouts(connection_timeout, request_timeout, keepalive_interval,
                                          reconnect_min_delay, reconnect_max_delay);
@@ -2000,17 +2001,18 @@ int main(int argc, char** argv) {
     }
 
     // Auto-screenshot timer (configurable delay after UI creation)
-    uint32_t screenshot_time = helix_get_ticks() + (screenshot_delay_sec * 1000);
+    uint32_t screenshot_time =
+        helix_get_ticks() + (static_cast<uint32_t>(screenshot_delay_sec) * 1000U);
     bool screenshot_taken = false;
 
     // Auto-quit timeout timer (if enabled)
     uint32_t start_time = helix_get_ticks();
-    uint32_t timeout_ms = timeout_sec * 1000;
+    uint32_t timeout_ms = static_cast<uint32_t>(timeout_sec) * 1000U;
 
     // Request timeout check timer (check every 2 seconds)
     uint32_t last_timeout_check = helix_get_ticks();
-    uint32_t timeout_check_interval =
-        config->get<int>(config->df() + "moonraker_timeout_check_interval_ms", 2000);
+    uint32_t timeout_check_interval = static_cast<uint32_t>(
+        config->get<int>(config->df() + "moonraker_timeout_check_interval_ms", 2000));
 
     // Main event loop - LVGL handles display events internally via lv_timer_handler()
     // Loop continues while display exists and quit not requested

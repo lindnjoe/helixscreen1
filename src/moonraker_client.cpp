@@ -216,7 +216,7 @@ int MoonrakerClient::connect(const char* url, std::function<void()> on_connected
     close();
 
     // Apply connection timeout to libhv (must be called before open())
-    setConnectTimeout(connection_timeout_ms_);
+    setConnectTimeout(static_cast<int>(connection_timeout_ms_));
 
     spdlog::debug("[Moonraker Client] WebSocket connecting to {}", url);
     set_connection_state(ConnectionState::CONNECTING);
@@ -538,7 +538,7 @@ int MoonrakerClient::connect(const char* url, std::function<void()> on_connected
     };
 
     // WebSocket ping (keepalive) - use configured interval
-    setPingInterval(keepalive_interval_ms_);
+    setPingInterval(static_cast<int>(keepalive_interval_ms_));
 
     // Automatic reconnection with exponential backoff - use configured values
     reconn_setting_t reconn;
@@ -1084,9 +1084,10 @@ void MoonrakerClient::parse_bed_mesh(const json& bed_mesh) {
         }
 
         // Update dimensions
-        active_bed_mesh_.y_count = active_bed_mesh_.probed_matrix.size();
-        active_bed_mesh_.x_count =
-            active_bed_mesh_.probed_matrix.empty() ? 0 : active_bed_mesh_.probed_matrix[0].size();
+        active_bed_mesh_.y_count = static_cast<int>(active_bed_mesh_.probed_matrix.size());
+        active_bed_mesh_.x_count = active_bed_mesh_.probed_matrix.empty()
+                                       ? 0
+                                       : static_cast<int>(active_bed_mesh_.probed_matrix[0].size());
     }
 
     // Parse mesh bounds

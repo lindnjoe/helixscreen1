@@ -188,8 +188,8 @@ void WizardHeaterSelectStep::cleanup() {
 
     // Get the selected bed heater name and also save it as the sensor
     int32_t bed_idx = lv_subject_get_int(&bed_heater_selected_);
-    if (bed_idx >= 0 && bed_idx < static_cast<int32_t>(bed_heater_items_.size())) {
-        const std::string& bed_heater_name = bed_heater_items_[bed_idx];
+    if (bed_idx >= 0 && static_cast<size_t>(bed_idx) < bed_heater_items_.size()) {
+        const std::string& bed_heater_name = bed_heater_items_[static_cast<size_t>(bed_idx)];
         config->set<std::string>(WizardConfigPaths::BED_SENSOR, bed_heater_name);
         spdlog::debug("[{}] Bed sensor set to: {}", get_name(), bed_heater_name);
     }
@@ -201,8 +201,9 @@ void WizardHeaterSelectStep::cleanup() {
 
     // Get the selected hotend heater name and also save it as the sensor
     int32_t hotend_idx = lv_subject_get_int(&hotend_heater_selected_);
-    if (hotend_idx >= 0 && hotend_idx < static_cast<int32_t>(hotend_heater_items_.size())) {
-        const std::string& hotend_heater_name = hotend_heater_items_[hotend_idx];
+    if (hotend_idx >= 0 && static_cast<size_t>(hotend_idx) < hotend_heater_items_.size()) {
+        const std::string& hotend_heater_name =
+            hotend_heater_items_[static_cast<size_t>(hotend_idx)];
         config->set<std::string>(WizardConfigPaths::HOTEND_SENSOR, hotend_heater_name);
         spdlog::debug("[{}] Hotend sensor set to: {}", get_name(), hotend_heater_name);
     }

@@ -41,7 +41,7 @@ void wizard_hardware_dropdown_changed_cb(lv_event_t* e) {
         return;
     }
 
-    uint16_t selected_index = lv_dropdown_get_selected(dropdown);
+    uint16_t selected_index = static_cast<uint16_t>(lv_dropdown_get_selected(dropdown));
     lv_subject_set_int(subject, selected_index);
 }
 

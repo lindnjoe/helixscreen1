@@ -256,7 +256,7 @@ static void show_overlay(const lv_area_t* key_area, const char* alternatives) {
     const int32_t char_width = 50;  // Width per character
     const int32_t char_height = 60; // Height of overlay
     const int32_t padding = 8;
-    int32_t overlay_width = (alt_count * char_width) + (padding * 2);
+    int32_t overlay_width = (static_cast<int32_t>(alt_count) * char_width) + (padding * 2);
     int32_t overlay_height = char_height;
 
     lv_obj_set_size(g_overlay, overlay_width, overlay_height);
@@ -421,7 +421,7 @@ static void longpress_event_handler(lv_event_t* e) {
                 char selected_char = 0;
 
                 for (uint32_t i = 0; i < child_count; i++) {
-                    lv_obj_t* label = lv_obj_get_child(g_overlay, i);
+                    lv_obj_t* label = lv_obj_get_child(g_overlay, static_cast<int32_t>(i));
                     lv_area_t label_area;
                     lv_obj_get_coords(label, &label_area);
 
@@ -776,7 +776,7 @@ static void keyboard_draw_alternative_chars(lv_event_t* e) {
 
                 // Calculate button top-right corner
                 lv_coord_t btn_x = kb_coords.x1 + cumulative_width + current_btn_width - 10;
-                lv_coord_t btn_y = kb_coords.y1 + row * row_height + 6;
+                lv_coord_t btn_y = kb_coords.y1 + static_cast<lv_coord_t>(row) * row_height + 6;
 
                 // Create draw label descriptor
                 lv_draw_label_dsc_t label_dsc;
@@ -980,11 +980,10 @@ void ui_keyboard_show(lv_obj_t* textarea) {
                       ta_bottom, kb_top);
 
         // Move all screen children (except keyboard) up with animation
-        lv_obj_t* screen = lv_screen_active();
         uint32_t child_count = lv_obj_get_child_count(screen);
 
         for (uint32_t i = 0; i < child_count; i++) {
-            lv_obj_t* child = lv_obj_get_child(screen, i);
+            lv_obj_t* child = lv_obj_get_child(screen, static_cast<int32_t>(i));
             if (child == g_keyboard)
                 continue;
 
@@ -1045,7 +1044,7 @@ void ui_keyboard_hide() {
     spdlog::debug("[Keyboard] Restoring screen children to y=0");
 
     for (uint32_t i = 0; i < child_count; i++) {
-        lv_obj_t* child = lv_obj_get_child(screen, i);
+        lv_obj_t* child = lv_obj_get_child(screen, static_cast<int32_t>(i));
         if (child == g_keyboard)
             continue;
 

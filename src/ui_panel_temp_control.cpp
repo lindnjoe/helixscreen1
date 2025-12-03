@@ -340,7 +340,7 @@ void TempControlPanel::create_x_axis_labels(lv_obj_t* container,
     static const char* label_names[X_AXIS_LABEL_COUNT] = {"x_label_0", "x_label_1", "x_label_2",
                                                           "x_label_3", "x_label_4", "x_label_5"};
 
-    for (int i = 0; i < X_AXIS_LABEL_COUNT; i++) {
+    for (size_t i = 0; i < X_AXIS_LABEL_COUNT; i++) {
         labels[i] = lv_obj_find_by_name(container, label_names[i]);
         if (!labels[i]) {
             spdlog::warn("[TempPanel] X-axis label '{}' not found in container", label_names[i]);
@@ -377,11 +377,11 @@ void TempControlPanel::update_x_axis_labels(std::array<lv_obj_t*, X_AXIS_LABEL_C
     int64_t label_interval_ms = visible_duration_ms / (X_AXIS_LABEL_COUNT - 1);
 
     // Update label text (visibility controlled reactively by bind_flag_if_lt in XML)
-    for (int i = 0; i < X_AXIS_LABEL_COUNT; i++) {
+    for (size_t i = 0; i < X_AXIS_LABEL_COUNT; i++) {
         if (!labels[i])
             continue;
 
-        int64_t label_time_ms = oldest_ms + (i * label_interval_ms);
+        int64_t label_time_ms = oldest_ms + (static_cast<int64_t>(i) * label_interval_ms);
         time_t label_time = static_cast<time_t>(label_time_ms / 1000);
 
         struct tm* tm_info = localtime(&label_time);

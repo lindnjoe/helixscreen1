@@ -1011,7 +1011,8 @@ void PrintStatusPanel::handle_object_long_press(const char* object_name) {
 
     // Find the created dialog (should be last child of screen)
     uint32_t child_cnt = lv_obj_get_child_count(screen);
-    exclude_confirm_dialog_ = (child_cnt > 0) ? lv_obj_get_child(screen, child_cnt - 1) : nullptr;
+    exclude_confirm_dialog_ =
+        (child_cnt > 0) ? lv_obj_get_child(screen, static_cast<int32_t>(child_cnt - 1)) : nullptr;
 
     if (!exclude_confirm_dialog_) {
         spdlog::error("[{}] Failed to create exclude confirmation dialog", get_name());

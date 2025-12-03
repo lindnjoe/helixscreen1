@@ -138,7 +138,8 @@ static void load_colors(jog_pad_state_t* state, const char* component_scope_name
 static float calculate_angle(lv_coord_t dx, lv_coord_t dy) {
     // atan2 gives us angle with 0° = East, counter-clockwise
     // We need 0° = North, clockwise
-    float angle = atan2f((float)dx, (float)-dy) * 180.0f / M_PI;
+    float angle =
+        atan2f(static_cast<float>(dx), static_cast<float>(-dy)) * 180.0f / static_cast<float>(M_PI);
     if (angle < 0)
         angle += 360.0f;
     return angle;
@@ -246,10 +247,10 @@ static void jog_pad_draw_cb(lv_event_t* e) {
     lv_draw_arc_dsc_t bg_arc_dsc;
     lv_draw_arc_dsc_init(&bg_arc_dsc);
     bg_arc_dsc.color = state->jog_color_outer_ring;
-    bg_arc_dsc.width = radius * 2; // Width = diameter, fills entire circle
+    bg_arc_dsc.width = static_cast<uint16_t>(radius * 2); // Width = diameter, fills entire circle
     bg_arc_dsc.center.x = center_x;
     bg_arc_dsc.center.y = center_y;
-    bg_arc_dsc.radius = radius; // Centerline at outer edge
+    bg_arc_dsc.radius = static_cast<uint16_t>(radius); // Centerline at outer edge
     bg_arc_dsc.start_angle = 0;
     bg_arc_dsc.end_angle = 360;
     lv_draw_arc(layer, &bg_arc_dsc);
@@ -258,10 +259,10 @@ static void jog_pad_draw_cb(lv_event_t* e) {
     lv_draw_arc_dsc_t inner_arc_dsc;
     lv_draw_arc_dsc_init(&inner_arc_dsc);
     inner_arc_dsc.color = state->jog_color_inner_circle;
-    inner_arc_dsc.width = inner_boundary * 2; // Width = inner diameter
+    inner_arc_dsc.width = static_cast<uint16_t>(inner_boundary * 2); // Width = inner diameter
     inner_arc_dsc.center.x = center_x;
     inner_arc_dsc.center.y = center_y;
-    inner_arc_dsc.radius = inner_boundary;
+    inner_arc_dsc.radius = static_cast<uint16_t>(inner_boundary);
     inner_arc_dsc.start_angle = 0;
     inner_arc_dsc.end_angle = 360;
     lv_draw_arc(layer, &inner_arc_dsc);
@@ -295,10 +296,10 @@ static void jog_pad_draw_cb(lv_event_t* e) {
     lv_draw_arc_dsc_t home_bg_dsc;
     lv_draw_arc_dsc_init(&home_bg_dsc);
     home_bg_dsc.color = state->jog_color_home_bg;
-    home_bg_dsc.width = home_radius * 2; // Fill entire circle
+    home_bg_dsc.width = static_cast<uint16_t>(home_radius * 2); // Fill entire circle
     home_bg_dsc.center.x = center_x;
     home_bg_dsc.center.y = center_y;
-    home_bg_dsc.radius = home_radius;
+    home_bg_dsc.radius = static_cast<uint16_t>(home_radius);
     home_bg_dsc.start_angle = 0;
     home_bg_dsc.end_angle = 360;
     lv_draw_arc(layer, &home_bg_dsc);
@@ -310,7 +311,7 @@ static void jog_pad_draw_cb(lv_event_t* e) {
     home_ring_dsc.width = 3; // Border thickness
     home_ring_dsc.center.x = center_x;
     home_ring_dsc.center.y = center_y;
-    home_ring_dsc.radius = home_radius;
+    home_ring_dsc.radius = static_cast<uint16_t>(home_radius);
     home_ring_dsc.start_angle = 0;
     home_ring_dsc.end_angle = 360;
     lv_draw_arc(layer, &home_ring_dsc);
@@ -333,7 +334,7 @@ static void jog_pad_draw_cb(lv_event_t* e) {
     // Draw zone boundary lines to show the edges of each directional click zone
     // 8 zones means 8 boundaries - at 22.5° intervals starting from 22.5°
     for (float angle_deg : {22.5f, 67.5f, 112.5f, 157.5f, 202.5f, 247.5f, 292.5f, 337.5f}) {
-        float angle_rad = angle_deg * M_PI / 180.0f;
+        float angle_rad = angle_deg * static_cast<float>(M_PI) / 180.0f;
 
         lv_draw_line_dsc_t boundary_line_dsc;
         lv_draw_line_dsc_init(&boundary_line_dsc);
@@ -423,11 +424,11 @@ static void jog_pad_draw_cb(lv_event_t* e) {
             lv_draw_arc_dsc_init(&highlight_dsc);
             highlight_dsc.color = state->jog_color_highlight;
             highlight_dsc.opa = LV_OPA_60; // ~23% opacity
-            lv_coord_t home_radius = (lv_coord_t)(radius * 0.25f);
-            highlight_dsc.width = home_radius * 2;
+            lv_coord_t highlight_home_radius = (lv_coord_t)(radius * 0.25f);
+            highlight_dsc.width = static_cast<uint16_t>(highlight_home_radius * 2);
             highlight_dsc.center.x = center_x;
             highlight_dsc.center.y = center_y;
-            highlight_dsc.radius = home_radius;
+            highlight_dsc.radius = static_cast<uint16_t>(highlight_home_radius);
             highlight_dsc.start_angle = 0;
             highlight_dsc.end_angle = 360;
             lv_draw_arc(layer, &highlight_dsc);
@@ -452,24 +453,27 @@ static void jog_pad_draw_cb(lv_event_t* e) {
 
             if (state->pressed_is_inner) {
                 // Inner zone: Draw arc ring from 25% to 50%
-                lv_coord_t inner_boundary = (lv_coord_t)(radius * 0.50f);
+                lv_coord_t highlight_inner_boundary = (lv_coord_t)(radius * 0.50f);
                 lv_coord_t home_edge = (lv_coord_t)(radius * 0.25f);
 
-                highlight_dsc.width = inner_boundary - home_edge; // 25% thickness
+                highlight_dsc.width =
+                    static_cast<uint16_t>(highlight_inner_boundary - home_edge); // 25% thickness
                 highlight_dsc.center.x = center_x;
                 highlight_dsc.center.y = center_y;
-                highlight_dsc.radius = inner_boundary; // 50% outer edge
+                highlight_dsc.radius =
+                    static_cast<uint16_t>(highlight_inner_boundary); // 50% outer edge
                 highlight_dsc.start_angle = lvgl_start;
                 highlight_dsc.end_angle = lvgl_end;
                 lv_draw_arc(layer, &highlight_dsc);
             } else {
                 // Outer zone: Draw arc ring from 50% to 100%
-                lv_coord_t inner_boundary = (lv_coord_t)(radius * 0.50f);
+                lv_coord_t highlight_outer_inner_boundary = (lv_coord_t)(radius * 0.50f);
 
-                highlight_dsc.width = radius - inner_boundary; // 50% thickness
+                highlight_dsc.width =
+                    static_cast<uint16_t>(radius - highlight_outer_inner_boundary); // 50% thickness
                 highlight_dsc.center.x = center_x;
                 highlight_dsc.center.y = center_y;
-                highlight_dsc.radius = radius; // 100% outer edge
+                highlight_dsc.radius = static_cast<uint16_t>(radius); // 100% outer edge
                 highlight_dsc.start_angle = lvgl_start;
                 highlight_dsc.end_angle = lvgl_end;
                 lv_draw_arc(layer, &highlight_dsc);
