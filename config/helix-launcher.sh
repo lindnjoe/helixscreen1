@@ -22,16 +22,19 @@ set -e
 # Determine script and binary locations
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Support both installed and development layouts
+# Support installed, deployed, and development layouts
 if [ -x "${SCRIPT_DIR}/helix-splash" ]; then
     # Installed: binaries in same directory as script
     BIN_DIR="${SCRIPT_DIR}"
+elif [ -x "${SCRIPT_DIR}/../helix-splash" ]; then
+    # Deployed: binaries in parent directory (rsync deployment layout)
+    BIN_DIR="${SCRIPT_DIR}/.."
 elif [ -x "${SCRIPT_DIR}/../build/bin/helix-splash" ]; then
     # Development: binaries in build/bin relative to config/
     BIN_DIR="${SCRIPT_DIR}/../build/bin"
 else
     echo "Error: Cannot find helix-splash binary" >&2
-    echo "Looked in: ${SCRIPT_DIR} and ${SCRIPT_DIR}/../build/bin" >&2
+    echo "Looked in: ${SCRIPT_DIR}, ${SCRIPT_DIR}/.., and ${SCRIPT_DIR}/../build/bin" >&2
     exit 1
 fi
 
