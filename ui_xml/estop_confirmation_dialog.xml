@@ -43,7 +43,7 @@
               style_flex_cross_place="center"
               style_pad_gap="#space_md">
 
-        <icon src="mat_emergency_img" size="xl" color="#error_color"/>
+        <icon src="alert_octagon" size="xl" color="#error_color"/>
 
         <text_heading text="Emergency Stop?" style_text_align="center"/>
 

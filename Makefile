@@ -198,9 +198,9 @@ FONT_SRCS += assets/fonts/noto_sans_10.c assets/fonts/noto_sans_12.c assets/font
 FONT_SRCS += assets/fonts/noto_sans_bold_14.c assets/fonts/noto_sans_bold_16.c assets/fonts/noto_sans_bold_18.c assets/fonts/noto_sans_bold_20.c assets/fonts/noto_sans_bold_24.c assets/fonts/noto_sans_bold_28.c
 FONT_OBJS := $(patsubst %.c,$(OBJ_DIR)/%.o,$(FONT_SRCS))
 
-# Material Design Icons
-MATERIAL_ICON_SRCS := $(wildcard assets/images/material/*.c)
-MATERIAL_ICON_OBJS := $(patsubst %.c,$(OBJ_DIR)/%.o,$(MATERIAL_ICON_SRCS))
+# Material Design Icons - REMOVED
+# Icons are now font-based using MDI font glyphs (mdi_icons_*.c)
+# See include/ui_icon_codepoints.h for icon mapping
 
 # SDL2 - Only needed for native desktop builds (not embedded targets)
 # Cross-compilation targets use framebuffer/DRM instead

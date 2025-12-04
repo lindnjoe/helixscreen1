@@ -3,10 +3,10 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!-- Reusable Settings Info Row Component -->
 <!-- Creates a read-only row showing a label and value -->
-<!-- Usage: <setting_info_row label="Version" icon="mat_info_img" value="1.0.0"/> -->
+<!-- Usage: <setting_info_row label="Version" icon="info" value="1.0.0"/> -->
 <!-- Props:
      - label: Label text on left side
-     - icon: Optional left icon (e.g., "mat_info_img"). If empty, no icon shown.
+     - icon: Optional left icon (e.g., "info", "wifi"). If empty, no icon shown.
      - value: Value text on right side (can be updated via bind_text in C++)
 -->
 <component>

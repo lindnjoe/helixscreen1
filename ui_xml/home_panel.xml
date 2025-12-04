@@ -22,7 +22,7 @@
       <lv_obj name="printer_container" width="#printer_container_width" height="100%" style_bg_opa="0%" style_border_width="0" style_pad_all="0" scrollable="false">
         <lv_image name="printer_image" src="A:assets/images/printer_400.png" width="100%" height="100%" inner_align="contain"/>
         <!-- Disconnected overlay - shown when NOT connected (state != 2) -->
-        <icon name="disconnected_overlay" src="mat_prohibited_img" size="xl" align="center" color="#error_color">
+        <icon name="disconnected_overlay" src="prohibited" size="xl" align="center" color="#error_color">
           <lv_obj-bind_flag_if_eq subject="printer_connection_state" flag="hidden" ref_value="2"/>
         </icon>
       </lv_obj>
@@ -45,9 +45,9 @@
     <!-- Bottom section: Info cards (40% of height via flex_grow="2", balances with top section's flex_grow="3") -->
     <lv_obj width="100%" flex_grow="2" style_bg_opa="0%" style_border_width="0" style_pad_all="#space_lg" flex_flow="row" style_pad_gap="#space_md" style_flex_cross_place="stretch" scrollable="false">
       <!-- Print Files Card - Benchy thumbnail + text in horizontal layout -->
-      <lv_button name="print_card" flex_grow="1" height="100%" style_radius="#border_radius" style_border_width="0" style_pad_all="#space_lg" style_shadow_width="0" flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center" style_flex_track_place="center" style_pad_gap="#space_sm">
+      <lv_button name="print_card" width="content" height="100%" style_radius="#border_radius" style_border_width="0" style_pad_all="#space_lg" style_shadow_width="0" flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center" style_flex_track_place="center" style_pad_gap="#space_sm">
         <!-- Benchy thumbnail - white silhouette for dark theme -->
-        <lv_image src="A:assets/images/benchy_thumbnail_white.png" height="128" inner_align="contain"/>
+        <lv_image src="A:assets/images/benchy_thumbnail_white.png" width="content" height="100%" inner_align="contain"/>
         <text_body text="Print Files"/>
         <event_cb trigger="clicked" callback="print_card_clicked_cb"/>
       </lv_button>
@@ -55,14 +55,38 @@
       <ui_card name="status_card" flex_grow="2" height="100%" style_radius="#border_radius" style_pad_all="#space_md" flex_flow="row" style_flex_cross_place="center">
         <!-- Temperature display - icon on top, text below -->
         <lv_obj flex_grow="1" height="100%" style_bg_opa="0%" style_border_width="0" style_pad_all="0" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center">
-          <icon name="temp_icon" src="mat_extruder_img" variant="secondary"/>
+          <icon name="temp_icon" src="heater" variant="secondary"/>
           <text_body name="temp_text_label" bind_text="temp_text" style_text_align="center" width="100%"/>
         </lv_obj>
         <!-- Vertical divider (80% height for visual breathing room) -->
         <lv_obj name="divider1" width="1" height="80%" style_bg_color="#text_secondary" style_bg_opa="50%" style_border_width="0" style_pad_all="0"/>
         <!-- Network status - icon on top, label below (centered) -->
+        <!-- Icons switch based on network_icon_state: 0=disconnected, 1-4=wifi strength, 5=ethernet -->
         <lv_obj flex_grow="1" height="100%" style_bg_opa="0%" style_border_width="0" style_pad_all="0" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center">
-          <lv_label name="network_icon" bind_text="network_icon" style_text_font="mdi_icons_48" style_text_align="center" width="100%"/>
+          <!-- Disconnected (state 0) -->
+          <icon name="net_disconnected" src="wifi_off" size="lg" variant="disabled">
+            <lv_obj-bind_flag_if_not_eq subject="network_icon_state" flag="hidden" ref_value="0"/>
+          </icon>
+          <!-- WiFi strength 1 - weak (state 1) - warning color -->
+          <icon name="net_wifi_1" src="wifi_strength_1_alert" size="lg" variant="warning" hidden="true">
+            <lv_obj-bind_flag_if_not_eq subject="network_icon_state" flag="hidden" ref_value="1"/>
+          </icon>
+          <!-- WiFi strength 2 - fair (state 2) -->
+          <icon name="net_wifi_2" src="wifi_strength_2" size="lg" variant="accent" hidden="true">
+            <lv_obj-bind_flag_if_not_eq subject="network_icon_state" flag="hidden" ref_value="2"/>
+          </icon>
+          <!-- WiFi strength 3 - good (state 3) -->
+          <icon name="net_wifi_3" src="wifi_strength_3" size="lg" variant="accent" hidden="true">
+            <lv_obj-bind_flag_if_not_eq subject="network_icon_state" flag="hidden" ref_value="3"/>
+          </icon>
+          <!-- WiFi strength 4 - strong (state 4) -->
+          <icon name="net_wifi_4" src="wifi_strength_4" size="lg" variant="accent" hidden="true">
+            <lv_obj-bind_flag_if_not_eq subject="network_icon_state" flag="hidden" ref_value="4"/>
+          </icon>
+          <!-- Ethernet (state 5) -->
+          <icon name="net_ethernet" src="ethernet" size="lg" variant="accent" hidden="true">
+            <lv_obj-bind_flag_if_not_eq subject="network_icon_state" flag="hidden" ref_value="5"/>
+          </icon>
           <text_body name="network_label" bind_text="network_label" style_text_align="center" width="100%"/>
         </lv_obj>
         <!-- Vertical divider (hidden if no LED capability) -->
@@ -74,11 +98,11 @@
         <lv_button name="light_button" flex_grow="1" height="100%" style_bg_opa="0%" style_border_width="0" style_pad_all="0" style_shadow_width="0">
           <lv_obj-bind_flag_if_eq subject="printer_has_led" flag="hidden" ref_value="0"/>
           <!-- OFF state icon (gray) - visible when led_state == 0 -->
-          <icon name="light_icon_off" src="mat_light_img" align="center" color="#light_icon_off">
+          <icon name="light_icon_off" src="light" align="center" color="#light_icon_off">
             <lv_obj-bind_flag_if_not_eq subject="led_state" flag="hidden" ref_value="0"/>
           </icon>
           <!-- ON state icon (gold) - visible when led_state == 1 -->
-          <icon name="light_icon_on" src="mat_light_img" align="center" color="#light_icon_on">
+          <icon name="light_icon_on" src="light" align="center" color="#light_icon_on">
             <lv_obj-bind_flag_if_eq subject="led_state" flag="hidden" ref_value="0"/>
           </icon>
           <event_cb trigger="clicked" callback="light_toggle_cb"/>

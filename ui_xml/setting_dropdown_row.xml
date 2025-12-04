@@ -3,10 +3,10 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!-- Reusable Settings Dropdown Row Component -->
 <!-- Creates a setting row with label, optional icon, and dropdown selector -->
-<!-- Usage: <setting_dropdown_row label="Display Sleep" icon="mat_clock_img"/> -->
+<!-- Usage: <setting_dropdown_row label="Display Sleep" icon="clock"/> -->
 <!-- Props:
      - label: Label text on left side
-     - icon: Optional left icon (e.g., "mat_clock_img"). If empty, no icon shown.
+     - icon: Optional left icon (e.g., "clock", "wifi"). If empty, no icon shown.
      - description: Optional secondary description text below label
 -->
 <!-- Note: Dropdown options and selection handled in C++ -->

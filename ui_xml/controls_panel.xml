@@ -7,7 +7,7 @@
     <!-- Card 1: Movement & Home -->
     <ui_card name="card_motion" width="#launcher_card_width" height="#launcher_card_height" flex_flow="column" flex_main_place="center" flex_cross_place="center" style_radius="#border_radius_large" style_pad_all="#launcher_card_padding" clickable="true">
       <!-- Icon -->
-      <icon src="mat_move_img" variant="accent" style_pad_bottom="#launcher_card_icon_padding"/>
+      <icon src="move" variant="accent" style_pad_bottom="#launcher_card_icon_padding"/>
       <!-- Label -->
       <text_body text="Movement &amp; Home" style_pad_bottom="#launcher_card_title_padding"/>
       <!-- Subtitle -->
@@ -16,7 +16,7 @@
     <!-- Card 2: Nozzle Temperature -->
     <ui_card name="card_nozzle_temp" width="#launcher_card_width" height="#launcher_card_height" flex_flow="column" flex_main_place="center" flex_cross_place="center" style_radius="#border_radius_large" style_pad_all="#launcher_card_padding" clickable="true">
       <!-- Icon -->
-      <icon src="mat_heater_img" variant="accent" style_pad_bottom="#launcher_card_icon_padding"/>
+      <icon src="heater" variant="accent" style_pad_bottom="#launcher_card_icon_padding"/>
       <!-- Label -->
       <text_body text="Nozzle Temp" style_pad_bottom="#launcher_card_title_padding"/>
       <!-- Subtitle -->
@@ -25,7 +25,7 @@
     <!-- Card 3: Heatbed Temperature -->
     <ui_card name="card_bed_temp" width="#launcher_card_width" height="#launcher_card_height" flex_flow="column" flex_main_place="center" flex_cross_place="center" style_radius="#border_radius_large" style_pad_all="#launcher_card_padding" clickable="true">
       <!-- Icon -->
-      <icon src="mat_bed_img" variant="accent" style_pad_bottom="#launcher_card_icon_padding"/>
+      <icon src="bed" variant="accent" style_pad_bottom="#launcher_card_icon_padding"/>
       <!-- Label -->
       <text_body text="Heatbed Temp" style_pad_bottom="#launcher_card_title_padding"/>
       <!-- Subtitle -->
@@ -34,7 +34,7 @@
     <!-- Card 4: Extrude/Retract -->
     <ui_card name="card_extrusion" width="#launcher_card_width" height="#launcher_card_height" flex_flow="column" flex_main_place="center" flex_cross_place="center" style_radius="#border_radius_large" style_pad_all="#launcher_card_padding" clickable="true">
       <!-- Icon -->
-      <icon src="mat_extrude_img" variant="accent" style_pad_bottom="#launcher_card_icon_padding"/>
+      <icon src="heater" variant="accent" style_pad_bottom="#launcher_card_icon_padding"/>
       <!-- Label -->
       <text_body text="Extrude/Retract" style_pad_bottom="#launcher_card_title_padding"/>
       <!-- Subtitle -->
@@ -43,7 +43,7 @@
     <!-- Card 5: Fan Control -->
     <ui_card name="card_fan" width="#launcher_card_width" height="#launcher_card_height" flex_flow="column" flex_main_place="center" flex_cross_place="center" style_radius="#border_radius_large" style_pad_all="#launcher_card_padding" clickable="true">
       <!-- Icon -->
-      <icon src="mat_fan_img" variant="accent" style_pad_bottom="#launcher_card_icon_padding"/>
+      <icon src="fan" variant="accent" style_pad_bottom="#launcher_card_icon_padding"/>
       <!-- Label -->
       <text_body text="Fan Control" style_pad_bottom="#launcher_card_title_padding"/>
       <!-- Subtitle -->
@@ -52,7 +52,7 @@
     <!-- Card 6: Motors Disable -->
     <ui_card name="card_motors" width="#launcher_card_width" height="#launcher_card_height" flex_flow="column" flex_main_place="center" flex_cross_place="center" style_radius="#border_radius_large" style_pad_all="#launcher_card_padding" clickable="true">
       <!-- Icon -->
-      <icon src="mat_motor_off_img" variant="accent" style_pad_bottom="#launcher_card_icon_padding"/>
+      <icon src="engine_off" variant="accent" style_pad_bottom="#launcher_card_icon_padding"/>
       <!-- Label -->
       <text_body text="Motors Disable" style_pad_bottom="#launcher_card_title_padding"/>
       <!-- Subtitle -->

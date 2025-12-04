@@ -24,7 +24,7 @@
         <!-- Section Label -->
         <lv_obj width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false" flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center">
           <lv_obj width="content" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false" flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_sm">
-            <icon src="mat_light_img" size="sm" variant="secondary"/>
+            <icon src="light" size="sm" variant="secondary"/>
             <text_body text="Brightness" style_text_color="#text_primary"/>
           </lv_obj>
           <!-- Current brightness value display -->
@@ -33,11 +33,11 @@
         <!-- Brightness Slider -->
         <lv_obj width="100%" height="50" style_bg_opa="0" style_border_width="0" style_pad_left="8" style_pad_right="8" style_pad_top="8" style_pad_bottom="8" scrollable="false" flex_flow="row" style_flex_cross_place="center">
           <!-- Min icon (sun dim) -->
-          <icon src="mat_light_off_img" size="xs" variant="secondary"/>
+          <icon src="light_off" size="xs" variant="secondary"/>
           <!-- Slider -->
           <lv_slider name="brightness_slider" flex_grow="1" min_value="10" max_value="100" value="50" style_margin_left="8" style_margin_right="8"/>
           <!-- Max icon (sun bright) -->
-          <icon src="mat_light_img" size="xs" variant="primary"/>
+          <icon src="light" size="xs" variant="primary"/>
         </lv_obj>
       </lv_obj>
       <!-- Divider -->
@@ -48,7 +48,7 @@
       <lv_obj width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false" flex_flow="column" style_pad_gap="#space_sm">
         <!-- Section Label with Icon -->
         <lv_obj width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false" flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_sm">
-          <icon src="mat_clock_img" size="sm" variant="secondary"/>
+          <icon src="clock" size="sm" variant="secondary"/>
           <text_body text="Display Sleep" style_text_color="#text_primary"/>
         </lv_obj>
         <!-- Description -->
@@ -81,7 +81,7 @@
       <lv_obj flex_grow="1" width="100%" style_bg_opa="0" style_border_width="0" scrollable="false"/>
       <!-- Info Note at bottom -->
       <lv_obj width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false" flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_sm">
-        <icon src="mat_info_img" size="xs" variant="secondary"/>
+        <icon src="info" size="xs" variant="secondary"/>
         <text_small text="Touch screen to wake from sleep" style_text_color="#text_secondary"/>
       </lv_obj>
     </lv_obj>

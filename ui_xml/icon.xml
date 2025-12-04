@@ -2,47 +2,49 @@
 <!-- Copyright 2025 356C LLC -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!--
-  Icon Component - Material Design Icons with Semantic Sizing and Color Variants
+  Icon Component - Material Design Icons using Font Glyphs
 
   Usage:
-    <icon src="mat_home_img" size="xl" variant="primary"/>
+    <icon src="home" size="xl" variant="primary"/>
 
   Properties:
-    - src: Material icon name (default: "mat_home_img")
+    - src: Icon short name (e.g., "home", "wifi", "settings")
     - size: Semantic size string - xs, sm, md, lg, xl (default: "xl")
-    - variant: Color variant - primary, secondary, accent, disabled, none (default: none/no recoloring)
+    - variant: Color variant - primary, secondary, accent, disabled, warning, error, none (default: none)
     - color: Custom color override (e.g., "#header_text", "#FF0000") - takes precedence over variant
 
+  Size Mapping (font sizes):
+    xs: 16px (mdi_icons_16)
+    sm: 24px (mdi_icons_24)
+    md: 32px (mdi_icons_32)
+    lg: 48px (mdi_icons_48)
+    xl: 64px (mdi_icons_64)
+
   Implementation:
-    This component is backed by a C++ custom widget (ui_icon) that extends lv_image.
-    The C++ code parses the string properties and applies the appropriate styles.
-    Constants and styles are defined here in XML for easy theming without recompilation.
+    This component is backed by a C++ custom widget (ui_icon) that extends lv_label.
+    The C++ code looks up the icon codepoint from ui_icon_codepoints.h and sets
+    the appropriate MDI font based on the requested size.
 -->
 <component>
   <api>
-    <prop name="src" type="string" default="mat_home_img"/>
+    <prop name="src" type="string" default="home"/>
     <prop name="size" type="string" default="xl"/>
     <prop name="variant" type="string" default=""/>
     <prop name="color" type="string" default=""/>
   </api>
   <consts>
-    <!-- Size constants (width/height in pixels) -->
+    <!-- Size constants (font size in pixels) -->
     <px name="size_xs" value="16"/>
     <px name="size_sm" value="24"/>
     <px name="size_md" value="32"/>
     <px name="size_lg" value="48"/>
     <px name="size_xl" value="64"/>
-    <!-- Scale constants (size × 4 for 64px base icons) -->
-    <px name="scale_xs" value="64"/>
-    <px name="scale_sm" value="96"/>
-    <px name="scale_md" value="128"/>
-    <px name="scale_lg" value="192"/>
-    <px name="scale_xl" value="256"/>
   </consts>
   <!--
-	  Note: The view extends lv_image but the actual widget creation and property
-	  handling is done by the C++ ui_icon custom widget class. The C++ code will
-	  parse the src, size, and variant properties and configure the lv_image accordingly.
-	-->
-  <view extends="lv_image" src="$src"/>
+    Note: The view extends lv_label but the actual widget creation and property
+    handling is done by the C++ ui_icon custom widget class. The C++ code will
+    parse the src, size, and variant properties and configure the lv_label with
+    the correct font glyph and color.
+  -->
+  <view extends="lv_label"/>
 </component>

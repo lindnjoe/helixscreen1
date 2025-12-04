@@ -120,10 +120,15 @@ static void update_printer_icon_combined() {
         }
     }
 
-    // Printer icon is a Material Design image (lv_image), NOT an lv_label
-    // Use image recolor to change the icon color (same as network_icon)
-    lv_obj_set_style_image_recolor(printer_icon, color, 0);
-    lv_obj_set_style_image_recolor_opa(printer_icon, LV_OPA_COVER, 0);
+    // Support both image icons (recolor) and font-based icons (text color)
+    if (lv_obj_check_type(printer_icon, &lv_image_class)) {
+        // Legacy image icon: use recolor
+        lv_obj_set_style_image_recolor(printer_icon, color, 0);
+        lv_obj_set_style_image_recolor_opa(printer_icon, LV_OPA_COVER, 0);
+    } else {
+        // Font-based icon (lv_label): use text color
+        lv_obj_set_style_text_color(printer_icon, color, 0);
+    }
 }
 
 // Track notification panel to prevent multiple instances
@@ -242,8 +247,13 @@ void ui_status_bar_init() {
     // Unlike network/printer icons which change color based on state, bell stays neutral
     if (notification_icon) {
         lv_color_t neutral = ui_theme_parse_color(lv_xml_get_const(NULL, "text_secondary"));
-        lv_obj_set_style_image_recolor(notification_icon, neutral, 0);
-        lv_obj_set_style_image_recolor_opa(notification_icon, LV_OPA_COVER, 0);
+        // Support both image icons (recolor) and font-based icons (text color)
+        if (lv_obj_check_type(notification_icon, &lv_image_class)) {
+            lv_obj_set_style_image_recolor(notification_icon, neutral, 0);
+            lv_obj_set_style_image_recolor_opa(notification_icon, LV_OPA_COVER, 0);
+        } else {
+            lv_obj_set_style_text_color(notification_icon, neutral, 0);
+        }
     }
 
     spdlog::debug("[StatusBar] Initialization complete");
@@ -271,9 +281,13 @@ void ui_status_bar_update_network(NetworkStatus status) {
         break;
     }
 
-    // Update image recolor for Material Design icon
-    lv_obj_set_style_image_recolor(network_icon, color, 0);
-    lv_obj_set_style_image_recolor_opa(network_icon, LV_OPA_COVER, 0);
+    // Support both image icons (recolor) and font-based icons (text color)
+    if (lv_obj_check_type(network_icon, &lv_image_class)) {
+        lv_obj_set_style_image_recolor(network_icon, color, 0);
+        lv_obj_set_style_image_recolor_opa(network_icon, LV_OPA_COVER, 0);
+    } else {
+        lv_obj_set_style_text_color(network_icon, color, 0);
+    }
 }
 
 void ui_status_bar_update_printer(PrinterStatus status) {
@@ -318,9 +332,13 @@ void ui_status_bar_update_printer(PrinterStatus status) {
         break;
     }
 
-    // Update image recolor for Material Design icon
-    lv_obj_set_style_image_recolor(printer_icon, color, 0);
-    lv_obj_set_style_image_recolor_opa(printer_icon, LV_OPA_COVER, 0);
+    // Support both image icons (recolor) and font-based icons (text color)
+    if (lv_obj_check_type(printer_icon, &lv_image_class)) {
+        lv_obj_set_style_image_recolor(printer_icon, color, 0);
+        lv_obj_set_style_image_recolor_opa(printer_icon, LV_OPA_COVER, 0);
+    } else {
+        lv_obj_set_style_text_color(printer_icon, color, 0);
+    }
     spdlog::debug("[StatusBar] Printer icon updated successfully");
 }
 

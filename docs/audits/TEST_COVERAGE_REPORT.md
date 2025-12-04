@@ -59,7 +59,6 @@ This report analyzes test coverage for the HelixScreen project and documents the
 | gcode_geometry_builder.cpp | HIGH | Complex geometry logic | Create test_gcode_geometry_builder.cpp |
 | ui_modal.cpp | MEDIUM | Dialog logic | Create test_ui_modal.cpp |
 | ui_keyboard.cpp | MEDIUM | Input handling | Create test_ui_keyboard.cpp |
-| material_icons.cpp | LOW | Simple icon mapping | Low priority |
 | ui_text.cpp | LOW | Text utilities | Low priority |
 
 ### ❌ Modules That Don't Need Tests (UI/Rendering/Mocks)
@@ -395,13 +394,9 @@ TEST_CASE("UI Theme: Parse colors from globals.xml")
    - Text input validation
    - Special character handling
 
-4. **material_icons.cpp** - Icon mapping
-   - Icon code lookup
-   - Fallback behavior
-
 ### Low Priority (Optional)
 
-5. **ui_text.cpp** - Text utilities (if any complex logic exists)
+4. **ui_text.cpp** - Text utilities (if any complex logic exists)
 
 ---
 

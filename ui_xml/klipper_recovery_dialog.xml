@@ -44,7 +44,7 @@
               style_flex_cross_place="center"
               style_pad_gap="#space_md">
 
-        <icon src="mat_emergency_img" size="xl" color="#warning_color"/>
+        <icon src="alert_octagon" size="xl" color="#warning_color"/>
 
         <text_heading text="Printer Shutdown" style_text_align="center"/>
 
@@ -73,7 +73,7 @@
                   style_flex_cross_place="center"
                   style_pad_gap="#space_sm"
                   clickable="false">
-            <icon src="mat_refresh_img" size="sm" color="#text_primary"/>
+            <icon src="refresh" size="sm" color="#text_primary"/>
             <text_body text="Restart Klipper" style_text_color="#text_primary"/>
           </lv_obj>
           <event_cb trigger="clicked" callback="recovery_restart_klipper_clicked"/>
@@ -92,7 +92,7 @@
                   style_flex_cross_place="center"
                   style_pad_gap="#space_sm"
                   clickable="false">
-            <icon src="mat_update_img" size="sm" color="#text_secondary"/>
+            <icon src="update" size="sm" color="#text_secondary"/>
             <text_body text="Firmware Restart" style_text_color="#text_secondary"/>
           </lv_obj>
           <event_cb trigger="clicked" callback="recovery_firmware_restart_clicked"/>

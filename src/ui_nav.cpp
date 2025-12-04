@@ -94,20 +94,28 @@ static void active_panel_observer_cb(lv_observer_t* /*observer*/, lv_subject_t* 
     }
 }
 
-// Observer callback for icon color changes - updates image recolor style
-static void icon_image_color_observer_cb(lv_observer_t* observer, lv_subject_t* subject) {
-    lv_obj_t* image = (lv_obj_t*)lv_observer_get_target(observer);
+// Observer callback for icon color changes
+// Supports both image icons (recolor) and font-based icons (text color)
+static void icon_color_observer_cb(lv_observer_t* observer, lv_subject_t* subject) {
+    lv_obj_t* icon = (lv_obj_t*)lv_observer_get_target(observer);
     lv_color_t color = lv_subject_get_color(subject);
-    // Material Design icons are white - use recolor to tint them
-    lv_obj_set_style_img_recolor(image, color, LV_PART_MAIN);
-    lv_obj_set_style_img_recolor_opa(image, LV_OPA_COVER, LV_PART_MAIN);
+
+    if (lv_obj_check_type(icon, &lv_image_class)) {
+        // Image icons: Use recolor to tint white source
+        lv_obj_set_style_img_recolor(icon, color, LV_PART_MAIN);
+        lv_obj_set_style_img_recolor_opa(icon, LV_OPA_COVER, LV_PART_MAIN);
+    } else {
+        // Font-based icons (lv_label): Use text color
+        lv_obj_set_style_text_color(icon, color, LV_PART_MAIN);
+    }
 }
 
-// Observer callback for icon opacity changes - updates image opacity
-static void icon_image_opacity_observer_cb(lv_observer_t* observer, lv_subject_t* subject) {
-    lv_obj_t* image = (lv_obj_t*)lv_observer_get_target(observer);
+// Observer callback for icon opacity changes
+// Works for both image and font-based icons
+static void icon_opacity_observer_cb(lv_observer_t* observer, lv_subject_t* subject) {
+    lv_obj_t* icon = (lv_obj_t*)lv_observer_get_target(observer);
     int32_t opacity = lv_subject_get_int(subject);
-    lv_obj_set_style_opa(image, static_cast<lv_opa_t>(opacity), LV_PART_MAIN);
+    lv_obj_set_style_opa(icon, static_cast<lv_opa_t>(opacity), LV_PART_MAIN);
 }
 
 // Button click event handler - switches active panel
@@ -333,21 +341,15 @@ void ui_nav_wire_events(lv_obj_t* navbar) {
             continue;
         }
 
-        // All navigation icons are now Material Design images
-        if (!lv_obj_check_type(icon_widget, &lv_image_class)) {
-            spdlog::error("Nav icon {} is not an image widget!", i);
-            continue;
-        }
+        // Icons can be either image widgets (legacy) or label widgets (font-based)
+        // Both are supported via the unified observer callbacks
 
-        // Apply responsive scaling to Material Design image
-        // lv_image_set_scale(icon_widget, icon_scale);
+        // Bind color to icon (works for both image recolor and text color)
+        lv_subject_add_observer_obj(&icon_color_subjects[i], icon_color_observer_cb, icon_widget,
+                                    NULL);
 
-        // Bind img_recolor to icon color subject
-        lv_subject_add_observer_obj(&icon_color_subjects[i], icon_image_color_observer_cb,
-                                    icon_widget, NULL);
-
-        // Bind opacity to icon opacity subject
-        lv_subject_add_observer_obj(&icon_opacity_subjects[i], icon_image_opacity_observer_cb,
+        // Bind opacity to icon (works for both types)
+        lv_subject_add_observer_obj(&icon_opacity_subjects[i], icon_opacity_observer_cb,
                                     icon_widget, NULL);
 
         // Make icon widget non-clickable so clicks pass through to button
@@ -355,7 +357,11 @@ void ui_nav_wire_events(lv_obj_t* navbar) {
         lv_obj_remove_flag(icon_widget, LV_OBJ_FLAG_CLICKABLE);
 
         // Ensure button is clickable and add event handler
-        lv_obj_add_flag(btn, LV_OBJ_FLAG_CLICKABLE);
+        // PRESS_LOCK prevents LVGL from re-searching for objects on every frame while pressed,
+        // which would cause repeated LV_EVENT_CLICKED events as the pointer moves between
+        // button and child icon
+        lv_obj_add_flag(btn,
+                        static_cast<lv_obj_flag_t>(LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_PRESS_LOCK));
         lv_obj_add_event_cb(btn, nav_button_clicked_cb, LV_EVENT_CLICKED, (void*)(uintptr_t)i);
     }
 

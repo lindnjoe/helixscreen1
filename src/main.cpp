@@ -75,7 +75,6 @@
 #include "lvgl/lvgl.h"
 #include "lvgl/src/libs/svg/lv_svg_decoder.h"
 #include "lvgl/src/xml/lv_xml.h"
-#include "material_icons.h"
 #include "moonraker_api.h"
 #include "moonraker_api_mock.h"
 #include "moonraker_client.h"
@@ -1674,10 +1673,9 @@ int main(int argc, char** argv) {
         show_splash_screen();
     }
 
-    // Register Material Design icons (64x64, scalable)
-    material_icons_register();
-
     // Register custom widgets (must be before XML component registration)
+    // Note: Material Design icons are now font-based (mdi_icons_*.c)
+    // Icon lookup happens via ui_icon_codepoints.h
     ui_icon_register_widget();
     ui_switch_register();
     ui_card_register();

@@ -26,6 +26,6 @@
       <text_small name="description" text="$description" style_text_color="#text_secondary"/>
     </lv_obj>
     <!-- Right side: Chevron indicator -->
-    <icon src="mat_arrow_right_img" size="xs" variant="secondary"/>
+    <icon src="chevron_right" size="xs" variant="secondary"/>
   </view>
 </component>

@@ -1527,65 +1527,61 @@ A thin vertical colored bar positioned to the left of text, commonly used in mat
 
 ### Icon Component
 
-**Modern approach using reusable icon component with semantic sizing:**
+**Font-based icons using Material Design Icons (MDI) with semantic sizing:**
+
+Icons are rendered as font glyphs for efficiency (~50KB total vs ~4.6MB for images).
+All 7200+ MDI icons are available by adding their codepoints to the font.
 
 ```xml
-<!-- Basic icon with default size (64px) -->
-<icon src="mat_home"/>
+<!-- Basic icon -->
+<icon src="home" size="lg"/>
 
 <!-- Sized icon with color variant -->
-<icon src="mat_heater" size="lg" variant="accent"/>
+<icon src="heater" size="lg" variant="accent"/>
 
 <!-- Clickable icon button -->
 <lv_button width="60" height="60"
            style_bg_opa="0"
            style_border_width="0"
            style_shadow_width="0">
-    <icon src="mat_back" size="md" variant="primary"/>
-    <lv_event-call_function trigger="clicked" callback="back_clicked"/>
+    <icon src="back" size="md" variant="primary"/>
+    <event_cb trigger="clicked" callback="back_clicked"/>
 </lv_button>
 
-<!-- Icon with custom recolor (override variant) -->
-<icon src="mat_delete" size="md" variant="none"
-      style_image_recolor="#warning_color"
-      style_image_recolor_opa="100%"/>
+<!-- Icon with custom color (overrides variant) -->
+<icon src="alert" size="sm" color="#warning_color"/>
+<icon src="check_circle" size="lg" color="#success_color"/>
 ```
 
-**Semantic sizes:** `xs` (16px), `sm` (24px), `md` (32px), `lg` (48px), `xl` (64px), `xxl` (96px)
+**Semantic sizes:** `xs` (16px), `sm` (24px), `md` (32px), `lg` (48px), `xl` (64px)
 
-**Color variants:** `primary`, `secondary`, `accent`, `disabled`, `none`
+**Color variants:** `primary`, `secondary`, `accent`, `disabled`, `warning`
+
+**Available icons:** Defined in `include/ui_icon_codepoints.h`. Common icons include:
+- `home`, `back`, `settings`, `wifi`, `wifi_off`, `wifi_strength_1` through `wifi_strength_4`
+- `heater`, `bed`, `fan`, `thermometer`, `filament`, `printer_3d`
+- `play`, `pause`, `stop`, `check`, `close`, `alert`, `info`
 
 **Benefits:**
 - Clean, semantic API (size="md" vs explicit pixel values)
-- Automatic icon scaling (no manual scale calculation)
+- Automatic font size selection based on semantic size
 - Consistent color theming via variants
-- Encapsulated in reusable component
+- Tiny binary footprint (~50KB for all icons)
+- Easy to add new icons (just add codepoint)
 
 **C++ Setup (main.cpp):**
 ```cpp
 #include "ui_icon.h"
 
-lv_display_t* display = lv_sdl_window_create(...);
-ui_icon_init_auto_scale(display);  // Initialize once at startup
+// Register the custom icon widget
+ui_icon_register_widget();
 ```
 
-### Legacy Pattern: Direct Image/Label Icons
-
-For reference, the old approach before icon component:
-
-```xml
-<!-- Direct lv_image with manual scaling -->
-<lv_image src="mat_home" width="64" height="64" scale="256"/>
-
-<!-- FontAwesome with label -->
-<lv_label text="#icon_home" style_text_font="fa_icons_64" align="center"/>
-```
-
-**Why migrate to icon component:**
-- Reduces XML verbosity
-- Eliminates scale calculation errors
-- Provides semantic sizing
-- Enables global theme changes via variants
+**Adding New Icons:**
+1. Find icon at [Pictogrammers MDI](https://pictogrammers.com/library/mdi/)
+2. Add codepoint to `include/ui_icon_codepoints.h` (keep alphabetically sorted!)
+3. Add codepoint to `scripts/regen_mdi_fonts.sh`
+4. Regenerate fonts: `./scripts/regen_mdi_fonts.sh`
 
 ### Reactive Counter with Buttons
 

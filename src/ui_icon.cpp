@@ -1,28 +1,10 @@
 // Copyright 2025 HelixScreen
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-/*
- * Copyright (C) 2025 356C LLC
- * Author: Preston Brown <pbrown@brown-house.net>
- *
- * This file is part of HelixScreen.
- *
- * HelixScreen is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * HelixScreen is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with HelixScreen. If not, see <https://www.gnu.org/licenses/>.
- */
-
 #include "ui_icon.h"
 
+#include "ui_fonts.h"
+#include "ui_icon_codepoints.h"
 #include "ui_theme.h"
 
 #include "lvgl/lvgl.h"
@@ -39,52 +21,75 @@
 #include <cstring>
 
 /**
- * Size mapping: semantic name -> {width, height, scale}
- * Material Design icons are 64x64 at scale 256 (1:1 ratio)
- * Scale = (size / 64) * 256 = size * 4
+ * Icon size enum - maps to MDI font sizes
  */
-struct IconSize {
-    int32_t width;
-    int32_t height;
-    int32_t scale;
-};
-
-static const IconSize SIZE_XS = {16, 16, 64};
-static const IconSize SIZE_SM = {24, 24, 96};
-static const IconSize SIZE_MD = {32, 32, 128};
-static const IconSize SIZE_LG = {48, 48, 192};
-static const IconSize SIZE_XL = {64, 64, 256};
+enum class IconSize { XS, SM, MD, LG, XL };
 
 /**
- * Variant mapping: semantic name -> {recolor, opacity}
- * Colors are resolved from global theme constants at runtime.
+ * Variant mapping: semantic name -> color styling
  */
 enum class IconVariant { NONE, PRIMARY, SECONDARY, ACCENT, DISABLED, WARNING, ERROR };
 
 /**
- * Parse size string to IconSize struct
+ * Parse size string to IconSize enum
  */
-static bool parse_size(const char* size_str, IconSize* out_size) {
-    if (strcmp(size_str, "xs") == 0) {
-        *out_size = SIZE_XS;
-        return true;
-    } else if (strcmp(size_str, "sm") == 0) {
-        *out_size = SIZE_SM;
-        return true;
-    } else if (strcmp(size_str, "md") == 0) {
-        *out_size = SIZE_MD;
-        return true;
-    } else if (strcmp(size_str, "lg") == 0) {
-        *out_size = SIZE_LG;
-        return true;
-    } else if (strcmp(size_str, "xl") == 0) {
-        *out_size = SIZE_XL;
-        return true;
+static IconSize parse_size(const char* size_str) {
+    if (!size_str || strlen(size_str) == 0) {
+        return IconSize::XL; // Default
     }
 
-    spdlog::warn("Invalid icon size '{}', using default 'xl'", size_str);
-    *out_size = SIZE_XL;
-    return false;
+    if (strcmp(size_str, "xs") == 0) {
+        return IconSize::XS;
+    } else if (strcmp(size_str, "sm") == 0) {
+        return IconSize::SM;
+    } else if (strcmp(size_str, "md") == 0) {
+        return IconSize::MD;
+    } else if (strcmp(size_str, "lg") == 0) {
+        return IconSize::LG;
+    } else if (strcmp(size_str, "xl") == 0) {
+        return IconSize::XL;
+    }
+
+    spdlog::warn("[Icon] Invalid size '{}', using default 'xl'", size_str);
+    return IconSize::XL;
+}
+
+/**
+ * Get the MDI font for a given size
+ */
+static const lv_font_t* get_font_for_size(IconSize size) {
+    switch (size) {
+    case IconSize::XS:
+        return &mdi_icons_16;
+    case IconSize::SM:
+        return &mdi_icons_24;
+    case IconSize::MD:
+        return &mdi_icons_32;
+    case IconSize::LG:
+        return &mdi_icons_48;
+    case IconSize::XL:
+    default:
+        return &mdi_icons_64;
+    }
+}
+
+/**
+ * Get pixel size for a given IconSize
+ */
+static int32_t get_pixel_size(IconSize size) {
+    switch (size) {
+    case IconSize::XS:
+        return 16;
+    case IconSize::SM:
+        return 24;
+    case IconSize::MD:
+        return 32;
+    case IconSize::LG:
+        return 48;
+    case IconSize::XL:
+    default:
+        return 64;
+    }
 }
 
 /**
@@ -109,16 +114,19 @@ static IconVariant parse_variant(const char* variant_str) {
         return IconVariant::NONE;
     }
 
-    spdlog::warn("Invalid icon variant '{}', using default 'none'", variant_str);
+    spdlog::warn("[Icon] Invalid variant '{}', using default 'none'", variant_str);
     return IconVariant::NONE;
 }
 
 /**
- * Apply size properties to icon widget
+ * Apply size to icon widget (font + dimensions)
  */
-static void apply_size(lv_obj_t* obj, const IconSize& size) {
-    lv_obj_set_size(obj, size.width, size.height);
-    lv_image_set_scale(obj, static_cast<uint32_t>(size.scale));
+static void apply_size(lv_obj_t* obj, IconSize size) {
+    const lv_font_t* font = get_font_for_size(size);
+    int32_t px_size = get_pixel_size(size);
+
+    lv_obj_set_style_text_font(obj, font, LV_PART_MAIN);
+    lv_obj_set_size(obj, px_size, px_size);
 }
 
 /**
@@ -126,7 +134,6 @@ static void apply_size(lv_obj_t* obj, const IconSize& size) {
  * Uses colors from ui_theme.h (single source of truth)
  */
 static void apply_variant(lv_obj_t* obj, IconVariant variant) {
-    (void)obj; // Unused parameter
     lv_color_t color;
     lv_opa_t opa = LV_OPA_COVER;
 
@@ -158,33 +165,63 @@ static void apply_variant(lv_obj_t* obj, IconVariant variant) {
         break;
     case IconVariant::NONE:
     default:
-        lv_obj_set_style_image_recolor_opa(obj, LV_OPA_TRANSP, LV_PART_MAIN);
-        return;
+        // Use default text color (inherit from theme)
+        color = UI_COLOR_TEXT_PRIMARY;
+        break;
     }
 
-    lv_obj_set_style_image_recolor(obj, color, LV_PART_MAIN);
-    lv_obj_set_style_image_recolor_opa(obj, opa, LV_PART_MAIN);
+    lv_obj_set_style_text_color(obj, color, LV_PART_MAIN);
+    lv_obj_set_style_text_opa(obj, opa, LV_PART_MAIN);
+}
+
+/**
+ * Apply icon source (lookup codepoint and set label text)
+ */
+static void apply_source(lv_obj_t* obj, const char* src) {
+    if (!src || strlen(src) == 0) {
+        src = "home"; // Default icon
+    }
+
+    // Try direct lookup first
+    const char* codepoint = ui_icon::lookup_codepoint(src);
+
+    // If not found, try stripping legacy "mat_" prefix and "_img" suffix
+    if (!codepoint) {
+        const char* stripped = ui_icon::strip_legacy_prefix(src);
+        if (stripped != src) {
+            codepoint = ui_icon::lookup_codepoint(stripped);
+        }
+    }
+
+    if (codepoint) {
+        lv_label_set_text(obj, codepoint);
+        spdlog::trace("[Icon] Set icon '{}' -> codepoint", src);
+    } else {
+        // Fallback to home icon
+        const char* fallback = ui_icon::lookup_codepoint("home");
+        if (fallback) {
+            lv_label_set_text(obj, fallback);
+        }
+        spdlog::warn("[Icon] Icon '{}' not found, using 'home' fallback", src);
+    }
 }
 
 /**
  * XML create function for icon widget
- * Called by LVGL XML parser when <icon> or <lv_image> is encountered
+ * Called by LVGL XML parser when <icon> is encountered
  */
 static void* ui_icon_xml_create(lv_xml_parser_state_t* state, const char** attrs) {
-    (void)attrs; // Unused parameter
+    (void)attrs;
     lv_obj_t* parent = (lv_obj_t*)lv_xml_state_get_parent(state);
-    lv_obj_t* obj = lv_image_create(parent);
+    lv_obj_t* obj = lv_label_create(parent);
 
-    // Set default source to mat_home_img
-    const void* default_src = lv_xml_get_image(NULL, "mat_home_img");
-    if (default_src) {
-        lv_image_set_src(obj, default_src);
-    }
+    // Apply default size (xl = 64px)
+    apply_size(obj, IconSize::XL);
 
-    // Apply default size (xl = 64x64, scale 256)
-    apply_size(obj, SIZE_XL);
+    // Apply default source (home icon)
+    apply_source(obj, "home");
 
-    // No variant by default (no recoloring)
+    // Default variant (primary text color)
     apply_variant(obj, IconVariant::NONE);
 
     return obj;
@@ -201,28 +238,22 @@ static void ui_icon_xml_apply(lv_xml_parser_state_t* state, const char** attrs) 
     lv_xml_obj_apply(state, attrs);
 
     // Then process icon-specific properties
-    IconSize size = SIZE_XL;
+    IconSize size = IconSize::XL;
     IconVariant variant = IconVariant::NONE;
+    const char* src = nullptr;
     bool size_set = false;
     bool variant_set = false;
     bool custom_color_set = false;
     lv_color_t custom_color;
-    lv_opa_t custom_opa = LV_OPA_COVER;
 
     for (int i = 0; attrs[i]; i += 2) {
         const char* name = attrs[i];
         const char* value = attrs[i + 1];
 
         if (strcmp(name, "src") == 0) {
-            const void* img_src = lv_xml_get_image(NULL, value);
-            if (img_src) {
-                lv_image_set_src(obj, img_src);
-                spdlog::trace("[Icon] Set icon source: '{}'", value);
-            } else {
-                spdlog::warn("[Icon] Icon image '{}' not found in XML registry", value);
-            }
+            src = value;
         } else if (strcmp(name, "size") == 0) {
-            parse_size(value, &size);
+            size = parse_size(value);
             size_set = true;
         } else if (strcmp(name, "variant") == 0) {
             variant = parse_variant(value);
@@ -233,14 +264,20 @@ static void ui_icon_xml_apply(lv_xml_parser_state_t* state, const char** attrs) 
         }
     }
 
+    // Apply size first (sets font)
     if (size_set) {
         apply_size(obj, size);
     }
 
+    // Apply source (sets label text to codepoint)
+    if (src) {
+        apply_source(obj, src);
+    }
+
     // Custom color overrides variant
     if (custom_color_set) {
-        lv_obj_set_style_image_recolor(obj, custom_color, LV_PART_MAIN);
-        lv_obj_set_style_image_recolor_opa(obj, custom_opa, LV_PART_MAIN);
+        lv_obj_set_style_text_color(obj, custom_color, LV_PART_MAIN);
+        lv_obj_set_style_text_opa(obj, LV_OPA_COVER, LV_PART_MAIN);
     } else if (variant_set) {
         apply_variant(obj, variant);
     }
@@ -251,7 +288,7 @@ static void ui_icon_xml_apply(lv_xml_parser_state_t* state, const char** attrs) 
  */
 void ui_icon_register_widget() {
     lv_xml_register_widget("icon", ui_icon_xml_create, ui_icon_xml_apply);
-    spdlog::trace("Icon widget registered with XML system");
+    spdlog::trace("[Icon] Font-based icon widget registered with XML system");
 }
 
 // Public API implementations
@@ -262,13 +299,8 @@ void ui_icon_set_source(lv_obj_t* icon, const char* icon_name) {
         return;
     }
 
-    const void* img_src = lv_xml_get_image(NULL, icon_name);
-    if (img_src) {
-        lv_image_set_src(icon, img_src);
-        spdlog::debug("[Icon] Changed icon source to '{}'", icon_name);
-    } else {
-        spdlog::warn("[Icon] Icon image '{}' not found in registry", icon_name);
-    }
+    apply_source(icon, icon_name);
+    spdlog::debug("[Icon] Changed icon source to '{}'", icon_name);
 }
 
 void ui_icon_set_size(lv_obj_t* icon, const char* size_str) {
@@ -277,11 +309,9 @@ void ui_icon_set_size(lv_obj_t* icon, const char* size_str) {
         return;
     }
 
-    IconSize size;
-    if (parse_size(size_str, &size)) {
-        apply_size(icon, size);
-        spdlog::debug("[Icon] Changed icon size to '{}'", size_str);
-    }
+    IconSize size = parse_size(size_str);
+    apply_size(icon, size);
+    spdlog::debug("[Icon] Changed icon size to '{}'", size_str);
 }
 
 void ui_icon_set_variant(lv_obj_t* icon, const char* variant_str) {
@@ -301,7 +331,7 @@ void ui_icon_set_color(lv_obj_t* icon, lv_color_t color, lv_opa_t opa) {
         return;
     }
 
-    lv_obj_set_style_image_recolor(icon, color, LV_PART_MAIN);
-    lv_obj_set_style_image_recolor_opa(icon, opa, LV_PART_MAIN);
+    lv_obj_set_style_text_color(icon, color, LV_PART_MAIN);
+    lv_obj_set_style_text_opa(icon, opa, LV_PART_MAIN);
     spdlog::debug("[Icon] Set custom color (opa: {})", opa);
 }

@@ -193,14 +193,15 @@ const char* WizardWifiStep::get_status_text(const char* status_name) {
 }
 
 const char* WizardWifiStep::get_wifi_signal_icon(int signal_strength, bool is_secured) {
+    // Icon names from ui_icon_codepoints.h - font-based MDI icons
     if (signal_strength <= 25) {
-        return is_secured ? "mat_wifi_strength_1_lock_img" : "mat_wifi_strength_1_img";
+        return is_secured ? "wifi_strength_1_lock" : "wifi_strength_1";
     } else if (signal_strength <= 50) {
-        return is_secured ? "mat_wifi_strength_2_lock_img" : "mat_wifi_strength_2_img";
+        return is_secured ? "wifi_strength_2_lock" : "wifi_strength_2";
     } else if (signal_strength <= 75) {
-        return is_secured ? "mat_wifi_strength_3_lock_img" : "mat_wifi_strength_3_img";
+        return is_secured ? "wifi_strength_3_lock" : "wifi_strength_3";
     } else {
-        return is_secured ? "mat_wifi_strength_4_lock_img" : "mat_wifi_strength_4_img";
+        return is_secured ? "wifi_strength_4_lock" : "wifi_strength_4";
     }
 }
 

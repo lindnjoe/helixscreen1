@@ -25,32 +25,6 @@ $(FONT_SRCS): .fonts.stamp
 
 generate-fonts: .fonts.stamp
 
-# Material Design Icon Management
-material-icons-list:
-	@.venv/bin/python3 scripts/material_icons.py list
-
-material-icons-convert:
-ifndef SVGS
-	@echo "$(RED)Error: SVGS not specified$(RESET)"
-	@echo "Usage: make material-icons-convert SVGS=\"icon1.svg icon2.svg ...\""
-	@exit 1
-endif
-	@.venv/bin/python3 scripts/material_icons.py convert $(SVGS)
-
-material-icons-add:
-ifndef ICONS
-	@echo "$(RED)Error: ICONS not specified$(RESET)"
-	@echo "Usage: make material-icons-add ICONS=\"wifi-strength-1 wifi-strength-2 ...\""
-	@echo ""
-	@echo "$(CYAN)This will:$(RESET)"
-	@echo "  1. Download SVGs from Material Design Icons (google/material-design-icons)"
-	@echo "  2. Convert to 64x64 PNGs"
-	@echo "  3. Generate LVGL C arrays"
-	@echo "  4. Register in material_icons.h/.cpp"
-	@exit 1
-endif
-	@.venv/bin/python3 scripts/material_icons.py add $(ICONS)
-
 # Generate macOS .icns icon from source logo
 # Requires: ImageMagick (magick) for image processing
 # Source: assets/images/helixscreen-logo.png

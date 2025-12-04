@@ -26,7 +26,7 @@
       <lv_obj width="100%" height="content" style_bg_opa="0%" style_border_width="0" style_pad_all="#header_padding" flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center">
         <!-- Left side: Back button + Title -->
         <lv_obj height="content" width="content" style_bg_opa="0%" style_border_width="0" style_pad_all="0" flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_md">
-          <icon name="back_button" src="mat_back_img" size="sm" variant="primary" style_pad_all="#space_md" clickable="true" scrollable="false" align="center"/>
+          <icon name="back_button" src="back" size="sm" variant="primary" style_pad_all="#space_md" clickable="true" scrollable="false" align="center"/>
           <text_heading name="keypad_title" text="Nozzle Temp" width="content" scrollable="false"/>
         </lv_obj>
         <!-- Right side: OK button -->

@@ -36,7 +36,7 @@
     <lv_obj-bind_flag_if_eq subject="estop_visible" flag="hidden" ref_value="0"/>
 
     <!-- Emergency icon centered -->
-    <icon name="estop_icon" src="mat_emergency_img" size="lg" align="center"
+    <icon name="estop_icon" src="alert_octagon" size="lg" align="center"
           color="#text_primary"/>
 
     <!-- Click handler -->
