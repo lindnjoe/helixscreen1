@@ -158,6 +158,14 @@ class PrintSelectPanel : public PanelBase {
         return "print_select_panel";
     }
 
+    /**
+     * @brief Called when panel becomes visible
+     *
+     * Triggers lazy file refresh if file list is empty and API is connected.
+     * This handles the case where set_api() was called before WebSocket connection.
+     */
+    void on_activate() override;
+
     //
     // === Public API ===
     //

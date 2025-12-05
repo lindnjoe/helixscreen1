@@ -12,6 +12,7 @@
 #include "app_globals.h"
 #include "config.h"
 #include "moonraker_api.h"
+#include "printer_detector.h"
 #include "printer_state.h"
 #include "wifi_manager.h"
 #include "wizard_config_paths.h"
@@ -142,6 +143,9 @@ void HomePanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
         spdlog::debug("[{}] Started signal polling timer ({}ms)", get_name(),
                       SIGNAL_POLL_INTERVAL_MS);
     }
+
+    // Load printer image from config (if available)
+    reload_from_config();
 
     spdlog::info("[{}] Setup complete!", get_name());
 }
@@ -295,12 +299,46 @@ void HomePanel::on_extruder_temp_changed(int temp) {
 }
 
 void HomePanel::reload_from_config() {
-    // Printer image and LED visibility are now handled via XML bindings to subjects:
-    // - printer_connection_state: controls image dimming via XML styles
-    // - printer_has_led: controls light button/divider visibility via bind_flag_if_eq
-    // The subjects are updated by PrinterState when capabilities change.
-    spdlog::debug("[{}] reload_from_config called - visibility handled by XML bindings",
-                  get_name());
+    // LED visibility is handled via XML bindings to printer_has_led subject
+
+    // Update printer image based on configured printer type
+    Config* config = Config::get_instance();
+    if (!config) {
+        spdlog::warn("[{}] reload_from_config: Config not available", get_name());
+        return;
+    }
+
+    std::string printer_type = config->get<std::string>(WizardConfigPaths::PRINTER_TYPE, "");
+    if (printer_type.empty()) {
+        spdlog::debug("[{}] No printer type configured - keeping default image", get_name());
+        return;
+    }
+
+    // Look up image filename from printer database
+    std::string image_filename = PrinterDetector::get_image_for_printer(printer_type);
+    std::string image_path;
+
+    if (!image_filename.empty()) {
+        // Use the specific printer image
+        image_path = "A:assets/images/printers/" + image_filename;
+    } else {
+        // Fall back to generic CoreXY image
+        spdlog::info("[{}] No specific image for '{}' - using generic CoreXY image", get_name(),
+                     printer_type);
+        image_path = "A:assets/images/printers/generic-corexy.png";
+    }
+
+    // Find and update the printer_image widget
+    if (panel_) {
+        lv_obj_t* printer_image = lv_obj_find_by_name(panel_, "printer_image");
+        if (printer_image) {
+            lv_image_set_src(printer_image, image_path.c_str());
+            spdlog::info("[{}] Updated printer image to '{}' for type '{}'", get_name(), image_path,
+                         printer_type);
+        } else {
+            spdlog::warn("[{}] Could not find 'printer_image' widget", get_name());
+        }
+    }
 }
 
 void HomePanel::light_toggle_cb(lv_event_t* e) {

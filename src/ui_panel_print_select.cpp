@@ -291,6 +291,15 @@ void PrintSelectPanel::refresh_files() {
         return;
     }
 
+    // Check if WebSocket is actually connected before attempting to send requests
+    // This prevents the race condition where set_api() is called before connection is established
+    ConnectionState state = api_->get_client().get_connection_state();
+    if (state != ConnectionState::CONNECTED) {
+        spdlog::debug("[{}] Cannot refresh files: not connected (state={})", get_name(),
+                      static_cast<int>(state));
+        return;
+    }
+
     spdlog::info("[{}] Refreshing file list from Moonraker (path: '{}')...", get_name(),
                  current_path_.empty() ? "/" : current_path_);
 
@@ -469,10 +478,25 @@ void PrintSelectPanel::refresh_files() {
 void PrintSelectPanel::set_api(MoonrakerAPI* api) {
     api_ = api;
 
-    // Automatically refresh file list when API becomes available
+    // Note: Don't auto-refresh here - WebSocket may not be connected yet.
+    // refresh_files() has a connection check that will silently return if not connected.
+    // Files will be loaded lazily via on_activate() when user navigates to this panel.
     if (api_ && panel_initialized_) {
-        spdlog::info("[{}] API connected, refreshing file list", get_name());
+        spdlog::debug("[{}] API set, files will load on first view", get_name());
+        refresh_files(); // Will early-return if not connected
+    }
+}
+
+void PrintSelectPanel::on_activate() {
+    // Always refresh when panel becomes visible to pick up external changes
+    // (e.g., files uploaded via web UI, deleted from another client)
+    // This also handles the race condition where set_api() was called before WebSocket connection
+    if (current_source_ == FileSource::PRINTER && api_) {
+        spdlog::info("[{}] Panel activated, refreshing file list", get_name());
         refresh_files();
+    } else if (current_source_ == FileSource::USB) {
+        spdlog::info("[{}] Panel activated, refreshing USB file list", get_name());
+        refresh_usb_files();
     }
 }
 
