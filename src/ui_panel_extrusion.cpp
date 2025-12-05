@@ -32,6 +32,8 @@ ExtrusionPanel::ExtrusionPanel(PrinterState& printer_state, MoonrakerAPI* api)
                   nozzle_target_);
     std::snprintf(warning_temps_buf_, sizeof(warning_temps_buf_), "Current: %d°C\nTarget: %d°C",
                   nozzle_current_, nozzle_target_);
+    std::snprintf(speed_display_buf_, sizeof(speed_display_buf_), "%d mm/min",
+                  extrusion_speed_mmpm_);
 }
 
 void ExtrusionPanel::init_subjects() {
@@ -48,9 +50,12 @@ void ExtrusionPanel::init_subjects() {
     UI_SUBJECT_INIT_AND_REGISTER_INT(
         safety_warning_visible_subject_, 1,
         "extrusion_safety_warning_visible"); // 1=visible (cold at start)
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(speed_display_subject_, speed_display_buf_,
+                                        speed_display_buf_, "extrusion_speed_display");
 
     subjects_initialized_ = true;
-    spdlog::debug("[{}] Subjects initialized: temp_status, warning_temps, safety_warning_visible",
+    spdlog::debug("[{}] Subjects initialized: temp_status, warning_temps, safety_warning_visible, "
+                  "speed_display",
                   get_name());
 }
 
@@ -68,9 +73,11 @@ void ExtrusionPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     // Use standard overlay panel setup (wires header, back button, handles responsive padding)
     ui_overlay_panel_setup_standard(panel_, parent_screen_, "overlay_header", "overlay_content");
 
-    // Setup all button groups
+    // Setup all controls
     setup_amount_buttons();
     setup_action_buttons();
+    setup_speed_slider();
+    setup_animation_widget();
     setup_temperature_observer();
 
     // Initialize visual state
@@ -78,6 +85,7 @@ void ExtrusionPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     update_temp_status();
     update_warning_text();
     update_safety_state();
+    update_speed_display();
 
     spdlog::info("[{}] Setup complete!", get_name());
 }
@@ -119,7 +127,14 @@ void ExtrusionPanel::setup_action_buttons() {
     btn_retract_ = lv_obj_find_by_name(overlay_content, "btn_retract");
     if (btn_retract_) {
         lv_obj_add_event_cb(btn_retract_, on_retract_clicked, LV_EVENT_CLICKED, this);
-        spdlog::debug("[{}] Retract button", get_name());
+        spdlog::debug("[{}] Retract button wired", get_name());
+    }
+
+    // Purge button
+    btn_purge_ = lv_obj_find_by_name(overlay_content, "btn_purge");
+    if (btn_purge_) {
+        lv_obj_add_event_cb(btn_purge_, on_purge_clicked, LV_EVENT_CLICKED, this);
+        spdlog::debug("[{}] Purge button wired", get_name());
     }
 
     // Safety warning card
@@ -174,24 +189,9 @@ void ExtrusionPanel::update_warning_text() {
 void ExtrusionPanel::update_safety_state() {
     bool allowed = is_extrusion_allowed();
 
-    // Enable/disable extrude and retract buttons
-    if (btn_extrude_) {
-        if (allowed) {
-            lv_obj_clear_state(btn_extrude_, LV_STATE_DISABLED);
-        } else {
-            lv_obj_add_state(btn_extrude_, LV_STATE_DISABLED);
-        }
-    }
-
-    if (btn_retract_) {
-        if (allowed) {
-            lv_obj_clear_state(btn_retract_, LV_STATE_DISABLED);
-        } else {
-            lv_obj_add_state(btn_retract_, LV_STATE_DISABLED);
-        }
-    }
-
-    // Update safety warning visibility via reactive subject (XML binding handles visibility)
+    // Update subject - XML bindings handle both:
+    // 1. Safety warning card visibility (bind_flag_if_eq hidden when value=0)
+    // 2. Action button disabled state (bind_state_if_eq disabled when value=1)
     lv_subject_set_int(&safety_warning_visible_subject_, allowed ? 0 : 1);
 
     spdlog::debug("[{}] Safety state updated: allowed={} (temp={}°C)", get_name(), allowed,
@@ -238,17 +238,26 @@ void ExtrusionPanel::handle_extrude() {
         return;
     }
 
-    spdlog::info("[{}] Extruding {}mm of filament", get_name(), selected_amount_);
+    spdlog::info("[{}] Extruding {}mm at {} mm/min", get_name(), selected_amount_,
+                 extrusion_speed_mmpm_);
+
+    start_extrusion_animation(true);
 
     if (api_) {
-        // M83 = relative extrusion mode, G1 E{amount} F300 = extrude at 300mm/min
-        std::string gcode = fmt::format("M83\nG1 E{} F300", selected_amount_);
+        // M83 = relative extrusion mode, G1 E{amount} F{speed}
+        std::string gcode = fmt::format("M83\nG1 E{} F{}", selected_amount_, extrusion_speed_mmpm_);
         api_->execute_gcode(
-            gcode, [amount = selected_amount_]() { NOTIFY_SUCCESS("Extruded {}mm", amount); },
-            [](const MoonrakerError& error) {
+            gcode,
+            [this, amount = selected_amount_]() {
+                stop_extrusion_animation();
+                NOTIFY_SUCCESS("Extruded {}mm", amount);
+            },
+            [this](const MoonrakerError& error) {
+                stop_extrusion_animation();
                 NOTIFY_ERROR("Extrusion failed: {}", error.user_message());
             });
     } else {
+        stop_extrusion_animation();
         NOTIFY_WARNING("Not connected to printer");
     }
 }
@@ -260,17 +269,58 @@ void ExtrusionPanel::handle_retract() {
         return;
     }
 
-    spdlog::info("[{}] Retracting {}mm of filament", get_name(), selected_amount_);
+    spdlog::info("[{}] Retracting {}mm at {} mm/min", get_name(), selected_amount_,
+                 extrusion_speed_mmpm_);
+
+    start_extrusion_animation(false);
 
     if (api_) {
-        // M83 = relative extrusion mode, G1 E-{amount} F300 = retract at 300mm/min
-        std::string gcode = fmt::format("M83\nG1 E-{} F300", selected_amount_);
+        // M83 = relative extrusion mode, G1 E-{amount} F{speed}
+        std::string gcode =
+            fmt::format("M83\nG1 E-{} F{}", selected_amount_, extrusion_speed_mmpm_);
         api_->execute_gcode(
-            gcode, [amount = selected_amount_]() { NOTIFY_SUCCESS("Retracted {}mm", amount); },
-            [](const MoonrakerError& error) {
+            gcode,
+            [this, amount = selected_amount_]() {
+                stop_extrusion_animation();
+                NOTIFY_SUCCESS("Retracted {}mm", amount);
+            },
+            [this](const MoonrakerError& error) {
+                stop_extrusion_animation();
                 NOTIFY_ERROR("Retraction failed: {}", error.user_message());
             });
     } else {
+        stop_extrusion_animation();
+        NOTIFY_WARNING("Not connected to printer");
+    }
+}
+
+void ExtrusionPanel::handle_purge() {
+    if (!is_extrusion_allowed()) {
+        NOTIFY_WARNING("Nozzle too cold for purge ({}°C, min: {}°C)", nozzle_current_,
+                       AppConstants::Temperature::MIN_EXTRUSION_TEMP);
+        return;
+    }
+
+    spdlog::info("[{}] Purging {}mm at {} mm/min", get_name(), PURGE_AMOUNT_MM,
+                 extrusion_speed_mmpm_);
+
+    start_extrusion_animation(true);
+
+    if (api_) {
+        // M83 = relative extrusion mode, G1 E{amount} F{speed}
+        std::string gcode = fmt::format("M83\nG1 E{} F{}", PURGE_AMOUNT_MM, extrusion_speed_mmpm_);
+        api_->execute_gcode(
+            gcode,
+            [this]() {
+                stop_extrusion_animation();
+                NOTIFY_SUCCESS("Purged {}mm", PURGE_AMOUNT_MM);
+            },
+            [this](const MoonrakerError& error) {
+                stop_extrusion_animation();
+                NOTIFY_ERROR("Purge failed: {}", error.user_message());
+            });
+    } else {
+        stop_extrusion_animation();
         NOTIFY_WARNING("Not connected to printer");
     }
 }
@@ -351,6 +401,108 @@ void ExtrusionPanel::set_limits(int min_temp, int max_temp) {
     nozzle_min_temp_ = min_temp;
     nozzle_max_temp_ = max_temp;
     spdlog::info("[{}] Nozzle temperature limits updated: {}-{}°C", get_name(), min_temp, max_temp);
+}
+
+void ExtrusionPanel::setup_speed_slider() {
+    lv_obj_t* overlay_content = lv_obj_find_by_name(panel_, "overlay_content");
+    if (!overlay_content)
+        return;
+
+    speed_slider_ = lv_obj_find_by_name(overlay_content, "speed_slider");
+    if (speed_slider_) {
+        lv_slider_set_value(speed_slider_, extrusion_speed_mmpm_, LV_ANIM_OFF);
+        lv_obj_add_event_cb(speed_slider_, on_speed_changed, LV_EVENT_VALUE_CHANGED, this);
+        spdlog::debug("[{}] Speed slider wired (range 60-600 mm/min)", get_name());
+    }
+}
+
+void ExtrusionPanel::update_speed_display() {
+    std::snprintf(speed_display_buf_, sizeof(speed_display_buf_), "%d mm/min",
+                  extrusion_speed_mmpm_);
+    lv_subject_copy_string(&speed_display_subject_, speed_display_buf_);
+}
+
+void ExtrusionPanel::setup_animation_widget() {
+    lv_obj_t* overlay_content = lv_obj_find_by_name(panel_, "overlay_content");
+    if (!overlay_content)
+        return;
+
+    filament_anim_obj_ = lv_obj_find_by_name(overlay_content, "filament_animation");
+    if (filament_anim_obj_) {
+        spdlog::debug("[{}] Animation widget found", get_name());
+    }
+}
+
+void ExtrusionPanel::start_extrusion_animation(bool is_extruding) {
+    if (!filament_anim_obj_ || animation_active_)
+        return;
+
+    animation_active_ = true;
+
+    // Make visible and set color based on direction
+    lv_obj_remove_flag(filament_anim_obj_, LV_OBJ_FLAG_HIDDEN);
+
+    // Green for extrude (pushing filament down), orange for retract (pulling up)
+    lv_color_t color = is_extruding ? lv_color_hex(0x4CAF50) : lv_color_hex(0xFF9800);
+    lv_obj_set_style_bg_color(filament_anim_obj_, color, 0);
+    lv_obj_set_style_bg_opa(filament_anim_obj_, LV_OPA_COVER, 0);
+
+    // Create looping animation
+    lv_anim_t anim;
+    lv_anim_init(&anim);
+    lv_anim_set_var(&anim, filament_anim_obj_);
+
+    // Animate Y position to simulate flow
+    if (is_extruding) {
+        lv_anim_set_values(&anim, 0, 20); // Move down for extrusion
+    } else {
+        lv_anim_set_values(&anim, 20, 0); // Move up for retraction
+    }
+
+    lv_anim_set_duration(&anim, 400);
+    lv_anim_set_repeat_count(&anim, LV_ANIM_REPEAT_INFINITE);
+    lv_anim_set_path_cb(&anim, lv_anim_path_linear);
+    lv_anim_set_exec_cb(&anim, [](void* obj, int32_t value) {
+        lv_obj_set_style_translate_y(static_cast<lv_obj_t*>(obj), value, 0);
+    });
+    lv_anim_start(&anim);
+
+    spdlog::debug("[{}] Animation started ({})", get_name(), is_extruding ? "extrude" : "retract");
+}
+
+void ExtrusionPanel::stop_extrusion_animation() {
+    if (!filament_anim_obj_ || !animation_active_)
+        return;
+
+    animation_active_ = false;
+
+    // Stop animation and hide widget
+    lv_anim_delete(filament_anim_obj_, nullptr);
+    lv_obj_set_style_translate_y(filament_anim_obj_, 0, 0);
+    lv_obj_add_flag(filament_anim_obj_, LV_OBJ_FLAG_HIDDEN);
+
+    spdlog::debug("[{}] Animation stopped", get_name());
+}
+
+void ExtrusionPanel::on_speed_changed(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[ExtrusionPanel] on_speed_changed");
+    auto* self = static_cast<ExtrusionPanel*>(lv_event_get_user_data(e));
+    if (self && self->speed_slider_) {
+        self->extrusion_speed_mmpm_ = lv_slider_get_value(self->speed_slider_);
+        self->update_speed_display();
+        spdlog::debug("[{}] Speed changed: {} mm/min", self->get_name(),
+                      self->extrusion_speed_mmpm_);
+    }
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+void ExtrusionPanel::on_purge_clicked(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[ExtrusionPanel] on_purge_clicked");
+    auto* self = static_cast<ExtrusionPanel*>(lv_event_get_user_data(e));
+    if (self) {
+        self->handle_purge();
+    }
+    LVGL_SAFE_EVENT_CB_END();
 }
 
 static std::unique_ptr<ExtrusionPanel> g_extrusion_panel;

@@ -200,7 +200,12 @@
     <!-- NO BASE icon_font_xl - registered at runtime -->
     <!-- Theme colors -->
     <color name="primary_color" value="#AD2724"/>
-    <color name="secondary_color" value="#37AEB3"/>
+    <color name="secondary_color" value="#D4A84B"/>
+    <!-- Alternative secondary colors (uncomment to try):
+    <color name="secondary_color" value="#E67E7B"/>  Light red - monochromatic harmony
+    <color name="secondary_color" value="#607D8B"/>  Slate blue - cool professional
+    <color name="secondary_color" value="#37AEB3"/>  Original teal/cyan
+    -->
     <color name="error_color" value="#AD2724"/>
     <!-- Error/validation feedback (red) -->
     <color name="warning_color" value="#FF9800"/>
