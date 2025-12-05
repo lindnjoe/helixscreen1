@@ -90,6 +90,14 @@ void HomePanel::init_subjects() {
     UI_SUBJECT_INIT_AND_REGISTER_STRING(network_label_subject_, network_label_buffer_, "WiFi",
                                         "network_label");
 
+    // Printer type and host - two subjects for flexible XML layout
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(printer_type_subject_, printer_type_buffer_, "",
+                                        "printer_type_text");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(printer_host_subject_, printer_host_buffer_, "",
+                                        "printer_host_text");
+    lv_subject_init_int(&printer_info_visible_, 0);
+    lv_xml_register_subject(nullptr, "printer_info_visible", &printer_info_visible_);
+
     // Register event callbacks BEFORE loading XML
     // Note: These use static trampolines that will look up the global instance
     lv_xml_register_event_cb(nullptr, "light_toggle_cb", light_toggle_cb);
@@ -301,43 +309,51 @@ void HomePanel::on_extruder_temp_changed(int temp) {
 void HomePanel::reload_from_config() {
     // LED visibility is handled via XML bindings to printer_has_led subject
 
-    // Update printer image based on configured printer type
     Config* config = Config::get_instance();
     if (!config) {
         spdlog::warn("[{}] reload_from_config: Config not available", get_name());
         return;
     }
 
+    // Update printer image based on configured printer type
     std::string printer_type = config->get<std::string>(WizardConfigPaths::PRINTER_TYPE, "");
-    if (printer_type.empty()) {
-        spdlog::debug("[{}] No printer type configured - keeping default image", get_name());
-        return;
-    }
+    if (!printer_type.empty()) {
+        // Look up image filename from printer database
+        std::string image_filename = PrinterDetector::get_image_for_printer(printer_type);
+        std::string image_path;
 
-    // Look up image filename from printer database
-    std::string image_filename = PrinterDetector::get_image_for_printer(printer_type);
-    std::string image_path;
-
-    if (!image_filename.empty()) {
-        // Use the specific printer image
-        image_path = "A:assets/images/printers/" + image_filename;
-    } else {
-        // Fall back to generic CoreXY image
-        spdlog::info("[{}] No specific image for '{}' - using generic CoreXY image", get_name(),
-                     printer_type);
-        image_path = "A:assets/images/printers/generic-corexy.png";
-    }
-
-    // Find and update the printer_image widget
-    if (panel_) {
-        lv_obj_t* printer_image = lv_obj_find_by_name(panel_, "printer_image");
-        if (printer_image) {
-            lv_image_set_src(printer_image, image_path.c_str());
-            spdlog::info("[{}] Updated printer image to '{}' for type '{}'", get_name(), image_path,
-                         printer_type);
+        if (!image_filename.empty()) {
+            image_path = "A:assets/images/printers/" + image_filename;
         } else {
-            spdlog::warn("[{}] Could not find 'printer_image' widget", get_name());
+            // Fall back to generic CoreXY image
+            spdlog::info("[{}] No specific image for '{}' - using generic CoreXY", get_name(),
+                         printer_type);
+            image_path = "A:assets/images/printers/generic-corexy.png";
         }
+
+        // Find and update the printer_image widget
+        if (panel_) {
+            lv_obj_t* printer_image = lv_obj_find_by_name(panel_, "printer_image");
+            if (printer_image) {
+                lv_image_set_src(printer_image, image_path.c_str());
+                spdlog::info("[{}] Printer image: '{}' for '{}'", get_name(), image_path,
+                             printer_type);
+            }
+        }
+    }
+
+    // Update printer type/host overlay (hidden for localhost)
+    std::string host = config->get<std::string>(WizardConfigPaths::MOONRAKER_HOST, "");
+
+    if (host.empty() || host == "127.0.0.1" || host == "localhost") {
+        lv_subject_set_int(&printer_info_visible_, 0);
+    } else {
+        std::strncpy(printer_type_buffer_, printer_type.empty() ? "Printer" : printer_type.c_str(),
+                     sizeof(printer_type_buffer_) - 1);
+        std::strncpy(printer_host_buffer_, host.c_str(), sizeof(printer_host_buffer_) - 1);
+        lv_subject_copy_string(&printer_type_subject_, printer_type_buffer_);
+        lv_subject_copy_string(&printer_host_subject_, printer_host_buffer_);
+        lv_subject_set_int(&printer_info_visible_, 1);
     }
 }
 

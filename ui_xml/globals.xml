@@ -223,8 +223,9 @@
     <color name="text_secondary" value="#AAAAAA"/>
     <!-- Card background colors (theme-aware: light/dark modes) -->
     <color name="card_bg_light" value="#F0F3F9"/>
-    <!-- Light mode: light blue-gray -->
     <color name="card_bg_dark" value="#1F1F1F"/>
+    <!-- Image caption overlay (semi-transparent, same for both themes) -->
+    <color name="image_caption_bg" value="#000000"/>
     <!-- Dark mode: very dark gray -->
     <!-- Theme grey colors (replaces LVGL default grey palette) -->
     <color name="theme_grey_light" value="#D0D0D0"/>
