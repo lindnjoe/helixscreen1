@@ -50,6 +50,56 @@ static void textarea_text_observer_cb(lv_observer_t* observer, lv_subject_t* sub
 }
 
 /**
+ * Thread-local flag to prevent reentrancy during two-way binding updates.
+ * This is needed because lv_textarea_set_text fires VALUE_CHANGED, which
+ * would call us again before we've finished updating the subject.
+ */
+static thread_local bool g_updating_from_textarea = false;
+
+/**
+ * Event callback - updates subject when textarea text changes.
+ *
+ * This provides the reverse binding: when user types in the textarea,
+ * we update the bound subject so other code sees the new value.
+ * The subject pointer is passed via event user_data.
+ */
+static void textarea_value_changed_cb(lv_event_t* e) {
+    // Prevent reentrancy - if we're already handling an update, skip
+    if (g_updating_from_textarea) {
+        return;
+    }
+
+    lv_obj_t* textarea = lv_event_get_target_obj(e);
+    lv_subject_t* subject = static_cast<lv_subject_t*>(lv_event_get_user_data(e));
+
+    if (subject == nullptr) {
+        return;
+    }
+
+    // Validate subject type before using it
+    // This prevents crashes if user_data is not actually a subject pointer
+    if (subject->type != LV_SUBJECT_TYPE_STRING && subject->type != LV_SUBJECT_TYPE_POINTER) {
+        return;
+    }
+
+    // Get current text from textarea
+    const char* new_text = lv_textarea_get_text(textarea);
+    if (new_text == nullptr) {
+        return;
+    }
+
+    // Get current subject value
+    const char* subject_text = lv_subject_get_string(subject);
+
+    // Only update if text actually changed
+    if (subject_text == nullptr || std::strcmp(new_text, subject_text) != 0) {
+        g_updating_from_textarea = true;
+        lv_subject_copy_string(subject, new_text);
+        g_updating_from_textarea = false;
+    }
+}
+
+/**
  * XML create callback for <text_input>.
  *
  * Creates a textarea with sensible defaults for form inputs:
@@ -114,9 +164,15 @@ static void ui_text_input_apply(lv_xml_parser_state_t* state, const char** attrs
                 continue;
             }
 
-            // Create observer to update textarea when subject changes
+            // Create observer to update textarea when subject changes (subject -> textarea)
             lv_subject_add_observer_obj(subject, textarea_text_observer_cb, textarea, nullptr);
-            spdlog::trace("[text_input] Bound subject '{}' to textarea", value);
+
+            // Add event handler to update subject when user types (textarea -> subject)
+            // Pass subject pointer via user_data
+            lv_obj_add_event_cb(textarea, textarea_value_changed_cb, LV_EVENT_VALUE_CHANGED,
+                                subject);
+
+            spdlog::trace("[text_input] Bound subject '{}' to textarea (two-way)", value);
         } else if (lv_streq("keyboard_hint", name)) {
             // Parse keyboard hint and store in user_data
             KeyboardHint hint = KeyboardHint::TEXT;

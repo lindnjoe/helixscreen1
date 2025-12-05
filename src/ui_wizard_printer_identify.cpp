@@ -210,6 +210,19 @@ void WizardPrinterIdentifyStep::init_subjects() {
         spdlog::debug("[{}] No existing config, using defaults", get_name());
     }
 
+    // Auto-fill printer name from Moonraker hostname if not saved
+    if (default_name.empty()) {
+        MoonrakerClient* client = get_moonraker_client();
+        if (client) {
+            std::string hostname = client->get_hostname();
+            if (!hostname.empty() && hostname != "unknown") {
+                default_name = hostname;
+                spdlog::info("[{}] Auto-filled printer name from hostname: '{}'", get_name(),
+                             default_name);
+            }
+        }
+    }
+
     // Initialize with values from config or defaults
     strncpy(printer_name_buffer_, default_name.c_str(), sizeof(printer_name_buffer_) - 1);
     printer_name_buffer_[sizeof(printer_name_buffer_) - 1] = '\0';

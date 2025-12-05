@@ -96,6 +96,23 @@ static void async_error_callback(void* user_data) {
     AsyncErrorData* data = (AsyncErrorData*)user_data;
     if (data && data->message) {
         if (data->modal && data->title) {
+            // Check if a modal with the same title is already showing
+            lv_obj_t* existing_modal = ui_modal_get_top();
+            if (existing_modal) {
+                lv_obj_t* title_label = lv_obj_find_by_name(existing_modal, "lbl_title");
+                if (title_label) {
+                    const char* existing_title = lv_label_get_text(title_label);
+                    if (existing_title && strcmp(existing_title, data->title) == 0) {
+                        spdlog::debug("[Notification] Skipping duplicate modal (async): '{}'",
+                                      data->title);
+                        free(data->title);
+                        free(data->message);
+                        free(data);
+                        return;
+                    }
+                }
+            }
+
             // Show modal dialog for critical errors
             ui_modal_config_t config = {
                 .position = {.use_alignment = true, .alignment = LV_ALIGN_CENTER, .x = 0, .y = 0},
@@ -303,6 +320,20 @@ void ui_notification_error(const char* title, const char* message, bool modal) {
     if (is_main_thread()) {
         // Main thread: call LVGL directly
         if (modal && title) {
+            // Check if a modal with the same title is already showing
+            // This prevents duplicate modals when multiple components report the same error
+            lv_obj_t* existing_modal = ui_modal_get_top();
+            if (existing_modal) {
+                lv_obj_t* title_label = lv_obj_find_by_name(existing_modal, "lbl_title");
+                if (title_label) {
+                    const char* existing_title = lv_label_get_text(title_label);
+                    if (existing_title && strcmp(existing_title, title) == 0) {
+                        spdlog::debug("[Notification] Skipping duplicate modal: '{}'", title);
+                        return;
+                    }
+                }
+            }
+
             // Show modal dialog for critical errors
             ui_modal_config_t config = {
                 .position = {.use_alignment = true, .alignment = LV_ALIGN_CENTER, .x = 0, .y = 0},
