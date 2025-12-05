@@ -168,6 +168,8 @@ MDI_ICONS+=",0xF0493"    # cog (settings)
 MDI_ICONS+=",0xF04C5"    # speedometer
 MDI_ICONS+=",0xF04DB"    # stop
 MDI_ICONS+=",0xF050F"    # thermometer
+MDI_ICONS+=",0xF0E04"    # thermometer-minus
+MDI_ICONS+=",0xF0E05"    # thermometer-plus
 
 # View/Dashboard
 MDI_ICONS+=",0xF0566"    # vibrate (input shaper)
@@ -223,6 +225,11 @@ MDI_ICONS+=",0xF16BD"    # wifi-check
 MDI_ICONS+=",0xF16BF"    # wifi-lock
 MDI_ICONS+=",0xF18B8"    # printer-3d-nozzle-heat (heater)
 MDI_ICONS+=",0xF1A2F"    # cube-outline
+MDI_ICONS+=",0xF1A45"    # heat-wave (for heated bed icon)
+MDI_ICONS+=",0xF1B35"    # train-car-flatbed (print bed base)
+
+# Custom icons
+MDI_ICONS+=",0xF01BE"    # cursor-move (4-way movement cross)
 
 # Arrow icons for motion control (using MDI arrows)
 MDI_ICONS+=",0xF005D"    # arrow-up
