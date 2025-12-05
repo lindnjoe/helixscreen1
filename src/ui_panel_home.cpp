@@ -5,19 +5,14 @@
 
 #include "ui_error_reporting.h"
 #include "ui_event_safety.h"
-#include "ui_fonts.h"
-#include "ui_icon.h"
 #include "ui_modal.h"
 #include "ui_nav.h"
 #include "ui_subject_registry.h"
-#include "ui_theme.h"
 
 #include "app_globals.h"
 #include "config.h"
 #include "moonraker_api.h"
-#include "printer_images.h"
 #include "printer_state.h"
-#include "printer_types.h"
 #include "wifi_manager.h"
 #include "wizard_config_paths.h"
 
@@ -35,18 +30,14 @@ HomePanel::HomePanel(PrinterState& printer_state, MoonrakerAPI* api)
     // Initialize buffer contents with default values
     std::strcpy(status_buffer_, "Welcome to HelixScreen");
     std::strcpy(temp_buffer_, "-- °C");
-    std::strcpy(network_icon_buffer_, ICON_WIFI);
-    std::strcpy(network_label_buffer_, "Wi-Fi");
-    std::strcpy(network_color_buffer_, "0xff4444");
+    std::strcpy(network_label_buffer_, "WiFi");
 
     // Subscribe to PrinterState subjects (ObserverGuard handles cleanup)
+    // Note: Connection state dimming is now handled by XML binding to printer_connection_state
     extruder_temp_observer_ =
         ObserverGuard(printer_state_.get_extruder_temp_subject(), extruder_temp_observer_cb, this);
-    connection_state_observer_ = ObserverGuard(
-        printer_state_.get_printer_connection_state_subject(), connection_state_observer_cb, this);
 
-    spdlog::debug("[{}] Subscribed to PrinterState extruder temperature and connection state",
-                  get_name());
+    spdlog::debug("[{}] Subscribed to PrinterState extruder temperature", get_name());
 
     // Load configured LED from wizard settings and tell PrinterState to track it
     Config* config = Config::get_instance();
@@ -91,17 +82,12 @@ void HomePanel::init_subjects() {
 
     // Network icon state: integer 0-5 for conditional icon visibility
     // 0=disconnected, 1-4=wifi strength, 5=ethernet
+    // Note: Uses unique name to avoid conflict with navigation_bar's network_icon_state
     lv_subject_init_int(&network_icon_state_, 0); // Default: disconnected
-    lv_xml_register_subject(nullptr, "network_icon_state", &network_icon_state_);
+    lv_xml_register_subject(nullptr, "home_network_icon_state", &network_icon_state_);
 
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(network_label_subject_, network_label_buffer_, "Wi-Fi",
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(network_label_subject_, network_label_buffer_, "WiFi",
                                         "network_label");
-
-    // Legacy string subjects (kept for backwards compatibility, may be removed later)
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(network_icon_subject_, network_icon_buffer_, ICON_WIFI,
-                                        "network_icon");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(network_color_subject_, network_color_buffer_, "0xff4444",
-                                        "network_color");
 
     // Register event callbacks BEFORE loading XML
     // Note: These use static trampolines that will look up the global instance
@@ -127,44 +113,9 @@ void HomePanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
 
     spdlog::debug("[{}] Setting up...", get_name());
 
-    // Find light-related widgets for conditional hiding
-    light_button_ = lv_obj_find_by_name(panel_, "light_button");
-    light_divider_ = lv_obj_find_by_name(panel_, "divider2");
-
-    // Find printer image for connection state dimming
-    printer_image_ = lv_obj_find_by_name(panel_, "printer_image");
-
-    // Load printer-specific image based on configured type
-    if (printer_image_) {
-        Config* cfg = Config::get_instance();
-        std::string printer_type =
-            cfg->get<std::string>(WizardConfigPaths::PRINTER_TYPE, "Unknown");
-        int type_index = PrinterTypes::find_printer_type_index(printer_type);
-        std::string image_path = PrinterImages::get_validated_image_path(type_index);
-        lv_image_set_src(printer_image_, image_path.c_str());
-        spdlog::debug("[{}] Printer image set: type='{}' (idx={}) -> {}", get_name(), printer_type,
-                      type_index, image_path);
-    }
-
-    // Apply initial connection state dimming
-    int conn_state = lv_subject_get_int(printer_state_.get_printer_connection_state_subject());
-    update_printer_image_opacity(conn_state);
-
-    // If no LED is configured, hide the light button and divider
-    // Note: LED on/off visual state is handled by XML binding to PrinterState's led_state subject
-    if (configured_led_.empty()) {
-        if (light_button_) {
-            lv_obj_add_flag(light_button_, LV_OBJ_FLAG_HIDDEN);
-            spdlog::debug("[{}] Light button hidden (no LED configured)", get_name());
-        }
-        if (light_divider_) {
-            lv_obj_add_flag(light_divider_, LV_OBJ_FLAG_HIDDEN);
-            spdlog::debug("[{}] Light divider hidden (no LED configured)", get_name());
-        }
-    }
-
-    // Apply responsive icon font sizes (fonts are discrete, can't be scaled in XML)
-    setup_responsive_icon_fonts();
+    // Widget visibility (light button/divider) is handled by XML bindings to printer_has_led
+    // subject Printer image opacity is handled by XML styles bound to printer_connection_state
+    // subject No C++ widget manipulation needed - everything is declarative
 
     // Start tip rotation timer (60 seconds = 60000ms)
     if (!tip_rotation_timer_) {
@@ -229,73 +180,6 @@ void HomePanel::update_tip_of_day() {
     } else {
         spdlog::warn("[{}] Failed to get tip, keeping current", get_name());
     }
-}
-
-void HomePanel::setup_responsive_icon_fonts() {
-    // Layout/sizing is handled by XML, but icon fonts need C++ because fonts are discrete sizes.
-    // XML can't conditionally switch fonts based on screen size.
-    lv_display_t* display = lv_display_get_default();
-    int32_t screen_height = lv_display_get_vertical_resolution(display);
-
-    // Select icon sizes and label fonts based on screen size
-    const lv_font_t* mdi_icon_font;
-    const char* mat_icon_size;
-    const lv_font_t* label_font;
-    int icon_px;
-
-    if (screen_height <= UI_SCREEN_TINY_H) {
-        mdi_icon_font = &mdi_icons_24; // Tiny: 24px icons
-        mat_icon_size = "sm";          // 24x24
-        label_font = UI_FONT_SMALL;    // Smaller text labels to save space
-        icon_px = 24;
-    } else if (screen_height <= UI_SCREEN_SMALL_H) {
-        mdi_icon_font = &mdi_icons_32; // Small: 32px icons
-        mat_icon_size = "md";          // 32x32
-        label_font = UI_FONT_BODY;     // Normal text
-        icon_px = 32;
-    } else {
-        mdi_icon_font = &mdi_icons_64; // Medium/Large: 64px icons
-        mat_icon_size = "xl";          // 64x64
-        label_font = UI_FONT_BODY;     // Normal text
-        icon_px = 64;
-    }
-
-    // Network icon (MDI label)
-    lv_obj_t* network_icon = lv_obj_find_by_name(panel_, "network_icon");
-    if (network_icon) {
-        lv_obj_set_style_text_font(network_icon, mdi_icon_font, 0);
-    }
-
-    // Network label text
-    lv_obj_t* network_label = lv_obj_find_by_name(panel_, "network_label");
-    if (network_label) {
-        lv_obj_set_style_text_font(network_label, label_font, 0);
-    }
-
-    // Temperature icon (Material Design icon widget)
-    lv_obj_t* temp_icon = lv_obj_find_by_name(panel_, "temp_icon");
-    if (temp_icon) {
-        ui_icon_set_size(temp_icon, mat_icon_size);
-    }
-
-    // Temperature label text
-    lv_obj_t* temp_label = lv_obj_find_by_name(panel_, "temp_text_label");
-    if (temp_label) {
-        lv_obj_set_style_text_font(temp_label, label_font, 0);
-    }
-
-    // Light icons (Material Design icon widgets) - set size for both on/off states
-    lv_obj_t* light_icon_off = lv_obj_find_by_name(panel_, "light_icon_off");
-    lv_obj_t* light_icon_on = lv_obj_find_by_name(panel_, "light_icon_on");
-    if (light_icon_off) {
-        ui_icon_set_size(light_icon_off, mat_icon_size);
-    }
-    if (light_icon_on) {
-        ui_icon_set_size(light_icon_on, mat_icon_size);
-    }
-
-    spdlog::debug("[{}] Set icons to {}px, labels to {} for screen height {}", get_name(), icon_px,
-                  (label_font == UI_FONT_SMALL) ? "small" : "body", screen_height);
 }
 
 void HomePanel::handle_light_toggle() {
@@ -410,23 +294,13 @@ void HomePanel::on_extruder_temp_changed(int temp) {
     spdlog::trace("[{}] Extruder temperature updated: {}°C", get_name(), temp);
 }
 
-void HomePanel::update_printer_image_opacity(int connection_state) {
-    if (!printer_image_) {
-        return;
-    }
-
-    // CONNECTED = 2, all other states show darkened image
-    if (connection_state == 2) {
-        // Connected - clear recolor effect
-        lv_obj_set_style_image_recolor_opa(printer_image_, LV_OPA_TRANSP, 0);
-        spdlog::debug("[{}] Printer connected - image normal", get_name());
-    } else {
-        // Not connected - darken by 50% with black overlay
-        lv_obj_set_style_image_recolor(printer_image_, lv_color_hex(0x000000), 0);
-        lv_obj_set_style_image_recolor_opa(printer_image_, LV_OPA_50, 0);
-        spdlog::debug("[{}] Printer not connected (state={}) - image darkened", get_name(),
-                      connection_state);
-    }
+void HomePanel::reload_from_config() {
+    // Printer image and LED visibility are now handled via XML bindings to subjects:
+    // - printer_connection_state: controls image dimming via XML styles
+    // - printer_has_led: controls light button/divider visibility via bind_flag_if_eq
+    // The subjects are updated by PrinterState when capabilities change.
+    spdlog::debug("[{}] reload_from_config called - visibility handled by XML bindings",
+                  get_name());
 }
 
 void HomePanel::light_toggle_cb(lv_event_t* e) {
@@ -477,13 +351,6 @@ void HomePanel::extruder_temp_observer_cb(lv_observer_t* observer, lv_subject_t*
     }
 }
 
-void HomePanel::connection_state_observer_cb(lv_observer_t* observer, lv_subject_t* subject) {
-    auto* self = static_cast<HomePanel*>(lv_observer_get_user_data(observer));
-    if (self) {
-        self->update_printer_image_opacity(lv_subject_get_int(subject));
-    }
-}
-
 void HomePanel::update(const char* status_text, int temp) {
     // Update subjects - all bound widgets update automatically
     if (status_text) {
@@ -503,7 +370,7 @@ void HomePanel::set_network(network_type_t type) {
     // Update label text
     switch (type) {
     case NETWORK_WIFI:
-        lv_subject_copy_string(&network_label_subject_, "Wi-Fi");
+        lv_subject_copy_string(&network_label_subject_, "WiFi");
         break;
     case NETWORK_ETHERNET:
         lv_subject_copy_string(&network_label_subject_, "Ethernet");
@@ -530,10 +397,12 @@ int HomePanel::compute_network_icon_state() {
     // 5 = Ethernet connected (accent variant)
 
     if (current_network_ == NETWORK_DISCONNECTED) {
+        spdlog::trace("[{}] Network disconnected -> state 0", get_name());
         return 0;
     }
 
     if (current_network_ == NETWORK_ETHERNET) {
+        spdlog::trace("[{}] Network ethernet -> state 5", get_name());
         return 5;
     }
 
@@ -541,16 +410,24 @@ int HomePanel::compute_network_icon_state() {
     int signal = 0;
     if (wifi_manager_) {
         signal = wifi_manager_->get_signal_strength();
+        spdlog::debug("[{}] WiFi signal strength: {}%", get_name(), signal);
+    } else {
+        spdlog::warn("[{}] WiFiManager not available for signal query", get_name());
     }
 
     // Map signal percentage to icon state (1-4)
+    int state;
     if (signal <= 25)
-        return 1; // Weak (warning)
-    if (signal <= 50)
-        return 2; // Fair
-    if (signal <= 75)
-        return 3; // Good
-    return 4;     // Strong
+        state = 1; // Weak (warning)
+    else if (signal <= 50)
+        state = 2; // Fair
+    else if (signal <= 75)
+        state = 3; // Good
+    else
+        state = 4; // Strong
+
+    spdlog::debug("[{}] WiFi signal {}% -> state {}", get_name(), signal, state);
+    return state;
 }
 
 void HomePanel::update_network_icon_state() {

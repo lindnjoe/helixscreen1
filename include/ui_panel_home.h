@@ -63,40 +63,36 @@ class HomePanel : public PanelBase {
         return light_on_;
     }
 
+    /**
+     * @brief Reload printer image and LED visibility from config
+     *
+     * Called after wizard completion to update the home panel with
+     * newly configured printer type and LED settings.
+     */
+    void reload_from_config();
+
   private:
     lv_subject_t status_subject_;
     lv_subject_t temp_subject_;
     lv_subject_t network_icon_state_; // Integer subject: 0-5 for conditional icon visibility
     lv_subject_t network_label_subject_;
 
-    // Legacy string subjects (kept for network_label binding)
-    lv_subject_t network_icon_subject_;  // Unused after migration
-    lv_subject_t network_color_subject_; // Unused after migration
-
     char status_buffer_[512];
     char temp_buffer_[32];
-    char network_icon_buffer_[8];
     char network_label_buffer_[32];
-    char network_color_buffer_[16];
 
     bool light_on_ = false;
     network_type_t current_network_ = NETWORK_WIFI;
     PrintingTip current_tip_;
     std::string configured_led_;
     lv_timer_t* tip_rotation_timer_ = nullptr;
-    lv_timer_t* signal_poll_timer_ = nullptr; // Polls WiFi signal strength every 5s
-    lv_obj_t* light_button_ = nullptr;
-    lv_obj_t* light_divider_ = nullptr;
-    lv_obj_t* printer_image_ = nullptr;
-
+    lv_timer_t* signal_poll_timer_ = nullptr;   // Polls WiFi signal strength every 5s
     std::shared_ptr<WiFiManager> wifi_manager_; // For signal strength queries
 
     void update_tip_of_day();
     int compute_network_icon_state(); // Maps network type + signal → 0-5
     void update_network_icon_state(); // Updates the subject
     static void signal_poll_timer_cb(lv_timer_t* timer);
-    void setup_responsive_icon_fonts();
-    void update_printer_image_opacity(int connection_state);
 
     void handle_light_toggle();
     void handle_print_card_clicked();
@@ -111,11 +107,9 @@ class HomePanel : public PanelBase {
     static void tip_rotation_timer_cb(lv_timer_t* timer);
     static void extruder_temp_observer_cb(lv_observer_t* observer, lv_subject_t* subject);
     static void led_state_observer_cb(lv_observer_t* observer, lv_subject_t* subject);
-    static void connection_state_observer_cb(lv_observer_t* observer, lv_subject_t* subject);
 
     ObserverGuard extruder_temp_observer_;
     ObserverGuard led_state_observer_;
-    ObserverGuard connection_state_observer_;
 };
 
 // Global instance accessor (needed by main.cpp)
