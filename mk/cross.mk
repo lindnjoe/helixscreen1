@@ -333,7 +333,7 @@ endif
 # Pi Deployment Targets
 # =============================================================================
 
-.PHONY: deploy-pi deploy-pi-run pi-ssh pi-test
+.PHONY: deploy-pi deploy-pi-run deploy-pi-run-quiet pi-ssh pi-test
 
 # Deploy full application to Pi using rsync (binary + assets + config + XML)
 # Uses rsync for efficient delta transfers - only changed files are sent
@@ -353,8 +353,14 @@ deploy-pi:
 		$(PI_SSH_TARGET):$(PI_DEPLOY_DIR)/
 	@echo "$(GREEN)✓ Deployed to $(PI_HOST):$(PI_DEPLOY_DIR)$(RESET)"
 
-# Deploy and run in foreground (kills any existing instance first)
+# Deploy and run in foreground with debug logging (kills any existing instance first)
+# Uses --debug for trace-level logging and --log-dest=console for immediate output
 deploy-pi-run: deploy-pi
+	@echo "$(CYAN)Starting helix-screen on $(PI_HOST) (debug mode)...$(RESET)"
+	ssh -t $(PI_SSH_TARGET) "cd $(PI_DEPLOY_DIR) && killall helix-screen helix-splash 2>/dev/null || true; sleep 0.5; ./config/helix-launcher.sh --debug --log-dest=console"
+
+# Deploy and run without debug logging (production mode)
+deploy-pi-run-quiet: deploy-pi
 	@echo "$(CYAN)Starting helix-screen on $(PI_HOST)...$(RESET)"
 	ssh -t $(PI_SSH_TARGET) "cd $(PI_DEPLOY_DIR) && killall helix-screen helix-splash 2>/dev/null || true; sleep 0.5; ./config/helix-launcher.sh"
 
