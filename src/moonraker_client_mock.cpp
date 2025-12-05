@@ -79,14 +79,19 @@ static std::vector<std::string> scan_mock_gcode_files() {
 /**
  * @brief Build mock JSON response for server.files.list
  * @param path Directory path relative to gcodes root (empty = root)
- * @return JSON response matching Moonraker format
+ * @return JSON response matching real Moonraker format (flat array in result)
+ *
+ * Real Moonraker server.files.list returns:
+ *   {"result": [{"path": "file.gcode", "modified": 123.0, "size": 456, "permissions": "rw"}, ...]}
+ *
+ * Note: Directories are NOT included in server.files.list - they come from
+ * server.files.get_directory
  */
 static json build_mock_file_list_response(const std::string& path = "") {
-    json files_array = json::array();
-    json dirs_array = json::array();
+    json result_array = json::array();
 
     if (path.empty()) {
-        // Root directory - add mock subdirectories plus real files
+        // Root directory - scan real files from test gcode directory
         auto filenames = scan_mock_gcode_files();
 
         for (const auto& filename : filenames) {
@@ -100,60 +105,64 @@ static json build_mock_file_list_response(const std::string& path = "") {
                 modified = static_cast<double>(file_stat.st_mtime);
             }
 
-            json file_entry = {{"filename", filename},
-                               {"path", filename},
-                               {"size", size},
-                               {"modified", modified},
-                               {"permissions", "rw"}};
-            files_array.push_back(file_entry);
+            // Real Moonraker format: flat array with "path" key (not "filename")
+            json file_entry = {
+                {"path", filename}, {"size", size}, {"modified", modified}, {"permissions", "rw"}};
+            result_array.push_back(file_entry);
         }
 
-        // Add mock subdirectories at root
-        dirs_array.push_back({{"dirname", "calibration"},
-                              {"modified", 1700000000.0},
-                              {"size", 4096},
-                              {"permissions", "rw"}});
-        dirs_array.push_back({{"dirname", "my_projects"},
-                              {"modified", 1699900000.0},
-                              {"size", 4096},
-                              {"permissions", "rw"}});
+        // Add mock files that simulate subdirectory contents (as if listed recursively)
+        // Note: Moonraker's server.files.list only returns files, not directories
+        result_array.push_back({{"path", "calibration/temp_tower.gcode"},
+                                {"size", 125000},
+                                {"modified", 1698000000.0},
+                                {"permissions", "rw"}});
+        result_array.push_back({{"path", "calibration/bed_level_test.gcode"},
+                                {"size", 85000},
+                                {"modified", 1697500000.0},
+                                {"permissions", "rw"}});
+        result_array.push_back({{"path", "my_projects/custom_bracket.gcode"},
+                                {"size", 250000},
+                                {"modified", 1696000000.0},
+                                {"permissions", "rw"}});
+        result_array.push_back({{"path", "my_projects/keycaps/cherry_mx_cap.gcode"},
+                                {"size", 45000},
+                                {"modified", 1694000000.0},
+                                {"permissions", "rw"}});
+
     } else if (path == "calibration") {
-        // Mock calibration subdirectory
-        files_array.push_back({{"filename", "temp_tower.gcode"},
-                               {"path", "calibration/temp_tower.gcode"},
-                               {"size", 125000},
-                               {"modified", 1698000000.0},
-                               {"permissions", "rw"}});
-        files_array.push_back({{"filename", "bed_level_test.gcode"},
-                               {"path", "calibration/bed_level_test.gcode"},
-                               {"size", 85000},
-                               {"modified", 1697500000.0},
-                               {"permissions", "rw"}});
+        // Filtered to calibration directory
+        result_array.push_back({{"path", "calibration/temp_tower.gcode"},
+                                {"size", 125000},
+                                {"modified", 1698000000.0},
+                                {"permissions", "rw"}});
+        result_array.push_back({{"path", "calibration/bed_level_test.gcode"},
+                                {"size", 85000},
+                                {"modified", 1697500000.0},
+                                {"permissions", "rw"}});
     } else if (path == "my_projects") {
-        // Mock my_projects subdirectory with nested folder
-        files_array.push_back({{"filename", "custom_bracket.gcode"},
-                               {"path", "my_projects/custom_bracket.gcode"},
-                               {"size", 250000},
-                               {"modified", 1696000000.0},
-                               {"permissions", "rw"}});
-        dirs_array.push_back({{"dirname", "keycaps"},
-                              {"modified", 1695000000.0},
-                              {"size", 4096},
-                              {"permissions", "rw"}});
+        // Filtered to my_projects directory
+        result_array.push_back({{"path", "my_projects/custom_bracket.gcode"},
+                                {"size", 250000},
+                                {"modified", 1696000000.0},
+                                {"permissions", "rw"}});
+        result_array.push_back({{"path", "my_projects/keycaps/cherry_mx_cap.gcode"},
+                                {"size", 45000},
+                                {"modified", 1694000000.0},
+                                {"permissions", "rw"}});
     } else if (path == "my_projects/keycaps") {
-        // Nested subdirectory
-        files_array.push_back({{"filename", "cherry_mx_cap.gcode"},
-                               {"path", "my_projects/keycaps/cherry_mx_cap.gcode"},
-                               {"size", 45000},
-                               {"modified", 1694000000.0},
-                               {"permissions", "rw"}});
+        // Filtered to nested subdirectory
+        result_array.push_back({{"path", "my_projects/keycaps/cherry_mx_cap.gcode"},
+                                {"size", 45000},
+                                {"modified", 1694000000.0},
+                                {"permissions", "rw"}});
     }
     // Unknown paths return empty lists
 
-    json response = {{"result", {{"dirs", dirs_array}, {"files", files_array}}}};
+    json response = {{"result", result_array}};
 
-    spdlog::debug("[MoonrakerClientMock] Built mock file list for path '{}': {} dirs, {} files",
-                  path.empty() ? "/" : path, dirs_array.size(), files_array.size());
+    spdlog::debug("[MoonrakerClientMock] Built mock file list for path '{}': {} files",
+                  path.empty() ? "/" : path, result_array.size());
     return response;
 }
 

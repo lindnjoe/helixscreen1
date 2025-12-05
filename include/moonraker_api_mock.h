@@ -86,6 +86,21 @@ class MoonrakerAPIMock : public MoonrakerAPI {
                                const std::string& filename, const std::string& content,
                                SuccessCallback on_success, ErrorCallback on_error) override;
 
+    /**
+     * @brief Mock thumbnail download (reads from local test assets)
+     *
+     * Instead of downloading from Moonraker, looks for thumbnails in
+     * assets/test_thumbnails/ or assets/test_gcodes/. For mock mode,
+     * simply returns a placeholder path since we don't have real thumbnails.
+     *
+     * @param thumbnail_path Relative path from metadata
+     * @param cache_path Destination cache path (ignored - uses placeholder)
+     * @param on_success Callback with placeholder image path
+     * @param on_error Error callback (never called - mock always returns placeholder)
+     */
+    void download_thumbnail(const std::string& thumbnail_path, const std::string& cache_path,
+                            StringCallback on_success, ErrorCallback on_error) override;
+
     // ========================================================================
     // Shared State Methods
     // ========================================================================

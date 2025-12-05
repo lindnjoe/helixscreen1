@@ -4,6 +4,7 @@
 #include "moonraker_api_mock.h"
 
 #include "../tests/mocks/mock_printer_state.h"
+#include "gcode_parser.h"
 
 #include <spdlog/spdlog.h>
 
@@ -123,6 +124,95 @@ void MoonrakerAPIMock::upload_file_with_name(const std::string& root, const std:
     // Mock always succeeds
     if (on_success) {
         on_success();
+    }
+}
+
+void MoonrakerAPIMock::download_thumbnail(const std::string& thumbnail_path,
+                                          const std::string& cache_path, StringCallback on_success,
+                                          ErrorCallback on_error) {
+    (void)on_error; // Unused - mock falls back to placeholder on failure
+
+    spdlog::debug("[MoonrakerAPIMock] download_thumbnail: path='{}' -> cache='{}'", thumbnail_path,
+                  cache_path);
+
+    namespace fs = std::filesystem;
+
+    // Moonraker thumbnail paths look like: ".thumbnails/filename-NNxNN.png"
+    // Try to find the corresponding G-code file and extract the thumbnail
+    std::string gcode_filename;
+
+    // Extract the G-code filename from the thumbnail path
+    // e.g., ".thumbnails/3DBenchy-300x300.png" -> "3DBenchy.gcode"
+    size_t thumb_start = thumbnail_path.find(".thumbnails/");
+    if (thumb_start != std::string::npos) {
+        std::string thumb_name = thumbnail_path.substr(thumb_start + 12);
+        // Remove resolution suffix like "-300x300.png" or "_300x300.png"
+        size_t dash = thumb_name.rfind('-');
+        size_t underscore = thumb_name.rfind('_');
+        size_t sep = (dash != std::string::npos) ? dash : underscore;
+        if (sep != std::string::npos) {
+            gcode_filename = thumb_name.substr(0, sep) + ".gcode";
+        }
+    }
+
+    // Try to find and extract thumbnail from the G-code file
+    if (!gcode_filename.empty()) {
+        std::string gcode_path = find_test_file(gcode_filename);
+        if (!gcode_path.empty()) {
+            // Extract thumbnails from the G-code file
+            auto thumbnails = gcode::extract_thumbnails(gcode_path);
+            if (!thumbnails.empty()) {
+                // Find the largest thumbnail (best quality)
+                const gcode::GCodeThumbnail* best = &thumbnails[0];
+                for (const auto& thumb : thumbnails) {
+                    if (thumb.pixel_count() > best->pixel_count()) {
+                        best = &thumb;
+                    }
+                }
+
+                // Write the thumbnail to the cache path
+                std::ofstream file(cache_path, std::ios::binary);
+                if (file) {
+                    file.write(reinterpret_cast<const char*>(best->png_data.data()),
+                               static_cast<std::streamsize>(best->png_data.size()));
+                    file.close();
+
+                    spdlog::info(
+                        "[MoonrakerAPIMock] Extracted thumbnail {}x{} ({} bytes) from {} -> {}",
+                        best->width, best->height, best->png_data.size(), gcode_filename,
+                        cache_path);
+
+                    if (on_success) {
+                        on_success(cache_path);
+                    }
+                    return;
+                }
+            } else {
+                spdlog::debug("[MoonrakerAPIMock] No thumbnails found in {}", gcode_path);
+            }
+        } else {
+            spdlog::debug("[MoonrakerAPIMock] G-code file not found: {}", gcode_filename);
+        }
+    }
+
+    // Fallback to placeholder if extraction failed
+    spdlog::debug("[MoonrakerAPIMock] Falling back to placeholder thumbnail");
+
+    std::string placeholder_path;
+    for (const auto& prefix : PATH_PREFIXES) {
+        std::string test_path = prefix + "assets/images/benchy_thumbnail_white.png";
+        if (fs::exists(test_path)) {
+            placeholder_path = "A:" + test_path;
+            break;
+        }
+    }
+
+    if (placeholder_path.empty()) {
+        placeholder_path = "A:assets/images/placeholder_thumbnail.png";
+    }
+
+    if (on_success) {
+        on_success(placeholder_path);
     }
 }
 
