@@ -1,93 +1,52 @@
 <?xml version="1.0"?>
 <!-- Copyright 2025 356C LLC -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- Numeric Keypad Overlay - Matches motion_panel structure exactly -->
 <component>
-  <!-- Local Constants -->
   <consts>
-    <int name="button_radius" value="8"/>
-    <int name="header_padding" value="6"/>
+    <px name="keypad_width" value="280"/>
   </consts>
-  <!-- API Properties -->
   <api>
-    <prop type="int" name="initial_value" default="0"/>
-    <prop type="int" name="min_value" default="0"/>
-    <prop type="int" name="max_value" default="999"/>
     <prop type="string" name="unit_label" default=""/>
-    <prop type="bool" name="allow_decimal" default="false"/>
-    <prop type="bool" name="allow_negative" default="false"/>
+    <prop type="string" name="title" default="Enter Value"/>
   </api>
-  <!-- Full-screen backdrop (semi-transparent overlay) -->
-  <view extends="lv_obj" name="keypad_backdrop" width="100%" height="100%" style_bg_color="0x000000" style_bg_opa="128" style_border_width="0" style_pad_all="0" style_radius="0" align="center" clickable="true">
-    <!-- Keypad modal (docked right edge) -->
-    <lv_obj name="keypad_modal" width="#overlay_panel_width" style_max_width="600" height="100%" align="right_mid" style_pad_all="#space_md" style_border_width="0" flex_flow="column" style_flex_main_place="start" style_pad_gap="#space_sm">
-      <!-- Header bar: Back button + Title (left) and OK button (right) -->
-      <!-- NOTE: Uses custom header instead of header_bar component due to unique OK button requirement -->
-      <!-- Mobile-first sizing: compact for tiny screens -->
-      <lv_obj width="100%" height="content" style_bg_opa="0%" style_border_width="0" style_pad_all="#header_padding" flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center">
-        <!-- Left side: Back button + Title -->
-        <lv_obj height="content" width="content" style_bg_opa="0%" style_border_width="0" style_pad_all="0" flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_md">
-          <icon name="back_button" src="back" size="sm" variant="primary" style_pad_all="#space_md" clickable="true" scrollable="false" align="center"/>
-          <text_heading name="keypad_title" text="Nozzle Temp" width="content" scrollable="false"/>
-        </lv_obj>
-        <!-- Right side: OK button -->
-        <lv_button name="btn_ok" width="content" height="content" style_pad_row="8" style_pad_column="16" style_radius="#button_radius" style_border_width="0">
-          <text_heading text="OK" style_text_color="#text_primary" align="center"/>
-        </lv_button>
+  <!-- Panel structure matches motion_panel exactly -->
+  <view extends="lv_obj" name="keypad_panel" width="#keypad_width" height="100%" align="right_mid" style_pad_all="0" style_border_width="0" style_bg_opa="255" style_bg_color="#card_bg" scrollable="false" flex_flow="column" hidden="true">
+    <header_bar name="overlay_header" title="$title" action_button_text="OK" hide_action_button="false"/>
+    <!-- Content: flex_grow fills remaining space (like motion_panel overlay_content) -->
+    <lv_obj name="overlay_content" flex_grow="1" width="100%" style_bg_opa="0" style_pad_all="#space_sm" scrollable="false" style_border_width="0" flex_flow="column" style_pad_gap="#space_xs">
+      <!-- Input Display -->
+      <lv_obj width="100%" height="content" style_radius="#border_radius" style_pad_all="#space_sm" style_border_width="0" scrollable="false" flex_flow="row" flex_align="center,center,center">
+        <lv_label name="input_display" style_text_font="montserrat_28" style_text_align="center" scrollable="false">
+          <lv_label-bind_text subject="keypad_display"/>
+        </lv_label>
+        <lv_label name="input_unit" text="$unit_label" style_text_font="montserrat_28" scrollable="false" style_pad_left="#space_xs"/>
       </lv_obj>
-      <!-- Input Display Card - Uses content sizing -->
-      <lv_obj width="100%" height="content" style_radius="#button_radius" style_pad_all="#space_md" style_border_width="0" scrollable="false" flex_flow="row" flex_align="center,center,center">
-        <lv_label name="input_display" text="0" style_text_font="montserrat_28" style_text_align="center" scrollable="false" style_max_width="400" style_pad_all="0"/>
-        <!-- Unit label (e.g., "°C") -->
-        <lv_label name="input_unit" text="$unit_label" style_text_font="montserrat_28" style_text_align="left" scrollable="false" style_max_width="60" style_pad_left="#space_md" style_pad_all="0"/>
-      </lv_obj>
-      <!-- Keypad Grid Container - Flex grow to fill remaining space -->
-      <lv_obj width="100%" flex_grow="1" style_bg_opa="0%" style_border_width="0" style_pad_all="0" flex_flow="column" style_pad_gap="#space_sm" style_flex_main_place="space_evenly" name="keypad_grid">
-        <!-- Row 1: [7] [8] [9] -->
-        <lv_obj width="100%" flex_grow="1" style_bg_opa="0%" style_border_width="0" flex_flow="row" style_flex_main_place="space_evenly" style_flex_cross_place="center" style_pad_all="0" style_pad_bottom="2" name="row_1">
-          <lv_button name="btn_7" flex_grow="1" height="100%" style_radius="#button_radius" style_border_width="0">
-            <text_body text="7" style_text_color="#text_primary" align="center"/>
-          </lv_button>
-          <lv_button name="btn_8" flex_grow="1" height="100%" style_radius="#button_radius" style_border_width="0">
-            <text_body text="8" style_text_color="#text_primary" align="center"/>
-          </lv_button>
-          <lv_button name="btn_9" flex_grow="1" height="100%" style_radius="#button_radius" style_border_width="0">
-            <text_body text="9" style_text_color="#text_primary" align="center"/>
-          </lv_button>
+      <!-- Button Grid: flex_grow="1" fills remaining vertical space -->
+      <lv_obj name="keypad_grid" flex_grow="1" width="100%" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false" flex_flow="column" style_pad_gap="#space_xxs">
+        <!-- Row 1 -->
+        <lv_obj flex_grow="1" width="100%" style_bg_opa="0" style_border_width="0" scrollable="false" flex_flow="row" style_pad_gap="#space_xxs" style_flex_cross_place="stretch">
+          <lv_button name="btn_7" flex_grow="1" style_radius="#border_radius"><text_heading text="7" align="center"/></lv_button>
+          <lv_button name="btn_8" flex_grow="1" style_radius="#border_radius"><text_heading text="8" align="center"/></lv_button>
+          <lv_button name="btn_9" flex_grow="1" style_radius="#border_radius"><text_heading text="9" align="center"/></lv_button>
         </lv_obj>
-        <!-- Row 2: [4] [5] [6] -->
-        <lv_obj width="100%" flex_grow="1" style_bg_opa="0%" style_border_width="0" flex_flow="row" style_flex_main_place="space_evenly" style_flex_cross_place="center" style_pad_all="0" style_pad_bottom="2" name="row_2">
-          <lv_button name="btn_4" flex_grow="1" height="100%" style_radius="#button_radius" style_border_width="0">
-            <text_body text="4" style_text_color="#text_primary" align="center"/>
-          </lv_button>
-          <lv_button name="btn_5" flex_grow="1" height="100%" style_radius="#button_radius" style_border_width="0">
-            <text_body text="5" style_text_color="#text_primary" align="center"/>
-          </lv_button>
-          <lv_button name="btn_6" flex_grow="1" height="100%" style_radius="#button_radius" style_border_width="0">
-            <text_body text="6" style_text_color="#text_primary" align="center"/>
-          </lv_button>
+        <!-- Row 2 -->
+        <lv_obj flex_grow="1" width="100%" style_bg_opa="0" style_border_width="0" scrollable="false" flex_flow="row" style_pad_gap="#space_xxs" style_flex_cross_place="stretch">
+          <lv_button name="btn_4" flex_grow="1" style_radius="#border_radius"><text_heading text="4" align="center"/></lv_button>
+          <lv_button name="btn_5" flex_grow="1" style_radius="#border_radius"><text_heading text="5" align="center"/></lv_button>
+          <lv_button name="btn_6" flex_grow="1" style_radius="#border_radius"><text_heading text="6" align="center"/></lv_button>
         </lv_obj>
-        <!-- Row 3: [1] [2] [3] -->
-        <lv_obj width="100%" flex_grow="1" style_bg_opa="0%" style_border_width="0" flex_flow="row" style_flex_main_place="space_evenly" style_flex_cross_place="center" style_pad_all="0" style_pad_bottom="2" name="row_3">
-          <lv_button name="btn_1" flex_grow="1" height="100%" style_radius="#button_radius" style_border_width="0">
-            <text_body text="1" style_text_color="#text_primary" align="center"/>
-          </lv_button>
-          <lv_button name="btn_2" flex_grow="1" height="100%" style_radius="#button_radius" style_border_width="0">
-            <text_body text="2" style_text_color="#text_primary" align="center"/>
-          </lv_button>
-          <lv_button name="btn_3" flex_grow="1" height="100%" style_radius="#button_radius" style_border_width="0">
-            <text_body text="3" style_text_color="#text_primary" align="center"/>
-          </lv_button>
+        <!-- Row 3 -->
+        <lv_obj flex_grow="1" width="100%" style_bg_opa="0" style_border_width="0" scrollable="false" flex_flow="row" style_pad_gap="#space_xxs" style_flex_cross_place="stretch">
+          <lv_button name="btn_1" flex_grow="1" style_radius="#border_radius"><text_heading text="1" align="center"/></lv_button>
+          <lv_button name="btn_2" flex_grow="1" style_radius="#border_radius"><text_heading text="2" align="center"/></lv_button>
+          <lv_button name="btn_3" flex_grow="1" style_radius="#border_radius"><text_heading text="3" align="center"/></lv_button>
         </lv_obj>
-        <!-- Row 4: [EMPTY] [0] [BACKSPACE] - 0 centered under 2 -->
-        <lv_obj width="100%" flex_grow="1" style_bg_opa="0%" style_border_width="0" flex_flow="row" style_flex_main_place="space_evenly" style_flex_cross_place="center" style_pad_all="0" style_pad_bottom="2" name="row_4">
-          <!-- Empty spacer to align 0 under 2 -->
-          <lv_obj flex_grow="1" height="100%" style_bg_opa="0%" style_border_width="0"/>
-          <lv_button name="btn_0" flex_grow="1" height="100%" style_radius="#button_radius" style_border_width="0">
-            <text_body text="0" style_text_color="#text_primary" align="center"/>
-          </lv_button>
-          <lv_button name="btn_backspace" flex_grow="1" height="100%" style_radius="#button_radius" style_border_width="0">
-            <lv_label text="#icon_backspace" style_text_font="mdi_icons_24" style_text_color="#text_primary" align="center"/>
-          </lv_button>
+        <!-- Row 4 -->
+        <lv_obj flex_grow="1" width="100%" style_bg_opa="0" style_border_width="0" scrollable="false" flex_flow="row" style_pad_gap="#space_xxs" style_flex_cross_place="stretch">
+          <lv_obj flex_grow="1" style_bg_opa="0" style_border_width="0"/>
+          <lv_button name="btn_0" flex_grow="1" style_radius="#border_radius"><text_heading text="0" align="center"/></lv_button>
+          <lv_button name="btn_backspace" flex_grow="1" style_radius="#border_radius"><lv_label text="#icon_backspace" style_text_font="#icon_font_md" align="center"/></lv_button>
         </lv_obj>
       </lv_obj>
     </lv_obj>
