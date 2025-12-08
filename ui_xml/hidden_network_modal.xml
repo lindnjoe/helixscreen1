@@ -97,7 +97,7 @@
         <!-- Show spinner when hidden_connecting == 1 -->
         <lv_obj-bind_flag_if_eq subject="hidden_connecting" flag="hidden" ref_value="0"/>
 
-        <lv_spinner width="64" height="64" style_arc_width:indicator="4" style_arc_color="#primary_color" style_arc_opa:main="0"/>
+        <spinner size="lg"/>
         <text_heading text="Connecting..." style_text_align="center"/>
         <text_small name="connecting_ssid" bind_text="hidden_ssid"
                     style_text_color="#text_secondary" style_text_align="center"/>

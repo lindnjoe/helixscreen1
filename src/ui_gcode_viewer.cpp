@@ -13,6 +13,7 @@
 #include "ui_gcode_viewer.h"
 
 #include "ui_async_callback.h"
+#include "ui_theme.h"
 
 #include "gcode_camera.h"
 #include "gcode_parser.h"
@@ -617,7 +618,13 @@ static void ui_gcode_viewer_load_file_async(lv_obj_t* obj, const char* file_path
                           LV_FLEX_ALIGN_CENTER);
 
     st->loading_spinner = lv_spinner_create(st->loading_container);
-    lv_obj_set_size(st->loading_spinner, 50, 50);
+    lv_obj_set_size(st->loading_spinner, 48, 48); // ~lg size for small screens
+
+    // Apply consistent spinner styling (matching ui_spinner component)
+    lv_color_t primary = ui_theme_parse_color("#primary_color");
+    lv_obj_set_style_arc_color(st->loading_spinner, primary, LV_PART_INDICATOR);
+    lv_obj_set_style_arc_width(st->loading_spinner, 4, LV_PART_INDICATOR);
+    lv_obj_set_style_arc_opa(st->loading_spinner, LV_OPA_0, LV_PART_MAIN);
 
     st->loading_label = lv_label_create(st->loading_container);
     lv_label_set_text(st->loading_label, "Loading G-code...");

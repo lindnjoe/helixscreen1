@@ -68,6 +68,41 @@
     <string name="icon_size_card_medium" value="lg"/>
     <string name="icon_size_card_large" value="xl"/>
 
+    <!-- ===================================================================== -->
+    <!-- Responsive Spinner Sizes (spinner_*)                                  -->
+    <!-- ===================================================================== -->
+    <!-- Runtime selects appropriate variant via ui_theme_register_responsive_spacing()
+         Spinner component uses these for consistent, responsive loading indicators -->
+    <!-- spinner_lg: Large modal spinners (preparing overlay, calibration, WiFi connect) -->
+    <px name="spinner_lg_small" value="48"/>
+    <px name="spinner_lg_medium" value="56"/>
+    <px name="spinner_lg_large" value="64"/>
+    <!-- spinner_md: Standard loading indicators -->
+    <px name="spinner_md_small" value="24"/>
+    <px name="spinner_md_medium" value="28"/>
+    <px name="spinner_md_large" value="32"/>
+    <!-- spinner_sm: Inline status indicators (WiFi test rows) -->
+    <px name="spinner_sm_small" value="16"/>
+    <px name="spinner_sm_medium" value="18"/>
+    <px name="spinner_sm_large" value="20"/>
+    <!-- spinner_xs: Compact UI elements -->
+    <px name="spinner_xs_small" value="12"/>
+    <px name="spinner_xs_medium" value="14"/>
+    <px name="spinner_xs_large" value="16"/>
+    <!-- Spinner arc widths - proportional to size -->
+    <px name="spinner_arc_lg_small" value="3"/>
+    <px name="spinner_arc_lg_medium" value="4"/>
+    <px name="spinner_arc_lg_large" value="4"/>
+    <px name="spinner_arc_md_small" value="2"/>
+    <px name="spinner_arc_md_medium" value="3"/>
+    <px name="spinner_arc_md_large" value="3"/>
+    <px name="spinner_arc_sm_small" value="2"/>
+    <px name="spinner_arc_sm_medium" value="2"/>
+    <px name="spinner_arc_sm_large" value="2"/>
+    <px name="spinner_arc_xs_small" value="2"/>
+    <px name="spinner_arc_xs_medium" value="2"/>
+    <px name="spinner_arc_xs_large" value="2"/>
+
     <!-- printer_img_size moved to home_panel.xml -->
     <!-- accent_bar_width moved to home_panel.xml -->
     <px name="accent_bar_height" value="28"/>

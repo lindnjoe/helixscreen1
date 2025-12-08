@@ -122,9 +122,9 @@
                   <lv_obj-bind_flag_if_not_eq subject="test_gateway_status" flag="hidden" ref_value="0"/>
                 </icon>
                 <!-- Testing (status=1) -->
-                <lv_spinner name="gateway_spinner" width="20" height="20" align="center" hidden="true">
+                <spinner name="gateway_spinner" size="sm" align="center" hidden="true">
                   <lv_obj-bind_flag_if_not_eq subject="test_gateway_status" flag="hidden" ref_value="1"/>
-                </lv_spinner>
+                </spinner>
                 <!-- Success (status=2) -->
                 <icon name="gateway_success" src="check" size="xs" variant="success" align="center" hidden="true">
                   <lv_obj-bind_flag_if_not_eq subject="test_gateway_status" flag="hidden" ref_value="2"/>
@@ -146,9 +146,9 @@
                   <lv_obj-bind_flag_if_not_eq subject="test_internet_status" flag="hidden" ref_value="0"/>
                 </icon>
                 <!-- Testing (status=1) -->
-                <lv_spinner name="internet_spinner" width="20" height="20" align="center" hidden="true">
+                <spinner name="internet_spinner" size="sm" align="center" hidden="true">
                   <lv_obj-bind_flag_if_not_eq subject="test_internet_status" flag="hidden" ref_value="1"/>
-                </lv_spinner>
+                </spinner>
                 <!-- Success (status=2) -->
                 <icon name="internet_success" src="check" size="xs" variant="success" align="center" hidden="true">
                   <lv_obj-bind_flag_if_not_eq subject="test_internet_status" flag="hidden" ref_value="2"/>
@@ -201,9 +201,9 @@
                 <lv_obj-bind_flag_if_eq subject="wifi_scanning" flag="hidden" ref_value="1"/>
               </icon>
               <!-- Spinner (shown when scanning) -->
-              <lv_spinner name="scan_spinner" width="16" height="16" hidden="true">
+              <spinner name="scan_spinner" size="xs" hidden="true">
                 <lv_obj-bind_flag_if_eq subject="wifi_scanning" flag="hidden" ref_value="0"/>
-              </lv_spinner>
+              </spinner>
             </lv_obj>
             <event_cb trigger="clicked" callback="on_refresh_clicked"/>
           </lv_button>
@@ -223,7 +223,7 @@
           <!-- Scanning indicator (shown when scanning) -->
           <lv_obj name="scanning_placeholder" width="100%" height="100" style_bg_opa="0" style_border_width="0" style_pad_all="#space_lg" scrollable="false" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center" hidden="true">
             <lv_obj-bind_flag_if_eq subject="wifi_scanning" flag="hidden" ref_value="0"/>
-            <lv_spinner width="32" height="32"/>
+            <spinner size="md"/>
             <text_small text="Scanning for networks..." style_text_color="#text_secondary" style_margin_top="#space_sm"/>
           </lv_obj>
         </lv_obj>

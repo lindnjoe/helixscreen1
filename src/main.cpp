@@ -59,6 +59,7 @@
 #include "ui_panel_temp_control.h"
 #include "ui_panel_test.h"
 #include "ui_severity_card.h"
+#include "ui_spinner.h"
 #include "ui_status_bar.h"
 #include "ui_switch.h"
 #include "ui_text.h"
@@ -995,6 +996,7 @@ static void register_xml_components() {
     // Register semantic text widgets (AFTER theme init, BEFORE components that use them)
     ui_text_init();
     ui_text_input_init(); // <text_input> with bind_text support
+    ui_spinner_init();    // <spinner> with responsive sizing
 
     // Register custom widgets (BEFORE components that use them)
     ui_gcode_viewer_register();
