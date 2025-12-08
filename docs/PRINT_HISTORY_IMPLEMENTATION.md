@@ -642,8 +642,8 @@ Update this section as stages complete:
 | Stage | Status | Notes |
 |-------|--------|-------|
 | 1. Data Layer | ✅ Complete | Commit 62d6a22 |
-| 2. Dashboard Stats | 🔜 Next | |
-| 3. History List | Not Started | |
+| 2. Dashboard Stats | ✅ Complete | Session 2025-12-08 |
+| 3. History List | 🔜 Next | |
 | 4. Search/Filter/Sort | Not Started | |
 | 5. Detail Overlay | Not Started | |
 | 6. Charts | Not Started | |
@@ -702,28 +702,81 @@ Update this section as stages complete:
 
 ---
 
-### Next Session: Stage 2 - Dashboard Panel
+### Session: 2025-12-08 (Stage 2 Complete)
 
-**Goal:** Create dashboard panel showing stats, accessible from Advanced panel
+**Worktree:** `/Users/pbrown/Code/Printing/helixscreen-print-history`
+**Branch:** `feature/print-history`
+
+**Files Created:**
+- `ui_xml/history_dashboard_panel.xml` - Dashboard layout with 6 stat cards and time filters
+- `include/ui_panel_history_dashboard.h` - Panel class header
+- `src/ui_panel_history_dashboard.cpp` - Panel implementation with API integration
+
+**Files Modified:**
+- `ui_xml/advanced_panel.xml` - Added "Print History" action row
+- `src/ui_panel_advanced.cpp` - Wired click handler with `show_history_dashboard` handling
+- `src/main.cpp` - Registered XML component, added CLI `-p print-history` option, added `set_api()` call
+
+**Key Fixes & Learnings:**
+
+1. **LVGL Subject API (CRITICAL)**
+   - ❌ Wrong: `lv_subject_create_int(0)` / `lv_subject_get_by_name("name")`
+   - ✅ Correct: Use class member `lv_subject_t subject_` with `lv_subject_init_int(&subject_, 0)` then `lv_xml_register_subject(nullptr, "name", &subject_)`
+   - Subject must persist for LVGL binding lifetime (use class member, not local variable)
+
+2. **XML Overlay Panel Pattern (STACK OVERFLOW FIX)**
+   - ❌ Wrong: `extends="overlay_panel"` causes infinite XML recursion
+   - ✅ Correct: Extend `lv_obj` directly and manually include `header_bar` + `overlay_content` structure
+   - Reference: `bed_mesh_panel.xml`, `calibration_zoffset_panel.xml`
+
+3. **Error Callback Signature**
+   - ❌ Wrong: `[](const std::string& error) { ... }`
+   - ✅ Correct: `[](const MoonrakerError& error) { ... error.message ... }`
+
+4. **PrintJobStatus Enum Usage**
+   - ❌ Wrong: `parse_job_status(job.status)` assuming status is string
+   - ✅ Correct: `job.status` is already `PrintJobStatus` enum, use directly
+
+5. **Static Callback Visibility**
+   - ❌ Wrong: Private static callbacks for LVGL XML event registration
+   - ✅ Correct: Static event callbacks must be `public:` for `lv_xml_register_event_cb()`
+
+6. **Deferred API Injection**
+   - Panels created before MoonrakerAPI initialization need `set_api()` called later
+   - Add to main.cpp after API construction: `get_global_history_dashboard_panel().set_api(moonraker_api.get())`
+
+**Validation:**
+```bash
+./build/bin/helix-screen --test -p print-history -vv
+# Shows: 20 prints, 34h 15m, 242.7m filament, 75% success, 5h longest, 5 failed
+```
+
+**Screenshot:** `/tmp/history-dashboard-final.png` - Dashboard with mock data
+
+---
+
+### Next Session: Stage 3 - History List Panel
+
+**Goal:** Create full-screen list panel with print history items
 
 **Quick Start:**
 ```bash
 cd /Users/pbrown/Code/Printing/helixscreen-print-history
 git log --oneline -3  # Verify on feature/print-history branch
-make -j && ./build/bin/helix-screen --test -p advanced -vv
+make -j && ./build/bin/helix-screen --test -p print-history -vv
 ```
 
 **Files to Create:**
-- `ui_xml/history_dashboard_panel.xml` - Stats layout with time filters
-- `include/ui_panel_history_dashboard.h` - Panel class header
-- `src/ui_panel_history_dashboard.cpp` - Panel implementation
+- `ui_xml/history_list_panel.xml` - Full-screen list layout
+- `ui_xml/history_list_row.xml` - List item component
+- `include/ui_panel_history_list.h` - Panel class header
+- `src/ui_panel_history_list.cpp` - Panel implementation
 
 **Files to Modify:**
-- `ui_xml/advanced_panel.xml` - Add "Print History" action row
-- `src/ui_panel_advanced.cpp` - Wire click handler
+- `src/ui_panel_history_dashboard.cpp` - Wire "View Full History" button navigation
 - `src/main.cpp` - Register XML component
 
 **Reference Patterns:**
-- `ui_xml/overlay_panel.xml` - Overlay structure
-- `ui_xml/home_panel.xml` - Card layout patterns
-- `src/ui_panel_settings.cpp` - Action row click handling
+- `ui_xml/print_file_list_row.xml` - Row component pattern
+- `src/ui_panel_print_select.cpp:761-792` - Dynamic list population
+- `src/ui_panel_print_select.cpp:974-983` - Row click handlers

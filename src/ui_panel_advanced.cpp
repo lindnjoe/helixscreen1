@@ -5,6 +5,7 @@
 
 #include "ui_nav.h"
 #include "ui_panel_calibration_zoffset.h"
+#include "ui_panel_history_dashboard.h"
 #include "ui_toast.h"
 
 #include "moonraker_api.h"
@@ -124,6 +125,13 @@ void AdvancedPanel::setup_action_handlers() {
         spdlog::debug("[{}]   ✓ Console action row", get_name());
     }
 
+    // === Print History Row ===
+    print_history_row_ = lv_obj_find_by_name(panel_, "row_print_history");
+    if (print_history_row_) {
+        lv_obj_add_event_cb(print_history_row_, on_print_history_clicked, LV_EVENT_CLICKED, this);
+        spdlog::debug("[{}]   ✓ Print history action row", get_name());
+    }
+
     // === Restart Row ===
     restart_row_ = lv_obj_find_by_name(panel_, "row_restart");
     if (restart_row_) {
@@ -210,6 +218,36 @@ void AdvancedPanel::handle_console_clicked() {
     ui_toast_show(ToastSeverity::INFO, "Console: Coming soon", 2000);
 }
 
+void AdvancedPanel::handle_print_history_clicked() {
+    spdlog::debug("[{}] Print History clicked - opening dashboard", get_name());
+
+    // Lazy-create the history dashboard panel
+    if (!history_dashboard_panel_ && parent_screen_) {
+        spdlog::debug("[{}] Creating history dashboard panel...", get_name());
+
+        // Create from XML
+        history_dashboard_panel_ = static_cast<lv_obj_t*>(
+            lv_xml_create(parent_screen_, "history_dashboard_panel", nullptr));
+        if (history_dashboard_panel_) {
+            // Setup the panel class
+            get_global_history_dashboard_panel().setup(history_dashboard_panel_, parent_screen_);
+
+            // Initially hidden
+            lv_obj_add_flag(history_dashboard_panel_, LV_OBJ_FLAG_HIDDEN);
+            spdlog::info("[{}] History dashboard panel created", get_name());
+        } else {
+            spdlog::error("[{}] Failed to create history dashboard panel from XML", get_name());
+            return;
+        }
+    }
+
+    // Push history dashboard onto navigation and show it
+    if (history_dashboard_panel_) {
+        ui_nav_push_overlay(history_dashboard_panel_);
+        get_global_history_dashboard_panel().on_activate();
+    }
+}
+
 void AdvancedPanel::handle_restart_clicked() {
     spdlog::debug("[{}] Restart clicked", get_name());
     ui_toast_show(ToastSeverity::INFO, "Restart: Coming soon", 2000);
@@ -259,6 +297,12 @@ void AdvancedPanel::on_console_clicked(lv_event_t* e) {
     auto* self = static_cast<AdvancedPanel*>(lv_event_get_user_data(e));
     if (self)
         self->handle_console_clicked();
+}
+
+void AdvancedPanel::on_print_history_clicked(lv_event_t* e) {
+    auto* self = static_cast<AdvancedPanel*>(lv_event_get_user_data(e));
+    if (self)
+        self->handle_print_history_clicked();
 }
 
 void AdvancedPanel::on_restart_clicked(lv_event_t* e) {

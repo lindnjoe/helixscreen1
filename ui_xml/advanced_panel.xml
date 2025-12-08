@@ -161,6 +161,12 @@
                         icon="console"
                         description="Send commands directly to printer"/>
 
+    <!-- Print History -->
+    <setting_action_row name="row_print_history"
+                        label="Print History"
+                        icon="history"
+                        description="View print statistics and job history"/>
+
     <!-- Bottom padding for scroll -->
     <lv_obj width="100%" height="#space_xl" style_bg_opa="0" style_border_width="0" scrollable="false"/>
 

@@ -49,6 +49,7 @@
 #include "ui_panel_filament.h"
 #include "ui_panel_gcode_test.h"
 #include "ui_panel_glyphs.h"
+#include "ui_panel_history_dashboard.h"
 #include "ui_panel_home.h"
 #include "ui_panel_motion.h"
 #include "ui_panel_notification_history.h"
@@ -380,10 +381,10 @@ static bool parse_command_line_args(
     bool& show_bed_temp, bool& show_extrusion, bool& show_fan, bool& show_print_status,
     bool& show_file_detail, bool& show_keypad, bool& show_keyboard, bool& show_step_test,
     bool& show_test_panel, bool& show_gcode_test, bool& show_bed_mesh, bool& show_zoffset,
-    bool& show_pid, bool& show_glyphs, bool& show_gradient_test, bool& force_wizard,
-    int& wizard_step, bool& panel_requested, int& display_num, int& x_pos, int& y_pos,
-    bool& screenshot_enabled, int& screenshot_delay_sec, int& timeout_sec, int& verbosity,
-    int& dark_mode_cli, int& dpi) {
+    bool& show_pid, bool& show_glyphs, bool& show_gradient_test, bool& show_history_dashboard,
+    bool& force_wizard, int& wizard_step, bool& panel_requested, int& display_num, int& x_pos,
+    int& y_pos, bool& screenshot_enabled, int& screenshot_delay_sec, int& timeout_sec,
+    int& verbosity, int& dark_mode_cli, int& dpi) {
     // Parse arguments
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-s") == 0 || strcmp(argv[i], "--size") == 0) {
@@ -465,6 +466,10 @@ static bool parse_command_line_args(
                     show_zoffset = true;
                 } else if (strcmp(panel_arg, "pid") == 0) {
                     show_pid = true;
+                } else if (strcmp(panel_arg, "history-dashboard") == 0 ||
+                           strcmp(panel_arg, "history_dashboard") == 0 ||
+                           strcmp(panel_arg, "print-history") == 0) {
+                    show_history_dashboard = true;
                 } else if (strcmp(panel_arg, "glyphs") == 0) {
                     show_glyphs = true;
                 } else if (strcmp(panel_arg, "gradient-test") == 0) {
@@ -473,7 +478,7 @@ static bool parse_command_line_args(
                     printf("Unknown panel: %s\n", panel_arg);
                     printf("Available panels: home, controls, motion, nozzle-temp, bed-temp, "
                            "bed-mesh, zoffset, pid, extrusion, fan, print-status, filament, "
-                           "settings, advanced, "
+                           "settings, advanced, print-history, "
                            "print-select, step-test, test, gcode-test, glyphs, gradient-test\n");
                     return false;
                 }
@@ -1065,6 +1070,7 @@ static void register_xml_components() {
     lv_xml_register_component_from_file("A:ui_xml/wifi_network_item.xml");
     // Note: factory_reset_dialog.xml removed - use modal_dialog instead
     lv_xml_register_component_from_file("A:ui_xml/advanced_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/history_dashboard_panel.xml");
     lv_xml_register_component_from_file("A:ui_xml/test_panel.xml");
     lv_xml_register_component_from_file("A:ui_xml/print_select_panel.xml");
     lv_xml_register_component_from_file("A:ui_xml/step_progress_test.xml");
@@ -1110,7 +1116,10 @@ static void initialize_subjects() {
     get_global_settings_panel().init_subjects();              // Settings panel launcher
     init_global_advanced_panel(get_printer_state(), nullptr); // Initialize advanced panel instance
     get_global_advanced_panel().init_subjects();              // Advanced panel capability subjects
-    ui_wizard_init_subjects(); // Wizard subjects (for first-run config)
+    init_global_history_dashboard_panel(get_printer_state(),
+                                        nullptr);         // Initialize history dashboard
+    get_global_history_dashboard_panel().init_subjects(); // History dashboard subjects
+    ui_wizard_init_subjects();                            // Wizard subjects (for first-run config)
     ui_keypad_init_subjects(); // Keypad display subject (for reactive binding)
 
     // Panels that need MoonrakerAPI - store pointers for deferred set_api()
@@ -1547,6 +1556,7 @@ static void initialize_moonraker_client(Config* config) {
     if (bed_mesh_panel) {
         bed_mesh_panel->set_api(moonraker_api.get());
     }
+    get_global_history_dashboard_panel().set_api(moonraker_api.get());
 
     // Initialize E-Stop overlay with dependencies (creates the floating button)
     EmergencyStopOverlay::instance().init(get_printer_state(), moonraker_api.get());
@@ -1604,45 +1614,46 @@ int main(int argc, char** argv) {
     ensure_project_root_cwd();
 
     // Parse command-line arguments
-    int initial_panel = -1;          // -1 means auto-select based on screen size
-    bool show_motion = false;        // Special flag for motion sub-screen
-    bool show_nozzle_temp = false;   // Special flag for nozzle temp sub-screen
-    bool show_bed_temp = false;      // Special flag for bed temp sub-screen
-    bool show_extrusion = false;     // Special flag for extrusion sub-screen
-    bool show_fan = false;           // Special flag for fan control sub-screen
-    bool show_print_status = false;  // Special flag for print status screen
-    bool show_file_detail = false;   // Special flag for file detail view
-    bool show_keypad = false;        // Special flag for keypad testing
-    bool show_keyboard = false;      // Special flag for keyboard testing
-    bool show_step_test = false;     // Special flag for step progress widget testing
-    bool show_test_panel = false;    // Special flag for test/development panel
-    bool show_gcode_test = false;    // Special flag for G-code 3D viewer testing
-    bool show_bed_mesh = false;      // Special flag for bed mesh overlay panel
-    bool show_zoffset = false;       // Special flag for Z-offset calibration panel
-    bool show_pid = false;           // Special flag for PID tuning panel
-    bool show_glyphs = false;        // Special flag for LVGL glyphs reference panel
-    bool show_gradient_test = false; // Special flag for gradient canvas test panel
-    bool force_wizard = false;       // Force wizard to run even if config exists
-    int wizard_step = -1;            // Specific wizard step to show (-1 means normal flow)
-    bool panel_requested = false;    // Track if user explicitly requested a panel via CLI
-    int display_num = -1;            // Display number for window placement (-1 means unset)
-    int x_pos = -1;                  // X position for window placement (-1 means unset)
-    int y_pos = -1;                  // Y position for window placement (-1 means unset)
-    bool screenshot_enabled = false; // Enable automatic screenshot
-    int screenshot_delay_sec = 2;    // Screenshot delay in seconds (default: 2)
-    int timeout_sec = 0;             // Auto-quit timeout in seconds (0 = disabled)
-    int verbosity = 0;               // Verbosity level (0=warn, 1=info, 2=debug, 3=trace)
-    int dark_mode_cli = -1;          // Theme from CLI: -1=not set, 0=light, 1=dark
-    int dpi = -1;                    // Display DPI (-1 means use LV_DPI_DEF from lv_conf.h)
+    int initial_panel = -1;              // -1 means auto-select based on screen size
+    bool show_motion = false;            // Special flag for motion sub-screen
+    bool show_nozzle_temp = false;       // Special flag for nozzle temp sub-screen
+    bool show_bed_temp = false;          // Special flag for bed temp sub-screen
+    bool show_extrusion = false;         // Special flag for extrusion sub-screen
+    bool show_fan = false;               // Special flag for fan control sub-screen
+    bool show_print_status = false;      // Special flag for print status screen
+    bool show_file_detail = false;       // Special flag for file detail view
+    bool show_keypad = false;            // Special flag for keypad testing
+    bool show_keyboard = false;          // Special flag for keyboard testing
+    bool show_step_test = false;         // Special flag for step progress widget testing
+    bool show_test_panel = false;        // Special flag for test/development panel
+    bool show_gcode_test = false;        // Special flag for G-code 3D viewer testing
+    bool show_bed_mesh = false;          // Special flag for bed mesh overlay panel
+    bool show_zoffset = false;           // Special flag for Z-offset calibration panel
+    bool show_pid = false;               // Special flag for PID tuning panel
+    bool show_glyphs = false;            // Special flag for LVGL glyphs reference panel
+    bool show_gradient_test = false;     // Special flag for gradient canvas test panel
+    bool show_history_dashboard = false; // Special flag for print history dashboard
+    bool force_wizard = false;           // Force wizard to run even if config exists
+    int wizard_step = -1;                // Specific wizard step to show (-1 means normal flow)
+    bool panel_requested = false;        // Track if user explicitly requested a panel via CLI
+    int display_num = -1;                // Display number for window placement (-1 means unset)
+    int x_pos = -1;                      // X position for window placement (-1 means unset)
+    int y_pos = -1;                      // Y position for window placement (-1 means unset)
+    bool screenshot_enabled = false;     // Enable automatic screenshot
+    int screenshot_delay_sec = 2;        // Screenshot delay in seconds (default: 2)
+    int timeout_sec = 0;                 // Auto-quit timeout in seconds (0 = disabled)
+    int verbosity = 0;                   // Verbosity level (0=warn, 1=info, 2=debug, 3=trace)
+    int dark_mode_cli = -1;              // Theme from CLI: -1=not set, 0=light, 1=dark
+    int dpi = -1;                        // Display DPI (-1 means use LV_DPI_DEF from lv_conf.h)
 
     // Parse command-line arguments (returns false for help/error)
     if (!parse_command_line_args(
             argc, argv, initial_panel, show_motion, show_nozzle_temp, show_bed_temp, show_extrusion,
             show_fan, show_print_status, show_file_detail, show_keypad, show_keyboard,
             show_step_test, show_test_panel, show_gcode_test, show_bed_mesh, show_zoffset, show_pid,
-            show_glyphs, show_gradient_test, force_wizard, wizard_step, panel_requested,
-            display_num, x_pos, y_pos, screenshot_enabled, screenshot_delay_sec, timeout_sec,
-            verbosity, dark_mode_cli, dpi)) {
+            show_glyphs, show_gradient_test, show_history_dashboard, force_wizard, wizard_step,
+            panel_requested, display_num, x_pos, y_pos, screenshot_enabled, screenshot_delay_sec,
+            timeout_sec, verbosity, dark_mode_cli, dpi)) {
         return 0; // Help shown or parse error
     }
 
@@ -2106,6 +2117,20 @@ int main(int argc, char** argv) {
             } else {
                 spdlog::error("Failed to create PID tuning overlay from XML component "
                               "'calibration_pid_panel'");
+            }
+        }
+        if (show_history_dashboard) {
+            spdlog::debug("Opening history dashboard overlay as requested by command-line flag");
+            lv_obj_t* history_panel =
+                (lv_obj_t*)lv_xml_create(screen, "history_dashboard_panel", nullptr);
+            if (history_panel) {
+                get_global_history_dashboard_panel().setup(history_panel, screen);
+                ui_nav_push_overlay(history_panel);
+                get_global_history_dashboard_panel().on_activate();
+                spdlog::debug("History dashboard overlay pushed to nav stack");
+            } else {
+                spdlog::error("Failed to create history dashboard overlay from XML component "
+                              "'history_dashboard_panel'");
             }
         }
         if (show_keypad) {

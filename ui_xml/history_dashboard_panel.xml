@@ -1,0 +1,140 @@
+<?xml version="1.0"?>
+<!-- Copyright 2025 356C LLC -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+
+<!-- Print History Dashboard Panel -->
+<!-- Overlay panel showing aggregated print statistics with time filtering -->
+<!-- Entry point: Advanced Panel → Print History action row -->
+<!-- Navigation: Back → Advanced Panel, View Full History → History List Panel -->
+<component>
+  <consts>
+    <!-- Stat card layout dimensions -->
+    <percentage name="stat_card_width" value="48%"/>
+    <px name="stat_card_height" value="72"/>
+  </consts>
+
+  <view extends="lv_obj" name="history_dashboard_panel" width="#overlay_panel_width_large"
+        height="100%" align="right_mid" style_bg_opa="255" style_bg_color="#card_bg"
+        style_pad_all="0" style_border_width="0" scrollable="false" flex_flow="column">
+    <!-- Header Bar -->
+    <header_bar name="overlay_header" title="Print History"/>
+
+    <!-- Content Area -->
+    <lv_obj name="overlay_content" flex_grow="1" width="100%" style_bg_opa="0"
+            style_pad_all="#space_lg" style_border_width="0" scrollable="false" flex_flow="column">
+
+      <!-- Time Filter Segmented Buttons -->
+    <lv_obj width="100%" height="content" style_bg_opa="0" style_border_width="0"
+            style_pad_all="0" style_pad_bottom="#space_md" flex_flow="row"
+            style_flex_main_place="space_evenly" style_pad_gap="#space_xs" scrollable="false">
+      <lv_button name="filter_day" width="content" height="#button_height_small"
+                 style_radius="#border_radius" style_border_width="0"
+                 style_bg_color="#surface_bg_dark" style_pad_hor="#space_md">
+        <text_small text="Day" style_text_color="#text_secondary"/>
+        <event_cb trigger="clicked" callback="history_filter_day_clicked"/>
+      </lv_button>
+      <lv_button name="filter_week" width="content" height="#button_height_small"
+                 style_radius="#border_radius" style_border_width="0"
+                 style_bg_color="#surface_bg_dark" style_pad_hor="#space_md">
+        <text_small text="Week" style_text_color="#text_secondary"/>
+        <event_cb trigger="clicked" callback="history_filter_week_clicked"/>
+      </lv_button>
+      <lv_button name="filter_month" width="content" height="#button_height_small"
+                 style_radius="#border_radius" style_border_width="0"
+                 style_bg_color="#surface_bg_dark" style_pad_hor="#space_md">
+        <text_small text="Month" style_text_color="#text_secondary"/>
+        <event_cb trigger="clicked" callback="history_filter_month_clicked"/>
+      </lv_button>
+      <lv_button name="filter_year" width="content" height="#button_height_small"
+                 style_radius="#border_radius" style_border_width="0"
+                 style_bg_color="#surface_bg_dark" style_pad_hor="#space_md">
+        <text_small text="Year" style_text_color="#text_secondary"/>
+        <event_cb trigger="clicked" callback="history_filter_year_clicked"/>
+      </lv_button>
+      <lv_button name="filter_all" width="content" height="#button_height_small"
+                 style_radius="#border_radius" style_border_width="0"
+                 style_bg_color="#primary_color" style_pad_hor="#space_md">
+        <text_small text="All" style_text_color="#text_primary"/>
+        <event_cb trigger="clicked" callback="history_filter_all_clicked"/>
+      </lv_button>
+    </lv_obj>
+
+    <!-- Stats Grid Container (2x3) -->
+    <lv_obj name="stats_grid" width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0"
+            style_pad_all="0" flex_flow="row_wrap" style_flex_main_place="space_between"
+            style_flex_cross_place="start" style_flex_track_place="start"
+            style_pad_gap="#space_md" scrollable="false">
+
+      <!-- Row 1: Total Prints, Print Time -->
+      <ui_card name="card_total_prints" width="#stat_card_width" height="#stat_card_height"
+               style_radius="#border_radius" style_pad_all="#space_md"
+               flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center">
+        <text_heading name="stat_total_prints" text="0" style_text_color="#text_primary"/>
+        <text_small text="Total Prints" style_text_color="#text_secondary"/>
+      </ui_card>
+
+      <ui_card name="card_print_time" width="#stat_card_width" height="#stat_card_height"
+               style_radius="#border_radius" style_pad_all="#space_md"
+               flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center">
+        <text_heading name="stat_print_time" text="0h" style_text_color="#text_primary"/>
+        <text_small text="Print Time" style_text_color="#text_secondary"/>
+      </ui_card>
+
+      <!-- Row 2: Filament Used, Success Rate -->
+      <ui_card name="card_filament" width="#stat_card_width" height="#stat_card_height"
+               style_radius="#border_radius" style_pad_all="#space_md"
+               flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center">
+        <text_heading name="stat_filament" text="0m" style_text_color="#text_primary"/>
+        <text_small text="Filament Used" style_text_color="#text_secondary"/>
+      </ui_card>
+
+      <ui_card name="card_success_rate" width="#stat_card_width" height="#stat_card_height"
+               style_radius="#border_radius" style_pad_all="#space_md"
+               flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center">
+        <text_heading name="stat_success_rate" text="0%" style_text_color="#success_color"/>
+        <text_small text="Success Rate" style_text_color="#text_secondary"/>
+      </ui_card>
+
+      <!-- Row 3: Longest Print, Failed/Cancelled -->
+      <ui_card name="card_longest" width="#stat_card_width" height="#stat_card_height"
+               style_radius="#border_radius" style_pad_all="#space_md"
+               flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center">
+        <text_heading name="stat_longest" text="0h" style_text_color="#text_primary"/>
+        <text_small text="Longest Print" style_text_color="#text_secondary"/>
+      </ui_card>
+
+      <ui_card name="card_failed" width="#stat_card_width" height="#stat_card_height"
+               style_radius="#border_radius" style_pad_all="#space_md"
+               flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center">
+        <text_heading name="stat_failed" text="0" style_text_color="#error_color"/>
+        <text_small text="Failed/Cancelled" style_text_color="#text_secondary"/>
+      </ui_card>
+    </lv_obj>
+
+    <!-- Empty State (shown when no history) -->
+    <lv_obj name="empty_state" width="100%" height="content" style_bg_opa="0"
+            style_border_width="0" style_pad_all="#space_xl" hidden="true"
+            flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
+            style_pad_gap="#space_md" scrollable="false">
+      <lv_obj-bind_flag_if_not_eq subject="history_has_jobs" flag="hidden" ref_value="0"/>
+      <icon src="history" size="xl" variant="secondary"/>
+      <text_body text="No print history yet" style_text_color="#text_secondary"/>
+      <text_small text="Your completed prints will appear here" style_text_color="#text_secondary"/>
+    </lv_obj>
+
+      <!-- View Full History Button -->
+      <lv_obj width="100%" height="content" style_bg_opa="0" style_border_width="0"
+              style_pad_all="0" style_pad_top="#space_md" scrollable="false">
+        <lv_button name="btn_view_history" width="100%" height="#button_height_normal"
+                   style_radius="#border_radius" style_border_width="0"
+                   style_bg_color="#primary_color"
+                   flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center"
+                   style_pad_gap="#space_sm">
+          <icon src="format_list_bulleted" size="sm" color="#text_primary"/>
+          <text_body text="View Full History" style_text_color="#text_primary"/>
+          <event_cb trigger="clicked" callback="history_view_full_clicked"/>
+        </lv_button>
+      </lv_obj>
+    </lv_obj><!-- End overlay_content -->
+  </view>
+</component>

@@ -99,6 +99,7 @@ class AdvancedPanel : public PanelBase {
     lv_obj_t* spoolman_row_ = nullptr;
     lv_obj_t* macros_row_ = nullptr;
     lv_obj_t* console_row_ = nullptr;
+    lv_obj_t* print_history_row_ = nullptr;
     lv_obj_t* restart_row_ = nullptr;
 
     //
@@ -106,6 +107,7 @@ class AdvancedPanel : public PanelBase {
     //
 
     lv_obj_t* zoffset_cal_panel_ = nullptr; // Reuses existing panel
+    lv_obj_t* history_dashboard_panel_ = nullptr;
 
     //
     // === Setup Helpers ===
@@ -124,6 +126,7 @@ class AdvancedPanel : public PanelBase {
     void handle_spoolman_clicked();
     void handle_macros_clicked();
     void handle_console_clicked();
+    void handle_print_history_clicked();
     void handle_restart_clicked();
 
     //
@@ -137,6 +140,7 @@ class AdvancedPanel : public PanelBase {
     static void on_spoolman_clicked(lv_event_t* e);
     static void on_macros_clicked(lv_event_t* e);
     static void on_console_clicked(lv_event_t* e);
+    static void on_print_history_clicked(lv_event_t* e);
     static void on_restart_clicked(lv_event_t* e);
 };
 
