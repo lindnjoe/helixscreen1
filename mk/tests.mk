@@ -107,7 +107,9 @@ TEST_SETTINGS_DEPS := \
     $(OBJ_DIR)/settings_manager.o \
     $(OBJ_DIR)/sound_manager.o \
     $(OBJ_DIR)/ui_panel_calibration_zoffset.o \
-    $(OBJ_DIR)/ui_panel_calibration_pid.o
+    $(OBJ_DIR)/ui_panel_calibration_pid.o \
+    $(OBJ_DIR)/wifi_settings_overlay.o \
+    $(OBJ_DIR)/sound_manager.o
 
 # Moonraker/printer components
 # Note: LIBHV_LIB is in LDFLAGS via LIBHV_LIBS, not needed here

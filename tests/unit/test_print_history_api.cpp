@@ -165,11 +165,11 @@ TEST_CASE_METHOD(PrintHistoryTestFixture, "get_history_totals returns statistics
     REQUIRE(captured_totals.total_jobs > 0);
     REQUIRE(captured_totals.total_time > 0);
     REQUIRE(captured_totals.total_filament_used > 0.0);
+    REQUIRE(captured_totals.longest_job > 0.0);
 
-    // Verify job counts add up
-    uint64_t sum = captured_totals.total_completed + captured_totals.total_cancelled +
-                   captured_totals.total_failed;
-    REQUIRE(sum == captured_totals.total_jobs);
+    // Note: Real Moonraker doesn't provide breakdown counts (completed/cancelled/failed)
+    // These must be calculated client-side from the job list if needed
+    // So we don't test for them here
 }
 
 // ============================================================================

@@ -1014,7 +1014,8 @@ RequestId MoonrakerClientMock::send_jsonrpc(const std::string& method, const jso
 
     // server.history.totals - Get aggregate statistics
     if (method == "server.history.totals") {
-        // Calculate realistic totals from mock data
+        // Return exactly what real Moonraker provides - no breakdown counts
+        // (breakdown should be calculated client-side from job list if needed)
         json response = {{"result",
                           {{"job_totals",
                             {{"total_jobs", 47},

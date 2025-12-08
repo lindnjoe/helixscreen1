@@ -2190,11 +2190,9 @@ void MoonrakerAPI::get_history_totals(HistoryTotalsCallback on_success, ErrorCal
                 totals.total_time = static_cast<uint64_t>(jt.value("total_time", 0.0));
                 totals.total_filament_used = jt.value("total_filament_used", 0.0);
                 totals.longest_job = jt.value("longest_job", 0.0);
+                // Note: Moonraker doesn't provide breakdown counts (completed/cancelled/failed)
+                // These must be calculated client-side from the job list if needed
             }
-
-            // Calculate completed/cancelled/failed from jobs if needed
-            // Note: Moonraker doesn't provide these in totals, would need separate query
-            // For now, these will be calculated client-side from the job list
 
             spdlog::debug("[Moonraker API] get_history_totals: {} jobs, {}s total time",
                           totals.total_jobs, totals.total_time);
