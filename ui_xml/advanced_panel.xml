@@ -164,7 +164,7 @@
     <!-- Print History -->
     <setting_action_row name="row_print_history"
                         label="Print History"
-                        icon="history"
+                        icon="clock"
                         description="View print statistics and job history"/>
 
     <!-- Bottom padding for scroll -->

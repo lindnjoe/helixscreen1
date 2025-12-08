@@ -644,7 +644,7 @@ Update this section as stages complete:
 | 1. Data Layer | ✅ Complete | Commit 62d6a22 |
 | 2. Dashboard Stats | ✅ Complete | Session 2025-12-08 |
 | 3. History List | ✅ Complete | Session 2025-12-08 |
-| 4. Search/Filter/Sort | 🔜 Next | |
+| 4. Search/Filter/Sort | ✅ Complete | Session 2025-12-08 |
 | 5. Detail Overlay | Not Started | |
 | 6. Charts | Not Started | |
 | 7. Small Screen | Not Started | |
@@ -809,9 +809,72 @@ Update this section as stages complete:
 
 ---
 
-### Next Session: Stage 4 - Search, Filter, Sort
+### Session: 2025-12-08 (Stage 4 Complete)
 
-**Goal:** Add search box, status filter dropdown, and sort functionality to list
+**Worktree:** `/Users/pbrown/Code/Printing/helixscreen-print-history`
+**Branch:** `feature/print-history`
+
+**Files Modified:**
+- `ui_xml/history_list_panel.xml` - Added filter row with search, status dropdown, sort dropdown
+- `ui_xml/history_dashboard_panel.xml` - UI polish: labels above values, icon fixes, button styling
+- `ui_xml/advanced_panel.xml` - Fixed icon from `history` to `clock`
+- `include/ui_panel_history_list.h` - Added filter/sort enums and methods
+- `src/ui_panel_history_list.cpp` - Implemented filtering and sorting logic
+
+**Key Implementation Details:**
+
+1. **Filter/Search Row Layout**
+   ```xml
+   <lv_obj name="filter_row" width="100%" height="content" flex_flow="row" ...>
+     <lv_textarea name="search_box" placeholder_text="Search filename..." one_line="true" flex_grow="1">
+       <event_cb trigger="value_changed" callback="history_search_changed"/>
+     </lv_textarea>
+     <lv_dropdown name="filter_status" options="All\nCompleted\nFailed\nCancelled">
+       <event_cb trigger="value_changed" callback="history_filter_status_changed"/>
+     </lv_dropdown>
+     <lv_dropdown name="sort_dropdown" options="Date (newest)\nDate (oldest)\nDuration\nFilename">
+       <event_cb trigger="value_changed" callback="history_sort_changed"/>
+     </lv_dropdown>
+   </lv_obj>
+   ```
+
+2. **Filter Chain Pattern**
+   - Source jobs → search filter → status filter → sort → display
+   - `apply_filters_and_sort()` orchestrates the chain
+   - Results stored in `filtered_jobs_` vector
+
+3. **Debounced Search**
+   - 300ms debounce using `lv_timer_create()`
+   - Case-insensitive filename substring match
+
+4. **Enums for Filter/Sort State**
+   ```cpp
+   enum class HistorySortColumn { DATE, DURATION, FILENAME };
+   enum class HistorySortDirection { ASCENDING, DESCENDING };
+   enum class HistoryStatusFilter { ALL, COMPLETED, FAILED, CANCELLED };
+   ```
+
+**UI Polish Fixes:**
+- Dashboard stat card labels moved ABOVE values (was below)
+- Fixed missing icons: `history`→`clock`, `format_list_bulleted`→`list`
+- Filter buttons: removed flex layout (lv_button centers children by default)
+- Filter buttons: removed explicit height, use `style_pad_all="#space_sm"` for natural sizing
+
+**Validation:**
+```bash
+./build/bin/helix-screen --test -p print-history -vv
+# Navigate: Dashboard → View Full History
+# Test: Search box filters by filename
+# Test: Status dropdown filters by status
+# Test: Sort dropdown reorders list
+# Test: Combined filters work correctly
+```
+
+---
+
+### Next Session: Stage 5 - Print Details Overlay
+
+**Goal:** Create detail overlay showing full print metadata with Reprint/Delete actions
 
 **Quick Start:**
 ```bash
@@ -819,16 +882,30 @@ cd /Users/pbrown/Code/Printing/helixscreen-print-history
 make -j && ./build/bin/helix-screen --test -p print-history -vv
 ```
 
+**Files to Create:**
+- `ui_xml/history_detail_overlay.xml` - Detail overlay layout
+
 **Files to Modify:**
-- `ui_xml/history_list_panel.xml` - Add filter/search row above list
-- `src/ui_panel_history_list.cpp` - Implement filtering and sorting logic
+- `src/ui_panel_history_list.cpp` - Add row click handlers and overlay management
+- `include/ui_panel_history_list.h` - Add detail overlay subjects and methods
 
 **Implementation Notes:**
-- Search: Filter by filename substring (case-insensitive), debounce 300ms
-- Status filter: All / Completed / Failed / Cancelled dropdown
-- Sort: Date (default) / Duration / Filename / Status
-- Chain: search → status filter → sort → display
+1. Create overlay XML with:
+   - Header bar with "Print Details" title
+   - Status section with colored icon/text
+   - Stats grid: Start/End times, Duration, Layers, Temps, Filament
+   - Action buttons: "Reprint" (if file exists), "Delete"
+
+2. Wire row click handlers:
+   - Store selected job reference
+   - Populate subjects with job data
+   - Call `ui_nav_push_overlay()`
+
+3. Implement actions:
+   - Reprint: Check file exists, call `start_print()`, show toast
+   - Delete: Show confirmation dialog, call `delete_history_job()`, refresh list
 
 **Reference Patterns:**
-- `src/ui_panel_print_select.cpp:262-285` - Sort implementation
-- `ui_xml/print_select_panel.xml` - Header with sort indicators
+- `ui_xml/print_file_detail.xml` - Detail overlay structure
+- `ui_xml/confirmation_dialog.xml` - Confirmation pattern
+- `src/ui_panel_print_select.cpp` - Reprint/delete implementation

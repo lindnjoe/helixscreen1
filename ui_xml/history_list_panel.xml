@@ -11,8 +11,10 @@
     - Back button → Returns to History Dashboard
     - Row click → Opens Detail Overlay (Stage 5)
 
-  Note: Search, filter, and sort controls will be added in Stage 4.
-        This panel implements the basic scrollable list structure.
+  Features (Stage 4):
+    - Search: case-insensitive filename search with debounce
+    - Status filter: All, Completed, Failed, Cancelled
+    - Sort: Date (newest/oldest), Duration, Filename
 -->
 <component>
   <!-- Full-screen overlay panel structure (extends lv_obj to avoid recursion) -->
@@ -29,12 +31,51 @@
                 title="Print History"
                 show_back="true"/>
 
+    <!-- Filter/Search Row -->
+    <lv_obj name="filter_row"
+            width="100%" height="content"
+            flex_flow="row"
+            style_flex_main_place="start"
+            style_flex_cross_place="center"
+            style_flex_gap_column="#space_md"
+            style_pad_left="#space_md"
+            style_pad_right="#space_md"
+            style_pad_top="#space_sm"
+            style_pad_bottom="#space_sm"
+            style_bg_opa="0"
+            style_border_width="0">
+
+      <!-- Search box - fills remaining space -->
+      <lv_textarea name="search_box"
+                   placeholder_text="Search filename..."
+                   one_line="true"
+                   flex_grow="1"
+                   style_min_width="120"
+                   style_max_height="#input_height">
+        <event_cb trigger="value_changed" callback="history_search_changed"/>
+      </lv_textarea>
+
+      <!-- Status filter dropdown -->
+      <lv_dropdown name="filter_status"
+                   options="All&#10;Completed&#10;Failed&#10;Cancelled"
+                   style_min_width="100">
+        <event_cb trigger="value_changed" callback="history_filter_status_changed"/>
+      </lv_dropdown>
+
+      <!-- Sort dropdown -->
+      <lv_dropdown name="sort_dropdown"
+                   options="Date (newest)&#10;Date (oldest)&#10;Duration&#10;Filename"
+                   style_min_width="120">
+        <event_cb trigger="value_changed" callback="history_sort_changed"/>
+      </lv_dropdown>
+    </lv_obj>
+
     <!-- Content area - scrollable list container -->
     <lv_obj name="list_content"
             width="100%" height="content"
             flex_grow="1"
             flex_flow="column"
-            style_pad_top="#space_md"
+            style_pad_top="#space_sm"
             style_pad_bottom="#space_md"
             style_pad_left="#space_md"
             style_pad_right="#space_md"
@@ -66,9 +107,9 @@
         <!-- Bind hidden state to history_list_has_jobs subject -->
         <lv_obj-bind_flag_if_eq subject="history_list_has_jobs" value="1" flag="hidden"/>
 
-        <!-- Empty state icon -->
+        <!-- Empty state icon (clock/history icon F0150) -->
         <lv_label name="empty_icon"
-                  text=""
+                  text="&#xF0150;"
                   style_text_font="mdi_icons_48"
                   style_text_color="#text_secondary"/>
 

@@ -10,7 +10,12 @@
 
 #include <spdlog/spdlog.h>
 
+#include <algorithm>
+#include <cctype>
 #include <lvgl.h>
+
+// MDI chevron-down symbol for dropdown arrows (replaces FontAwesome LV_SYMBOL_DOWN)
+static const char* MDI_CHEVRON_DOWN = "\xF3\xB0\x85\x80"; // F0140
 
 // Global instance (singleton pattern)
 static std::unique_ptr<HistoryListPanel> g_history_list_panel;
@@ -53,13 +58,36 @@ void HistoryListPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     panel_ = panel;
     parent_screen_ = parent_screen;
 
-    // Get widget references
+    // Get widget references - list containers
     list_content_ = lv_obj_find_by_name(panel_, "list_content");
     list_rows_ = lv_obj_find_by_name(panel_, "list_rows");
     empty_state_ = lv_obj_find_by_name(panel_, "empty_state");
+    empty_message_ = lv_obj_find_by_name(panel_, "empty_message");
+    empty_hint_ = lv_obj_find_by_name(panel_, "empty_hint");
+
+    // Get widget references - filter controls
+    search_box_ = lv_obj_find_by_name(panel_, "search_box");
+    filter_status_ = lv_obj_find_by_name(panel_, "filter_status");
+    sort_dropdown_ = lv_obj_find_by_name(panel_, "sort_dropdown");
 
     spdlog::debug("[{}] Widget refs - content: {}, rows: {}, empty: {}", get_name(),
                   list_content_ != nullptr, list_rows_ != nullptr, empty_state_ != nullptr);
+    spdlog::debug("[{}] Filter refs - search: {}, status: {}, sort: {}", get_name(),
+                  search_box_ != nullptr, filter_status_ != nullptr, sort_dropdown_ != nullptr);
+
+    // Set MDI chevron icons for dropdowns (Noto Sans doesn't have LV_SYMBOL_DOWN)
+    if (filter_status_) {
+        lv_dropdown_set_symbol(filter_status_, MDI_CHEVRON_DOWN);
+    }
+    if (sort_dropdown_) {
+        lv_dropdown_set_symbol(sort_dropdown_, MDI_CHEVRON_DOWN);
+    }
+
+    // Register XML event callbacks for filter controls
+    lv_xml_register_event_cb(nullptr, "history_search_changed", on_search_changed_static);
+    lv_xml_register_event_cb(nullptr, "history_filter_status_changed",
+                             on_status_filter_changed_static);
+    lv_xml_register_event_cb(nullptr, "history_sort_changed", on_sort_changed_static);
 
     // Wire up back button to navigation system
     ui_panel_setup_back_button(panel_);
@@ -79,13 +107,37 @@ void HistoryListPanel::on_activate() {
         // Jobs weren't set by dashboard, fetch from API
         refresh_from_api();
     } else {
-        // Jobs were provided, just populate the list
-        populate_list();
+        // Jobs were provided, apply filters and populate the list
+        apply_filters_and_sort();
     }
 }
 
 void HistoryListPanel::on_deactivate() {
     spdlog::debug("[{}] Deactivated", get_name());
+
+    // Cancel any pending search timer
+    if (search_timer_) {
+        lv_timer_delete(search_timer_);
+        search_timer_ = nullptr;
+    }
+
+    // Reset filter state for fresh start on next activation
+    search_query_.clear();
+    status_filter_ = HistoryStatusFilter::ALL;
+    sort_column_ = HistorySortColumn::DATE;
+    sort_direction_ = HistorySortDirection::DESC;
+
+    // Reset filter control widgets if available
+    if (search_box_) {
+        lv_textarea_set_text(search_box_, "");
+    }
+    if (filter_status_) {
+        lv_dropdown_set_selected(filter_status_, 0);
+    }
+    if (sort_dropdown_) {
+        lv_dropdown_set_selected(sort_dropdown_, 0);
+    }
+
     // Clear the received flag so next activation will refresh
     jobs_received_ = false;
 }
@@ -116,12 +168,12 @@ void HistoryListPanel::refresh_from_api() {
         [this](const std::vector<PrintHistoryJob>& jobs, uint64_t total) {
             spdlog::info("[{}] Received {} jobs (total: {})", get_name(), jobs.size(), total);
             jobs_ = jobs;
-            populate_list();
+            apply_filters_and_sort();
         },
         [this](const MoonrakerError& error) {
             spdlog::error("[{}] Failed to fetch history: {}", get_name(), error.message);
             jobs_.clear();
-            populate_list();
+            apply_filters_and_sort();
         });
 }
 
@@ -141,15 +193,15 @@ void HistoryListPanel::populate_list() {
     // Update empty state
     update_empty_state();
 
-    if (jobs_.empty()) {
-        spdlog::debug("[{}] No jobs to display", get_name());
+    if (filtered_jobs_.empty()) {
+        spdlog::debug("[{}] No jobs to display after filtering", get_name());
         return;
     }
 
-    spdlog::debug("[{}] Populating list with {} jobs", get_name(), jobs_.size());
+    spdlog::debug("[{}] Populating list with {} filtered jobs", get_name(), filtered_jobs_.size());
 
-    for (size_t i = 0; i < jobs_.size(); ++i) {
-        const auto& job = jobs_[i];
+    for (size_t i = 0; i < filtered_jobs_.size(); ++i) {
+        const auto& job = filtered_jobs_[i];
 
         // Get status info
         const char* status_color = get_status_color(job.status);
@@ -180,7 +232,7 @@ void HistoryListPanel::populate_list() {
         }
     }
 
-    spdlog::debug("[{}] List populated with {} rows", get_name(), jobs_.size());
+    spdlog::debug("[{}] List populated with {} rows", get_name(), filtered_jobs_.size());
 }
 
 void HistoryListPanel::clear_list() {
@@ -198,9 +250,27 @@ void HistoryListPanel::clear_list() {
 }
 
 void HistoryListPanel::update_empty_state() {
-    int has_jobs = jobs_.empty() ? 0 : 1;
-    lv_subject_set_int(&subject_has_jobs_, has_jobs);
-    spdlog::debug("[{}] Empty state updated: has_jobs={}", get_name(), has_jobs);
+    // Check if there are filtered results
+    bool has_filtered_jobs = !filtered_jobs_.empty();
+    lv_subject_set_int(&subject_has_jobs_, has_filtered_jobs ? 1 : 0);
+
+    // Update empty state message based on whether filters are active
+    if (!has_filtered_jobs && empty_message_ && empty_hint_) {
+        bool filters_active = !search_query_.empty() || status_filter_ != HistoryStatusFilter::ALL;
+
+        if (filters_active) {
+            // Filters are active but yielded no results
+            lv_label_set_text(empty_message_, "No matching prints");
+            lv_label_set_text(empty_hint_, "Try adjusting your search or filters");
+        } else if (jobs_.empty()) {
+            // No jobs at all
+            lv_label_set_text(empty_message_, "No print history found");
+            lv_label_set_text(empty_hint_, "Completed prints will appear here");
+        }
+    }
+
+    spdlog::debug("[{}] Empty state updated: has_filtered_jobs={}, total_jobs={}", get_name(),
+                  has_filtered_jobs, jobs_.size());
 }
 
 const char* HistoryListPanel::get_status_color(PrintJobStatus status) {
@@ -266,16 +336,252 @@ void HistoryListPanel::on_row_clicked_static(lv_event_t* e) {
 }
 
 void HistoryListPanel::handle_row_click(size_t index) {
-    if (index >= jobs_.size()) {
+    if (index >= filtered_jobs_.size()) {
         spdlog::warn("[{}] Invalid row index: {}", get_name(), index);
         return;
     }
 
-    const auto& job = jobs_[index];
+    const auto& job = filtered_jobs_[index];
     spdlog::info("[{}] Row clicked: {} ({})", get_name(), job.filename,
                  get_status_text(job.status));
 
     // TODO: Stage 5 - Open detail overlay
     // For now, just log the click
     spdlog::debug("[{}] Detail overlay not yet implemented (Stage 5)", get_name());
+}
+
+// ============================================================================
+// Filter/Sort Implementation
+// ============================================================================
+
+void HistoryListPanel::apply_filters_and_sort() {
+    spdlog::debug("[{}] Applying filters - search: '{}', status: {}, sort: {} {}", get_name(),
+                  search_query_, static_cast<int>(status_filter_), static_cast<int>(sort_column_),
+                  sort_direction_ == HistorySortDirection::DESC ? "DESC" : "ASC");
+
+    // Chain: search -> status -> sort
+    auto result = apply_search_filter(jobs_);
+    result = apply_status_filter(result);
+    apply_sort(result);
+
+    filtered_jobs_ = std::move(result);
+
+    spdlog::debug("[{}] Filter result: {} jobs -> {} filtered", get_name(), jobs_.size(),
+                  filtered_jobs_.size());
+
+    populate_list();
+}
+
+std::vector<PrintHistoryJob>
+HistoryListPanel::apply_search_filter(const std::vector<PrintHistoryJob>& source) {
+    if (search_query_.empty()) {
+        return source;
+    }
+
+    // Case-insensitive search
+    std::string query_lower = search_query_;
+    std::transform(query_lower.begin(), query_lower.end(), query_lower.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+
+    std::vector<PrintHistoryJob> result;
+    result.reserve(source.size());
+
+    for (const auto& job : source) {
+        std::string filename_lower = job.filename;
+        std::transform(filename_lower.begin(), filename_lower.end(), filename_lower.begin(),
+                       [](unsigned char c) { return std::tolower(c); });
+
+        if (filename_lower.find(query_lower) != std::string::npos) {
+            result.push_back(job);
+        }
+    }
+
+    return result;
+}
+
+std::vector<PrintHistoryJob>
+HistoryListPanel::apply_status_filter(const std::vector<PrintHistoryJob>& source) {
+    if (status_filter_ == HistoryStatusFilter::ALL) {
+        return source;
+    }
+
+    std::vector<PrintHistoryJob> result;
+    result.reserve(source.size());
+
+    for (const auto& job : source) {
+        bool include = false;
+
+        switch (status_filter_) {
+        case HistoryStatusFilter::COMPLETED:
+            include = (job.status == PrintJobStatus::COMPLETED);
+            break;
+        case HistoryStatusFilter::FAILED:
+            include = (job.status == PrintJobStatus::ERROR);
+            break;
+        case HistoryStatusFilter::CANCELLED:
+            include = (job.status == PrintJobStatus::CANCELLED);
+            break;
+        default:
+            include = true;
+            break;
+        }
+
+        if (include) {
+            result.push_back(job);
+        }
+    }
+
+    return result;
+}
+
+void HistoryListPanel::apply_sort(std::vector<PrintHistoryJob>& jobs) {
+    auto sort_col = sort_column_;
+    auto sort_dir = sort_direction_;
+
+    std::sort(jobs.begin(), jobs.end(),
+              [sort_col, sort_dir](const PrintHistoryJob& a, const PrintHistoryJob& b) {
+                  bool result = false;
+
+                  switch (sort_col) {
+                  case HistorySortColumn::DATE:
+                      result = a.start_time < b.start_time;
+                      break;
+                  case HistorySortColumn::DURATION:
+                      result = a.total_duration < b.total_duration;
+                      break;
+                  case HistorySortColumn::FILENAME:
+                      result = a.filename < b.filename;
+                      break;
+                  }
+
+                  // For DESC, invert the result
+                  if (sort_dir == HistorySortDirection::DESC) {
+                      result = !result;
+                  }
+
+                  return result;
+              });
+}
+
+// ============================================================================
+// Filter/Sort Event Handlers
+// ============================================================================
+
+void HistoryListPanel::on_search_changed_static(lv_event_t* e) {
+    // Get the textarea that fired the event
+    lv_obj_t* textarea = static_cast<lv_obj_t*>(lv_event_get_target(e));
+    if (!textarea)
+        return;
+
+    // Find the panel instance (singleton pattern)
+    try {
+        auto& panel = get_global_history_list_panel();
+        panel.on_search_changed();
+    } catch (const std::exception& ex) {
+        spdlog::error("[History List] Search callback error: {}", ex.what());
+    }
+}
+
+void HistoryListPanel::on_search_changed() {
+    // Cancel existing timer if any
+    if (search_timer_) {
+        lv_timer_delete(search_timer_);
+        search_timer_ = nullptr;
+    }
+
+    // Create debounce timer (300ms)
+    search_timer_ = lv_timer_create(on_search_timer_static, 300, this);
+    lv_timer_set_repeat_count(search_timer_, 1); // Fire once
+}
+
+void HistoryListPanel::on_search_timer_static(lv_timer_t* timer) {
+    auto* panel = static_cast<HistoryListPanel*>(lv_timer_get_user_data(timer));
+    if (panel) {
+        panel->do_debounced_search();
+    }
+}
+
+void HistoryListPanel::do_debounced_search() {
+    search_timer_ = nullptr; // Timer is auto-deleted after single fire
+
+    if (!search_box_) {
+        return;
+    }
+
+    const char* text = lv_textarea_get_text(search_box_);
+    search_query_ = text ? text : "";
+
+    spdlog::debug("[{}] Search query changed: '{}'", get_name(), search_query_);
+    apply_filters_and_sort();
+}
+
+void HistoryListPanel::on_status_filter_changed_static(lv_event_t* e) {
+    lv_obj_t* dropdown = static_cast<lv_obj_t*>(lv_event_get_target(e));
+    if (!dropdown)
+        return;
+
+    int index = lv_dropdown_get_selected(dropdown);
+
+    try {
+        auto& panel = get_global_history_list_panel();
+        panel.on_status_filter_changed(index);
+    } catch (const std::exception& ex) {
+        spdlog::error("[History List] Status filter callback error: {}", ex.what());
+    }
+}
+
+void HistoryListPanel::on_status_filter_changed(int index) {
+    status_filter_ = static_cast<HistoryStatusFilter>(index);
+    spdlog::debug("[{}] Status filter changed to: {}", get_name(), index);
+    apply_filters_and_sort();
+}
+
+void HistoryListPanel::on_sort_changed_static(lv_event_t* e) {
+    lv_obj_t* dropdown = static_cast<lv_obj_t*>(lv_event_get_target(e));
+    if (!dropdown)
+        return;
+
+    int index = lv_dropdown_get_selected(dropdown);
+
+    try {
+        auto& panel = get_global_history_list_panel();
+        panel.on_sort_changed(index);
+    } catch (const std::exception& ex) {
+        spdlog::error("[History List] Sort callback error: {}", ex.what());
+    }
+}
+
+void HistoryListPanel::on_sort_changed(int index) {
+    // Map dropdown indices to sort settings:
+    // 0: Date (newest) -> DATE, DESC
+    // 1: Date (oldest) -> DATE, ASC
+    // 2: Duration      -> DURATION, DESC
+    // 3: Filename      -> FILENAME, ASC
+
+    switch (index) {
+    case 0: // Date (newest)
+        sort_column_ = HistorySortColumn::DATE;
+        sort_direction_ = HistorySortDirection::DESC;
+        break;
+    case 1: // Date (oldest)
+        sort_column_ = HistorySortColumn::DATE;
+        sort_direction_ = HistorySortDirection::ASC;
+        break;
+    case 2: // Duration
+        sort_column_ = HistorySortColumn::DURATION;
+        sort_direction_ = HistorySortDirection::DESC;
+        break;
+    case 3: // Filename
+        sort_column_ = HistorySortColumn::FILENAME;
+        sort_direction_ = HistorySortDirection::ASC;
+        break;
+    default:
+        spdlog::warn("[{}] Unknown sort index: {}", get_name(), index);
+        return;
+    }
+
+    spdlog::debug("[{}] Sort changed to: column={}, dir={}", get_name(),
+                  static_cast<int>(sort_column_),
+                  sort_direction_ == HistorySortDirection::DESC ? "DESC" : "ASC");
+    apply_filters_and_sort();
 }

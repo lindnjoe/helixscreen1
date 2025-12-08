@@ -7,14 +7,21 @@
 
 #include "print_history_data.h"
 
+#include <string>
 #include <vector>
 
 /**
  * @file ui_panel_history_list.h
- * @brief Print History List Panel - Scrollable list of print jobs
+ * @brief Print History List Panel - Scrollable list of print jobs with filter/sort
  *
  * The History List Panel displays a scrollable list of all print history jobs
  * with metadata (filename, date, duration, filament type, status).
+ *
+ * ## Features (Stage 4):
+ * - Search: Case-insensitive filename search with 300ms debounce
+ * - Status Filter: All, Completed, Failed, Cancelled
+ * - Sort: Date (newest/oldest), Duration, Filename
+ * - Filters chain: search → status → sort → display
  *
  * ## Navigation:
  * - Entry: History Dashboard → "View Full History" button
@@ -23,12 +30,40 @@
  *
  * ## Data Flow:
  * 1. On activate, receives job list from HistoryDashboardPanel
- * 2. Dynamically creates row widgets for each job
- * 3. Caches job data for row click handling
+ * 2. Applies search/filter/sort to create filtered_jobs_ for display
+ * 3. Dynamically creates row widgets for filtered jobs
+ * 4. Caches job data for row click handling (indexes into filtered_jobs_)
  *
  * @see print_history_data.h for PrintHistoryJob struct
  * @see PanelBase for base class documentation
  */
+
+/**
+ * @brief Sort column for history list
+ */
+enum class HistorySortColumn {
+    DATE,     ///< Sort by start_time (default)
+    DURATION, ///< Sort by total_duration
+    FILENAME  ///< Sort by filename alphabetically
+};
+
+/**
+ * @brief Sort direction
+ */
+enum class HistorySortDirection {
+    DESC, ///< Descending (newest first, longest first, Z-A)
+    ASC   ///< Ascending (oldest first, shortest first, A-Z)
+};
+
+/**
+ * @brief Status filter options (maps to dropdown indices)
+ */
+enum class HistoryStatusFilter {
+    ALL = 0,       ///< Show all statuses
+    COMPLETED = 1, ///< Only completed jobs
+    FAILED = 2,    ///< Only failed/error jobs
+    CANCELLED = 3  ///< Only cancelled jobs
+};
 class HistoryListPanel : public PanelBase {
   public:
     /**
@@ -107,16 +142,31 @@ class HistoryListPanel : public PanelBase {
     // === Widget References ===
     //
 
-    lv_obj_t* list_content_ = nullptr; ///< Scrollable content area
-    lv_obj_t* list_rows_ = nullptr;    ///< Container for row widgets
-    lv_obj_t* empty_state_ = nullptr;  ///< Empty state message container
+    lv_obj_t* list_content_ = nullptr;  ///< Scrollable content area
+    lv_obj_t* list_rows_ = nullptr;     ///< Container for row widgets
+    lv_obj_t* empty_state_ = nullptr;   ///< Empty state message container
+    lv_obj_t* search_box_ = nullptr;    ///< Search textarea
+    lv_obj_t* filter_status_ = nullptr; ///< Status filter dropdown
+    lv_obj_t* sort_dropdown_ = nullptr; ///< Sort dropdown
+    lv_obj_t* empty_message_ = nullptr; ///< Empty state message label
+    lv_obj_t* empty_hint_ = nullptr;    ///< Empty state hint label
 
     //
     // === State ===
     //
 
-    std::vector<PrintHistoryJob> jobs_; ///< Cached job list
-    bool jobs_received_ = false;        ///< True if jobs were set externally
+    std::vector<PrintHistoryJob> jobs_;          ///< Source of truth - all jobs
+    std::vector<PrintHistoryJob> filtered_jobs_; ///< Filtered/sorted for display
+    bool jobs_received_ = false;                 ///< True if jobs were set externally
+
+    // Filter/sort state
+    std::string search_query_;                                         ///< Current search text
+    HistoryStatusFilter status_filter_ = HistoryStatusFilter::ALL;     ///< Current status filter
+    HistorySortColumn sort_column_ = HistorySortColumn::DATE;          ///< Current sort column
+    HistorySortDirection sort_direction_ = HistorySortDirection::DESC; ///< Current sort direction
+
+    // Search debounce timer
+    lv_timer_t* search_timer_ = nullptr; ///< Timer for debounced search (300ms)
 
     //
     // === Subject for empty state binding ===
@@ -129,9 +179,9 @@ class HistoryListPanel : public PanelBase {
     //
 
     /**
-     * @brief Populate the list with row widgets
+     * @brief Populate the list with row widgets from filtered_jobs_
      *
-     * Clears existing rows and creates new ones from jobs_ vector.
+     * Clears existing rows and creates new ones from filtered_jobs_ vector.
      */
     void populate_list();
 
@@ -141,9 +191,43 @@ class HistoryListPanel : public PanelBase {
     void clear_list();
 
     /**
-     * @brief Update the empty state visibility based on job count
+     * @brief Update the empty state visibility and message
+     *
+     * Shows appropriate message based on whether filters are active.
      */
     void update_empty_state();
+
+    /**
+     * @brief Apply all filters and sort, then populate list
+     *
+     * Chain: search → status filter → sort → populate_list()
+     */
+    void apply_filters_and_sort();
+
+    /**
+     * @brief Apply search filter to jobs
+     *
+     * Case-insensitive substring match on filename.
+     *
+     * @param source Source job list
+     * @return Filtered job list
+     */
+    std::vector<PrintHistoryJob> apply_search_filter(const std::vector<PrintHistoryJob>& source);
+
+    /**
+     * @brief Apply status filter to jobs
+     *
+     * @param source Source job list
+     * @return Filtered job list
+     */
+    std::vector<PrintHistoryJob> apply_status_filter(const std::vector<PrintHistoryJob>& source);
+
+    /**
+     * @brief Sort jobs in place
+     *
+     * @param jobs Jobs to sort (modified in place)
+     */
+    void apply_sort(std::vector<PrintHistoryJob>& jobs);
 
     /**
      * @brief Get status color for a job status
@@ -169,19 +253,53 @@ class HistoryListPanel : public PanelBase {
      * @brief Attach click handler to a row widget
      *
      * @param row Row widget
-     * @param index Index into jobs_ vector
+     * @param index Index into filtered_jobs_ vector
      */
     void attach_row_click_handler(lv_obj_t* row, size_t index);
 
     /**
      * @brief Handle row click - opens detail overlay (Stage 5)
      *
-     * @param index Index of clicked row
+     * @param index Index of clicked row in filtered_jobs_
      */
     void handle_row_click(size_t index);
 
     // Static callback wrapper for row clicks
     static void on_row_clicked_static(lv_event_t* e);
+
+    //
+    // === Filter/Sort Event Handlers ===
+    //
+
+    /**
+     * @brief Handle search text change (debounced)
+     */
+    void on_search_changed();
+
+    /**
+     * @brief Debounced search callback (called after 300ms)
+     */
+    void do_debounced_search();
+
+    /**
+     * @brief Handle status filter dropdown change
+     *
+     * @param index Selected dropdown index (maps to HistoryStatusFilter)
+     */
+    void on_status_filter_changed(int index);
+
+    /**
+     * @brief Handle sort dropdown change
+     *
+     * @param index Selected dropdown index
+     */
+    void on_sort_changed(int index);
+
+    // Static callback wrappers
+    static void on_search_changed_static(lv_event_t* e);
+    static void on_status_filter_changed_static(lv_event_t* e);
+    static void on_sort_changed_static(lv_event_t* e);
+    static void on_search_timer_static(lv_timer_t* timer);
 };
 
 /**
