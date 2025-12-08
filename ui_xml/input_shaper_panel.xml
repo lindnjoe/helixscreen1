@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<!-- Copyright 2025 356C LLC -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!--
+  Input Shaper Panel - Resonance calibration UI
+
+  Features (planned):
+  - Run SHAPER_CALIBRATE button
+  - Run MEASURE_AXES_NOISE button
+  - Progress indicator during measurement
+  - Display recommended shaper settings
+  - Graph viewer for resonance results
+
+  Klipper Commands:
+  - SHAPER_CALIBRATE AXIS=X/Y
+  - MEASURE_AXES_NOISE
+
+  Note: Input shaper graphs are typically saved as PNG files
+  in /tmp/calibration_data_*.png - we can display these.
+
+  Status: STUB - Coming Soon
+  See: docs/FEATURE_STATUS.md for implementation progress
+-->
+<component>
+  <view extends="lv_obj" name="input_shaper_panel" width="#overlay_panel_width" height="100%" align="right_mid" style_border_width="0" style_pad_all="0" style_bg_opa="255" style_bg_color="#card_bg" scrollable="false" flex_flow="column">
+    <!-- Header Bar -->
+    <header_bar name="overlay_header" title="Input Shaper"/>
+    <!-- Content Area with Coming Soon Overlay -->
+    <lv_obj name="panel_content" flex_grow="1" width="100%" style_bg_opa="0" style_border_width="0" scrollable="false">
+      <coming_soon_overlay feature_name="Input Shaper Calibration" feature_description="Run resonance calibration and view recommended shaper settings. Reduces ringing and ghosting in prints." icon_name="sine-wave"/>
+    </lv_obj>
+  </view>
+</component>

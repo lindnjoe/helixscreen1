@@ -4,18 +4,19 @@
 
 ---
 
-## Project Status: Beta
+## Project Status: Beta → Feature Parity Push
 
-HelixScreen is a production-quality Klipper touchscreen UI with comprehensive feature coverage. Core functionality is complete; remaining work focuses on polish and edge cases.
+HelixScreen is a production-quality Klipper touchscreen UI. Core functionality is complete; **now pushing for feature parity with KlipperScreen, Mainsail, and Fluidd**.
 
 | Area | Status | Details |
 |------|--------|---------|
 | **UI Panels** | ✅ Complete | 14 production panels + 6 overlays |
 | **Settings** | ✅ Complete | 18 settings across 8 categories |
 | **First-Run Wizard** | ✅ Complete | 7-step guided setup |
-| **Moonraker API** | ✅ Complete | 30+ API methods |
+| **Moonraker API** | 🔄 Expanding | 30+ methods, adding ~25 more |
 | **Build System** | ✅ Complete | macOS, Linux, Pi, AD5M |
 | **Test Suite** | ✅ Complete | 51 unit tests |
+| **Feature Parity** | 🔄 In Progress | 47 gaps identified, prioritized |
 
 ---
 
@@ -36,8 +37,9 @@ Support for Happy Hare and AFC-Klipper multi-filament systems with Bambu-inspire
 - [ ] Phase 6: Error recovery wizard
 
 See `docs/AMS_IMPLEMENTATION_PLAN.md` for detailed specification.
+Branch: `feature/ams-support` in `helixscreen-ams-feature` worktree.
 
-### 2. Production Hardening
+### 3. Production Hardening
 **Status:** In Progress
 
 - [x] **Connection-aware navigation** - Disable Controls/Filament when disconnected, auto-navigate to home
@@ -45,12 +47,47 @@ See `docs/AMS_IMPLEMENTATION_PLAN.md` for detailed specification.
 - [ ] **Structured logging** - Log levels, rotation, remote debugging
 - [ ] **Edge case testing** - Print failures, filesystem errors
 
-### 3. Documentation Gaps
-**Status:** Ongoing
+---
 
-- [ ] User manual for end users (non-developer)
-- [ ] Hardware installation guide per target platform
-- [ ] Troubleshooting guide
+## Feature Parity Quick Reference
+
+### Moonraker API Additions Needed (~25 endpoints)
+```
+Job Queue:     /server/job_queue/*
+Print History: /server/history/*
+Webcams:       /server/webcams/*
+Power Devices: /machine/device_power/*
+Updates:       /machine/update/*
+Spoolman:      /server/spoolman/*
+GCode Store:   /server/gcode_store
+```
+
+### New Panels to Create
+```
+macro_panel.xml         - Execute Klipper macros
+console_panel.xml       - G-code console with keyboard
+camera_panel.xml        - Webcam viewer (MJPEG)
+history_panel.xml       - Print job history
+power_panel.xml         - Power device control
+screws_tilt_panel.xml   - Visual bed leveling
+input_shaper_panel.xml  - Resonance calibration
+```
+
+### Strategy: Breadth First
+1. Create ALL panel stubs with "Coming Soon" overlays
+2. Implement quick wins (layer display, presets, power)
+3. Build out core features incrementally
+4. Each feature clearly marked as complete/in-progress/stub
+
+---
+
+## Documentation
+
+| Document | Purpose |
+|----------|---------|
+| `docs/FEATURE_PARITY_RESEARCH.md` | Complete competitive analysis, API reference |
+| `docs/FEATURE_STATUS.md` | Live implementation tracking |
+| `docs/AMS_IMPLEMENTATION_PLAN.md` | Multi-material support spec |
 
 ---
 
@@ -58,9 +95,9 @@ See `docs/AMS_IMPLEMENTATION_PLAN.md` for detailed specification.
 
 | Feature | Priority | Notes |
 |---------|----------|-------|
-| **Console/logs viewer** | Low | Klipper console access from UI |
 | **mDNS discovery** | Low | Auto-find Moonraker (manual IP works) |
 | **OTA updates** | Future | Currently requires manual binary update |
+| **User manual** | Future | End-user documentation |
 
 ---
 

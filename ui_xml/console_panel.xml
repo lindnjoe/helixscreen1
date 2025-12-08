@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<!-- Copyright 2025 356C LLC -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!--
+  Console Panel - G-code console with command input
+
+  Features (planned):
+  - Scrollable command history from GCode store
+  - On-screen keyboard for G-code input
+  - Color-coded output (errors, responses)
+  - Temperature message filtering
+  - Command history navigation (up/down)
+  - Clear button
+
+  Moonraker API:
+  - GET /server/gcode_store - Command history
+  - POST /printer/gcode/script - Execute commands
+  - notify_gcode_response - Real-time output
+
+  Status: STUB - Coming Soon
+  See: docs/FEATURE_STATUS.md for implementation progress
+-->
+<component>
+  <view extends="lv_obj" name="console_panel" width="#overlay_panel_width" height="100%" align="right_mid" style_border_width="0" style_pad_all="0" style_bg_opa="255" style_bg_color="#card_bg" scrollable="false" flex_flow="column">
+    <!-- Header Bar -->
+    <header_bar name="overlay_header" title="Console"/>
+    <!-- Content Area with Coming Soon Overlay -->
+    <lv_obj name="panel_content" flex_grow="1" width="100%" style_bg_opa="0" style_border_width="0" scrollable="false">
+      <coming_soon_overlay feature_name="G-code Console" feature_description="Send commands directly to Klipper. View command history and responses with color-coded output." icon_name="console"/>
+    </lv_obj>
+  </view>
+</component>
