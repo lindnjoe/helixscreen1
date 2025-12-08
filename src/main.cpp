@@ -82,6 +82,7 @@
 #include "moonraker_api_mock.h"
 #include "moonraker_client.h"
 #include "moonraker_client_mock.h"
+#include "print_history_data.h"
 #include "printer_state.h"
 #include "runtime_config.h"
 #include "settings_manager.h"
@@ -596,6 +597,8 @@ static bool parse_command_line_args(
             g_runtime_config.use_real_moonraker = true;
         } else if (strcmp(argv[i], "--real-files") == 0) {
             g_runtime_config.use_real_files = true;
+        } else if (strcmp(argv[i], "--test-history") == 0) {
+            g_runtime_config.test_history_api = true;
         } else if (strcmp(argv[i], "--select-file") == 0) {
             if (i + 1 < argc) {
                 g_runtime_config.select_file = argv[++i];
@@ -1555,6 +1558,41 @@ static void initialize_moonraker_client(Config* config) {
     EmergencyStopOverlay::instance().on_panel_changed("home_panel");
 
     spdlog::debug("Moonraker client initialized (not connected yet)");
+
+    // Test print history API if requested (for Stage 1 validation)
+    if (get_runtime_config().test_history_api) {
+        spdlog::info("[History Test] Testing print history API...");
+
+        // Test get_history_list
+        moonraker_api->get_history_list(
+            10, 0, 0.0, 0.0,
+            [](const std::vector<PrintHistoryJob>& jobs, uint64_t total_count) {
+                spdlog::info("[History Test] get_history_list SUCCESS: {} jobs (total: {})",
+                             jobs.size(), total_count);
+                for (size_t i = 0; i < std::min(jobs.size(), size_t(3)); ++i) {
+                    const auto& job = jobs[i];
+                    spdlog::info("[History Test]   Job {}: {} - {} ({})", i + 1, job.filename,
+                                 job.duration_str, job.date_str);
+                }
+            },
+            [](const MoonrakerError& err) {
+                spdlog::error("[History Test] get_history_list FAILED: {}", err.message);
+            });
+
+        // Test get_history_totals
+        moonraker_api->get_history_totals(
+            [](const PrintHistoryTotals& totals) {
+                spdlog::info("[History Test] get_history_totals SUCCESS:");
+                spdlog::info("[History Test]   Total jobs: {}", totals.total_jobs);
+                spdlog::info("[History Test]   Completed: {}, Cancelled: {}, Failed: {}",
+                             totals.total_completed, totals.total_cancelled, totals.total_failed);
+                spdlog::info("[History Test]   Total time: {}s, Filament: {:.1f}mm",
+                             totals.total_time, totals.total_filament_used);
+            },
+            [](const MoonrakerError& err) {
+                spdlog::error("[History Test] get_history_totals FAILED: {}", err.message);
+            });
+    }
 }
 
 // Main application

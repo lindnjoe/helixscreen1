@@ -2023,3 +2023,203 @@ std::vector<MacroInfo> MoonrakerAPI::get_user_macros(bool /*include_system*/) co
     spdlog::warn("[Moonraker API] get_user_macros() not yet implemented");
     return {};
 }
+
+// ============================================================================
+// Print History Operations
+// ============================================================================
+
+namespace {
+
+/**
+ * @brief Format duration in seconds to human-readable string
+ * @param seconds Duration in seconds
+ * @return Formatted string like "2h 15m" or "45m" or "30s"
+ */
+std::string format_history_duration(double seconds) {
+    char buf[32];
+    int total_seconds = static_cast<int>(seconds);
+
+    if (total_seconds < 60) {
+        snprintf(buf, sizeof(buf), "%ds", total_seconds);
+    } else if (total_seconds < 3600) {
+        int mins = total_seconds / 60;
+        snprintf(buf, sizeof(buf), "%dm", mins);
+    } else {
+        int hours = total_seconds / 3600;
+        int mins = (total_seconds % 3600) / 60;
+        if (mins == 0) {
+            snprintf(buf, sizeof(buf), "%dh", hours);
+        } else {
+            snprintf(buf, sizeof(buf), "%dh %dm", hours, mins);
+        }
+    }
+    return std::string(buf);
+}
+
+/**
+ * @brief Format Unix timestamp to human-readable date
+ * @param timestamp Unix timestamp (seconds since epoch)
+ * @return Formatted string like "Dec 1, 14:30"
+ */
+std::string format_history_date(double timestamp) {
+    char buf[64];
+    time_t t = static_cast<time_t>(timestamp);
+    struct tm* timeinfo = localtime(&t);
+    if (timeinfo) {
+        strftime(buf, sizeof(buf), "%b %d, %H:%M", timeinfo);
+    } else {
+        snprintf(buf, sizeof(buf), "Unknown");
+    }
+    return std::string(buf);
+}
+
+/**
+ * @brief Format filament usage in mm to human-readable string
+ * @param mm Filament length in millimeters
+ * @return Formatted string like "12.5m" or "1.2km"
+ */
+std::string format_history_filament(double mm) {
+    char buf[32];
+    if (mm < 1000) {
+        snprintf(buf, sizeof(buf), "%.0fmm", mm);
+    } else if (mm < 1000000) {
+        snprintf(buf, sizeof(buf), "%.1fm", mm / 1000.0);
+    } else {
+        snprintf(buf, sizeof(buf), "%.2fkm", mm / 1000000.0);
+    }
+    return std::string(buf);
+}
+
+/**
+ * @brief Parse a single job from Moonraker history response
+ */
+PrintHistoryJob parse_history_job(const json& job_json) {
+    PrintHistoryJob job;
+
+    job.job_id = job_json.value("job_id", "");
+    job.filename = job_json.value("filename", "");
+    job.status = parse_job_status(job_json.value("status", "unknown"));
+    job.start_time = job_json.value("start_time", 0.0);
+    job.end_time = job_json.value("end_time", 0.0);
+    job.print_duration = job_json.value("print_duration", 0.0);
+    job.total_duration = job_json.value("total_duration", 0.0);
+    job.filament_used = job_json.value("filament_used", 0.0);
+    job.exists = job_json.value("exists", false);
+
+    // Metadata (may be nested)
+    if (job_json.contains("metadata")) {
+        const auto& meta = job_json["metadata"];
+        job.filament_type = meta.value("filament_type", "");
+        job.layer_count = meta.value("layer_count", 0);
+        job.layer_height = meta.value("layer_height", 0.0);
+        job.nozzle_temp = meta.value("first_layer_extr_temp", 0.0);
+        job.bed_temp = meta.value("first_layer_bed_temp", 0.0);
+
+        // Thumbnail path (first available)
+        if (meta.contains("thumbnails") && meta["thumbnails"].is_array() &&
+            !meta["thumbnails"].empty()) {
+            job.thumbnail_path = meta["thumbnails"][0].value("relative_path", "");
+        }
+    }
+
+    // Pre-format display strings
+    job.duration_str = format_history_duration(job.print_duration);
+    job.date_str = format_history_date(job.start_time);
+    job.filament_str = format_history_filament(job.filament_used);
+
+    return job;
+}
+
+} // anonymous namespace
+
+void MoonrakerAPI::get_history_list(int limit, int start, double since, double before,
+                                    HistoryListCallback on_success, ErrorCallback on_error) {
+    json params = json::object();
+    params["limit"] = limit;
+    params["start"] = start;
+
+    // Only add time filters if non-zero
+    if (since > 0) {
+        params["since"] = since;
+    }
+    if (before > 0) {
+        params["before"] = before;
+    }
+
+    spdlog::debug("[Moonraker API] get_history_list(limit={}, start={}, since={}, before={})",
+                  limit, start, since, before);
+
+    client_.send_jsonrpc(
+        "server.history.list", params,
+        [on_success](json response) {
+            std::vector<PrintHistoryJob> jobs;
+            uint64_t total_count = 0;
+
+            if (response.contains("result")) {
+                const auto& result = response["result"];
+                total_count = result.value("count", 0);
+
+                if (result.contains("jobs") && result["jobs"].is_array()) {
+                    for (const auto& job_json : result["jobs"]) {
+                        jobs.push_back(parse_history_job(job_json));
+                    }
+                }
+            }
+
+            spdlog::debug("[Moonraker API] get_history_list returned {} jobs (total: {})",
+                          jobs.size(), total_count);
+
+            if (on_success) {
+                on_success(jobs, total_count);
+            }
+        },
+        on_error);
+}
+
+void MoonrakerAPI::get_history_totals(HistoryTotalsCallback on_success, ErrorCallback on_error) {
+    spdlog::debug("[Moonraker API] get_history_totals()");
+
+    client_.send_jsonrpc(
+        "server.history.totals", json::object(),
+        [on_success](json response) {
+            PrintHistoryTotals totals;
+
+            if (response.contains("result") && response["result"].contains("job_totals")) {
+                const auto& jt = response["result"]["job_totals"];
+                totals.total_jobs = jt.value("total_jobs", 0);
+                totals.total_time = static_cast<uint64_t>(jt.value("total_time", 0.0));
+                totals.total_filament_used = jt.value("total_filament_used", 0.0);
+                totals.longest_job = jt.value("longest_job", 0.0);
+            }
+
+            // Calculate completed/cancelled/failed from jobs if needed
+            // Note: Moonraker doesn't provide these in totals, would need separate query
+            // For now, these will be calculated client-side from the job list
+
+            spdlog::debug("[Moonraker API] get_history_totals: {} jobs, {}s total time",
+                          totals.total_jobs, totals.total_time);
+
+            if (on_success) {
+                on_success(totals);
+            }
+        },
+        on_error);
+}
+
+void MoonrakerAPI::delete_history_job(const std::string& job_id, SuccessCallback on_success,
+                                      ErrorCallback on_error) {
+    json params = json::object();
+    params["uid"] = job_id;
+
+    spdlog::debug("[Moonraker API] delete_history_job(uid={})", job_id);
+
+    client_.send_jsonrpc(
+        "server.history.delete_job", params,
+        [on_success, job_id](json /*response*/) {
+            spdlog::info("[Moonraker API] Deleted history job: {}", job_id);
+            if (on_success) {
+                on_success();
+            }
+        },
+        on_error);
+}
