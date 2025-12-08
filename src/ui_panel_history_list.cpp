@@ -3,6 +3,7 @@
 
 #include "ui_panel_history_list.h"
 
+#include "ui_fonts.h"
 #include "ui_nav.h"
 #include "ui_panel_common.h"
 
@@ -76,11 +77,18 @@ void HistoryListPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
                   search_box_ != nullptr, filter_status_ != nullptr, sort_dropdown_ != nullptr);
 
     // Set MDI chevron icons for dropdowns (Noto Sans doesn't have LV_SYMBOL_DOWN)
+    // Must set BOTH the symbol AND the indicator font to MDI for the symbol to render
+    const char* icon_font_name = lv_xml_get_const(NULL, "icon_font_md");
+    const lv_font_t* icon_font =
+        icon_font_name ? lv_xml_get_font(NULL, icon_font_name) : &mdi_icons_24;
+
     if (filter_status_) {
         lv_dropdown_set_symbol(filter_status_, MDI_CHEVRON_DOWN);
+        lv_obj_set_style_text_font(filter_status_, icon_font, LV_PART_INDICATOR);
     }
     if (sort_dropdown_) {
         lv_dropdown_set_symbol(sort_dropdown_, MDI_CHEVRON_DOWN);
+        lv_obj_set_style_text_font(sort_dropdown_, icon_font, LV_PART_INDICATOR);
     }
 
     // Register XML event callbacks for filter controls
