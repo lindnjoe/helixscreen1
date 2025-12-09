@@ -355,9 +355,6 @@ void ControlsPanel::handle_motors_confirm() {
                 spdlog::error("[ControlsPanel] Motors disable failed: {}", err.user_message());
                 ui_notification_error("Error", "Motors disable failed");
             });
-    } else {
-        spdlog::warn("[{}] Not connected - motors command not sent", get_name());
-        ui_notification_warning("Not connected");
     }
 }
 

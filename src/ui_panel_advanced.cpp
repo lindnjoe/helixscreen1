@@ -200,8 +200,6 @@ void AdvancedPanel::handle_macros_clicked() {
         size_t macro_count = client->capabilities().macro_count();
         std::string msg = "Macros: " + std::to_string(macro_count) + " available";
         ui_toast_show(ToastSeverity::INFO, msg.c_str(), 2000);
-    } else {
-        ui_toast_show(ToastSeverity::WARNING, "Macros: Not connected", 2000);
     }
 }
 

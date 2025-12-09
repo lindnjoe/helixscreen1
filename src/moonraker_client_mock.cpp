@@ -25,6 +25,7 @@
 
 #include "../tests/mocks/mock_printer_state.h"
 #include "gcode_parser.h"
+#include "runtime_config.h"
 
 #include <spdlog/spdlog.h>
 
@@ -268,6 +269,15 @@ int MoonrakerClientMock::connect(const char* url, std::function<void()> on_conne
     // Small delay to simulate realistic connection (250ms)
     std::this_thread::sleep_for(std::chrono::milliseconds(250));
 
+    // Check if we should simulate disconnected state for testing
+    if (get_runtime_config().simulate_disconnect) {
+        spdlog::warn(
+            "[MoonrakerClientMock] --disconnected flag set, simulating connection failure");
+        set_connection_state(ConnectionState::DISCONNECTED);
+        // Don't invoke on_connected callback or dispatch any state
+        return 0;
+    }
+
     set_connection_state(ConnectionState::CONNECTED);
 
     // Dispatch historical temperature data first (fills graph with 2-3 min of data)
@@ -346,9 +356,9 @@ void MoonrakerClientMock::discover_printer(std::function<void()> on_complete) {
     mock_objects.push_back("gcode_macro LOAD_FILAMENT");
     mock_objects.push_back("gcode_macro UNLOAD_FILAMENT");
     mock_objects.push_back("gcode_macro BED_MESH_CALIBRATE");
-    mock_objects.push_back("gcode_macro G28");       // Home all
-    mock_objects.push_back("gcode_macro M600");      // Filament change
-    mock_objects.push_back("gcode_macro _SYSTEM_MACRO");  // System macro (hidden by default)
+    mock_objects.push_back("gcode_macro G28");           // Home all
+    mock_objects.push_back("gcode_macro M600");          // Filament change
+    mock_objects.push_back("gcode_macro _SYSTEM_MACRO"); // System macro (hidden by default)
 
     capabilities_.parse_objects(mock_objects);
 

@@ -256,9 +256,6 @@ void ExtrusionPanel::handle_extrude() {
                 stop_extrusion_animation();
                 NOTIFY_ERROR("Extrusion failed: {}", error.user_message());
             });
-    } else {
-        stop_extrusion_animation();
-        NOTIFY_WARNING("Not connected to printer");
     }
 }
 
@@ -288,9 +285,6 @@ void ExtrusionPanel::handle_retract() {
                 stop_extrusion_animation();
                 NOTIFY_ERROR("Retraction failed: {}", error.user_message());
             });
-    } else {
-        stop_extrusion_animation();
-        NOTIFY_WARNING("Not connected to printer");
     }
 }
 
@@ -319,9 +313,6 @@ void ExtrusionPanel::handle_purge() {
                 stop_extrusion_animation();
                 NOTIFY_ERROR("Purge failed: {}", error.user_message());
             });
-    } else {
-        stop_extrusion_animation();
-        NOTIFY_WARNING("Not connected to printer");
     }
 }
 

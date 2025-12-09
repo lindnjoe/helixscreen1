@@ -29,6 +29,7 @@
 #include "ui_status_bar.h"
 #include "ui_theme.h"
 
+#include "app_globals.h"
 #include "lvgl/lvgl.h"
 
 #include <spdlog/spdlog.h>
@@ -61,6 +62,38 @@ static lv_obj_t* overlay_backdrop = nullptr;
 static constexpr uint32_t OVERLAY_ANIM_DURATION_MS = 200; // Fast but visible
 static constexpr int32_t OVERLAY_SLIDE_OFFSET = 400;      // Pixels to slide from off-screen
 
+// Connection gating: panels that require Moonraker connection
+static bool panel_requires_connection(ui_panel_id_t panel) {
+    return panel == UI_PANEL_CONTROLS || panel == UI_PANEL_FILAMENT;
+    // Note: UI_PANEL_PRINT_SELECT also requires connection but has no nav button
+}
+
+// Check if printer is connected (connection state == 2 means CONNECTED)
+static bool is_printer_connected() {
+    auto* subject = get_printer_state().get_printer_connection_state_subject();
+    return lv_subject_get_int(subject) == 2;
+}
+
+// Forward declarations
+static void clear_overlay_stack();
+
+// Connection state observer - auto-navigate to home when connection drops on gated panel
+static void connection_state_observer_cb(lv_observer_t* /*observer*/, lv_subject_t* subject) {
+    int state = lv_subject_get_int(subject);
+    bool connected = (state == 2); // CONNECTED
+
+    if (!connected && panel_requires_connection(active_panel)) {
+        spdlog::info("[NAV] Connection lost on panel {} - navigating to home",
+                     static_cast<int>(active_panel));
+
+        // Clear any overlays first
+        clear_overlay_stack();
+
+        // Navigate to home
+        ui_nav_set_active(UI_PANEL_HOME);
+    }
+}
+
 // Observer callback - handles panel show/hide when active panel changes
 // Note: Icon colors are now handled reactively via XML bindings to active_panel subject
 static void active_panel_observer_cb(lv_observer_t* /*observer*/, lv_subject_t* subject) {
@@ -90,6 +123,14 @@ LVGL_SAFE_EVENT_CB_WITH_EVENT(nav_button_clicked_cb, event, {
         // Skip if already on this panel (prevents redundant work on repeated clicks)
         if (panel_id == static_cast<int>(active_panel)) {
             spdlog::info("[NAV] Skipping - already on panel {}", panel_id);
+            return;
+        }
+
+        // Block navigation to connection-required panels when disconnected
+        // (This is a safety net - XML bindings should also disable the buttons)
+        if (panel_requires_connection(static_cast<ui_panel_id_t>(panel_id)) &&
+            !is_printer_connected()) {
+            spdlog::info("[NAV] Navigation to panel {} blocked - not connected", panel_id);
             return;
         }
 
@@ -236,7 +277,13 @@ void ui_nav_wire_events(lv_obj_t* navbar) {
         lv_obj_add_event_cb(btn, nav_button_clicked_cb, LV_EVENT_CLICKED, (void*)(uintptr_t)i);
     }
 
-    spdlog::debug("Navigation button events wired");
+    // Register connection state observer for auto-navigation on disconnect
+    // This observer fires when connection state changes and navigates to home
+    // if the current panel requires connection
+    lv_subject_add_observer(get_printer_state().get_printer_connection_state_subject(),
+                            connection_state_observer_cb, nullptr);
+
+    spdlog::debug("Navigation button events wired (with connection gating)");
 }
 
 // Panel ID to name mapping for E-Stop visibility
@@ -344,6 +391,25 @@ static void overlay_animate_slide_in(lv_obj_t* panel) {
     lv_anim_start(&anim);
 
     spdlog::debug("Started slide-in animation for panel {} (width={})", (void*)panel, panel_width);
+}
+
+// Clear all overlays from the stack (used during connection loss)
+static void clear_overlay_stack() {
+    // Hide all overlay panels immediately (no animation for connection loss)
+    while (panel_stack.size() > 1) {
+        lv_obj_t* overlay = panel_stack.back();
+        lv_obj_add_flag(overlay, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_set_style_translate_x(overlay, 0, LV_PART_MAIN); // Reset animation state
+        panel_stack.pop_back();
+        spdlog::trace("Cleared overlay {} from stack", (void*)overlay);
+    }
+
+    // Hide backdrop
+    if (overlay_backdrop) {
+        ui_status_bar_set_backdrop_visible(false);
+    }
+
+    spdlog::debug("Overlay stack cleared (connection gating)");
 }
 
 // Animate overlay panel sliding out to right, then hide

@@ -478,8 +478,6 @@ void TempControlPanel::nozzle_confirm_cb(lv_event_t* e) {
             [](const MoonrakerError& error) {
                 NOTIFY_ERROR("Failed to set nozzle temp: {}", error.user_message());
             });
-    } else {
-        NOTIFY_WARNING("Not connected to printer");
     }
 
     ui_nav_go_back();
@@ -517,9 +515,6 @@ void TempControlPanel::bed_confirm_cb(lv_event_t* e) {
                 spdlog::error("[TempPanel] set_temperature FAILED: {}", error.message);
                 NOTIFY_ERROR("Failed to set bed temp: {}", error.user_message());
             });
-    } else {
-        spdlog::warn("[TempPanel] api_ is null - not connected");
-        NOTIFY_WARNING("Not connected to printer");
     }
 
     ui_nav_go_back();

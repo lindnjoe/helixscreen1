@@ -338,10 +338,6 @@ void MotionPanel::handle_z_button(const char* name) {
             [](const MoonrakerError& err) {
                 NOTIFY_ERROR("Z jog failed: {}", err.user_message());
             });
-    } else {
-        // Fallback for mock/disconnected mode
-        NOTIFY_WARNING("Not connected - Z jog not sent");
-        set_position(current_x_, current_y_, current_z_ + static_cast<float>(distance));
     }
 }
 
@@ -492,10 +488,6 @@ void MotionPanel::jog(jog_direction_t direction, float distance_mm) {
                     NOTIFY_ERROR("Y jog failed: {}", err.user_message());
                 });
         }
-    } else {
-        // Fallback for mock/disconnected mode - update display locally
-        NOTIFY_WARNING("Not connected - jog command not sent");
-        set_position(current_x_ + dx, current_y_ + dy, current_z_);
     }
 }
 
@@ -523,23 +515,6 @@ void MotionPanel::home(char axis) {
             [](const MoonrakerError& err) {
                 NOTIFY_ERROR("Homing failed: {}", err.user_message());
             });
-    } else {
-        // Fallback for mock/disconnected mode - update display locally
-        NOTIFY_WARNING("Not connected - home command not sent");
-        switch (axis) {
-        case 'X':
-            set_position(0.0f, current_y_, current_z_);
-            break;
-        case 'Y':
-            set_position(current_x_, 0.0f, current_z_);
-            break;
-        case 'Z':
-            set_position(current_x_, current_y_, 0.0f);
-            break;
-        case 'A':
-            set_position(0.0f, 0.0f, 0.0f);
-            break;
-        }
     }
 }
 

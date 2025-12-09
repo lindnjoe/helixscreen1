@@ -46,6 +46,9 @@ struct RuntimeConfig {
         false;                   ///< Use real Moonraker client (--real-moonraker, requires --test)
     bool use_real_files = false; ///< Use real file listing (--real-files, requires --test)
 
+    bool simulate_disconnect =
+        false; ///< Simulate disconnected state for testing (--disconnected, requires --test)
+
     // Print select panel options
     const char* select_file =
         nullptr; ///< File to auto-select in print select panel (--select-file)

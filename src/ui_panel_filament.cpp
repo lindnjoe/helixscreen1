@@ -247,8 +247,6 @@ void FilamentPanel::handle_preset_button(int material_id) {
             [](const MoonrakerError& error) {
                 NOTIFY_ERROR("Failed to set nozzle temp: {}", error.user_message());
             });
-    } else {
-        NOTIFY_WARNING("Not connected to printer");
     }
 }
 
@@ -289,8 +287,6 @@ void FilamentPanel::handle_custom_temp_confirmed(float value) {
             [](const MoonrakerError& error) {
                 NOTIFY_ERROR("Failed to set nozzle temp: {}", error.user_message());
             });
-    } else {
-        NOTIFY_WARNING("Not connected to printer");
     }
 }
 
@@ -309,8 +305,6 @@ void FilamentPanel::handle_load_button() {
             [](const MoonrakerError& error) {
                 NOTIFY_ERROR("Filament load failed: {}", error.user_message());
             });
-    } else {
-        NOTIFY_WARNING("Not connected to printer");
     }
 }
 
@@ -329,8 +323,6 @@ void FilamentPanel::handle_unload_button() {
             [](const MoonrakerError& error) {
                 NOTIFY_ERROR("Filament unload failed: {}", error.user_message());
             });
-    } else {
-        NOTIFY_WARNING("Not connected to printer");
     }
 }
 
@@ -350,8 +342,6 @@ void FilamentPanel::handle_purge_button() {
             [](const MoonrakerError& error) {
                 NOTIFY_ERROR("Purge failed: {}", error.user_message());
             });
-    } else {
-        NOTIFY_WARNING("Not connected to printer");
     }
 }
 

@@ -596,6 +596,8 @@ static bool parse_command_line_args(
             g_runtime_config.use_real_moonraker = true;
         } else if (strcmp(argv[i], "--real-files") == 0) {
             g_runtime_config.use_real_files = true;
+        } else if (strcmp(argv[i], "--disconnected") == 0) {
+            g_runtime_config.simulate_disconnect = true;
         } else if (strcmp(argv[i], "--select-file") == 0) {
             if (i + 1 < argc) {
                 g_runtime_config.select_file = argv[++i];
@@ -793,6 +795,7 @@ static bool parse_command_line_args(
             printf("    --real-ethernet    Use real Ethernet hardware (requires --test)\n");
             printf("    --real-moonraker   Connect to real printer (requires --test)\n");
             printf("    --real-files       Use real files from printer (requires --test)\n");
+            printf("    --disconnected     Simulate disconnected state (requires --test)\n");
             printf("    --select-file <name>  Auto-select file in print-select panel and show "
                    "detail view\n");
             printf("\nG-code Viewer Options (require --test):\n");
@@ -873,6 +876,13 @@ static bool parse_command_line_args(
         return false;
     }
 
+    // Validate --disconnected requires test mode
+    if (g_runtime_config.simulate_disconnect && !g_runtime_config.test_mode) {
+        printf("Error: --disconnected requires --test mode\n");
+        printf("Use --help for more information\n");
+        return false;
+    }
+
     // Print test mode configuration if enabled
     if (g_runtime_config.test_mode) {
         printf("╔════════════════════════════════════════╗\n");
@@ -898,6 +908,9 @@ static bool parse_command_line_args(
             printf("  Using REAL files from printer\n");
         else
             printf("  Using TEST file data\n");
+
+        if (g_runtime_config.simulate_disconnect)
+            printf("  SIMULATING DISCONNECTED STATE\n");
 
         printf("\n");
     }
