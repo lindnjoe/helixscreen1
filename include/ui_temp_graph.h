@@ -27,7 +27,10 @@
 
 // Default configuration
 #define UI_TEMP_GRAPH_MAX_SERIES 8            // Maximum concurrent temperature series
-#define UI_TEMP_GRAPH_DEFAULT_POINTS 300      // Default point count (5 min @ 1s)
+#define UI_TEMP_GRAPH_DISPLAY_MINUTES 20      // Display period in minutes (primary constant)
+#define UI_TEMP_GRAPH_SAMPLE_RATE_HZ 1        // Sample rate (1 sample per second)
+#define UI_TEMP_GRAPH_DEFAULT_POINTS (UI_TEMP_GRAPH_DISPLAY_MINUTES * 60 * UI_TEMP_GRAPH_SAMPLE_RATE_HZ)
+#define UI_TEMP_GRAPH_DISPLAY_MS (UI_TEMP_GRAPH_DISPLAY_MINUTES * 60 * 1000)  // Display period in ms
 #define UI_TEMP_GRAPH_DEFAULT_MIN_TEMP 0.0f   // Default Y-axis minimum
 #define UI_TEMP_GRAPH_DEFAULT_MAX_TEMP 100.0f // Default Y-axis maximum
 

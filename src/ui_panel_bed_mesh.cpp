@@ -7,6 +7,7 @@
 #include "ui_nav.h"
 #include "ui_panel_common.h"
 #include "ui_subject_registry.h"
+#include "ui_toast.h"
 
 #include "app_globals.h"
 #include "moonraker_api.h"
@@ -19,20 +20,55 @@
 
 static std::unique_ptr<BedMeshPanel> g_bed_mesh_panel;
 
+// ============================================================================
+// Forward declarations for static event callbacks
+// ============================================================================
+static void on_profile_clicked_cb(lv_event_t* e);
+static void on_profile_rename_cb(lv_event_t* e);
+static void on_profile_delete_cb(lv_event_t* e);
+static void on_calibrate_header_clicked_cb(lv_event_t* e);
+static void on_calibrate_cancel_cb(lv_event_t* e);
+static void on_calibrate_start_cb(lv_event_t* e);
+static void on_rename_cancel_cb(lv_event_t* e);
+static void on_rename_confirm_cb(lv_event_t* e);
+static void on_delete_cancel_cb(lv_event_t* e);
+static void on_delete_confirm_cb(lv_event_t* e);
+static void on_save_config_no_cb(lv_event_t* e);
+static void on_save_config_yes_cb(lv_event_t* e);
+
+// ============================================================================
+// Constructor / Destructor
+// ============================================================================
+
 BedMeshPanel::BedMeshPanel(PrinterState& printer_state, MoonrakerAPI* api)
     : PanelBase(printer_state, api) {
     // Initialize buffer contents
     std::memset(profile_name_buf_, 0, sizeof(profile_name_buf_));
     std::strncpy(dimensions_buf_, "No mesh data", sizeof(dimensions_buf_) - 1);
-    std::memset(z_range_buf_, 0, sizeof(z_range_buf_));
+    std::memset(max_label_buf_, 0, sizeof(max_label_buf_));
+    std::memset(max_value_buf_, 0, sizeof(max_value_buf_));
+    std::memset(min_label_buf_, 0, sizeof(min_label_buf_));
+    std::memset(min_value_buf_, 0, sizeof(min_value_buf_));
     std::memset(variance_buf_, 0, sizeof(variance_buf_));
+    std::memset(rename_old_name_buf_, 0, sizeof(rename_old_name_buf_));
+    std::memset(delete_profile_name_buf_, 0, sizeof(delete_profile_name_buf_));
+
+    // Initialize profile buffers
+    for (int i = 0; i < BED_MESH_MAX_PROFILES; i++) {
+        std::memset(profile_name_bufs_[static_cast<size_t>(i)].data(), 0, 64);
+        std::memset(profile_range_bufs_[static_cast<size_t>(i)].data(), 0, 32);
+    }
 }
 
 BedMeshPanel::~BedMeshPanel() {
-    // Widget pointers owned by LVGL - just clear them
     canvas_ = nullptr;
-    profile_dropdown_ = nullptr;
+    calibrate_name_input_ = nullptr;
+    rename_name_input_ = nullptr;
 }
+
+// ============================================================================
+// Subject Initialization
+// ============================================================================
 
 void BedMeshPanel::init_subjects() {
     if (subjects_initialized_) {
@@ -40,21 +76,72 @@ void BedMeshPanel::init_subjects() {
         return;
     }
 
-    // Initialize subjects with default values
+    // Current mesh stats subjects
     UI_SUBJECT_INIT_AND_REGISTER_INT(bed_mesh_available_, 0, "bed_mesh_available");
     UI_SUBJECT_INIT_AND_REGISTER_STRING(bed_mesh_profile_name_, profile_name_buf_, "",
                                         "bed_mesh_profile_name");
     UI_SUBJECT_INIT_AND_REGISTER_STRING(bed_mesh_dimensions_, dimensions_buf_, "No mesh data",
                                         "bed_mesh_dimensions");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(bed_mesh_z_range_, z_range_buf_, "", "bed_mesh_z_range");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(bed_mesh_max_label_, max_label_buf_, "Max",
+                                        "bed_mesh_max_label");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(bed_mesh_max_value_, max_value_buf_, "--",
+                                        "bed_mesh_max_value");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(bed_mesh_min_label_, min_label_buf_, "Min",
+                                        "bed_mesh_min_label");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(bed_mesh_min_value_, min_value_buf_, "--",
+                                        "bed_mesh_min_value");
     UI_SUBJECT_INIT_AND_REGISTER_STRING(bed_mesh_variance_, variance_buf_, "", "bed_mesh_variance");
+
+    // Profile count
+    UI_SUBJECT_INIT_AND_REGISTER_INT(bed_mesh_profile_count_, 0, "bed_mesh_profile_count");
+
+    // Profile list subjects (5 profiles)
+    for (int i = 0; i < BED_MESH_MAX_PROFILES; i++) {
+        std::string name_key = "bed_mesh_profile_" + std::to_string(i) + "_name";
+        std::string range_key = "bed_mesh_profile_" + std::to_string(i) + "_range";
+        std::string active_key = "bed_mesh_profile_" + std::to_string(i) + "_active";
+
+        auto idx = static_cast<size_t>(i);
+        char* name_buf = profile_name_bufs_[idx].data();
+        char* range_buf = profile_range_bufs_[idx].data();
+
+        // Initialize with 5-arg form: (subject, buf, prev_buf, size, initial_value)
+        lv_subject_init_string(&profile_name_subjects_[idx], name_buf, nullptr,
+                               profile_name_bufs_[idx].size(), "");
+        lv_xml_register_subject(nullptr, name_key.c_str(), &profile_name_subjects_[idx]);
+
+        lv_subject_init_string(&profile_range_subjects_[idx], range_buf, nullptr,
+                               profile_range_bufs_[idx].size(), "");
+        lv_xml_register_subject(nullptr, range_key.c_str(), &profile_range_subjects_[idx]);
+
+        lv_subject_init_int(&profile_active_subjects_[idx], 0);
+        lv_xml_register_subject(nullptr, active_key.c_str(), &profile_active_subjects_[idx]);
+    }
+
+    // Modal visibility subjects
+    UI_SUBJECT_INIT_AND_REGISTER_INT(bed_mesh_calibrate_modal_visible_, 0,
+                                     "bed_mesh_calibrate_modal_visible");
+    UI_SUBJECT_INIT_AND_REGISTER_INT(bed_mesh_calibrating_, 0, "bed_mesh_calibrating");
+    UI_SUBJECT_INIT_AND_REGISTER_INT(bed_mesh_rename_modal_visible_, 0,
+                                     "bed_mesh_rename_modal_visible");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(bed_mesh_rename_old_name_, rename_old_name_buf_, "",
+                                        "bed_mesh_rename_old_name");
+    UI_SUBJECT_INIT_AND_REGISTER_INT(bed_mesh_delete_modal_visible_, 0,
+                                     "bed_mesh_delete_modal_visible");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(bed_mesh_delete_profile_name_, delete_profile_name_buf_, "",
+                                        "bed_mesh_delete_profile_name");
+    UI_SUBJECT_INIT_AND_REGISTER_INT(bed_mesh_save_config_modal_visible_, 0,
+                                     "bed_mesh_save_config_modal_visible");
 
     subjects_initialized_ = true;
     spdlog::debug("[{}] Subjects initialized and registered", get_name());
 }
 
+// ============================================================================
+// Setup
+// ============================================================================
+
 void BedMeshPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
-    // Call base class to store panel_ and parent_screen_
     PanelBase::setup(panel, parent_screen);
 
     if (!panel_) {
@@ -64,7 +151,10 @@ void BedMeshPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
 
     spdlog::info("[{}] Setting up event handlers...", get_name());
 
-    // Use standard overlay panel setup (wires header, back button, handles responsive padding)
+    // Register all XML event callbacks
+    register_event_callbacks();
+
+    // Use standard overlay panel setup
     ui_overlay_panel_setup_standard(panel_, parent_screen_, "overlay_header", "overlay_content");
 
     lv_obj_t* overlay_content = lv_obj_find_by_name(panel_, "overlay_content");
@@ -73,16 +163,13 @@ void BedMeshPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
         return;
     }
 
-    // Find canvas widget (created by <bed_mesh> XML widget)
+    // Find canvas widget
     canvas_ = lv_obj_find_by_name(overlay_content, "bed_mesh_canvas");
     if (!canvas_) {
         spdlog::error("[{}] Canvas widget 'bed_mesh_canvas' not found in XML", get_name());
         return;
     }
     spdlog::debug("[{}] Found canvas widget - rotation controlled by touch drag", get_name());
-
-    // Setup profile dropdown
-    setup_profile_dropdown();
 
     // Setup Moonraker subscription for mesh updates
     setup_moonraker_subscription();
@@ -95,6 +182,8 @@ void BedMeshPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
                          mesh->x_count, mesh->y_count);
             on_mesh_update_internal(*mesh);
         }
+        // Update profile list
+        update_profile_list_subjects();
     } else {
         spdlog::info("[{}] No mesh data available from Moonraker", get_name());
     }
@@ -104,6 +193,127 @@ void BedMeshPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
 
     spdlog::info("[{}] Setup complete!", get_name());
 }
+
+// ============================================================================
+// Event Callback Registration
+// ============================================================================
+
+void BedMeshPanel::register_event_callbacks() {
+    // Header calibrate button
+    lv_xml_register_event_cb(nullptr, "on_bed_mesh_calibrate_clicked",
+                             on_calibrate_header_clicked_cb);
+
+    // Profile row callbacks (5 profiles)
+    lv_xml_register_event_cb(nullptr, "on_profile_0_clicked", on_profile_clicked_cb);
+    lv_xml_register_event_cb(nullptr, "on_profile_1_clicked", on_profile_clicked_cb);
+    lv_xml_register_event_cb(nullptr, "on_profile_2_clicked", on_profile_clicked_cb);
+    lv_xml_register_event_cb(nullptr, "on_profile_3_clicked", on_profile_clicked_cb);
+    lv_xml_register_event_cb(nullptr, "on_profile_4_clicked", on_profile_clicked_cb);
+
+    lv_xml_register_event_cb(nullptr, "on_profile_0_rename", on_profile_rename_cb);
+    lv_xml_register_event_cb(nullptr, "on_profile_1_rename", on_profile_rename_cb);
+    lv_xml_register_event_cb(nullptr, "on_profile_2_rename", on_profile_rename_cb);
+    lv_xml_register_event_cb(nullptr, "on_profile_3_rename", on_profile_rename_cb);
+    lv_xml_register_event_cb(nullptr, "on_profile_4_rename", on_profile_rename_cb);
+
+    lv_xml_register_event_cb(nullptr, "on_profile_0_delete", on_profile_delete_cb);
+    lv_xml_register_event_cb(nullptr, "on_profile_1_delete", on_profile_delete_cb);
+    lv_xml_register_event_cb(nullptr, "on_profile_2_delete", on_profile_delete_cb);
+    lv_xml_register_event_cb(nullptr, "on_profile_3_delete", on_profile_delete_cb);
+    lv_xml_register_event_cb(nullptr, "on_profile_4_delete", on_profile_delete_cb);
+
+    // Calibrate modal
+    lv_xml_register_event_cb(nullptr, "on_bed_mesh_calibrate_cancel", on_calibrate_cancel_cb);
+    lv_xml_register_event_cb(nullptr, "on_bed_mesh_calibrate_start", on_calibrate_start_cb);
+
+    // Rename modal
+    lv_xml_register_event_cb(nullptr, "on_bed_mesh_rename_cancel", on_rename_cancel_cb);
+    lv_xml_register_event_cb(nullptr, "on_bed_mesh_rename_confirm", on_rename_confirm_cb);
+
+    // Delete modal
+    lv_xml_register_event_cb(nullptr, "on_bed_mesh_delete_cancel", on_delete_cancel_cb);
+    lv_xml_register_event_cb(nullptr, "on_bed_mesh_delete_confirm", on_delete_confirm_cb);
+
+    // Save config modal
+    lv_xml_register_event_cb(nullptr, "on_bed_mesh_save_config_no", on_save_config_no_cb);
+    lv_xml_register_event_cb(nullptr, "on_bed_mesh_save_config_yes", on_save_config_yes_cb);
+
+    spdlog::debug("[{}] XML event callbacks registered", get_name());
+}
+
+// ============================================================================
+// Profile List Update
+// ============================================================================
+
+void BedMeshPanel::update_profile_list_subjects() {
+    if (!api_) {
+        lv_subject_set_int(&bed_mesh_profile_count_, 0);
+        return;
+    }
+
+    const auto profiles = api_->get_bed_mesh_profiles();
+    const BedMeshProfile* active_mesh = api_->get_active_bed_mesh();
+    std::string active_name = active_mesh ? active_mesh->name : "";
+
+    int count = std::min(static_cast<int>(profiles.size()), BED_MESH_MAX_PROFILES);
+    lv_subject_set_int(&bed_mesh_profile_count_, count);
+
+    for (int i = 0; i < BED_MESH_MAX_PROFILES; i++) {
+        size_t idx = static_cast<size_t>(i);
+        if (i < count) {
+            profile_names_[idx] = profiles[idx];
+
+            // Set name
+            lv_subject_copy_string(&profile_name_subjects_[idx], profiles[idx].c_str());
+
+            // Calculate and set range
+            float range = calculate_profile_range(profiles[idx]);
+            std::snprintf(profile_range_bufs_[idx].data(), 32, "%.3f", range);
+            lv_subject_copy_string(&profile_range_subjects_[idx], profile_range_bufs_[idx].data());
+
+            // Set active state
+            int is_active = (profiles[idx] == active_name) ? 1 : 0;
+            lv_subject_set_int(&profile_active_subjects_[idx], is_active);
+        } else {
+            profile_names_[idx].clear();
+            lv_subject_copy_string(&profile_name_subjects_[idx], "");
+            lv_subject_copy_string(&profile_range_subjects_[idx], "");
+            lv_subject_set_int(&profile_active_subjects_[idx], 0);
+        }
+    }
+
+    spdlog::debug("[{}] Profile list updated: {} profiles, active='{}'", get_name(), count,
+                  active_name);
+}
+
+float BedMeshPanel::calculate_profile_range(const std::string& profile_name) {
+    if (!api_)
+        return 0.0f;
+
+    // Get mesh data for this profile
+    // Note: MoonrakerAPI stores profiles in bed_mesh.profiles map
+    // For now, we'll use the active mesh if it matches, otherwise return 0
+    const BedMeshProfile* mesh = api_->get_active_bed_mesh();
+    if (!mesh || mesh->name != profile_name || mesh->probed_matrix.empty()) {
+        return 0.0f;
+    }
+
+    float min_z = std::numeric_limits<float>::max();
+    float max_z = std::numeric_limits<float>::lowest();
+
+    for (const auto& row : mesh->probed_matrix) {
+        for (float z : row) {
+            min_z = std::min(min_z, z);
+            max_z = std::max(max_z, z);
+        }
+    }
+
+    return max_z - min_z;
+}
+
+// ============================================================================
+// Mesh Data Update
+// ============================================================================
 
 void BedMeshPanel::set_mesh_data(const std::vector<std::vector<float>>& mesh_data) {
     if (!canvas_) {
@@ -119,19 +329,16 @@ void BedMeshPanel::set_mesh_data(const std::vector<std::vector<float>>& mesh_dat
     int rows = static_cast<int>(mesh_data.size());
     int cols = static_cast<int>(mesh_data[0].size());
 
-    // Convert std::vector to C-style array for widget API
     std::vector<const float*> row_pointers(static_cast<size_t>(rows));
     for (int i = 0; i < rows; i++) {
         row_pointers[static_cast<size_t>(i)] = mesh_data[static_cast<size_t>(i)].data();
     }
 
-    // Set mesh data in widget (automatically triggers redraw)
     if (!ui_bed_mesh_set_data(canvas_, row_pointers.data(), rows, cols)) {
         spdlog::error("[{}] Failed to set mesh data in widget", get_name());
         return;
     }
 
-    // Update info subjects
     update_info_subjects(mesh_data, cols, rows);
 }
 
@@ -140,64 +347,7 @@ void BedMeshPanel::redraw() {
         spdlog::warn("[{}] Cannot redraw - canvas not initialized", get_name());
         return;
     }
-
     ui_bed_mesh_redraw(canvas_);
-}
-
-void BedMeshPanel::setup_profile_dropdown() {
-    lv_obj_t* overlay_content = lv_obj_find_by_name(panel_, "overlay_content");
-    if (!overlay_content)
-        return;
-
-    profile_dropdown_ = lv_obj_find_by_name(overlay_content, "profile_dropdown");
-    if (!profile_dropdown_) {
-        spdlog::warn("[{}] Profile dropdown not found in XML", get_name());
-        return;
-    }
-
-    // Theme handles dropdown chevron symbol and MDI font automatically
-    // via LV_SYMBOL_DOWN override in lv_conf.h and helix_theme.c
-
-    if (!api_) {
-        lv_dropdown_set_options(profile_dropdown_, "(no connection)");
-        spdlog::warn("[{}] Cannot populate dropdown - MoonrakerAPI is null", get_name());
-        return;
-    }
-
-    const auto profiles = api_->get_bed_mesh_profiles();
-    if (profiles.empty()) {
-        lv_dropdown_set_options(profile_dropdown_, "(no profiles)");
-        spdlog::warn("[{}] No bed mesh profiles available", get_name());
-        return;
-    }
-
-    // Build options string (newline-separated)
-    std::string options;
-    for (size_t i = 0; i < profiles.size(); i++) {
-        if (i > 0)
-            options += "\n";
-        options += profiles[i];
-    }
-    lv_dropdown_set_options(profile_dropdown_, options.c_str());
-    spdlog::debug("[{}] Profile dropdown populated with {} profiles", get_name(), profiles.size());
-
-    // Set selected index to match active profile
-    const BedMeshProfile* active_mesh = api_->get_active_bed_mesh();
-    if (active_mesh && !active_mesh->name.empty()) {
-        for (size_t i = 0; i < profiles.size(); i++) {
-            if (profiles[i] == active_mesh->name) {
-                lv_dropdown_set_selected(profile_dropdown_, static_cast<uint32_t>(i));
-                spdlog::debug("[{}] Set dropdown to active profile: {}", get_name(),
-                              active_mesh->name);
-                break;
-            }
-        }
-    }
-
-    // Register event callback
-    lv_obj_add_event_cb(profile_dropdown_, on_profile_dropdown_changed, LV_EVENT_VALUE_CHANGED,
-                        this);
-    spdlog::debug("[{}] Profile dropdown event handler registered", get_name());
 }
 
 void BedMeshPanel::setup_moonraker_subscription() {
@@ -206,25 +356,17 @@ void BedMeshPanel::setup_moonraker_subscription() {
         return;
     }
 
-    // Note: We capture 'this' and 'api_' in the lambda. This is safe because:
-    // 1. Panels are destroyed when the app exits
-    // 2. MoonrakerClient doesn't outlive the UI
-    // If we had a proper unregister API, we'd use it in the destructor.
-    //
-    // We use get_client() to access the transport layer for subscriptions,
-    // which is appropriate since subscriptions are a transport-level concern.
     MoonrakerAPI* api = api_;
     api_->get_client().register_notify_update([this, api](nlohmann::json notification) {
-        // Check if this notification contains bed_mesh updates
         if (notification.contains("params") && notification["params"].is_array() &&
             !notification["params"].empty()) {
             const nlohmann::json& params = notification["params"][0];
             if (params.contains("bed_mesh") && params["bed_mesh"].is_object()) {
-                // Mesh data was updated - refresh UI via MoonrakerAPI
                 const BedMeshProfile* mesh = api->get_active_bed_mesh();
                 if (mesh) {
                     on_mesh_update_internal(*mesh);
                 }
+                update_profile_list_subjects();
             }
         }
     });
@@ -238,26 +380,22 @@ void BedMeshPanel::on_mesh_update_internal(const BedMeshProfile& mesh) {
     if (mesh.probed_matrix.empty()) {
         lv_subject_set_int(&bed_mesh_available_, 0);
         lv_subject_copy_string(&bed_mesh_dimensions_, "No mesh data");
-        lv_subject_copy_string(&bed_mesh_z_range_, "");
+        lv_subject_copy_string(&bed_mesh_max_label_, "Max");
+        lv_subject_copy_string(&bed_mesh_max_value_, "--");
+        lv_subject_copy_string(&bed_mesh_min_label_, "Min");
+        lv_subject_copy_string(&bed_mesh_min_value_, "--");
         lv_subject_copy_string(&bed_mesh_variance_, "");
         spdlog::warn("[{}] No mesh data available", get_name());
         return;
     }
 
-    // Update availability subject
     lv_subject_set_int(&bed_mesh_available_, 1);
-
-    // Update profile name
     lv_subject_copy_string(&bed_mesh_profile_name_, mesh.name.c_str());
-    spdlog::debug("[{}] Set profile name: {}", get_name(), mesh.name);
 
-    // Format and update dimensions
-    std::snprintf(dimensions_buf_, sizeof(dimensions_buf_), "%dx%d points", mesh.x_count,
-                  mesh.y_count);
+    std::snprintf(dimensions_buf_, sizeof(dimensions_buf_), "%dx%d", mesh.x_count, mesh.y_count);
     lv_subject_copy_string(&bed_mesh_dimensions_, dimensions_buf_);
-    spdlog::debug("[{}] Set dimensions: {}", get_name(), dimensions_buf_);
 
-    // Calculate Z range and variance, track coordinates of min/max points
+    // Calculate Z range with coordinates
     float min_z = std::numeric_limits<float>::max();
     float max_z = std::numeric_limits<float>::lowest();
     int min_row = 0, min_col = 0;
@@ -279,42 +417,37 @@ void BedMeshPanel::on_mesh_update_internal(const BedMeshProfile& mesh) {
         }
     }
 
-    // Convert mesh indices to real-world coordinates (matching bed_mesh_renderer coordinate system)
-    // X: (col - (cols-1)/2.0) * 50.0
-    // Y: ((rows-1-row) - (rows-1)/2.0) * 50.0
+    // Convert mesh indices to coordinates
     float min_x = (min_col - (mesh.x_count - 1) / 2.0f) * 50.0f;
     float min_y = ((mesh.y_count - 1 - min_row) - (mesh.y_count - 1) / 2.0f) * 50.0f;
     float max_x = (max_col - (mesh.x_count - 1) / 2.0f) * 50.0f;
     float max_y = ((mesh.y_count - 1 - max_row) - (mesh.y_count - 1) / 2.0f) * 50.0f;
 
-    // Calculate variance (range)
+    // Update max label and value
+    std::snprintf(max_label_buf_, sizeof(max_label_buf_), "Max [%.1f, %.1f]", max_x, max_y);
+    lv_subject_copy_string(&bed_mesh_max_label_, max_label_buf_);
+    std::snprintf(max_value_buf_, sizeof(max_value_buf_), "%.3f mm", max_z);
+    lv_subject_copy_string(&bed_mesh_max_value_, max_value_buf_);
+
+    // Update min label and value
+    std::snprintf(min_label_buf_, sizeof(min_label_buf_), "Min [%.1f, %.1f]", min_x, min_y);
+    lv_subject_copy_string(&bed_mesh_min_label_, min_label_buf_);
+    std::snprintf(min_value_buf_, sizeof(min_value_buf_), "%.3f mm", min_z);
+    lv_subject_copy_string(&bed_mesh_min_value_, min_value_buf_);
+
+    // Update variance (range)
     float variance = max_z - min_z;
-
-    // Format and update Z range with coordinates (Mainsail format)
-    std::snprintf(z_range_buf_, sizeof(z_range_buf_),
-                  "Max [%.1f, %.1f] = %.3f mm\nMin [%.1f, %.1f] = %.3f mm", max_x, max_y, max_z,
-                  min_x, min_y, min_z);
-    lv_subject_copy_string(&bed_mesh_z_range_, z_range_buf_);
-    spdlog::debug("[{}] Set Z range: {}", get_name(), z_range_buf_);
-
-    // Format and update variance
-    std::snprintf(variance_buf_, sizeof(variance_buf_), "Range: %.3f mm", variance);
+    std::snprintf(variance_buf_, sizeof(variance_buf_), "%.3f mm", variance);
     lv_subject_copy_string(&bed_mesh_variance_, variance_buf_);
-    spdlog::debug("[{}] Set variance: {}", get_name(), variance_buf_);
 
-    // Update renderer with new mesh data
+    // Update renderer
     set_mesh_data(mesh.probed_matrix);
 
-    // Set coordinate bounds for Mainsail-style rendering
-    // For now, use mesh bounds for both bed and mesh until we have BuildVolume access
-    // This enables correct printer coordinate positioning even without full bed size
+    // Set coordinate bounds
     if (canvas_ && (mesh.mesh_max[0] > mesh.mesh_min[0]) && (mesh.mesh_max[1] > mesh.mesh_min[1])) {
-        ui_bed_mesh_set_bounds(canvas_, mesh.mesh_min[0], mesh.mesh_max[0], // bed X bounds
-                               mesh.mesh_min[1], mesh.mesh_max[1],          // bed Y bounds
-                               mesh.mesh_min[0], mesh.mesh_max[0],          // mesh X bounds
-                               mesh.mesh_min[1], mesh.mesh_max[1]);         // mesh Y bounds
-        spdlog::debug("[{}] Set bounds: mesh X [{:.1f}, {:.1f}], Y [{:.1f}, {:.1f}]", get_name(),
-                      mesh.mesh_min[0], mesh.mesh_max[0], mesh.mesh_min[1], mesh.mesh_max[1]);
+        ui_bed_mesh_set_bounds(canvas_, mesh.mesh_min[0], mesh.mesh_max[0], mesh.mesh_min[1],
+                               mesh.mesh_max[1], mesh.mesh_min[0], mesh.mesh_max[0],
+                               mesh.mesh_min[1], mesh.mesh_max[1]);
     }
 
     spdlog::info("[{}] Mesh updated: {} ({}x{}, Z: {:.3f} to {:.3f})", get_name(), mesh.name,
@@ -323,11 +456,9 @@ void BedMeshPanel::on_mesh_update_internal(const BedMeshProfile& mesh) {
 
 void BedMeshPanel::update_info_subjects(const std::vector<std::vector<float>>& mesh_data, int cols,
                                         int rows) {
-    // Update dimensions subject
     std::snprintf(dimensions_buf_, sizeof(dimensions_buf_), "%dx%d points", cols, rows);
     lv_subject_copy_string(&bed_mesh_dimensions_, dimensions_buf_);
 
-    // Calculate Z range from mesh data
     float min_z = std::numeric_limits<float>::max();
     float max_z = std::numeric_limits<float>::lowest();
     for (const auto& row : mesh_data) {
@@ -337,9 +468,238 @@ void BedMeshPanel::update_info_subjects(const std::vector<std::vector<float>>& m
         }
     }
 
-    std::snprintf(z_range_buf_, sizeof(z_range_buf_), "Z: %.3f to %.3f mm", min_z, max_z);
-    lv_subject_copy_string(&bed_mesh_z_range_, z_range_buf_);
+    float variance = max_z - min_z;
+    std::snprintf(variance_buf_, sizeof(variance_buf_), "%.3f mm", variance);
+    lv_subject_copy_string(&bed_mesh_variance_, variance_buf_);
 }
+
+// ============================================================================
+// Profile Operations
+// ============================================================================
+
+void BedMeshPanel::load_profile(int index) {
+    if (index < 0 || index >= BED_MESH_MAX_PROFILES)
+        return;
+    if (profile_names_[static_cast<size_t>(index)].empty())
+        return;
+
+    const std::string& name = profile_names_[static_cast<size_t>(index)];
+    spdlog::info("[{}] Loading profile: {}", get_name(), name);
+
+    if (api_) {
+        std::string cmd = "BED_MESH_PROFILE LOAD=" + name;
+        api_->execute_gcode(
+            cmd, [this, name]() { spdlog::debug("[{}] Profile loaded: {}", get_name(), name); },
+            [this](const MoonrakerError& err) {
+                spdlog::error("[{}] Failed to load profile: {}", get_name(), err.message);
+                ui_toast_show(ToastSeverity::ERROR, "Failed to load profile", 3000);
+            });
+    }
+}
+
+void BedMeshPanel::delete_profile(int index) {
+    if (index < 0 || index >= BED_MESH_MAX_PROFILES)
+        return;
+    if (profile_names_[static_cast<size_t>(index)].empty())
+        return;
+
+    const std::string& name = profile_names_[static_cast<size_t>(index)];
+    show_delete_confirm_modal(name);
+}
+
+void BedMeshPanel::rename_profile(int index) {
+    if (index < 0 || index >= BED_MESH_MAX_PROFILES)
+        return;
+    if (profile_names_[static_cast<size_t>(index)].empty())
+        return;
+
+    const std::string& name = profile_names_[static_cast<size_t>(index)];
+    show_rename_modal(name);
+}
+
+void BedMeshPanel::start_calibration() {
+    show_calibrate_modal();
+}
+
+// ============================================================================
+// Modal Management
+// ============================================================================
+
+void BedMeshPanel::show_calibrate_modal() {
+    lv_subject_set_int(&bed_mesh_calibrating_, 0);
+    lv_subject_set_int(&bed_mesh_calibrate_modal_visible_, 1);
+    spdlog::debug("[{}] Showing calibrate modal", get_name());
+}
+
+void BedMeshPanel::show_rename_modal(const std::string& profile_name) {
+    pending_rename_old_ = profile_name;
+    lv_subject_copy_string(&bed_mesh_rename_old_name_, profile_name.c_str());
+    lv_subject_set_int(&bed_mesh_rename_modal_visible_, 1);
+    spdlog::debug("[{}] Showing rename modal for: {}", get_name(), profile_name);
+}
+
+void BedMeshPanel::show_delete_confirm_modal(const std::string& profile_name) {
+    pending_delete_profile_ = profile_name;
+    lv_subject_copy_string(&bed_mesh_delete_profile_name_, profile_name.c_str());
+    lv_subject_set_int(&bed_mesh_delete_modal_visible_, 1);
+    spdlog::debug("[{}] Showing delete confirm modal for: {}", get_name(), profile_name);
+}
+
+void BedMeshPanel::show_save_config_modal() {
+    lv_subject_set_int(&bed_mesh_save_config_modal_visible_, 1);
+    spdlog::debug("[{}] Showing save config modal", get_name());
+}
+
+void BedMeshPanel::hide_all_modals() {
+    lv_subject_set_int(&bed_mesh_calibrate_modal_visible_, 0);
+    lv_subject_set_int(&bed_mesh_calibrating_, 0);
+    lv_subject_set_int(&bed_mesh_rename_modal_visible_, 0);
+    lv_subject_set_int(&bed_mesh_delete_modal_visible_, 0);
+    lv_subject_set_int(&bed_mesh_save_config_modal_visible_, 0);
+}
+
+void BedMeshPanel::confirm_delete_profile() {
+    std::string name = pending_delete_profile_;
+    hide_all_modals();
+    execute_delete_profile(name);
+}
+
+void BedMeshPanel::decline_save_config() {
+    hide_all_modals();
+    pending_operation_ = PendingOperation::None;
+}
+
+void BedMeshPanel::confirm_save_config() {
+    hide_all_modals();
+    execute_save_config();
+    pending_operation_ = PendingOperation::None;
+}
+
+void BedMeshPanel::start_calibration_with_name(const std::string& profile_name) {
+    hide_all_modals();
+    execute_calibration(profile_name);
+}
+
+void BedMeshPanel::confirm_rename(const std::string& new_name) {
+    std::string old_name = pending_rename_old_;
+    hide_all_modals();
+    execute_rename_profile(old_name, new_name);
+}
+
+// ============================================================================
+// Profile Operation Implementations
+// ============================================================================
+
+void BedMeshPanel::execute_delete_profile(const std::string& name) {
+    if (!api_)
+        return;
+
+    spdlog::info("[{}] Deleting profile: {}", get_name(), name);
+
+    std::string cmd = "BED_MESH_PROFILE REMOVE=" + name;
+    api_->execute_gcode(
+        cmd,
+        [this, name]() {
+            spdlog::info("[{}] Profile deleted: {}", get_name(), name);
+            ui_toast_show(ToastSeverity::SUCCESS, "Profile deleted", 3000);
+            pending_operation_ = PendingOperation::Delete;
+            show_save_config_modal();
+        },
+        [this](const MoonrakerError& err) {
+            spdlog::error("[{}] Failed to delete profile: {}", get_name(), err.message);
+            ui_toast_show(ToastSeverity::ERROR, "Failed to delete profile", 3000);
+        });
+}
+
+void BedMeshPanel::execute_rename_profile(const std::string& old_name,
+                                          const std::string& new_name) {
+    if (!api_)
+        return;
+
+    spdlog::info("[{}] Renaming profile: {} -> {}", get_name(), old_name, new_name);
+
+    // Step 1: Load the profile
+    std::string load_cmd = "BED_MESH_PROFILE LOAD=" + old_name;
+    api_->execute_gcode(
+        load_cmd,
+        [this, old_name, new_name]() {
+            // Step 2: Save with new name
+            std::string save_cmd = "BED_MESH_PROFILE SAVE=" + new_name;
+            api_->execute_gcode(
+                save_cmd,
+                [this, old_name, new_name]() {
+                    // Step 3: Remove old name
+                    std::string remove_cmd = "BED_MESH_PROFILE REMOVE=" + old_name;
+                    api_->execute_gcode(
+                        remove_cmd,
+                        [this, old_name, new_name]() {
+                            spdlog::info("[{}] Profile renamed: {} -> {}", get_name(), old_name,
+                                         new_name);
+                            ui_toast_show(ToastSeverity::SUCCESS, "Profile renamed", 3000);
+                            pending_operation_ = PendingOperation::Rename;
+                            show_save_config_modal();
+                        },
+                        [this](const MoonrakerError& err) {
+                            spdlog::error("[{}] Failed to remove old profile: {}", get_name(),
+                                          err.message);
+                            ui_toast_show(ToastSeverity::ERROR, "Rename failed at remove step",
+                                          3000);
+                        });
+                },
+                [this](const MoonrakerError& err) {
+                    spdlog::error("[{}] Failed to save new profile: {}", get_name(), err.message);
+                    ui_toast_show(ToastSeverity::ERROR, "Rename failed at save step", 3000);
+                });
+        },
+        [this](const MoonrakerError& err) {
+            spdlog::error("[{}] Failed to load profile for rename: {}", get_name(), err.message);
+            ui_toast_show(ToastSeverity::ERROR, "Rename failed at load step", 3000);
+        });
+}
+
+void BedMeshPanel::execute_calibration(const std::string& profile_name) {
+    if (!api_)
+        return;
+
+    spdlog::info("[{}] Starting calibration for profile: {}", get_name(), profile_name);
+    lv_subject_set_int(&bed_mesh_calibrating_, 1);
+
+    std::string cmd = "BED_MESH_CALIBRATE PROFILE=" + profile_name;
+    api_->execute_gcode(
+        cmd,
+        [this, profile_name]() {
+            spdlog::info("[{}] Calibration started for: {}", get_name(), profile_name);
+            ui_toast_show(ToastSeverity::INFO, "Calibration started", 3000);
+            // Modal will close when mesh update notification arrives
+        },
+        [this](const MoonrakerError& err) {
+            spdlog::error("[{}] Failed to start calibration: {}", get_name(), err.message);
+            ui_toast_show(ToastSeverity::ERROR, "Failed to start calibration", 3000);
+            lv_subject_set_int(&bed_mesh_calibrating_, 0);
+        });
+}
+
+void BedMeshPanel::execute_save_config() {
+    if (!api_)
+        return;
+
+    spdlog::info("[{}] Saving config (will restart Klipper)", get_name());
+
+    api_->execute_gcode(
+        "SAVE_CONFIG",
+        [this]() {
+            spdlog::info("[{}] SAVE_CONFIG sent - Klipper will restart", get_name());
+            ui_toast_show(ToastSeverity::INFO, "Configuration saved - restarting", 4000);
+        },
+        [this](const MoonrakerError& err) {
+            spdlog::error("[{}] Failed to save config: {}", get_name(), err.message);
+            ui_toast_show(ToastSeverity::ERROR, "Failed to save configuration", 3000);
+        });
+}
+
+// ============================================================================
+// Static Event Callbacks
+// ============================================================================
 
 void BedMeshPanel::on_panel_delete(lv_event_t* e) {
     auto* self = static_cast<BedMeshPanel*>(lv_event_get_user_data(e));
@@ -347,45 +707,121 @@ void BedMeshPanel::on_panel_delete(lv_event_t* e) {
         return;
 
     spdlog::debug("[{}] Panel delete event - cleaning up resources", self->get_name());
-
-    // Clear widget pointers (owned by LVGL)
     self->canvas_ = nullptr;
-    self->profile_dropdown_ = nullptr;
+    self->calibrate_name_input_ = nullptr;
+    self->rename_name_input_ = nullptr;
 }
 
-void BedMeshPanel::on_profile_dropdown_changed(lv_event_t* e) {
-    auto* self = static_cast<BedMeshPanel*>(lv_event_get_user_data(e));
-    if (!self)
-        return;
+// Helper to extract profile index from callback name
+static int get_profile_index_from_event(lv_event_t* e) {
+    // The callback name contains the index (e.g., "on_profile_2_clicked")
+    // We use user_data to pass the panel, not the index
+    // Instead, look at the target object's name
+    auto* target = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
+    if (!target)
+        return -1;
 
-    lv_obj_t* dropdown = static_cast<lv_obj_t*>(lv_event_get_target(e));
+    // Find parent row and extract index from its name
+    lv_obj_t* parent = lv_obj_get_parent(target);
+    while (parent) {
+        const char* name = lv_obj_get_name(parent);
+        if (name && std::strncmp(name, "profile_row_", 12) == 0) {
+            return name[12] - '0'; // Extract digit
+        }
+        parent = lv_obj_get_parent(parent);
+    }
+    return -1;
+}
 
-    // Get selected profile name
-    char buf[64];
-    lv_dropdown_get_selected_str(dropdown, buf, sizeof(buf));
-
-    spdlog::info("[{}] Profile selected: {}", self->get_name(), buf);
-
-    // Load the selected profile via G-code command using MoonrakerAPI
-    if (self->api_) {
-        std::string cmd = "BED_MESH_PROFILE LOAD=" + std::string(buf);
-        self->api_->execute_gcode(
-            cmd,
-            [self, cmd]() {
-                spdlog::debug("[{}] G-code sent: {}", self->get_name(), cmd);
-                // UI will update automatically via Moonraker notification callback
-            },
-            [self](const MoonrakerError& err) {
-                spdlog::error("[{}] Failed to load profile: {}", self->get_name(), err.message);
-            });
-    } else {
-        spdlog::warn("[{}] Cannot load profile - MoonrakerAPI is null", self->get_name());
+static void on_profile_clicked_cb(lv_event_t* e) {
+    int index = get_profile_index_from_event(e);
+    if (index >= 0) {
+        get_global_bed_mesh_panel().load_profile(index);
     }
 }
 
+static void on_profile_rename_cb(lv_event_t* e) {
+    int index = get_profile_index_from_event(e);
+    if (index >= 0) {
+        get_global_bed_mesh_panel().rename_profile(index);
+    }
+}
+
+static void on_profile_delete_cb(lv_event_t* e) {
+    int index = get_profile_index_from_event(e);
+    if (index >= 0) {
+        get_global_bed_mesh_panel().delete_profile(index);
+    }
+}
+
+static void on_calibrate_header_clicked_cb(lv_event_t* /*e*/) {
+    get_global_bed_mesh_panel().start_calibration();
+}
+
+static void on_calibrate_cancel_cb(lv_event_t* /*e*/) {
+    get_global_bed_mesh_panel().hide_all_modals();
+}
+
+static void on_calibrate_start_cb(lv_event_t* /*e*/) {
+    // Find the textarea
+    lv_obj_t* input = lv_obj_find_by_name(lv_layer_top(), "calibrate_profile_name_input");
+    if (!input) {
+        // Try from parent screen
+        input = lv_obj_find_by_name(lv_screen_active(), "calibrate_profile_name_input");
+    }
+
+    std::string profile_name = "default";
+    if (input) {
+        const char* text = lv_textarea_get_text(input);
+        if (text && std::strlen(text) > 0) {
+            profile_name = text;
+        }
+    }
+
+    get_global_bed_mesh_panel().start_calibration_with_name(profile_name);
+}
+
+static void on_rename_cancel_cb(lv_event_t* /*e*/) {
+    get_global_bed_mesh_panel().hide_all_modals();
+}
+
+static void on_rename_confirm_cb(lv_event_t* /*e*/) {
+    // Get the new name from the input field
+    lv_obj_t* input = lv_obj_find_by_name(lv_layer_top(), "rename_new_name_input");
+    if (!input) {
+        input = lv_obj_find_by_name(lv_screen_active(), "rename_new_name_input");
+    }
+
+    if (input) {
+        const char* text = lv_textarea_get_text(input);
+        if (text && std::strlen(text) > 0) {
+            get_global_bed_mesh_panel().confirm_rename(std::string(text));
+        }
+    }
+}
+
+static void on_delete_cancel_cb(lv_event_t* /*e*/) {
+    get_global_bed_mesh_panel().hide_all_modals();
+}
+
+static void on_delete_confirm_cb(lv_event_t* /*e*/) {
+    get_global_bed_mesh_panel().confirm_delete_profile();
+}
+
+static void on_save_config_no_cb(lv_event_t* /*e*/) {
+    get_global_bed_mesh_panel().decline_save_config();
+}
+
+static void on_save_config_yes_cb(lv_event_t* /*e*/) {
+    get_global_bed_mesh_panel().confirm_save_config();
+}
+
+// ============================================================================
+// Global Instance
+// ============================================================================
+
 BedMeshPanel& get_global_bed_mesh_panel() {
     if (!g_bed_mesh_panel) {
-        // Create with PrinterState and MoonrakerAPI from app globals
         g_bed_mesh_panel = std::make_unique<BedMeshPanel>(get_printer_state(), get_moonraker_api());
     }
     return *g_bed_mesh_panel;

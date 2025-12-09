@@ -148,6 +148,12 @@ void register_xml_components() {
     // Calibration panels (overlays launched from settings)
     lv_xml_register_component_from_file("A:ui_xml/calibration_zoffset_panel.xml");
     lv_xml_register_component_from_file("A:ui_xml/calibration_pid_panel.xml");
+
+    // Bed mesh modals (must be registered before bed_mesh_panel which uses them)
+    lv_xml_register_component_from_file("A:ui_xml/bed_mesh_calibrate_modal.xml");
+    lv_xml_register_component_from_file("A:ui_xml/bed_mesh_rename_modal.xml");
+    lv_xml_register_component_from_file("A:ui_xml/bed_mesh_delete_confirm_modal.xml");
+    lv_xml_register_component_from_file("A:ui_xml/bed_mesh_save_config_modal.xml");
     lv_xml_register_component_from_file("A:ui_xml/bed_mesh_panel.xml");
 
     // Settings overlay panels

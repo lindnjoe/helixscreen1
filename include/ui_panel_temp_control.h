@@ -198,7 +198,7 @@ class TempControlPanel {
     // Background temperature history buffers
     // Store temperature readings from app start so graphs show data immediately
     // ─────────────────────────────────────────────────────────────────────────
-    static constexpr int TEMP_HISTORY_SIZE = 300; // Match graph point count (5 min @ 1/sec)
+    static constexpr int TEMP_HISTORY_SIZE = UI_TEMP_GRAPH_DEFAULT_POINTS; // Match graph point count
 
     // Circular buffer storage (temp values + timestamps)
     struct TempSample {

@@ -426,9 +426,9 @@ void TempControlPanel::update_x_axis_labels(std::array<lv_obj_t*, X_AXIS_LABEL_C
     // Calculate actual visible duration (real elapsed time, not assumed intervals)
     int64_t visible_duration_ms = now_ms - start_time_ms;
 
-    // Clamp to reasonable bounds (at least 30 seconds, at most 5 minutes = 300000ms)
+    // Clamp to reasonable bounds (at least 30 seconds, at most display period)
     visible_duration_ms = std::max(visible_duration_ms, static_cast<int64_t>(30000));
-    visible_duration_ms = std::min(visible_duration_ms, static_cast<int64_t>(300000));
+    visible_duration_ms = std::min(visible_duration_ms, static_cast<int64_t>(UI_TEMP_GRAPH_DISPLAY_MS));
 
     // Oldest visible time (leftmost point)
     int64_t oldest_ms = now_ms - visible_duration_ms;
@@ -437,6 +437,9 @@ void TempControlPanel::update_x_axis_labels(std::array<lv_obj_t*, X_AXIS_LABEL_C
     int64_t label_interval_ms = visible_duration_ms / (X_AXIS_LABEL_COUNT - 1);
 
     // Update label text (visibility controlled reactively by bind_flag_if_lt in XML)
+    // Track previous label to avoid showing duplicates
+    char prev_label[8] = "";
+
     for (size_t i = 0; i < X_AXIS_LABEL_COUNT; i++) {
         if (!labels[i])
             continue;
@@ -447,7 +450,15 @@ void TempControlPanel::update_x_axis_labels(std::array<lv_obj_t*, X_AXIS_LABEL_C
         struct tm* tm_info = localtime(&label_time);
         char buf[8];
         strftime(buf, sizeof(buf), "%H:%M", tm_info);
-        lv_label_set_text(labels[i], buf);
+
+        // Skip duplicate labels (same HH:MM as previous)
+        if (strcmp(buf, prev_label) == 0) {
+            lv_label_set_text(labels[i], "");
+        } else {
+            lv_label_set_text(labels[i], buf);
+            strncpy(prev_label, buf, sizeof(prev_label) - 1);
+            prev_label[sizeof(prev_label) - 1] = '\0';
+        }
     }
 }
 

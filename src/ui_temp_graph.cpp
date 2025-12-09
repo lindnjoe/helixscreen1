@@ -196,19 +196,24 @@ static void draw_task_cb(lv_event_t* e) {
 
     // Draw rectangle from the lower line point down to chart bottom
     // This completes the gradient fill to the bottom of the chart
+    // Use consistent gradient from chart top to bottom to avoid banding artifacts
     lv_draw_rect_dsc_t rect_dsc;
     lv_draw_rect_dsc_init(&rect_dsc);
     rect_dsc.bg_grad.dir = LV_GRAD_DIR_VER;
     rect_dsc.bg_grad.stops[0].color = ser_color;
-    rect_dsc.bg_grad.stops[0].opa = opa_lower;
+    rect_dsc.bg_grad.stops[0].opa = top_opa;  // Use top_opa for consistent gradient across all segments
     rect_dsc.bg_grad.stops[0].frac = 0;
     rect_dsc.bg_grad.stops[1].color = ser_color;
     rect_dsc.bg_grad.stops[1].opa = bottom_opa;
     rect_dsc.bg_grad.stops[1].frac = 255;
 
     lv_area_t rect_area;
-    rect_area.x1 = static_cast<int32_t>(line_dsc->p1.x);
-    rect_area.x2 = static_cast<int32_t>(line_dsc->p2.x) - 1;
+    rect_area.x1 = static_cast<int32_t>(LV_MIN(line_dsc->p1.x, line_dsc->p2.x));
+    rect_area.x2 = static_cast<int32_t>(LV_MAX(line_dsc->p1.x, line_dsc->p2.x));
+    // Ensure minimum width of 1 pixel for narrow segments
+    if (rect_area.x2 <= rect_area.x1) {
+        rect_area.x2 = rect_area.x1 + 1;
+    }
     rect_area.y1 = static_cast<int32_t>(LV_MAX(line_dsc->p1.y, line_dsc->p2.y));
     rect_area.y2 = static_cast<int32_t>(coords.y2);
 
@@ -272,6 +277,14 @@ ui_temp_graph_t* ui_temp_graph_create(lv_obj_t* parent) {
     // Hide point indicators (circles at each data point)
     lv_obj_set_style_width(graph->chart, 0, LV_PART_INDICATOR);
     lv_obj_set_style_height(graph->chart, 0, LV_PART_INDICATOR);
+
+    // Style target temperature cursor (dashed line, thinner than series)
+    // Note: cursor color is set per-cursor in ui_temp_graph_add_series()
+    lv_obj_set_style_line_width(graph->chart, 1, LV_PART_CURSOR);       // Thinner than series (2px)
+    lv_obj_set_style_line_dash_width(graph->chart, 6, LV_PART_CURSOR);  // Dash length
+    lv_obj_set_style_line_dash_gap(graph->chart, 4, LV_PART_CURSOR);    // Gap between dashes
+    lv_obj_set_style_width(graph->chart, 0, LV_PART_CURSOR);            // No point marker
+    lv_obj_set_style_height(graph->chart, 0, LV_PART_CURSOR);           // No point marker
 
     // Configure division line count
     lv_chart_set_div_line_count(graph->chart, 5, 10); // 5 horizontal, 10 vertical division lines
@@ -368,12 +381,12 @@ int ui_temp_graph_add_series(ui_temp_graph_t* graph, const char* name, lv_color_
     meta->gradient_bottom_opa = UI_TEMP_GRAPH_GRADIENT_BOTTOM_OPA;
     meta->gradient_top_opa = UI_TEMP_GRAPH_GRADIENT_TOP_OPA;
 
-    // Create target temperature cursor (horizontal line, initially hidden)
+    // Create target temperature cursor (horizontal dashed line, initially hidden)
     // Note: We don't use lv_chart_set_cursor_point because that binds the cursor
     // to a data point which scrolls. Instead we use lv_chart_set_cursor_pos for
     // a fixed Y position representing the target temperature.
-    // Use muted color (50% opacity) so target line is visually distinct from actual data
-    lv_color_t cursor_color = mute_color(color, LV_OPA_20); // Very subtle target line
+    // Use moderately muted color so target line is visible but distinct from actual data
+    lv_color_t cursor_color = mute_color(color, LV_OPA_50); // 50% opacity for visibility
     meta->target_cursor = lv_chart_add_cursor(graph->chart, cursor_color, LV_DIR_HOR);
 
     graph->series_count++;
