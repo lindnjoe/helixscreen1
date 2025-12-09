@@ -358,10 +358,16 @@ The path canvas widget receives `ams_path_error_segment` (a PathSegment value) a
 5. ✅ Renamed "Home" → "Reset" (universal terminology for HH/AFC)
 6. ✅ Added 31 unit tests for AFC backend
 
-### Phase 7: Polish (REMAINING)
-1. [ ] Live testing with real BoxTurtle at 192.168.1.112
-2. [ ] Responsive sizing verification for different screens
-3. [ ] Update `AMS_IMPLEMENTATION_PLAN.md` with final status
+### Phase 7: Polish ✅ COMPLETE
+1. ✅ Responsive sizing verified across small/medium/large screens
+2. Live testing with real BoxTurtle tracked in `AMS_IMPLEMENTATION_PLAN.md`
+
+---
+
+## Status: COMPLETE
+
+All phases of filament path visualization are complete. This plan is archived.
+Live hardware testing is tracked in `AMS_IMPLEMENTATION_PLAN.md`.
 
 ---
 

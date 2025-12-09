@@ -171,11 +171,17 @@ class AmsPanel : public PanelBase {
     void show_context_menu(int slot_index, lv_obj_t* near_widget);
     void hide_context_menu();
 
+    // === Bypass Button State ===
+
+    void update_bypass_button_visibility();
+    void update_bypass_button_state();
+
     // === Action Handlers (public for XML event callbacks) ===
   public:
     void handle_slot_tap(int slot_index);
     void handle_unload();
     void handle_reset();
+    void handle_bypass_toggle();
 
   private:
     void handle_context_load();

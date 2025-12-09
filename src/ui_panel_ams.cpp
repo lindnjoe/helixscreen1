@@ -44,6 +44,13 @@ static void on_reset_clicked_xml(lv_event_t* e) {
     }
 }
 
+static void on_bypass_clicked_xml(lv_event_t* e) {
+    LV_UNUSED(e);
+    if (g_ams_panel_instance) {
+        g_ams_panel_instance->handle_bypass_toggle();
+    }
+}
+
 // ============================================================================
 // Construction
 // ============================================================================
@@ -229,9 +236,13 @@ void AmsPanel::setup_action_buttons() {
     // These callbacks are referenced in ams_panel.xml via <event_cb> elements
     lv_xml_register_event_cb(nullptr, "ams_unload_clicked_cb", on_unload_clicked_xml);
     lv_xml_register_event_cb(nullptr, "ams_reset_clicked_cb", on_reset_clicked_xml);
+    lv_xml_register_event_cb(nullptr, "ams_bypass_clicked_cb", on_bypass_clicked_xml);
 
     // Store panel pointer for static callbacks to access
     g_ams_panel_instance = this;
+
+    // Show/hide bypass button based on backend support
+    update_bypass_button_visibility();
 
     spdlog::debug("[{}] Action button callbacks registered", get_name());
 }
@@ -481,7 +492,30 @@ void AmsPanel::update_current_loaded_display(int gate_index) {
     bool filament_loaded =
         lv_subject_get_int(AmsState::instance().get_filament_loaded_subject()) != 0;
 
-    if (gate_index >= 0 && filament_loaded && backend) {
+    // Check for bypass mode (gate_index == -2)
+    if (gate_index == -2 && backend && backend->is_bypass_active()) {
+        // Bypass mode active - show bypass state
+        if (current_swatch) {
+            lv_obj_set_style_bg_color(current_swatch, lv_color_hex(0x888888), 0);
+            lv_obj_set_style_border_color(current_swatch, lv_color_hex(0x888888), 0);
+        }
+
+        if (current_material) {
+            lv_label_set_text(current_material, "External");
+        }
+
+        if (current_slot_label) {
+            lv_label_set_text(current_slot_label, "Bypass");
+        }
+
+        // Update bypass button state
+        update_bypass_button_state();
+
+        // Update path canvas bypass state
+        if (path_canvas_) {
+            ui_filament_path_canvas_set_bypass_active(path_canvas_, true);
+        }
+    } else if (gate_index >= 0 && filament_loaded && backend) {
         // Filament is loaded - show the loaded gate info
         GateInfo gate_info = backend->get_gate_info(gate_index);
 
@@ -507,6 +541,11 @@ void AmsPanel::update_current_loaded_display(int gate_index) {
             snprintf(buf, sizeof(buf), "Slot %d", gate_index + 1);
             lv_label_set_text(current_slot_label, buf);
         }
+
+        // Clear bypass state on path canvas
+        if (path_canvas_) {
+            ui_filament_path_canvas_set_bypass_active(path_canvas_, false);
+        }
     } else {
         // No filament loaded - show empty state
         if (current_swatch) {
@@ -520,6 +559,11 @@ void AmsPanel::update_current_loaded_display(int gate_index) {
 
         if (current_slot_label) {
             lv_label_set_text(current_slot_label, "None");
+        }
+
+        // Clear bypass state on path canvas
+        if (path_canvas_) {
+            ui_filament_path_canvas_set_bypass_active(path_canvas_, false);
         }
     }
 }
@@ -690,6 +734,93 @@ void AmsPanel::handle_reset() {
     AmsError error = backend->reset();
     if (error.result != AmsResult::SUCCESS) {
         NOTIFY_ERROR("Reset failed: {}", error.user_msg);
+    }
+}
+
+void AmsPanel::handle_bypass_toggle() {
+    spdlog::info("[{}] Bypass toggle requested", get_name());
+
+    AmsBackend* backend = AmsState::instance().get_backend();
+    if (!backend) {
+        NOTIFY_WARNING("AMS not available");
+        return;
+    }
+
+    // Check current bypass state and toggle
+    bool currently_bypassed = backend->is_bypass_active();
+    AmsError error;
+
+    if (currently_bypassed) {
+        error = backend->disable_bypass();
+        if (error.result == AmsResult::SUCCESS) {
+            NOTIFY_INFO("Bypass disabled");
+        }
+    } else {
+        error = backend->enable_bypass();
+        if (error.result == AmsResult::SUCCESS) {
+            NOTIFY_INFO("Bypass enabled");
+        }
+    }
+
+    if (error.result != AmsResult::SUCCESS) {
+        NOTIFY_ERROR("Bypass toggle failed: {}", error.user_msg);
+    }
+
+    // Update button label
+    update_bypass_button_state();
+}
+
+void AmsPanel::update_bypass_button_visibility() {
+    if (!panel_) {
+        spdlog::debug("[{}] update_bypass_button_visibility: panel_ is null", get_name());
+        return;
+    }
+
+    lv_obj_t* btn_bypass = lv_obj_find_by_name(panel_, "btn_bypass");
+    if (!btn_bypass) {
+        spdlog::debug("[{}] update_bypass_button_visibility: btn_bypass not found", get_name());
+        return;
+    }
+
+    AmsBackend* backend = AmsState::instance().get_backend();
+    if (backend) {
+        AmsSystemInfo info = backend->get_system_info();
+        spdlog::debug("[{}] update_bypass_button_visibility: supports_bypass={}", get_name(),
+                      info.supports_bypass);
+        if (info.supports_bypass) {
+            lv_obj_remove_flag(btn_bypass, LV_OBJ_FLAG_HIDDEN);
+            // Force parent layout update to make button visible
+            lv_obj_t* parent = lv_obj_get_parent(btn_bypass);
+            if (parent) {
+                lv_obj_invalidate(parent);
+                lv_obj_update_layout(parent);
+            }
+            update_bypass_button_state();
+            spdlog::info("[{}] Bypass button shown (backend supports bypass)", get_name());
+        } else {
+            lv_obj_add_flag(btn_bypass, LV_OBJ_FLAG_HIDDEN);
+        }
+    } else {
+        spdlog::debug("[{}] update_bypass_button_visibility: no backend", get_name());
+        lv_obj_add_flag(btn_bypass, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
+void AmsPanel::update_bypass_button_state() {
+    if (!panel_) {
+        return;
+    }
+
+    lv_obj_t* bypass_label = lv_obj_find_by_name(panel_, "bypass_label");
+    if (!bypass_label) {
+        return;
+    }
+
+    AmsBackend* backend = AmsState::instance().get_backend();
+    if (backend && backend->is_bypass_active()) {
+        lv_label_set_text(bypass_label, "Disable Bypass");
+    } else {
+        lv_label_set_text(bypass_label, "Enable Bypass");
     }
 }
 

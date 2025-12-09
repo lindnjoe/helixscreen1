@@ -41,6 +41,11 @@ static constexpr float TOOLHEAD_Y_RATIO = 0.54f; // Toolhead sensor
 static constexpr float NOZZLE_Y_RATIO =
     0.75f; // Nozzle/extruder center (needs more room for larger extruder)
 
+// Bypass entry point position (right side of widget, below spool area)
+static constexpr float BYPASS_X_RATIO = 0.85f;       // Right side for bypass entry
+static constexpr float BYPASS_ENTRY_Y_RATIO = 0.32f; // Below spools, at hub level
+static constexpr float BYPASS_MERGE_Y_RATIO = 0.42f; // Where bypass joins main path (at OUTPUT)
+
 // Line widths (scaled by space_xs for responsiveness)
 static constexpr int LINE_WIDTH_IDLE_BASE = 2;
 static constexpr int LINE_WIDTH_ACTIVE_BASE = 4;
@@ -82,9 +87,15 @@ struct FilamentPathData {
     bool error_pulse_active = false;         // Error pulse animation running
     lv_opa_t error_pulse_opa = LV_OPA_COVER; // Current error segment opacity
 
+    // Bypass mode state
+    bool bypass_active = false;       // External spool bypass mode
+    uint32_t bypass_color = 0x888888; // Default gray for bypass filament
+
     // Callbacks
     filament_path_gate_cb_t gate_callback = nullptr;
     void* gate_user_data = nullptr;
+    filament_path_bypass_cb_t bypass_callback = nullptr;
+    void* bypass_user_data = nullptr;
 
     // Theme-derived colors (cached for performance)
     lv_color_t color_idle;
@@ -155,11 +166,14 @@ static int32_t get_gate_x(int gate_index, int gate_count, int32_t width) {
     if (gate_count <= 1)
         return width / 2;
 
-    // Distribute gates evenly with margin
-    int32_t margin = width / 8;
-    int32_t usable_width = width - 2 * margin;
-    int32_t spacing = usable_width / (gate_count - 1);
-    return margin + gate_index * spacing;
+    // Match the slot_grid layout: flex_grow=1 slots in a container inset by card_padding
+    // slot_grid is inside ams_unit_card with style_pad_all="#space_sm" (8px)
+    // Gate centers align with slot centers: card_padding + (2*i + 1) * effective_width /
+    // (2*gate_count)
+    constexpr int32_t card_padding = 8; // space_sm
+    int32_t effective_width = width - 2 * card_padding;
+    int32_t segment_width = effective_width / gate_count;
+    return card_padding + segment_width / 2 + gate_index * segment_width;
 }
 
 // Check if a segment should be drawn as "active" (filament present at or past it)
@@ -811,6 +825,51 @@ static void filament_path_draw_cb(lv_event_t* e) {
     }
 
     // ========================================================================
+    // Draw bypass entry and path (right side, below spool area, direct to output)
+    // ========================================================================
+    {
+        int32_t bypass_x = x_off + (int32_t)(width * BYPASS_X_RATIO);
+        int32_t bypass_entry_y = y_off + (int32_t)(height * BYPASS_ENTRY_Y_RATIO);
+        int32_t bypass_merge_y = y_off + (int32_t)(height * BYPASS_MERGE_Y_RATIO);
+
+        // Determine bypass colors
+        lv_color_t bypass_line_color = idle_color;
+        int32_t bypass_line_width = line_idle;
+
+        if (data->bypass_active) {
+            bypass_line_color = lv_color_hex(data->bypass_color);
+            bypass_line_width = line_active;
+        }
+
+        // Draw bypass entry point (below spool area)
+        draw_sensor_dot(layer, bypass_x, bypass_entry_y, bypass_line_color, data->bypass_active,
+                        sensor_r + 2);
+
+        // Draw vertical line from bypass entry down to merge level
+        draw_vertical_line(layer, bypass_x, bypass_entry_y + sensor_r + 2, bypass_merge_y,
+                           bypass_line_color, bypass_line_width);
+
+        // Draw horizontal line from bypass to center (joins at output_y level)
+        draw_line(layer, bypass_x, bypass_merge_y, center_x, bypass_merge_y, bypass_line_color,
+                  bypass_line_width);
+
+        // Draw "Bypass" label above entry point
+        if (data->label_font) {
+            lv_draw_label_dsc_t label_dsc;
+            lv_draw_label_dsc_init(&label_dsc);
+            label_dsc.color = data->bypass_active ? bypass_line_color : data->color_text;
+            label_dsc.font = data->label_font;
+            label_dsc.align = LV_TEXT_ALIGN_CENTER;
+            label_dsc.text = "Bypass";
+
+            int32_t font_h = lv_font_get_line_height(data->label_font);
+            lv_area_t label_area = {bypass_x - 40, bypass_entry_y - font_h - 4, bypass_x + 40,
+                                    bypass_entry_y - 4};
+            lv_draw_label(layer, &label_dsc, &label_area);
+        }
+    }
+
+    // ========================================================================
     // Draw hub/selector section
     // ========================================================================
     {
@@ -842,9 +901,17 @@ static void filament_path_draw_cb(lv_event_t* e) {
         lv_color_t output_color = idle_color;
         int32_t output_width = line_idle;
 
-        if (data->active_gate >= 0 && is_segment_active(PathSegment::OUTPUT, fil_seg)) {
+        // Bypass or normal gate active?
+        bool output_active = false;
+        if (data->bypass_active) {
+            // Bypass active - use bypass color for output path
+            output_color = lv_color_hex(data->bypass_color);
+            output_width = line_active;
+            output_active = true;
+        } else if (data->active_gate >= 0 && is_segment_active(PathSegment::OUTPUT, fil_seg)) {
             output_color = active_color;
             output_width = line_active;
+            output_active = true;
             if (has_error && error_seg == PathSegment::OUTPUT) {
                 output_color = error_color;
             }
@@ -855,8 +922,6 @@ static void filament_path_draw_cb(lv_event_t* e) {
         draw_vertical_line(layer, center_x, hub_bottom, output_y - sensor_r, output_color,
                            output_width);
 
-        bool output_active =
-            data->active_gate >= 0 && is_segment_active(PathSegment::OUTPUT, fil_seg);
         draw_sensor_dot(layer, center_x, output_y, output_active ? output_color : idle_color,
                         output_active, sensor_r);
     }
@@ -868,9 +933,17 @@ static void filament_path_draw_cb(lv_event_t* e) {
         lv_color_t toolhead_color = idle_color;
         int32_t toolhead_width = line_idle;
 
-        if (data->active_gate >= 0 && is_segment_active(PathSegment::TOOLHEAD, fil_seg)) {
+        // Bypass or normal gate active?
+        bool toolhead_active = false;
+        if (data->bypass_active) {
+            // Bypass active - use bypass color for toolhead path
+            toolhead_color = lv_color_hex(data->bypass_color);
+            toolhead_width = line_active;
+            toolhead_active = true;
+        } else if (data->active_gate >= 0 && is_segment_active(PathSegment::TOOLHEAD, fil_seg)) {
             toolhead_color = active_color;
             toolhead_width = line_active;
+            toolhead_active = true;
             if (has_error && error_seg == PathSegment::TOOLHEAD) {
                 toolhead_color = error_color;
             }
@@ -881,8 +954,6 @@ static void filament_path_draw_cb(lv_event_t* e) {
                            toolhead_color, toolhead_width);
 
         // Toolhead sensor
-        bool toolhead_active =
-            data->active_gate >= 0 && is_segment_active(PathSegment::TOOLHEAD, fil_seg);
         draw_sensor_dot(layer, center_x, toolhead_y, toolhead_active ? toolhead_color : idle_color,
                         toolhead_active, sensor_r);
     }
@@ -893,7 +964,11 @@ static void filament_path_draw_cb(lv_event_t* e) {
     {
         lv_color_t noz_color = nozzle_color;
 
-        if (data->active_gate >= 0 && is_segment_active(PathSegment::NOZZLE, fil_seg)) {
+        // Bypass or normal gate active?
+        if (data->bypass_active) {
+            // Bypass active - use bypass color for nozzle
+            noz_color = lv_color_hex(data->bypass_color);
+        } else if (data->active_gate >= 0 && is_segment_active(PathSegment::NOZZLE, fil_seg)) {
             noz_color = active_color;
             if (has_error && error_seg == PathSegment::NOZZLE) {
                 noz_color = error_color;
@@ -982,7 +1057,7 @@ static void filament_path_draw_cb(lv_event_t* e) {
 static void filament_path_click_cb(lv_event_t* e) {
     lv_obj_t* obj = lv_event_get_target_obj(e);
     FilamentPathData* data = get_data(obj);
-    if (!data || !data->gate_callback)
+    if (!data)
         return;
 
     lv_point_t point;
@@ -1004,13 +1079,25 @@ static void filament_path_click_cb(lv_event_t* e) {
     if (point.y < entry_y - 10 || point.y > prep_y + 20)
         return; // Click not in entry area
 
-    // Find which gate was clicked
-    for (int i = 0; i < data->gate_count; i++) {
-        int32_t gate_x = x_off + get_gate_x(i, data->gate_count, width);
-        if (abs(point.x - gate_x) < 20) {
-            spdlog::debug("[FilamentPath] Gate {} clicked", i);
-            data->gate_callback(i, data->gate_user_data);
+    // Check if bypass entry was clicked (right side)
+    if (data->bypass_callback) {
+        int32_t bypass_x = x_off + (int32_t)(width * BYPASS_X_RATIO);
+        if (abs(point.x - bypass_x) < 25) {
+            spdlog::debug("[FilamentPath] Bypass entry clicked");
+            data->bypass_callback(data->bypass_user_data);
             return;
+        }
+    }
+
+    // Find which gate was clicked
+    if (data->gate_callback) {
+        for (int i = 0; i < data->gate_count; i++) {
+            int32_t gate_x = x_off + get_gate_x(i, data->gate_count, width);
+            if (abs(point.x - gate_x) < 20) {
+                spdlog::debug("[FilamentPath] Gate {} clicked", i);
+                data->gate_callback(i, data->gate_user_data);
+                return;
+            }
         }
     }
 }
@@ -1107,6 +1194,9 @@ static void filament_path_xml_apply(lv_xml_parser_state_t* state, const char** a
             needs_redraw = true;
         } else if (strcmp(name, "filament_color") == 0) {
             data->filament_color = strtoul(value, nullptr, 0);
+            needs_redraw = true;
+        } else if (strcmp(name, "bypass_active") == 0) {
+            data->bypass_active = (strcmp(value, "true") == 0 || strcmp(value, "1") == 0);
             needs_redraw = true;
         }
     }
@@ -1287,4 +1377,25 @@ void ui_filament_path_canvas_stop_animations(lv_obj_t* obj) {
     stop_segment_animation(obj, data);
     stop_error_pulse(obj, data);
     lv_obj_invalidate(obj);
+}
+
+void ui_filament_path_canvas_set_bypass_active(lv_obj_t* obj, bool active) {
+    auto* data = get_data(obj);
+    if (!data)
+        return;
+
+    if (data->bypass_active != active) {
+        data->bypass_active = active;
+        spdlog::debug("[FilamentPath] Bypass mode: {}", active ? "active" : "inactive");
+        lv_obj_invalidate(obj);
+    }
+}
+
+void ui_filament_path_canvas_set_bypass_callback(lv_obj_t* obj, filament_path_bypass_cb_t cb,
+                                                 void* user_data) {
+    auto* data = get_data(obj);
+    if (data) {
+        data->bypass_callback = cb;
+        data->bypass_user_data = user_data;
+    }
 }

@@ -3,7 +3,7 @@
 **Feature Branch:** `feature/ams`
 **Repository:** `/Users/pbrown/code/helixscreen-ams`
 **Started:** 2025-12-07
-**Last Updated:** 2025-12-09 (Phase 6: Real AFC Backend Integration Complete)
+**Last Updated:** 2025-12-09 (Completed Phase 4.6: External Spool Bypass Support)
 
 ---
 
@@ -441,6 +441,64 @@ printer.mmu.endless_spool_groups
 - [x] Build succeeds
 - [x] All 31 AFC unit tests pass
 - [ ] Live testing with real BoxTurtle at 192.168.1.112
+
+---
+
+### ✅ Phase 4.6: External Spool Bypass Support (COMPLETE)
+
+**Goal:** Add UI and backend support for external spool bypass mode
+
+**Background:**
+Both Happy Hare and AFC support bypass mode for feeding filament from an external spool,
+bypassing the MMU/hub entirely. This is used for single-color prints, testing, or when
+the AMS runs out of a color.
+
+- **Happy Hare**: `printer.mmu.gate = -2` indicates bypass mode
+- **AFC**: `printer.AFC.bypass_state` boolean, virtual or hardware bypass sensor
+
+**Part A: Backend Fixes**
+- [x] AFC backend: `supports_bypass = true`
+- [x] AFC backend: Subscribe to `AFC` object, parse `bypass_state`
+- [x] AFC backend: Set `current_gate = -2` when `bypass_state == true`
+- [x] Added `bypass_active_` member to AFC backend
+- [x] Added `enable_bypass()` / `disable_bypass()` / `is_bypass_active()` to all backends
+
+**Part B: State Layer**
+- [x] Added `ams_bypass_active` subject (int, 0/1) to AmsState
+- [x] Sync from `current_gate == -2` in `sync_from_backend()`
+
+**Part C: Path Canvas Bypass Visualization**
+- [x] Added `set_bypass_active(bool)` and `set_bypass_callback()` APIs
+- [x] Draw bypass entry point on right side of canvas with "Bypass" label
+- [x] Draw direct bypass→OUTPUT→toolhead→nozzle path
+- [x] Highlight bypass path when active
+
+**Part D: UI Panel Integration**
+- [x] Added "Enable Bypass" button to `ams_panel.xml`
+- [x] Button visibility controlled by `supports_bypass` capability
+- [x] Button text toggles between "Enable Bypass" / "Disable Bypass"
+- [x] "Currently Loaded" shows "External" / "Bypass" when gate is -2
+- [x] Simplified button styling (removed flex, using `align="center"`)
+
+**Part E: All Backends**
+- [x] Mock backend: Full bypass toggle implementation
+- [x] AFC backend: `enable_bypass()` sends `SET_BYPASS ENABLE=1`
+- [x] Happy Hare backend: `enable_bypass()` sends `MMU_SELECT_BYPASS`
+
+**Unit Tests:**
+- [x] Added bypass tests in `tests/unit/test_ams_backend_afc.cpp`
+
+**UI Layout Fixes:**
+- [x] Reduced "Currently Loaded" card padding for better button visibility
+- [x] Reduced swatch size from 72px to 56px
+- [x] All three buttons visible: Enable Bypass, Unload Filament, Reset
+
+**Verification:**
+- [x] AFC backend reports `supports_bypass = true`
+- [x] Path canvas shows bypass entry point with "Bypass" label
+- [x] "Enable Bypass" button visible and toggles state
+- [x] Mock backend can toggle bypass for testing
+- [ ] Live testing with real AFC printer (deferred)
 
 ---
 

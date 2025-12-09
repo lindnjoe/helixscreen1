@@ -176,6 +176,31 @@ bool ui_filament_path_canvas_is_animating(lv_obj_t* obj);
  */
 void ui_filament_path_canvas_stop_animations(lv_obj_t* obj);
 
+/**
+ * @brief Set bypass mode active state
+ *
+ * When bypass is active, shows an alternate filament path from the bypass
+ * entry point directly to the toolhead, skipping the MMU gates and hub.
+ * Used for external spool feeding.
+ *
+ * @param obj The filament_path_canvas widget
+ * @param active true if bypass mode is active
+ */
+void ui_filament_path_canvas_set_bypass_active(lv_obj_t* obj, bool active);
+
+/**
+ * @brief Set click callback for bypass entry point
+ *
+ * When user taps on the bypass entry point, this callback is invoked.
+ *
+ * @param obj The filament_path_canvas widget
+ * @param cb Callback function (user_data)
+ * @param user_data User data passed to callback
+ */
+typedef void (*filament_path_bypass_cb_t)(void* user_data);
+void ui_filament_path_canvas_set_bypass_callback(lv_obj_t* obj, filament_path_bypass_cb_t cb,
+                                                 void* user_data);
+
 #ifdef __cplusplus
 }
 #endif

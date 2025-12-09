@@ -411,13 +411,11 @@ static void create_slot_children(lv_obj_t* container, AmsSlotData* data) {
     // Get responsive spacing values
     int32_t space_xs = ui_theme_get_spacing("space_xs");
 
-    // Responsive sizing: let flex layout handle width, use content height
-    // The parent slot_grid uses flex_flow="row_wrap" so slots will auto-fit
-    // We use flex_grow to share available space equally among slots
-    lv_obj_set_width(container, LV_SIZE_CONTENT);
+    // Responsive sizing: use flex_grow so slots share space equally
+    // This ensures 4 slots fit in one row and align with path canvas gates
+    // The parent slot_grid uses flex_flow="row" - slots expand to fill their portion
+    lv_obj_set_flex_grow(container, 1); // Share horizontal space equally
     lv_obj_set_height(container, LV_SIZE_CONTENT);
-    lv_obj_set_style_min_width(container, 60, LV_PART_MAIN);  // Minimum readable size
-    lv_obj_set_style_max_width(container, 100, LV_PART_MAIN); // Don't grow too large
 
     // Container styling: transparent, no border, minimal padding
     lv_obj_set_style_bg_opa(container, LV_OPA_TRANSP, LV_PART_MAIN);
@@ -425,6 +423,7 @@ static void create_slot_children(lv_obj_t* container, AmsSlotData* data) {
     lv_obj_set_style_pad_all(container, 2, LV_PART_MAIN);
     lv_obj_add_flag(container, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_flag(container, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
+    lv_obj_remove_flag(container, LV_OBJ_FLAG_SCROLLABLE);
 
     // Use flex layout: column, center items
     lv_obj_set_flex_flow(container, LV_FLEX_FLOW_COLUMN);
@@ -451,9 +450,10 @@ static void create_slot_children(lv_obj_t* container, AmsSlotData* data) {
     // Check config for visualization style
     data->use_3d_style = is_3d_spool_style();
 
-    // Spool size adapts to available space - 72px with tight gaps
+    // Spool size adapts to available space - scales with screen size
+    // Must fit within max_width=90px constraint: spool_size + 8 (container padding) < 90
     int32_t space_lg = ui_theme_get_spacing("space_lg");
-    int32_t spool_size = (space_lg * 9) / 2; // Responsive: 72px at 16px spacing
+    int32_t spool_size = (space_lg * 4); // Responsive: 64px at 16px, 80px at 20px
 
     if (data->use_3d_style) {
         // ====================================================================
