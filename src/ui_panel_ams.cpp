@@ -746,6 +746,14 @@ void AmsPanel::handle_bypass_toggle() {
         return;
     }
 
+    // Check if hardware sensor controls bypass (button should be disabled, but check anyway)
+    AmsSystemInfo info = backend->get_system_info();
+    if (info.has_hardware_bypass_sensor) {
+        NOTIFY_WARNING("Bypass controlled by sensor");
+        spdlog::warn("[{}] Bypass toggle blocked - hardware sensor controls bypass", get_name());
+        return;
+    }
+
     // Check current bypass state and toggle
     bool currently_bypassed = backend->is_bypass_active();
     AmsError error;
@@ -785,10 +793,21 @@ void AmsPanel::update_bypass_button_visibility() {
     AmsBackend* backend = AmsState::instance().get_backend();
     if (backend) {
         AmsSystemInfo info = backend->get_system_info();
-        spdlog::debug("[{}] update_bypass_button_visibility: supports_bypass={}", get_name(),
-                      info.supports_bypass);
+        spdlog::debug(
+            "[{}] update_bypass_button_visibility: supports_bypass={}, has_hardware_sensor={}",
+            get_name(), info.supports_bypass, info.has_hardware_bypass_sensor);
         if (info.supports_bypass) {
             lv_obj_remove_flag(btn_bypass, LV_OBJ_FLAG_HIDDEN);
+
+            // Disable button if hardware sensor controls bypass (auto-detect mode)
+            if (info.has_hardware_bypass_sensor) {
+                lv_obj_add_state(btn_bypass, LV_STATE_DISABLED);
+                spdlog::info("[{}] Bypass button disabled (hardware sensor controls bypass)",
+                             get_name());
+            } else {
+                lv_obj_remove_state(btn_bypass, LV_STATE_DISABLED);
+            }
+
             // Force parent layout update to make button visible
             lv_obj_t* parent = lv_obj_get_parent(btn_bypass);
             if (parent) {
@@ -817,10 +836,28 @@ void AmsPanel::update_bypass_button_state() {
     }
 
     AmsBackend* backend = AmsState::instance().get_backend();
-    if (backend && backend->is_bypass_active()) {
-        lv_label_set_text(bypass_label, "Disable Bypass");
+    if (!backend) {
+        return;
+    }
+
+    AmsSystemInfo info = backend->get_system_info();
+    bool bypass_active = backend->is_bypass_active();
+
+    // Different text based on hardware sensor vs virtual bypass
+    if (info.has_hardware_bypass_sensor) {
+        // Hardware sensor mode - show current state (button is disabled)
+        if (bypass_active) {
+            lv_label_set_text(bypass_label, "Bypass Active");
+        } else {
+            lv_label_set_text(bypass_label, "Bypass Inactive");
+        }
     } else {
-        lv_label_set_text(bypass_label, "Enable Bypass");
+        // Virtual bypass mode - show action (button is clickable)
+        if (bypass_active) {
+            lv_label_set_text(bypass_label, "Disable Bypass");
+        } else {
+            lv_label_set_text(bypass_label, "Enable Bypass");
+        }
     }
 }
 

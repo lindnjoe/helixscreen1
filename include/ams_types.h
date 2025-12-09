@@ -533,7 +533,8 @@ struct AmsSystemInfo {
     bool supports_endless_spool = false;
     bool supports_spoolman = false;
     bool supports_tool_mapping = false;
-    bool supports_bypass = false; ///< Has bypass selector position
+    bool supports_bypass = false;            ///< Has bypass selector position
+    bool has_hardware_bypass_sensor = false; ///< true=auto-detect sensor, false=virtual/manual
 
     // Tool-to-gate mapping (Happy Hare)
     std::vector<int> tool_to_gate_map; ///< tool_to_gate_map[tool] = gate

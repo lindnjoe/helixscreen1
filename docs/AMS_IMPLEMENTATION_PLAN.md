@@ -3,7 +3,7 @@
 **Feature Branch:** `feature/ams`
 **Repository:** `/Users/pbrown/code/helixscreen-ams`
 **Started:** 2025-12-07
-**Last Updated:** 2025-12-09 (Completed Phase 4.6: External Spool Bypass Support)
+**Last Updated:** 2025-12-09 (Added hardware bypass sensor support to Phase 4.6)
 
 ---
 
@@ -493,11 +493,32 @@ the AMS runs out of a color.
 - [x] Reduced swatch size from 72px to 56px
 - [x] All three buttons visible: Enable Bypass, Unload Filament, Reset
 
+**Part F: Hardware Bypass Sensor Support**
+- [x] Added `has_hardware_bypass_sensor` capability flag to `AmsSystemInfo`
+- [x] `true` = hardware sensor auto-detects bypass (button disabled, shows state)
+- [x] `false` = virtual bypass (button enabled, user toggles manually)
+- [x] Mock backend: Added `set_has_hardware_bypass_sensor()` for testing
+- [x] AFC backend: Defaults to `true` (BoxTurtle typically has hardware sensor)
+- [x] Happy Hare backend: Defaults to `false` (uses selector movement)
+- [x] UI: Button shows `LV_STATE_DISABLED` when hardware sensor controls bypass
+- [x] UI: Label shows "Bypass Active/Inactive" for hardware, "Enable/Disable Bypass" for virtual
+- [x] Toast feedback "Bypass controlled by sensor" if toggle attempted on hardware bypass
+
+**Unit Tests for Hardware Sensor:**
+- [x] Added 5 new test sections in `test_ams_backend_mock_bypass.cpp`:
+  - Default is virtual bypass (no hardware sensor)
+  - Can set hardware bypass sensor mode
+  - Can toggle back to virtual bypass
+  - Bypass operations work regardless of sensor setting
+  - `supports_bypass` flag independent of sensor setting
+- [x] All 43 assertions in 3 bypass test cases pass
+
 **Verification:**
 - [x] AFC backend reports `supports_bypass = true`
 - [x] Path canvas shows bypass entry point with "Bypass" label
 - [x] "Enable Bypass" button visible and toggles state
 - [x] Mock backend can toggle bypass for testing
+- [x] Hardware sensor mode disables button and shows state
 - [ ] Live testing with real AFC printer (deferred)
 
 ---

@@ -130,3 +130,52 @@ TEST_CASE("AmsBackendMock bypass events", "[ams][mock][bypass][events]") {
 
     backend.stop();
 }
+
+TEST_CASE("AmsBackendMock hardware bypass sensor", "[ams][mock][bypass][sensor]") {
+    AmsBackendMock backend(4);
+    backend.set_operation_delay(0);
+    REQUIRE(backend.start());
+
+    SECTION("default is virtual bypass (no hardware sensor)") {
+        auto info = backend.get_system_info();
+        REQUIRE(info.has_hardware_bypass_sensor == false);
+    }
+
+    SECTION("can set hardware bypass sensor mode") {
+        backend.set_has_hardware_bypass_sensor(true);
+        auto info = backend.get_system_info();
+        REQUIRE(info.has_hardware_bypass_sensor == true);
+    }
+
+    SECTION("can toggle back to virtual bypass") {
+        backend.set_has_hardware_bypass_sensor(true);
+        backend.set_has_hardware_bypass_sensor(false);
+        auto info = backend.get_system_info();
+        REQUIRE(info.has_hardware_bypass_sensor == false);
+    }
+
+    SECTION("bypass operations work regardless of sensor setting") {
+        // Hardware sensor mode doesn't prevent enable/disable at backend level
+        // (UI layer handles disabling the button)
+        backend.set_has_hardware_bypass_sensor(true);
+
+        auto enable_result = backend.enable_bypass();
+        REQUIRE(enable_result);
+        REQUIRE(backend.is_bypass_active());
+
+        auto disable_result = backend.disable_bypass();
+        REQUIRE(disable_result);
+        REQUIRE_FALSE(backend.is_bypass_active());
+    }
+
+    SECTION("supports_bypass flag independent of sensor setting") {
+        auto info1 = backend.get_system_info();
+        REQUIRE(info1.supports_bypass == true);
+
+        backend.set_has_hardware_bypass_sensor(true);
+        auto info2 = backend.get_system_info();
+        REQUIRE(info2.supports_bypass == true);
+    }
+
+    backend.stop();
+}

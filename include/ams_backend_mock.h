@@ -118,6 +118,16 @@ class AmsBackendMock : public AmsBackend {
      */
     void force_gate_status(int gate_index, GateStatus status);
 
+    /**
+     * @brief Set whether this mock simulates a hardware bypass sensor
+     * @param has_sensor true=hardware sensor (auto-detect), false=virtual (manual toggle)
+     *
+     * When has_sensor is true:
+     * - The bypass button should be disabled in the UI
+     * - Bypass is controlled by the sensor, not user clicks
+     */
+    void set_has_hardware_bypass_sensor(bool has_sensor);
+
   private:
     /**
      * @brief Initialize mock state with sample data

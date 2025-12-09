@@ -69,6 +69,7 @@ AmsBackendMock::AmsBackendMock(int gate_count) {
     system_info_.supports_spoolman = true;
     system_info_.supports_tool_mapping = true;
     system_info_.supports_bypass = true;
+    system_info_.has_hardware_bypass_sensor = false; // Default: virtual (manual toggle)
 
     // Create single unit with all gates
     AmsUnit unit;
@@ -602,6 +603,12 @@ void AmsBackendMock::force_gate_status(int gate_index, GateStatus status) {
         spdlog::debug("AmsBackendMock: Forced gate {} status to {}", gate_index,
                       gate_status_to_string(status));
     }
+}
+
+void AmsBackendMock::set_has_hardware_bypass_sensor(bool has_sensor) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    system_info_.has_hardware_bypass_sensor = has_sensor;
+    spdlog::debug("AmsBackendMock: Hardware bypass sensor set to {}", has_sensor);
 }
 
 void AmsBackendMock::emit_event(const std::string& event, const std::string& data) {

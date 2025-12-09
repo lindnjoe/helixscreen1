@@ -50,6 +50,9 @@ AmsBackendAfc::AmsBackendAfc(MoonrakerAPI* api, MoonrakerClient* client)
     system_info_.supports_spoolman = true;
     system_info_.supports_tool_mapping = true;
     system_info_.supports_bypass = true; // AFC supports bypass via bypass_state
+    // Default to hardware sensor - AFC BoxTurtle typically has physical bypass sensor
+    // TODO: Detect from AFC configuration whether bypass sensor is virtual or hardware
+    system_info_.has_hardware_bypass_sensor = true;
 
     spdlog::debug("[AMS AFC] Backend created");
 }

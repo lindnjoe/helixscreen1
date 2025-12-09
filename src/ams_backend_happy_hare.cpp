@@ -48,6 +48,9 @@ AmsBackendHappyHare::AmsBackendHappyHare(MoonrakerAPI* api, MoonrakerClient* cli
     system_info_.supports_spoolman = true;
     system_info_.supports_tool_mapping = true;
     system_info_.supports_bypass = true;
+    // Default to virtual bypass - Happy Hare typically uses selector movement to bypass position
+    // TODO: Detect from Happy Hare configuration if hardware bypass sensor is present
+    system_info_.has_hardware_bypass_sensor = false;
 
     spdlog::debug("[AMS HappyHare] Backend created");
 }
