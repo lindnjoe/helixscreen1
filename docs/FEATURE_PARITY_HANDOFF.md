@@ -64,7 +64,8 @@ make -j
 | **Layer Display** | ✅ Complete | Already in `print_status_panel.xml` |
 | **Temperature Presets** | ✅ Complete | Already in temp panels (Off/PLA/PETG/ABS) |
 | **Macro Panel** | ✅ Complete | List & execute Klipper macros with prettified names |
-| Core Features | 🟡 In Progress | Console, camera, history remaining |
+| **Console Panel** | ✅ Complete | Read-only G-code history with color coding |
+| Core Features | 🟡 In Progress | Camera, screws tilt, history remaining |
 
 ---
 
@@ -115,6 +116,15 @@ include/moonraker_api_mock.h   # Mock power methods
 src/moonraker_api_mock.cpp     # 4 test devices, MOCK_EMPTY_POWER env var
 ```
 
+### Console Panel Implementation (Complete)
+```
+include/ui_panel_console.h     # Panel class with GcodeEntry struct
+src/ui_panel_console.cpp       # G-code history fetch, color-coded display
+include/moonraker_client.h     # Added GcodeStoreEntry, get_gcode_store()
+src/moonraker_client.cpp       # Implemented get_gcode_store()
+tests/unit/test_ui_panel_console.cpp  # Unit tests for error detection
+```
+
 ### Modified Files
 ```
 src/main.cpp                   # Component registrations, power_device_row, event callbacks
@@ -132,7 +142,7 @@ docs/POWER_PANEL_POLISH_PLAN.md # UI polish plan (Stages 1-4 complete)
 |---------|------------|--------|
 | **Temperature Presets** | MEDIUM | ✅ **COMPLETE** - Off/PLA/PETG/ABS in temp panels |
 | Macro Panel | MEDIUM | ✅ Complete: List & execute with prettified names |
-| Console Panel | HIGH | 🚧 Stub: `console_panel.xml` |
+| Console Panel | HIGH | ✅ **COMPLETE** - Read-only G-code history with color coding |
 | Screws Tilt Adjust | HIGH | 🚧 Stub: `screws_tilt_panel.xml` |
 | Camera/Webcam | HIGH | 🚧 Stub: `camera_panel.xml` |
 | Print History | MEDIUM | 🟡 In Progress (separate worktree) |
@@ -165,22 +175,31 @@ docs/POWER_PANEL_POLISH_PLAN.md # UI polish plan (Stages 1-4 complete)
 - **Temperature Presets** - Already in temp panels (Off/PLA/PETG/ABS buttons)
 - **Power Device Control** - Completed in Session 4
 - **Macro Panel** - Completed in Session 5
+- **Console Panel** - Completed in Session 6 (read-only G-code history)
 
 ### Phase 3: Core Features (Recommended Next)
 
-#### 1. Console Panel (HIGH complexity)
+#### 1. Camera Panel (HIGH complexity)
 **Convert stub to functional panel:**
-- `ui_xml/console_panel.xml` - Scrollable output + input
-- `include/ui_panel_console.h` - Panel class
-- `src/ui_panel_console.cpp` - G-code history and input
+- `ui_xml/camera_panel.xml` - MJPEG stream display
+- `include/ui_panel_camera.h` - Panel class
+- `src/ui_panel_camera.cpp` - Webcam integration
 
-**API:** `/server/gcode_store`, `notify_gcode_response`
+**API:** `/server/webcams/list`, `/server/webcams/item`
 
 #### 2. Firmware Retraction (LOW complexity - Quick Win)
 **Files to create:**
 - Add to settings panel or create `ui_xml/retraction_panel.xml`
 
 **API:** `firmware_retraction` printer object
+
+#### 3. Screws Tilt Adjust (HIGH complexity)
+**Convert stub to functional panel:**
+- `ui_xml/screws_tilt_panel.xml` - Visual bed diagram
+- `include/ui_panel_screws_tilt.h` - Panel class
+- `src/ui_panel_screws_tilt.cpp` - Screw calculations
+
+**API:** `SCREWS_TILT_CALCULATE` command
 
 ---
 
@@ -331,6 +350,28 @@ make -j
 ---
 
 ## Session Log
+
+### 2025-12-10 Session 6 - Console Panel Complete
+- **Implemented:** Read-only G-code Console Panel for viewing command history
+- **Key Changes:**
+  - Created `include/ui_panel_console.h` - ConsolePanel class with GcodeEntry struct
+  - Created `src/ui_panel_console.cpp` - Full implementation (~200 lines)
+  - Updated `ui_xml/console_panel.xml` - Replaced Coming Soon stub with functional layout
+  - Created `tests/unit/test_ui_panel_console.cpp` - Unit tests for error detection
+  - Added `GcodeStoreEntry` struct and `get_gcode_store()` to MoonrakerClient
+  - Wired console row in AdvancedPanel to open panel
+  - Added `-p console` CLI option to main.cpp for direct testing
+  - Updated CLAUDE.md with C++ Theme Color API documentation
+- **Features:**
+  - Fetches last 100 G-code entries from Moonraker `server.gcode_store`
+  - Color-coded entries: commands (white), responses (green), errors (red)
+  - Error detection: `!!` prefix (Klipper errors) and `Error:` prefix
+  - Empty state when no history available
+  - Accessible from Advanced Panel → "G-code Console" row
+- **Pattern Used:** Theme color API via `ui_theme_get_color("success_color")` pattern from ui_icon.cpp
+- **Deferred to Phase 2:** G-code input field, real-time updates, clear button
+
+**Ready for:** Camera Panel, History Panel, or Screws Tilt Adjust
 
 ### 2025-12-08 Session 5 - Macro Panel Complete
 - **Implemented:** Full Macro Panel for listing and executing Klipper macros

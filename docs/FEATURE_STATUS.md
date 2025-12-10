@@ -1,6 +1,6 @@
 # Feature Implementation Status
 
-**Last Updated:** 2025-12-08
+**Last Updated:** 2025-12-10
 
 This document tracks the implementation status of all features identified in the feature parity analysis. It serves as the **single source of truth** for what's done, in progress, and remaining.
 
@@ -23,11 +23,11 @@ This document tracks the implementation status of all features identified in the
 
 | Category | Complete | In Progress | Stub | Not Started | Total |
 |----------|----------|-------------|------|-------------|-------|
-| CRITICAL (Tier 1) | 3 | 1 | 4 | 0 | 8 |
+| CRITICAL (Tier 1) | 4 | 1 | 3 | 0 | 8 |
 | HIGH (Tier 2) | 2 | 0 | 1 | 4 | 7 |
 | MEDIUM (Tier 3) | 0 | 0 | 0 | 7 | 7 |
 | DIFFERENTIATOR (Tier 4) | 0 | 0 | 0 | 5 | 5 |
-| **TOTAL** | **5** | **1** | **5** | **16** | **27** |
+| **TOTAL** | **6** | **1** | **4** | **16** | **27** |
 
 ---
 
@@ -39,7 +39,7 @@ These features ALL major competitors have. Required for feature parity.
 |---------|--------|-------|-------|
 | **Temperature Presets** | ✅ | `nozzle_temp_panel.xml`, `bed_temp_panel.xml` | Off/PLA/PETG/ABS presets implemented |
 | **Macro Panel** | ✅ | `ui_xml/macro_panel.xml`, `src/ui_panel_macros.cpp` | List & execute Klipper macros, prettified names, system macro filtering |
-| **Console Panel** | 🚧 | `ui_xml/console_panel.xml` | Stub with Coming Soon overlay |
+| **Console Panel** | ✅ | `ui_xml/console_panel.xml`, `src/ui_panel_console.cpp` | Complete - G-code history display with color coding |
 | **Screws Tilt Adjust** | 🚧 | `ui_xml/screws_tilt_panel.xml` | Stub with Coming Soon overlay |
 | **Camera/Webcam** | 🚧 | `ui_xml/camera_panel.xml` | Stub with Coming Soon overlay |
 | **Print History** | 🟡 | `ui_xml/history_panel.xml` | **IN PROGRESS** in `helixscreen-print-history` worktree |
@@ -87,27 +87,30 @@ These features ALL major competitors have. Required for feature parity.
   - [ ] Dangerous macro confirmation dialog (future enhancement)
 
 #### Console Panel
-- **Status:** ⬜ Not Started
+- **Status:** ✅ Complete
 - **Priority:** CRITICAL
 - **Complexity:** HIGH
 - **Depends On:** On-screen keyboard (exists)
-- **Files to Create:**
-  - [ ] `ui_xml/console_panel.xml`
-  - [ ] `include/ui_panel_console.h`
-  - [ ] `src/ui_panel_console.cpp`
-- **Files to Modify:**
-  - [ ] `ui_xml/navigation_bar.xml`
-  - [ ] `src/main.cpp`
-  - [ ] `include/moonraker_api.h`
-  - [ ] `src/moonraker_api.cpp`
-- **API:** `/server/gcode_store`, `/printer/gcode/script`, `notify_gcode_response`
+- **Files Created:**
+  - [x] `ui_xml/console_panel.xml` - Panel layout with scrollable container
+  - [x] `include/ui_panel_console.h` - Panel class with GcodeEntry struct
+  - [x] `src/ui_panel_console.cpp` - Full implementation with color coding
+  - [x] `tests/unit/test_ui_panel_console.cpp` - Unit tests for error detection
+- **Files Modified:**
+  - [x] `src/main.cpp` - Added `-p console` CLI option
+  - [x] `include/moonraker_client.h` - Added GcodeStoreEntry, get_gcode_store()
+  - [x] `src/moonraker_client.cpp` - Implemented get_gcode_store()
+  - [x] `src/ui_panel_advanced.cpp` - Wired console row handler
+- **API:** `/server/gcode_store` (implemented)
 - **Checklist:**
-  - [ ] Scrollable command history
-  - [ ] G-code input with keyboard
-  - [ ] Color-coded output (errors red)
-  - [ ] Temperature message filtering
-  - [ ] Command history (up/down)
-  - [ ] Clear button
+  - [x] Scrollable command history (fetch 100 entries)
+  - [x] Color-coded output (commands=white, responses=green, errors=red)
+  - [x] Error detection (`!!` prefix, `Error:` prefix)
+  - [x] Empty state when no history
+  - [x] Unit tests for error parsing
+  - [ ] G-code input with keyboard (Phase 2 - deferred)
+  - [ ] Real-time updates (Phase 2 - deferred)
+  - [ ] Clear button (Phase 2 - deferred)
 
 #### Screws Tilt Adjust
 - **Status:** ⬜ Not Started
