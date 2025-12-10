@@ -192,11 +192,35 @@ static PrinterDetectionHint detect_printer_type() {
 // ============================================================================
 
 void WizardPrinterIdentifyStep::init_subjects() {
+    // Check if we're connected to a DIFFERENT printer than last time
+    std::string current_url;
+    MoonrakerClient* client = get_moonraker_client();
+    if (client) {
+        current_url = client->get_last_url();
+    }
+
+    bool printer_changed = !last_detected_url_.empty() && current_url != last_detected_url_;
+    if (printer_changed) {
+        spdlog::info("[{}] Printer URL changed from '{}' to '{}' - forcing re-detection",
+                     get_name(), last_detected_url_, current_url);
+        subjects_initialized_ = false;  // Force re-initialization
+
+        // Clear saved printer type so detection runs fresh for new printer
+        Config* config = Config::get_instance();
+        config->set<std::string>(helix::wizard::PRINTER_TYPE, "");
+        config->set<std::string>(helix::wizard::PRINTER_NAME, "");
+        spdlog::debug("[{}] Cleared saved printer config for new printer", get_name());
+    }
+
     // Only initialize subjects once - they persist across wizard navigation
     if (subjects_initialized_) {
         spdlog::debug("[{}] Subjects already initialized, skipping", get_name());
         return;
     }
+
+    // Track current URL for change detection on future visits
+    last_detected_url_ = current_url;
+    spdlog::debug("[{}] Tracking printer URL: '{}'", get_name(), last_detected_url_);
 
     spdlog::debug("[{}] Initializing subjects", get_name());
 

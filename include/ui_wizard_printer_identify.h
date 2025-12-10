@@ -144,6 +144,7 @@ class WizardPrinterIdentifyStep {
     bool printer_identify_validated_ = false;
     bool subjects_initialized_ = false;
     bool updating_from_subject_ = false; // Re-entry guard for observer loop prevention
+    std::string last_detected_url_;      // Track URL to detect printer changes
 
     // Event handler implementations
     void handle_printer_name_changed(lv_event_t* e);
