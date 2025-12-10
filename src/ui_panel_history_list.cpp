@@ -40,6 +40,12 @@ void init_global_history_list_panel(PrinterState& printer_state, MoonrakerAPI* a
     lv_xml_register_event_cb(nullptr, "history_sort_changed",
                              HistoryListPanel::on_sort_changed_static);
 
+    // Register detail overlay button callbacks
+    lv_xml_register_event_cb(nullptr, "history_detail_reprint",
+                             HistoryListPanel::on_detail_reprint_static);
+    lv_xml_register_event_cb(nullptr, "history_detail_delete",
+                             HistoryListPanel::on_detail_delete_static);
+
     spdlog::debug("[History List] Global instance and event callbacks initialized");
 }
 
@@ -60,6 +66,9 @@ void HistoryListPanel::init_subjects() {
     // Initialize subject for empty state binding
     lv_subject_init_int(&subject_has_jobs_, 0);
     lv_xml_register_subject(nullptr, "history_list_has_jobs", &subject_has_jobs_);
+
+    // Initialize detail overlay subjects
+    init_detail_subjects();
 
     spdlog::debug("[{}] Subjects initialized", get_name());
 }
@@ -323,29 +332,22 @@ const char* HistoryListPanel::get_status_text(PrintJobStatus status) {
 
 void HistoryListPanel::attach_row_click_handler(lv_obj_t* row, size_t index) {
     // Store index in user data (cast to void* for LVGL)
+    // This matches the pattern used by PrintSelectPanel
     lv_obj_set_user_data(row, reinterpret_cast<void*>(index));
-
-    // Find the actual clickable row element
-    lv_obj_t* history_row = lv_obj_find_by_name(row, "history_row");
-    if (history_row) {
-        lv_obj_set_user_data(history_row, this);
-        // Store index as a property we can retrieve
-        // Using the row widget's index stored in parent's user_data
-        lv_obj_add_event_cb(history_row, on_row_clicked_static, LV_EVENT_CLICKED, row);
-    }
+    lv_obj_add_event_cb(row, on_row_clicked_static, LV_EVENT_CLICKED, this);
 }
 
 void HistoryListPanel::on_row_clicked_static(lv_event_t* e) {
-    lv_obj_t* row_container = static_cast<lv_obj_t*>(lv_event_get_user_data(e));
-    lv_obj_t* target = static_cast<lv_obj_t*>(lv_event_get_target(e));
+    // Get panel instance from event user data
+    HistoryListPanel* panel = static_cast<HistoryListPanel*>(lv_event_get_user_data(e));
+    // Get the row that was clicked (target of the event)
+    lv_obj_t* row = static_cast<lv_obj_t*>(lv_event_get_target(e));
 
-    // Get the panel instance from the clickable element
-    HistoryListPanel* panel = static_cast<HistoryListPanel*>(lv_obj_get_user_data(target));
-    if (!panel || !row_container)
+    if (!panel || !row)
         return;
 
-    // Get the index from the row container
-    size_t index = reinterpret_cast<size_t>(lv_obj_get_user_data(row_container));
+    // Get the index stored in the row's user data
+    size_t index = reinterpret_cast<size_t>(lv_obj_get_user_data(row));
     panel->handle_row_click(index);
 }
 
@@ -355,13 +357,12 @@ void HistoryListPanel::handle_row_click(size_t index) {
         return;
     }
 
+    selected_job_index_ = index;
     const auto& job = filtered_jobs_[index];
     spdlog::info("[{}] Row clicked: {} ({})", get_name(), job.filename,
                  get_status_text(job.status));
 
-    // TODO: Stage 5 - Open detail overlay
-    // For now, just log the click
-    spdlog::debug("[{}] Detail overlay not yet implemented (Stage 5)", get_name());
+    show_detail_overlay(job);
 }
 
 // ============================================================================
@@ -598,4 +599,256 @@ void HistoryListPanel::on_sort_changed(int index) {
                   static_cast<int>(sort_column_),
                   sort_direction_ == HistorySortDirection::DESC ? "DESC" : "ASC");
     apply_filters_and_sort();
+}
+
+// ============================================================================
+// Detail Overlay Implementation
+// ============================================================================
+
+void HistoryListPanel::init_detail_subjects() {
+    // Initialize all string subjects with buffers (LVGL 9.4 API)
+    lv_subject_init_string(&detail_filename_, detail_filename_buf_, nullptr,
+                           sizeof(detail_filename_buf_), "");
+    lv_subject_init_string(&detail_status_, detail_status_buf_, nullptr, sizeof(detail_status_buf_),
+                           "");
+    lv_subject_init_string(&detail_status_icon_, detail_status_icon_buf_, nullptr,
+                           sizeof(detail_status_icon_buf_), "help_circle");
+    lv_subject_init_string(&detail_status_variant_, detail_status_variant_buf_, nullptr,
+                           sizeof(detail_status_variant_buf_), "secondary");
+    lv_subject_init_string(&detail_start_time_, detail_start_time_buf_, nullptr,
+                           sizeof(detail_start_time_buf_), "");
+    lv_subject_init_string(&detail_end_time_, detail_end_time_buf_, nullptr,
+                           sizeof(detail_end_time_buf_), "");
+    lv_subject_init_string(&detail_duration_, detail_duration_buf_, nullptr,
+                           sizeof(detail_duration_buf_), "");
+    lv_subject_init_string(&detail_layers_, detail_layers_buf_, nullptr, sizeof(detail_layers_buf_),
+                           "");
+    lv_subject_init_string(&detail_layer_height_, detail_layer_height_buf_, nullptr,
+                           sizeof(detail_layer_height_buf_), "");
+    lv_subject_init_string(&detail_nozzle_temp_, detail_nozzle_temp_buf_, nullptr,
+                           sizeof(detail_nozzle_temp_buf_), "");
+    lv_subject_init_string(&detail_bed_temp_, detail_bed_temp_buf_, nullptr,
+                           sizeof(detail_bed_temp_buf_), "");
+    lv_subject_init_string(&detail_filament_, detail_filament_buf_, nullptr,
+                           sizeof(detail_filament_buf_), "");
+    lv_subject_init_string(&detail_filament_type_, detail_filament_type_buf_, nullptr,
+                           sizeof(detail_filament_type_buf_), "");
+    lv_subject_init_int(&detail_can_reprint_, 1);
+
+    // Register subjects for XML binding
+    lv_xml_register_subject(nullptr, "history_detail_filename", &detail_filename_);
+    lv_xml_register_subject(nullptr, "history_detail_status", &detail_status_);
+    lv_xml_register_subject(nullptr, "history_detail_status_icon", &detail_status_icon_);
+    lv_xml_register_subject(nullptr, "history_detail_status_variant", &detail_status_variant_);
+    lv_xml_register_subject(nullptr, "history_detail_start_time", &detail_start_time_);
+    lv_xml_register_subject(nullptr, "history_detail_end_time", &detail_end_time_);
+    lv_xml_register_subject(nullptr, "history_detail_duration", &detail_duration_);
+    lv_xml_register_subject(nullptr, "history_detail_layers", &detail_layers_);
+    lv_xml_register_subject(nullptr, "history_detail_layer_height", &detail_layer_height_);
+    lv_xml_register_subject(nullptr, "history_detail_nozzle_temp", &detail_nozzle_temp_);
+    lv_xml_register_subject(nullptr, "history_detail_bed_temp", &detail_bed_temp_);
+    lv_xml_register_subject(nullptr, "history_detail_filament", &detail_filament_);
+    lv_xml_register_subject(nullptr, "history_detail_filament_type", &detail_filament_type_);
+    lv_xml_register_subject(nullptr, "history_detail_can_reprint", &detail_can_reprint_);
+
+    spdlog::debug("[{}] Detail overlay subjects initialized", get_name());
+}
+
+void HistoryListPanel::show_detail_overlay(const PrintHistoryJob& job) {
+    // Update subjects with job data first
+    update_detail_subjects(job);
+
+    // Create overlay if not exists (lazy init)
+    if (!detail_overlay_) {
+        detail_overlay_ =
+            static_cast<lv_obj_t*>(lv_xml_create(parent_screen_, "history_detail_overlay", NULL));
+
+        if (detail_overlay_) {
+            // Wire up back button
+            ui_panel_setup_back_button(detail_overlay_);
+            spdlog::debug("[{}] Detail overlay created", get_name());
+        } else {
+            spdlog::error("[{}] Failed to create detail overlay", get_name());
+            return;
+        }
+    }
+
+    // Push the overlay
+    ui_nav_push_overlay(detail_overlay_);
+    spdlog::info("[{}] Showing detail overlay for: {}", get_name(), job.filename);
+}
+
+void HistoryListPanel::update_detail_subjects(const PrintHistoryJob& job) {
+    // Update string subjects using lv_subject_copy_string (LVGL 9.4 API)
+    lv_subject_copy_string(&detail_filename_, job.filename.c_str());
+    lv_subject_copy_string(&detail_status_, get_status_text(job.status));
+    lv_subject_copy_string(&detail_status_icon_, status_to_icon(job.status));
+    lv_subject_copy_string(&detail_status_variant_, status_to_variant(job.status));
+
+    // Format timestamps
+    lv_subject_copy_string(&detail_start_time_, job.date_str.c_str());
+
+    // Format end time from end_time timestamp
+    if (job.end_time > 0) {
+        time_t end_ts = static_cast<time_t>(job.end_time);
+        struct tm* tm_info = localtime(&end_ts);
+        char buf[32];
+        strftime(buf, sizeof(buf), "%b %d, %H:%M", tm_info);
+        lv_subject_copy_string(&detail_end_time_, buf);
+    } else {
+        lv_subject_copy_string(&detail_end_time_, "-");
+    }
+
+    lv_subject_copy_string(&detail_duration_, job.duration_str.c_str());
+
+    // Format layers
+    char layers_buf[32];
+    if (job.layer_count > 0) {
+        snprintf(layers_buf, sizeof(layers_buf), "%u", job.layer_count);
+    } else {
+        snprintf(layers_buf, sizeof(layers_buf), "-");
+    }
+    lv_subject_copy_string(&detail_layers_, layers_buf);
+
+    // Format layer height
+    char layer_height_buf[32];
+    if (job.layer_height > 0) {
+        snprintf(layer_height_buf, sizeof(layer_height_buf), "%.2f mm", job.layer_height);
+    } else {
+        snprintf(layer_height_buf, sizeof(layer_height_buf), "-");
+    }
+    lv_subject_copy_string(&detail_layer_height_, layer_height_buf);
+
+    // Format temperatures
+    char temp_buf[32];
+    if (job.nozzle_temp > 0) {
+        snprintf(temp_buf, sizeof(temp_buf), "%.0f°C", job.nozzle_temp);
+    } else {
+        snprintf(temp_buf, sizeof(temp_buf), "-");
+    }
+    lv_subject_copy_string(&detail_nozzle_temp_, temp_buf);
+
+    if (job.bed_temp > 0) {
+        snprintf(temp_buf, sizeof(temp_buf), "%.0f°C", job.bed_temp);
+    } else {
+        snprintf(temp_buf, sizeof(temp_buf), "-");
+    }
+    lv_subject_copy_string(&detail_bed_temp_, temp_buf);
+
+    lv_subject_copy_string(&detail_filament_, job.filament_str.c_str());
+    lv_subject_copy_string(&detail_filament_type_,
+                           job.filament_type.empty() ? "Unknown" : job.filament_type.c_str());
+
+    // Set reprint availability based on file existence
+    lv_subject_set_int(&detail_can_reprint_, job.exists ? 1 : 0);
+
+    spdlog::debug("[{}] Detail subjects updated for: {}", get_name(), job.filename);
+}
+
+void HistoryListPanel::handle_reprint() {
+    if (selected_job_index_ >= filtered_jobs_.size()) {
+        spdlog::warn("[{}] Invalid selected job index for reprint", get_name());
+        return;
+    }
+
+    const auto& job = filtered_jobs_[selected_job_index_];
+
+    if (!job.exists) {
+        spdlog::warn("[{}] Cannot reprint - file no longer exists: {}", get_name(), job.filename);
+        // TODO: Show toast notification
+        return;
+    }
+
+    spdlog::info("[{}] Reprint requested for: {}", get_name(), job.filename);
+
+    // Call API to start print
+    if (api_) {
+        api_->start_print(
+            job.filename,
+            [this, filename = job.filename]() {
+                spdlog::info("[{}] Print started: {}", get_name(), filename);
+                // Close the detail overlay and return to list
+                ui_nav_go_back();
+                // TODO: Show success toast
+            },
+            [this, filename = job.filename](const MoonrakerError& error) {
+                spdlog::error("[{}] Failed to start print {}: {}", get_name(), filename,
+                              error.message);
+                // TODO: Show error toast
+            });
+    }
+}
+
+void HistoryListPanel::handle_delete() {
+    if (selected_job_index_ >= filtered_jobs_.size()) {
+        spdlog::warn("[{}] Invalid selected job index for delete", get_name());
+        return;
+    }
+
+    const auto& job = filtered_jobs_[selected_job_index_];
+    spdlog::info("[{}] Delete requested for: {} (job_id: {})", get_name(), job.filename,
+                 job.job_id);
+
+    // For now, directly delete without confirmation dialog
+    // TODO: Add confirmation dialog
+    confirm_delete();
+}
+
+void HistoryListPanel::confirm_delete() {
+    if (selected_job_index_ >= filtered_jobs_.size()) {
+        spdlog::warn("[{}] Invalid selected job index for confirm delete", get_name());
+        return;
+    }
+
+    const auto& job = filtered_jobs_[selected_job_index_];
+    std::string job_id = job.job_id;
+    std::string filename = job.filename;
+
+    spdlog::info("[{}] Confirming delete for job_id: {}", get_name(), job_id);
+
+    if (api_) {
+        api_->delete_history_job(
+            job_id,
+            [this, job_id, filename]() {
+                spdlog::info("[{}] Job deleted: {} ({})", get_name(), filename, job_id);
+
+                // Remove from jobs_ and filtered_jobs_
+                jobs_.erase(std::remove_if(
+                                jobs_.begin(), jobs_.end(),
+                                [&job_id](const PrintHistoryJob& j) { return j.job_id == job_id; }),
+                            jobs_.end());
+
+                // Close detail overlay and refresh list
+                ui_nav_go_back();
+                apply_filters_and_sort();
+
+                // TODO: Show success toast
+            },
+            [this, filename](const MoonrakerError& error) {
+                spdlog::error("[{}] Failed to delete job {}: {}", get_name(), filename,
+                              error.message);
+                // TODO: Show error toast
+            });
+    }
+}
+
+// Static callbacks for detail overlay buttons
+void HistoryListPanel::on_detail_reprint_static(lv_event_t* e) {
+    (void)e; // Unused
+    try {
+        auto& panel = get_global_history_list_panel();
+        panel.handle_reprint();
+    } catch (const std::exception& ex) {
+        spdlog::error("[History List] Reprint callback error: {}", ex.what());
+    }
+}
+
+void HistoryListPanel::on_detail_delete_static(lv_event_t* e) {
+    (void)e; // Unused
+    try {
+        auto& panel = get_global_history_list_panel();
+        panel.handle_delete();
+    } catch (const std::exception& ex) {
+        spdlog::error("[History List] Delete callback error: {}", ex.what());
+    }
 }

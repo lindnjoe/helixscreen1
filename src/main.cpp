@@ -1081,6 +1081,7 @@ static void register_xml_components() {
     lv_xml_register_component_from_file("A:ui_xml/history_dashboard_panel.xml");
     lv_xml_register_component_from_file("A:ui_xml/history_list_row.xml");
     lv_xml_register_component_from_file("A:ui_xml/history_list_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/history_detail_overlay.xml");
     lv_xml_register_component_from_file("A:ui_xml/test_panel.xml");
     lv_xml_register_component_from_file("A:ui_xml/print_select_panel.xml");
     lv_xml_register_component_from_file("A:ui_xml/step_progress_test.xml");

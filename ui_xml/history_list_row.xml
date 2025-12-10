@@ -47,7 +47,8 @@
             style_bg_color="$status_color"
             style_radius="2"
             style_border_width="0"
-            style_pad_all="0"/>
+            style_pad_all="0"
+            clickable="false"/>
 
     <!-- Main content column -->
     <lv_obj width="content" height="content" flex_grow="1"
@@ -55,7 +56,8 @@
             style_flex_gap_row="#space_xs"
             style_pad_all="0"
             style_bg_opa="0"
-            style_border_width="0">
+            style_border_width="0"
+            clickable="false">
 
       <!-- Filename (primary text) -->
       <text_body name="row_filename"
@@ -63,7 +65,8 @@
                  width="100%"
                  style_text_align="left"
                  long_mode="dots"
-                 style_pad_all="0"/>
+                 style_pad_all="0"
+                 clickable="false"/>
 
       <!-- Metadata row (date, duration, filament type) -->
       <lv_obj width="100%" height="content"
@@ -72,7 +75,8 @@
               style_flex_gap_column="#space_lg"
               style_pad_all="0"
               style_bg_opa="0"
-              style_border_width="0">
+              style_border_width="0"
+              clickable="false">
 
         <!-- Date -->
         <text_small name="row_date"
@@ -80,7 +84,8 @@
                     width="content"
                     style_text_align="left"
                     style_text_color="#text_secondary"
-                    style_pad_all="0"/>
+                    style_pad_all="0"
+                    clickable="false"/>
 
         <!-- Duration -->
         <text_small name="row_duration"
@@ -88,7 +93,8 @@
                     width="content"
                     style_text_align="left"
                     style_text_color="#text_secondary"
-                    style_pad_all="0"/>
+                    style_pad_all="0"
+                    clickable="false"/>
 
         <!-- Filament Type -->
         <text_small name="row_filament"
@@ -96,7 +102,8 @@
                     width="content"
                     style_text_align="left"
                     style_text_color="#text_secondary"
-                    style_pad_all="0"/>
+                    style_pad_all="0"
+                    clickable="false"/>
       </lv_obj>
     </lv_obj>
 
@@ -106,13 +113,15 @@
                 width="content"
                 style_text_align="right"
                 style_text_color="$status_color"
-                style_pad_all="0"/>
+                style_pad_all="0"
+                clickable="false"/>
 
     <!-- Chevron icon for navigation hint -->
     <lv_label name="row_chevron"
               text=""
               style_text_font="mdi_icons_24"
               style_text_color="#text_secondary"
-              style_pad_all="0"/>
+              style_pad_all="0"
+              clickable="false"/>
   </view>
 </component>

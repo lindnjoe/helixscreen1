@@ -17,12 +17,14 @@
     - Sort: Date (newest/oldest), Duration, Filename
 -->
 <component>
-  <!-- Full-screen overlay panel structure (extends lv_obj to avoid recursion) -->
+  <!-- Overlay panel structure - leaves room for navbar -->
   <view extends="lv_obj" name="history_list_panel"
-        width="100%" height="100%"
+        width="#overlay_panel_width_large" height="100%"
+        align="right_mid"
         flex_flow="column"
         style_pad_all="0"
         style_bg_opa="255"
+        style_bg_color="#card_bg"
         style_radius="0"
         style_border_width="0">
 
@@ -86,13 +88,15 @@
             scroll_dir="ver">
 
       <!-- List rows container (populated dynamically) -->
+      <!-- clickable="false" ensures clicks pass through to row children -->
       <lv_obj name="list_rows"
               width="100%" height="content"
               flex_flow="column"
               style_flex_gap_row="#space_sm"
               style_pad_all="0"
               style_bg_opa="0"
-              style_border_width="0"/>
+              style_border_width="0"
+              clickable="false"/>
 
       <!-- Empty state (shown when no history) -->
       <lv_obj name="empty_state"

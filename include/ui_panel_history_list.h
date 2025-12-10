@@ -26,7 +26,12 @@
  * ## Navigation:
  * - Entry: History Dashboard → "View Full History" button
  * - Back: Returns to History Dashboard
- * - Row click: Opens Detail Overlay (Stage 5 - not yet implemented)
+ * - Row click: Opens Detail Overlay with job metadata
+ *
+ * ## Features (Stage 5):
+ * - Detail Overlay: Shows full print metadata when clicking a row
+ * - Reprint: Start the same print again (if file still exists)
+ * - Delete: Remove job from history with confirmation
  *
  * ## Data Flow:
  * 1. On activate, receives job list from HistoryDashboardPanel
@@ -157,6 +162,17 @@ class HistoryListPanel : public PanelBase {
      */
     static void on_sort_changed_static(lv_event_t* e);
 
+    /**
+     * @brief Static callback for detail overlay reprint button
+     * @note Registered with lv_xml_register_event_cb() in init_global_history_list_panel()
+     */
+    static void on_detail_reprint_static(lv_event_t* e);
+
+    /**
+     * @brief Static callback for detail overlay delete button
+     */
+    static void on_detail_delete_static(lv_event_t* e);
+
   private:
     //
     // === Widget References ===
@@ -193,6 +209,46 @@ class HistoryListPanel : public PanelBase {
     //
 
     lv_subject_t subject_has_jobs_; ///< 0 = no jobs (show empty), 1 = has jobs (hide empty)
+
+    //
+    // === Detail Overlay State ===
+    //
+
+    lv_obj_t* detail_overlay_ = nullptr; ///< Detail overlay widget (created on first use)
+    size_t selected_job_index_ = 0;      ///< Index of currently selected job in filtered_jobs_
+
+    // Detail overlay subjects (string subjects for reactive binding)
+    lv_subject_t detail_filename_;
+    lv_subject_t detail_status_;
+    lv_subject_t detail_status_icon_;
+    lv_subject_t detail_status_variant_;
+    lv_subject_t detail_start_time_;
+    lv_subject_t detail_end_time_;
+    lv_subject_t detail_duration_;
+    lv_subject_t detail_layers_;
+    lv_subject_t detail_layer_height_;
+    lv_subject_t detail_nozzle_temp_;
+    lv_subject_t detail_bed_temp_;
+    lv_subject_t detail_filament_;
+    lv_subject_t detail_filament_type_;
+    lv_subject_t detail_can_reprint_; ///< 1 if file exists, 0 otherwise
+
+    // Buffers for string subjects (LVGL 9.4 requires pre-allocated buffers)
+    static constexpr size_t kDetailBufSize = 128;
+    static constexpr size_t kSmallBufSize = 32;
+    char detail_filename_buf_[256] = {};
+    char detail_status_buf_[kSmallBufSize] = {};
+    char detail_status_icon_buf_[kSmallBufSize] = {};
+    char detail_status_variant_buf_[kSmallBufSize] = {};
+    char detail_start_time_buf_[kSmallBufSize] = {};
+    char detail_end_time_buf_[kSmallBufSize] = {};
+    char detail_duration_buf_[kSmallBufSize] = {};
+    char detail_layers_buf_[kSmallBufSize] = {};
+    char detail_layer_height_buf_[kSmallBufSize] = {};
+    char detail_nozzle_temp_buf_[kSmallBufSize] = {};
+    char detail_bed_temp_buf_[kSmallBufSize] = {};
+    char detail_filament_buf_[kSmallBufSize] = {};
+    char detail_filament_type_buf_[kSmallBufSize] = {};
 
     //
     // === Internal Methods ===
@@ -278,7 +334,7 @@ class HistoryListPanel : public PanelBase {
     void attach_row_click_handler(lv_obj_t* row, size_t index);
 
     /**
-     * @brief Handle row click - opens detail overlay (Stage 5)
+     * @brief Handle row click - opens detail overlay
      *
      * @param index Index of clicked row in filtered_jobs_
      */
@@ -286,6 +342,48 @@ class HistoryListPanel : public PanelBase {
 
     // Static callback wrapper for row clicks
     static void on_row_clicked_static(lv_event_t* e);
+
+    //
+    // === Detail Overlay Methods ===
+    //
+
+    /**
+     * @brief Initialize subjects for the detail overlay
+     *
+     * Called during init_subjects() to set up all binding subjects.
+     */
+    void init_detail_subjects();
+
+    /**
+     * @brief Show the detail overlay for a job
+     *
+     * Updates all detail subjects with job data and pushes the overlay.
+     *
+     * @param job The job to display
+     */
+    void show_detail_overlay(const PrintHistoryJob& job);
+
+    /**
+     * @brief Update detail subjects with job data
+     *
+     * @param job The job to display
+     */
+    void update_detail_subjects(const PrintHistoryJob& job);
+
+    /**
+     * @brief Handle reprint button click
+     */
+    void handle_reprint();
+
+    /**
+     * @brief Handle delete button click
+     */
+    void handle_delete();
+
+    /**
+     * @brief Actually delete the job after confirmation
+     */
+    void confirm_delete();
 
     //
     // === Filter/Sort Event Handlers ===
