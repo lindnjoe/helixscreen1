@@ -110,6 +110,9 @@ class HomePanel : public PanelBase {
     // Lazily-created overlay panels (owned by LVGL parent, not us)
     lv_obj_t* nozzle_temp_panel_ = nullptr;
 
+    // AMS mini status indicator (owned by LVGL, in ams_indicator_container)
+    lv_obj_t* ams_indicator_ = nullptr;
+
     void update_tip_of_day();
     void detect_network_type();       // Detects WiFi vs Ethernet vs disconnected
     int compute_network_icon_state(); // Maps network type + signal → 0-5
@@ -123,6 +126,7 @@ class HomePanel : public PanelBase {
     void handle_temp_clicked();
     void handle_printer_status_clicked();
     void handle_network_clicked();
+    void handle_ams_clicked();
     void on_extruder_temp_changed(int temp);
     void on_extruder_target_changed(int target);
     void on_led_state_changed(int state);
@@ -134,6 +138,7 @@ class HomePanel : public PanelBase {
     static void temp_clicked_cb(lv_event_t* e);
     static void printer_status_clicked_cb(lv_event_t* e);
     static void network_clicked_cb(lv_event_t* e);
+    static void ams_clicked_cb(lv_event_t* e);
     static void tip_rotation_timer_cb(lv_timer_t* timer);
     static void extruder_temp_observer_cb(lv_observer_t* observer, lv_subject_t* subject);
     static void extruder_target_observer_cb(lv_observer_t* observer, lv_subject_t* subject);

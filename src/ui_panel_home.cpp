@@ -3,6 +3,7 @@
 
 #include "ui_panel_home.h"
 
+#include "ui_ams_mini_status.h"
 #include "ui_error_reporting.h"
 #include "ui_event_safety.h"
 #include "ui_modal.h"
@@ -111,6 +112,7 @@ void HomePanel::init_subjects() {
     lv_xml_register_event_cb(nullptr, "temp_clicked_cb", temp_clicked_cb);
     lv_xml_register_event_cb(nullptr, "printer_status_clicked_cb", printer_status_clicked_cb);
     lv_xml_register_event_cb(nullptr, "network_clicked_cb", network_clicked_cb);
+    lv_xml_register_event_cb(nullptr, "ams_clicked_cb", ams_clicked_cb);
 
     subjects_initialized_ = true;
     spdlog::debug("[{}] Registered subjects and event callbacks", get_name());
@@ -145,19 +147,35 @@ void HomePanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
         spdlog::debug("[{}] Heating icon animator attached", get_name());
     }
 
+    // Create AMS mini status indicator (hidden until AMS data is available)
+    lv_obj_t* ams_container = lv_obj_find_by_name(panel_, "ams_indicator_container");
+    if (ams_container) {
+        // Get responsive height from status card
+        int32_t indicator_height = 32; // Default height
+        lv_obj_t* status_card = lv_obj_find_by_name(panel_, "status_card");
+        if (status_card) {
+            lv_obj_update_layout(status_card);
+            int32_t card_height = lv_obj_get_content_height(status_card);
+            // Use 40% of card height for indicator (leaving room for margins)
+            indicator_height = std::max(20, static_cast<int>(card_height * 0.4));
+        }
+
+        ams_indicator_ = ui_ams_mini_status_create(ams_container, indicator_height);
+        if (ams_indicator_) {
+            spdlog::debug("[{}] AMS mini status indicator created (height={})", get_name(),
+                          indicator_height);
+        }
+    }
+
     // Start tip rotation timer (60 seconds = 60000ms)
     if (!tip_rotation_timer_) {
         tip_rotation_timer_ = lv_timer_create(tip_rotation_timer_cb, 60000, this);
         spdlog::info("[{}] Started tip rotation timer (60s interval)", get_name());
     }
 
-    // Initialize WiFiManager for signal strength queries
-    // Use silent=true since this is just for signal monitoring, not user-initiated WiFi setup
-    // (suppress error modals if WiFi isn't available)
+    // Use global WiFiManager for signal strength queries
     if (!wifi_manager_) {
-        wifi_manager_ = std::make_shared<WiFiManager>(/*silent=*/true);
-        wifi_manager_->init_self_reference(wifi_manager_);
-        spdlog::debug("[{}] WiFiManager initialized for signal strength queries", get_name());
+        wifi_manager_ = get_wifi_manager();
     }
 
     // Initialize EthernetManager for Ethernet status detection
@@ -406,6 +424,13 @@ void HomePanel::handle_network_clicked() {
     overlay.show();
 }
 
+void HomePanel::handle_ams_clicked() {
+    spdlog::info("[{}] AMS indicator clicked - navigating to filament panel", get_name());
+
+    // Navigate to filament panel for AMS management
+    ui_nav_set_active(UI_PANEL_FILAMENT);
+}
+
 void HomePanel::on_led_state_changed(int state) {
     // Update local light_on_ state from PrinterState's led_state subject
     light_on_ = (state != 0);
@@ -562,6 +587,14 @@ void HomePanel::network_clicked_cb(lv_event_t* e) {
     (void)e;
     extern HomePanel& get_global_home_panel();
     get_global_home_panel().handle_network_clicked();
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+void HomePanel::ams_clicked_cb(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[HomePanel] ams_clicked_cb");
+    (void)e;
+    extern HomePanel& get_global_home_panel();
+    get_global_home_panel().handle_ams_clicked();
     LVGL_SAFE_EVENT_CB_END();
 }
 
