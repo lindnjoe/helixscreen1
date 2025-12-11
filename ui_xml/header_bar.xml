@@ -23,7 +23,7 @@
     <!-- Back button (fixed width, left-aligned) -->
     <icon name="back_button" src="back" size="lg" color="#text_primary" align="center" clickable="true"/>
     <!-- Title (flexible width, centered) -->
-    <text_heading name="header_title" text="$title" flex_grow="1" align="center" style_text_align="center" scrollable="false"/>
+    <text_heading name="header_title" text="$title" flex_grow="1" align="center" style_text_align="left" style_pad_left="#space_lg" scrollable="false"/>
     <!-- Action button (hidden by default, pass hide_action_button="false" to show) -->
     <lv_button name="action_button" width="#header_action_button_width" height="#header_action_button_height" style_radius="#border_radius" style_border_width="0" style_shadow_width="0" scrollable="false" hidden="$hide_action_button">
       <text_body name="action_button_label" text="$action_button_text" align="center"/>
