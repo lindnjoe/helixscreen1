@@ -199,7 +199,7 @@ static void gcode_viewer_draw_cb(lv_event_t* e) {
         return;
     }
 
-    spdlog::debug("GCodeViewer: draw_cb called, state={}, gcode_file={}, first_render={}",
+    spdlog::trace("GCodeViewer: draw_cb called, state={}, gcode_file={}, first_render={}",
                   (int)st->viewer_state, (void*)st->gcode_file.get(), st->first_render);
 
     // If no G-code loaded, draw placeholder message
@@ -1365,5 +1365,5 @@ static void gcode_viewer_xml_apply(lv_xml_parser_state_t* state, const char** at
  */
 extern "C" void ui_gcode_viewer_register(void) {
     lv_xml_register_widget("gcode_viewer", gcode_viewer_xml_create, gcode_viewer_xml_apply);
-    spdlog::debug("[GCodeViewer] Registered <gcode_viewer> widget with LVGL XML system");
+    spdlog::trace("[GCodeViewer] Registered <gcode_viewer> widget with LVGL XML system");
 }

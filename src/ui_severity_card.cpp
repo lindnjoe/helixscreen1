@@ -105,7 +105,7 @@ static void severity_card_xml_apply(lv_xml_parser_state_t* state, const char** a
 
 void ui_severity_card_register(void) {
     lv_xml_register_widget("severity_card", severity_card_xml_create, severity_card_xml_apply);
-    spdlog::debug("[SeverityCard] Registered <severity_card> widget with LVGL XML system");
+    spdlog::trace("[SeverityCard] Registered <severity_card> widget with LVGL XML system");
 }
 
 void ui_severity_card_finalize(lv_obj_t* obj) {

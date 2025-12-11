@@ -386,7 +386,7 @@ static void bed_mesh_xml_apply(lv_xml_parser_state_t* state, const char** attrs)
  */
 void ui_bed_mesh_register(void) {
     lv_xml_register_widget("bed_mesh", bed_mesh_xml_create, bed_mesh_xml_apply);
-    spdlog::debug("[bed_mesh] Registered <bed_mesh> widget with XML system");
+    spdlog::trace("[bed_mesh] Registered <bed_mesh> widget with XML system");
 }
 
 /**

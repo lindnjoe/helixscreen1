@@ -693,7 +693,7 @@ void GCodeTinyGLRenderer::draw_to_lvgl(lv_layer_t* layer, const lv_area_t* widge
     // Use widget coordinates as the draw area (absolute screen position)
     lv_area_t area = *widget_coords;
 
-    spdlog::debug("TinyGL draw_to_lvgl: draw_buf={}x{}, widget_coords=({},{}) to ({},{})",
+    spdlog::trace("TinyGL draw_to_lvgl: draw_buf={}x{}, widget_coords=({},{}) to ({},{})",
                   (int)draw_buf_->header.w, (int)draw_buf_->header.h, area.x1, area.y1, area.x2,
                   area.y2);
 

@@ -77,5 +77,5 @@ static void* ui_card_xml_create(lv_xml_parser_state_t* state, const char** attrs
 void ui_card_register(void) {
     // Use standard lv_xml_obj_apply for XML attr processing - defaults are in create handler
     lv_xml_register_widget("ui_card", ui_card_xml_create, lv_xml_obj_apply);
-    spdlog::debug("[Card] Registered <ui_card> widget with LVGL XML system");
+    spdlog::trace("[Card] Registered <ui_card> widget with LVGL XML system");
 }

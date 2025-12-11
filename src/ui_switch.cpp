@@ -375,7 +375,7 @@ void ui_switch_register_responsive_constants() {
     lv_xml_register_const(scope, "test_switch_height_large", switch_height_large);
     lv_xml_register_const(scope, "test_switch_knob_pad_large", knob_pad_large);
 
-    spdlog::debug("[Switch] Registered constants: {}x{} (pad={}), row={}", switch_width,
+    spdlog::trace("[Switch] Registered constants: {}x{} (pad={}), row={}", switch_width,
                   switch_height, knob_pad, row_height);
 }
 
@@ -385,5 +385,5 @@ void ui_switch_register_responsive_constants() {
 void ui_switch_register() {
     ui_switch_init_size_presets();
     lv_xml_register_widget("ui_switch", ui_switch_xml_create, ui_switch_xml_apply);
-    spdlog::debug("[Switch] Registered ui_switch widget with XML system");
+    spdlog::trace("[Switch] Registered ui_switch widget with XML system");
 }
