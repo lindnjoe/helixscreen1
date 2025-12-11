@@ -10,33 +10,23 @@ This document outlines remaining refactoring work identified during the December
 
 ---
 
-## Phase 2: Remaining RAII Migrations (HIGH PRIORITY)
+## Phase 2: RAII Migrations ✅ COMPLETED
 
-### 2.1 Global Observers Without Cleanup
+**Commit:** 70ffefd
 
-These files add observers via `lv_subject_add_observer()` without storing handles for cleanup. They should store observer handles as static `ObserverGuard` instances.
+### 2.1 Global Observers - DONE
 
-| File | Lines | Issue |
-|------|-------|-------|
-| `src/ui_status_bar.cpp` | 260, 266, 272 | 3 observers for network, printer connection, klippy state |
-| `src/ui_nav.cpp` | 220, 291 | Active panel observer, connection state observer |
-| `src/ui_notification.cpp` | 180 | Notification subject observer |
-| `src/ui_text_input.cpp` | 168 | Widget-attached observer (may need widget cleanup callback) |
+Migrated to static `ObserverGuard` instances:
+- ✅ `src/ui_status_bar.cpp` - 3 observers (network, connection, klippy)
+- ✅ `src/ui_nav.cpp` - 2 observers (active panel, connection state)
+- ✅ `src/ui_notification.cpp` - 1 observer (notification subject)
 
-**Fix Pattern:**
-```cpp
-// Before:
-lv_subject_add_observer(subject, callback, nullptr);
+**Remaining (LOW priority):**
+- `src/ui_text_input.cpp:168` - Widget-attached observer (may need widget cleanup callback instead)
 
-// After:
-static ObserverGuard s_my_observer;
-s_my_observer = ObserverGuard(subject, callback, nullptr);
-```
+### 2.2 Future RAII Wrappers (Optional)
 
-### 2.2 Recommended New RAII Wrappers
-
-Consider creating these additional RAII wrappers for common patterns:
-
+Consider for future work:
 1. **TimerGuard** - For `lv_timer_t*` handles (auto-delete on destruction)
 2. **AnimGuard** - For `lv_anim_t` handles (auto-stop on destruction)
 
@@ -219,13 +209,14 @@ done
 
 ## Prioritization Summary
 
-| Phase | Priority | Effort | Impact |
-|-------|----------|--------|--------|
-| 2. RAII Migrations | HIGH | 1-2 hours | Prevents memory leaks, use-after-free |
-| 3. Design Tokens | HIGH | 1-2 days | Enables proper theming, consistency |
-| 4. Event Callbacks | MEDIUM | 3-5 days | Cleaner architecture, XML-driven UI |
-| 5. Architecture | MEDIUM | 1-2 weeks | Testability, maintainability |
-| 6. Code Style | LOW | 2-4 hours | Consistency, reduced noise |
+| Phase | Priority | Effort | Impact | Status |
+|-------|----------|--------|--------|--------|
+| 1. SubscriptionGuard | HIGH | DONE | RAII for subscriptions | ✅ COMPLETED |
+| 2. RAII Migrations | HIGH | DONE | Prevents memory leaks, use-after-free | ✅ COMPLETED |
+| 3. Design Tokens | HIGH | 1-2 days | Enables proper theming, consistency | **NEXT** |
+| 4. Event Callbacks | MEDIUM | 3-5 days | Cleaner architecture, XML-driven UI | TODO |
+| 5. Architecture | MEDIUM | 1-2 weeks | Testability, maintainability | TODO |
+| 6. Code Style | LOW | 2-4 hours | Consistency, reduced noise | TODO |
 
 ---
 
