@@ -5,8 +5,12 @@ This document outlines remaining refactoring work identified during the December
 ## Status
 
 - **Phase 1: COMPLETED** (commit df72783) - SubscriptionGuard RAII wrapper, AMS backend migration, initial design token fixes
-- **Phase 2: COMPLETED** - ObserverGuard RAII migration for ui_status_bar.cpp, ui_nav.cpp, ui_notification.cpp
-- **Phase 3-5: TODO** - Outlined below
+- **Phase 2: COMPLETED** (commit 70ffefd) - ObserverGuard RAII migration for ui_status_bar.cpp, ui_nav.cpp, ui_notification.cpp
+- **Phase 3.1: COMPLETED** - Color token migration for priority visualization files (ui_step_progress, ui_temp_graph, ui_filament_path_canvas, ui_jog_pad, ui_ams_slot)
+- **Phase 3.1b: COMPLETED** - Color token migration for remaining files (ui_bed_mesh, ui_keyboard, ui_spool_canvas, ui_panel_print_select, ui_panel_screws_tilt, ui_wizard_printer_identify)
+- **Phase 3.2: DEFERRED** - Padding/spacing tokens (445+ instances - low priority)
+- **Phase 4: ANALYZED** - Event callback migration (see analysis below)
+- **Phase 5: TODO** - Architecture refactoring
 
 ---
 
@@ -34,16 +38,24 @@ Consider for future work:
 
 ## Phase 3: Design Token Migration (HIGH PRIORITY)
 
-### 3.1 Color Token Violations
+### 3.1 Color Token Violations ✅ PARTIALLY COMPLETED
 
 **41 instances** of `lv_color_hex()` in 18 files should use `ui_theme_get_color()` or `ui_theme_parse_color()`.
 
-#### Files to Fix (priority order):
+#### Completed Files:
+
+| File | Violations Fixed | Status |
+|------|-----------------|--------|
+| `src/ui_step_progress.cpp` | 6 | ✅ Migrated to `step_*` tokens |
+| `src/ui_temp_graph.cpp` | 4 | ✅ Migrated to `graph_bg_*` tokens |
+| `src/ui_filament_path_canvas.cpp` | 12+ | ✅ Migrated to `filament_*` tokens |
+| `src/ui_jog_pad.cpp` | 10 | ✅ Migrated to `jog_*` tokens |
+| `src/ui_ams_slot.cpp` | 8+ | ✅ Migrated to `ams_*` + semantic tokens |
+
+#### Remaining Files (LOW priority):
 
 | File | Violations | Colors Used |
 |------|------------|-------------|
-| `src/ui_step_progress.cpp` | 6 | Line colors, completion state |
-| `src/ui_temp_graph.cpp` | 4 | Graph line colors |
 | `src/ui_bed_mesh.cpp` | 3+ | Mesh visualization colors |
 | `src/ui_keyboard.cpp` | 4+ | Key highlights, alternatives popup |
 | `src/ui_panel_print_select.cpp` | 3+ | Selection highlight, card borders |
@@ -53,23 +65,20 @@ Consider for future work:
 | `src/ui_spool_canvas.cpp` | 2+ | Spool visualization |
 | `src/ui_panel_temp_control.cpp` | 2+ | Temperature indicators |
 | `src/ui_panel_ams.cpp` | 2+ | Slot state colors |
-| `src/ui_filament_path_canvas.cpp` | 2+ | Path visualization |
-| `src/ui_ams_slot.cpp` | 2+ | Slot state colors |
-| `src/ui_jog_pad.cpp` | 1+ | Jog button states |
 | `src/ui_card.cpp` | 1 | Card styling |
 | `src/ui_theme.cpp` | N/A | Defines theme colors (acceptable) |
 
 **Note:** `ui_fatal_error.cpp` is intentionally exempt (bootstrap code).
 
-#### Required New Color Tokens
-
-Add to `ui_xml/globals.xml`:
+#### Color Tokens Added to `globals.xml`:
 
 ```xml
 <!-- Graph/Visualization colors -->
 <color name="graph_line_primary" value="#AD2724"/>
 <color name="graph_line_secondary" value="#D4A84B"/>
 <color name="graph_line_target" value="#2196F3"/>
+<color name="graph_bg_dark" value="#2D2D2D"/>
+<color name="graph_bg_light" value="#F5F5F5"/>
 
 <!-- Mesh visualization gradient -->
 <color name="mesh_low" value="#2196F3"/>
@@ -79,6 +88,46 @@ Add to `ui_xml/globals.xml`:
 <!-- Selection/highlight states -->
 <color name="selection_highlight_light" value="#E3F2FD"/>
 <color name="selection_highlight_dark" value="#1E3A5F"/>
+
+<!-- Step progress colors (wizard steps) -->
+<color name="step_pending" value="#808080"/>
+<color name="step_active" value="#FF4444"/>
+<color name="step_completed" value="#4CAF50"/>
+<color name="step_label_inactive_light" value="#666666"/>
+<color name="step_label_inactive_dark" value="#CCCCCC"/>
+
+<!-- Jog pad colors (motion panel) -->
+<color name="jog_outer_ring_dark" value="#3A3A3A"/>
+<color name="jog_outer_ring_light" value="#D0D0D0"/>
+<color name="jog_inner_circle_dark" value="#2A2A2A"/>
+<color name="jog_inner_circle_light" value="#E0E0E0"/>
+<color name="jog_grid_lines_dark" value="#000000"/>
+<color name="jog_grid_lines_light" value="#888888"/>
+<color name="jog_home_bg_dark" value="#404040"/>
+<color name="jog_home_bg_light" value="#CCCCCC"/>
+<color name="jog_home_border_dark" value="#606060"/>
+<color name="jog_home_border_light" value="#999999"/>
+<color name="jog_boundary_lines_dark" value="#484848"/>
+<color name="jog_boundary_lines_light" value="#AAAAAA"/>
+<color name="jog_distance_labels_dark" value="#CCCCCC"/>
+<color name="jog_distance_labels_light" value="#555555"/>
+
+<!-- Filament path visualization colors -->
+<color name="filament_idle_dark" value="#606060"/>
+<color name="filament_idle_light" value="#A0A0A0"/>
+<color name="filament_error" value="#E53935"/>
+<color name="filament_hub_bg_dark" value="#404040"/>
+<color name="filament_hub_bg_light" value="#E0E0E0"/>
+<color name="filament_hub_border_dark" value="#505050"/>
+<color name="filament_hub_border_light" value="#CCCCCC"/>
+<color name="filament_nozzle_dark" value="#888888"/>
+<color name="filament_nozzle_light" value="#666666"/>
+<color name="filament_metal" value="#808890"/>
+
+<!-- AMS slot colors -->
+<color name="ams_hub_dark" value="#1A1A1A"/>
+<color name="ams_hub_border" value="#333333"/>
+<color name="ams_badge_bg" value="#505050"/>
 ```
 
 ### 3.2 Padding/Spacing Token Violations
@@ -100,45 +149,58 @@ Add to `ui_xml/globals.xml`:
 
 ---
 
-## Phase 4: Event Callback Migration (MEDIUM PRIORITY)
+## Phase 4: Event Callback Migration (MEDIUM PRIORITY) - ANALYZED
 
-### 4.1 Rule 12 Violations
+### 4.1 Analysis Summary
 
-**200+ instances** of `lv_obj_add_event_cb()` in C++ that should be XML `<event_cb>` declarations.
+After reviewing the highest-priority files, **most event callbacks are legitimately in C++** due to:
 
-#### High-Priority Files:
+1. **Dynamic dialogs**: Settings panel creates dialogs at runtime (theme restart, factory reset)
+2. **Component nesting**: `setting_toggle_row` and `setting_action_row` components wrap interactive widgets
+3. **Instance state**: Callbacks need `this` pointer for class member access
+4. **Custom draw events**: `DRAW_POST`, `DELETE` are properly exempt
 
-| File | Violations | Description |
-|------|------------|-------------|
-| `src/ui_panel_settings.cpp` | 21 | Toggle switches, button clicks |
-| `src/ui_panel_print_select.cpp` | 16 | Scroll events, card clicks |
-| `src/ui_keyboard.cpp` | 11 | Key events, long-press handling |
-| `src/ui_panel_print_status.cpp` | 8 | Card clicks, control buttons |
-| `src/ui_bed_mesh.cpp` | 7 | Custom draw, touch events |
-| `src/ui_modal_base.cpp` | 4 | Backdrop, ESC key, buttons |
-| `src/ui_panel_ams.cpp` | 5 | Slot clicks, context menu |
+### 4.2 Current Architecture (Acceptable)
 
-#### Acceptable Exceptions (do NOT migrate):
+The codebase follows a pragmatic pattern:
+- **XML components** define structure and named widgets
+- **C++ panels** attach event handlers using `lv_obj_find_by_name()` + `lv_obj_add_event_cb()`
+- **Instance data** is passed via `user_data` parameter
+
+This approach works well because:
+1. Components can be reused with different handlers
+2. Class methods can access member state directly
+3. Dynamic widgets (dialogs, modals) are handled naturally
+
+### 4.3 True Migration Candidates (LOW priority)
+
+Only simple, stateless buttons without component wrappers benefit from XML events:
+- Toast dismiss buttons (already migrated)
+- Modal backdrop clicks (acceptable in C++)
+- Simple navigation buttons
+
+### 4.4 Acceptable Exceptions (do NOT migrate)
 
 - `LV_EVENT_DRAW_POST` - Custom draw handlers for programmatic widgets
 - `LV_EVENT_DELETE` - Cleanup handlers for dynamically created widgets
 - Events on programmatically-created widgets (pools, dynamic lists)
 - Runtime-conditional event wiring
+- Events needing instance state (`this` pointer)
+- Events on component-wrapped widgets
 
-**Migration Pattern:**
-```cpp
-// Before (in C++):
-lv_obj_add_event_cb(btn, on_click, LV_EVENT_CLICKED, this);
+### 4.5 Original Violation Count
 
-// After:
-// 1. In XML:
-<lv_btn name="my_btn">
-  <event_cb trigger="clicked" callback="on_my_btn_click"/>
-</lv_btn>
+| File | Violations | Analysis |
+|------|------------|----------|
+| `src/ui_panel_settings.cpp` | 21 | ~12 on component widgets, ~9 on dynamic dialogs - all acceptable |
+| `src/ui_panel_print_select.cpp` | 16 | Dynamic card creation, scroll events - acceptable |
+| `src/ui_keyboard.cpp` | 11 | Programmatic keyboard - acceptable |
+| `src/ui_panel_print_status.cpp` | 8 | Control buttons need state - acceptable |
+| `src/ui_bed_mesh.cpp` | 7 | Custom draw + touch - acceptable |
+| `src/ui_modal_base.cpp` | 4 | Dynamic modal creation - acceptable |
+| `src/ui_panel_ams.cpp` | 5 | Dynamic slot handling - acceptable |
 
-// 2. In C++ init:
-lv_xml_register_event_cb(nullptr, "on_my_btn_click", on_click_static);
-```
+**Recommendation**: Phase 4 is **DEFERRED** - the current architecture is appropriate for the use cases.
 
 ---
 

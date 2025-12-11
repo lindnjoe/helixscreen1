@@ -95,6 +95,7 @@
 #include "tips_manager.h"
 #include "usb_backend_mock.h"
 #include "usb_manager.h"
+#include "xml_registration.h"
 
 #include <spdlog/spdlog.h>
 
@@ -1047,111 +1048,6 @@ static void register_fonts_and_images() {
                           "A:assets/images/benchy_thumbnail_white.png");
 }
 
-// Register XML components from ui_xml/ directory
-static void register_xml_components() {
-    spdlog::debug("Registering remaining XML components...");
-    spdlog::debug("[XML DEBUG] Starting XML registration function");
-
-    // Register responsive constants (AFTER globals, BEFORE components that use them)
-    ui_switch_register_responsive_constants();
-    spdlog::debug("[XML DEBUG] Past responsive constants");
-
-    // Register semantic text widgets (AFTER theme init, BEFORE components that use them)
-    ui_text_init();
-    ui_text_input_init(); // <text_input> with bind_text support
-    ui_spinner_init();    // <spinner> with responsive sizing
-
-    // Register custom widgets (BEFORE components that use them)
-    ui_gcode_viewer_register();
-
-    lv_xml_register_component_from_file("A:ui_xml/icon.xml");
-    lv_xml_register_component_from_file("A:ui_xml/header_bar.xml");
-    lv_xml_register_component_from_file("A:ui_xml/overlay_backdrop.xml");   // Modal dimming layer
-    lv_xml_register_component_from_file("A:ui_xml/overlay_panel_base.xml"); // Base styling only
-    lv_xml_register_component_from_file(
-        "A:ui_xml/overlay_panel.xml"); // Depends on header_bar + base
-    lv_xml_register_component_from_file("A:ui_xml/status_bar.xml");
-    lv_xml_register_component_from_file("A:ui_xml/toast_notification.xml");
-    lv_xml_register_component_from_file("A:ui_xml/emergency_stop_button.xml");
-    lv_xml_register_component_from_file("A:ui_xml/estop_confirmation_dialog.xml");
-    lv_xml_register_component_from_file("A:ui_xml/klipper_recovery_dialog.xml");
-    // Note: error_dialog.xml and warning_dialog.xml removed - use modal_dialog instead
-    spdlog::debug("[XML] Registering notification_history_panel.xml...");
-    auto nh_panel_ret =
-        lv_xml_register_component_from_file("A:ui_xml/notification_history_panel.xml");
-    spdlog::debug("[XML] notification_history_panel.xml registration returned: {}",
-                  (int)nh_panel_ret);
-    spdlog::debug("[XML] Registering notification_history_item.xml...");
-    auto nh_item_ret =
-        lv_xml_register_component_from_file("A:ui_xml/notification_history_item.xml");
-    spdlog::debug("[XML] notification_history_item.xml registration returned: {}",
-                  (int)nh_item_ret);
-    // Note: confirmation_dialog.xml, tip_detail_dialog.xml removed - use modal_dialog instead
-    lv_xml_register_component_from_file("A:ui_xml/modal_dialog.xml");
-    lv_xml_register_component_from_file("A:ui_xml/numeric_keypad_modal.xml");
-    lv_xml_register_component_from_file("A:ui_xml/print_file_card.xml");
-    lv_xml_register_component_from_file("A:ui_xml/print_file_list_row.xml");
-    lv_xml_register_component_from_file("A:ui_xml/print_file_detail.xml");
-    lv_xml_register_component_from_file("A:ui_xml/navigation_bar.xml");
-    lv_xml_register_component_from_file("A:ui_xml/home_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/controls_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/motion_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/nozzle_temp_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/bed_temp_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/extrusion_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/fan_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/print_status_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/print_tune_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/filament_panel.xml");
-    // Settings row components (must be registered before settings_panel)
-    lv_xml_register_component_from_file("A:ui_xml/setting_section_header.xml");
-    lv_xml_register_component_from_file("A:ui_xml/setting_toggle_row.xml");
-    lv_xml_register_component_from_file("A:ui_xml/setting_dropdown_row.xml");
-    lv_xml_register_component_from_file("A:ui_xml/setting_action_row.xml");
-    lv_xml_register_component_from_file("A:ui_xml/setting_info_row.xml");
-    lv_xml_register_component_from_file("A:ui_xml/setting_slider_row.xml");
-    lv_xml_register_component_from_file("A:ui_xml/settings_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/restart_prompt_dialog.xml");
-    // Calibration panels (overlays launched from settings/advanced)
-    lv_xml_register_component_from_file("A:ui_xml/calibration_zoffset_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/calibration_pid_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/screws_tilt_panel.xml");
-    spdlog::debug("[XML] Registering bed_mesh_panel.xml...");
-    auto ret = lv_xml_register_component_from_file("A:ui_xml/bed_mesh_panel.xml");
-    spdlog::debug("[XML] bed_mesh_panel.xml registration returned: {}", (int)ret);
-    // Settings overlay panels (launched from settings rows)
-    lv_xml_register_component_from_file("A:ui_xml/display_settings_overlay.xml");
-    // WiFi settings components (wifi_settings_overlay replaces network_settings_overlay)
-    lv_xml_register_component_from_file("A:ui_xml/wifi_settings_overlay.xml");
-    lv_xml_register_component_from_file("A:ui_xml/hidden_network_modal.xml");
-    lv_xml_register_component_from_file("A:ui_xml/wifi_network_item.xml");
-    // Note: factory_reset_dialog.xml removed - use modal_dialog instead
-    lv_xml_register_component_from_file("A:ui_xml/advanced_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/history_dashboard_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/history_list_row.xml");
-    lv_xml_register_component_from_file("A:ui_xml/history_list_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/history_detail_overlay.xml");
-    lv_xml_register_component_from_file("A:ui_xml/test_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/print_select_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/step_progress_test.xml");
-    lv_xml_register_component_from_file("A:ui_xml/gcode_test_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/glyphs_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/gradient_test_panel.xml");
-    lv_xml_register_component_from_file("A:ui_xml/app_layout.xml");
-    lv_xml_register_component_from_file(
-        "A:ui_xml/wizard_header_bar.xml"); // Must come before wizard_container
-    lv_xml_register_component_from_file("A:ui_xml/wizard_container.xml");
-    lv_xml_register_component_from_file("A:ui_xml/network_list_item.xml");
-    lv_xml_register_component_from_file("A:ui_xml/wifi_password_modal.xml");
-    lv_xml_register_component_from_file("A:ui_xml/wizard_wifi_setup.xml");
-    lv_xml_register_component_from_file("A:ui_xml/wizard_connection.xml");
-    lv_xml_register_component_from_file("A:ui_xml/wizard_printer_identify.xml");
-    lv_xml_register_component_from_file("A:ui_xml/wizard_heater_select.xml");
-    lv_xml_register_component_from_file("A:ui_xml/wizard_fan_select.xml");
-    lv_xml_register_component_from_file("A:ui_xml/wizard_led_select.xml");
-    lv_xml_register_component_from_file("A:ui_xml/wizard_summary.xml");
-}
-
 // Initialize all reactive subjects for data binding
 static void initialize_subjects() {
     spdlog::debug("Initializing reactive subjects...");
@@ -1942,7 +1838,7 @@ int main(int argc, char** argv) {
     helix_delay(100);
 
     // Register remaining XML components (globals already registered for theme init)
-    register_xml_components();
+    helix::register_xml_components();
 
     // Initialize reactive subjects BEFORE creating XML
     initialize_subjects();

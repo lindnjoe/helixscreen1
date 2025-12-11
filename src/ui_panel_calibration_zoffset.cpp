@@ -207,10 +207,17 @@ void ZOffsetCalibrationPanel::send_probe_calibrate() {
         return;
     }
 
-    spdlog::info("[ZOffsetCal] Sending PROBE_CALIBRATE");
-    int result = client_->gcode_script("PROBE_CALIBRATE");
+    // Auto-detect calibration method based on printer capabilities:
+    // - Printers with probe (BLTouch, inductive, etc.) use PROBE_CALIBRATE
+    // - Printers with only mechanical endstop use Z_ENDSTOP_CALIBRATE
+    // Both commands enter manual_probe mode and work identically from UI perspective
+    PrinterState& ps = get_printer_state();
+    const char* calibrate_cmd = ps.has_probe() ? "PROBE_CALIBRATE" : "Z_ENDSTOP_CALIBRATE";
+
+    spdlog::info("[ZOffsetCal] Sending {} (has_probe={})", calibrate_cmd, ps.has_probe());
+    int result = client_->gcode_script(calibrate_cmd);
     if (result != 0) {
-        spdlog::error("[ZOffsetCal] Failed to send PROBE_CALIBRATE (error {})", result);
+        spdlog::error("[ZOffsetCal] Failed to send {} (error {})", calibrate_cmd, result);
         on_calibration_result(false, "Failed to start calibration");
     }
     // State transition to ADJUSTING is handled by on_manual_probe_active_changed

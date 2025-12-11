@@ -261,28 +261,28 @@ static void on_status_changed(lv_observer_t* observer, lv_subject_t* subject) {
     switch (status) {
     case GateStatus::AVAILABLE:
         icon = ui_icon::lookup_codepoint("check");
-        badge_bg = ui_theme_parse_color("#4CAF50"); // success green
+        badge_bg = ui_theme_get_color("success_color");
         break;
     case GateStatus::LOADED:
         icon = ui_icon::lookup_codepoint("arrow_up");
-        badge_bg = ui_theme_parse_color("#2196F3"); // info blue
+        badge_bg = ui_theme_get_color("info_color");
         break;
     case GateStatus::FROM_BUFFER:
         icon = ui_icon::lookup_codepoint("check");
-        badge_bg = ui_theme_parse_color("#FF9800"); // warning orange
+        badge_bg = ui_theme_get_color("warning_color");
         break;
     case GateStatus::EMPTY:
         icon = ui_icon::lookup_codepoint("close");
-        badge_bg = lv_color_hex(0x505050); // dark gray
+        badge_bg = ui_theme_get_color("ams_badge_bg");
         break;
     case GateStatus::BLOCKED:
         icon = ui_icon::lookup_codepoint("alert");
-        badge_bg = ui_theme_parse_color("#FF4444"); // error red
+        badge_bg = ui_theme_get_color("error_color");
         break;
     case GateStatus::UNKNOWN:
     default:
         icon = ui_icon::lookup_codepoint("help_circle");
-        badge_bg = lv_color_hex(0x505050);
+        badge_bg = ui_theme_get_color("ams_badge_bg");
         break;
     }
 
@@ -518,7 +518,7 @@ static void create_slot_children(lv_obj_t* container, AmsSlotData* data) {
         lv_obj_set_style_bg_color(outer_ring, default_darker, LV_PART_MAIN);
         lv_obj_set_style_bg_opa(outer_ring, LV_OPA_COVER, LV_PART_MAIN);
         lv_obj_set_style_border_width(outer_ring, 2, LV_PART_MAIN);
-        lv_obj_set_style_border_color(outer_ring, lv_color_hex(0x1a1a1a), LV_PART_MAIN);
+        lv_obj_set_style_border_color(outer_ring, ui_theme_get_color("ams_hub_dark"), LV_PART_MAIN);
         lv_obj_set_style_border_opa(outer_ring, LV_OPA_50, LV_PART_MAIN);
         lv_obj_remove_flag(outer_ring, LV_OBJ_FLAG_SCROLLABLE);
         data->spool_outer = outer_ring;
@@ -540,10 +540,10 @@ static void create_slot_children(lv_obj_t* container, AmsSlotData* data) {
         lv_obj_set_size(hub, hub_size, hub_size);
         lv_obj_align(hub, LV_ALIGN_CENTER, 0, 0);
         lv_obj_set_style_radius(hub, LV_RADIUS_CIRCLE, LV_PART_MAIN);
-        lv_obj_set_style_bg_color(hub, lv_color_hex(0x1a1a1a), LV_PART_MAIN);
+        lv_obj_set_style_bg_color(hub, ui_theme_get_color("ams_hub_dark"), LV_PART_MAIN);
         lv_obj_set_style_bg_opa(hub, LV_OPA_COVER, LV_PART_MAIN);
         lv_obj_set_style_border_width(hub, 1, LV_PART_MAIN);
-        lv_obj_set_style_border_color(hub, lv_color_hex(0x333333), LV_PART_MAIN);
+        lv_obj_set_style_border_color(hub, ui_theme_get_color("ams_hub_border"), LV_PART_MAIN);
         lv_obj_remove_flag(hub, LV_OBJ_FLAG_SCROLLABLE);
         data->spool_hub = hub;
 
@@ -558,7 +558,7 @@ static void create_slot_children(lv_obj_t* container, AmsSlotData* data) {
     // Position badge at bottom-right of the canvas area (offset accounts for larger container)
     lv_obj_align(status_badge, LV_ALIGN_BOTTOM_RIGHT, -2, -2);
     lv_obj_set_style_radius(status_badge, LV_RADIUS_CIRCLE, LV_PART_MAIN);
-    lv_obj_set_style_bg_color(status_badge, lv_color_hex(0x505050), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(status_badge, ui_theme_get_color("ams_badge_bg"), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(status_badge, LV_OPA_COVER, LV_PART_MAIN);
     lv_obj_set_style_border_width(status_badge, 2, LV_PART_MAIN);
     lv_obj_set_style_border_color(status_badge, ui_theme_get_color("card_bg"), LV_PART_MAIN);
@@ -581,7 +581,7 @@ static void create_slot_children(lv_obj_t* container, AmsSlotData* data) {
     lv_obj_set_size(badge_container, 20, 20);
     lv_obj_align(badge_container, LV_ALIGN_BOTTOM_LEFT, -2, -2);
     lv_obj_set_style_radius(badge_container, LV_RADIUS_CIRCLE, LV_PART_MAIN);
-    lv_obj_set_style_bg_color(badge_container, lv_color_hex(0x505050), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(badge_container, ui_theme_get_color("ams_badge_bg"), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(badge_container, LV_OPA_COVER, LV_PART_MAIN);
     lv_obj_set_style_border_width(badge_container, 2, LV_PART_MAIN);
     lv_obj_set_style_border_color(badge_container, ui_theme_get_color("card_bg"), LV_PART_MAIN);

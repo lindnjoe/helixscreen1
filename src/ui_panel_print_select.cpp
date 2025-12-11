@@ -996,9 +996,9 @@ void PrintSelectPanel::configure_card(lv_obj_t* card, size_t index, const CardDi
     if (thumb_img && !file.thumbnail_path.empty()) {
         lv_image_set_src(thumb_img, file.thumbnail_path.c_str());
 
-        // Directory styling
+        // Directory styling - use amber/orange tint for folder icons
         if (file.is_dir) {
-            lv_obj_set_style_image_recolor(thumb_img, lv_color_hex(0xFFB74D), 0);
+            lv_obj_set_style_image_recolor(thumb_img, ui_theme_get_color("warning_color"), 0);
             lv_obj_set_style_image_recolor_opa(thumb_img, LV_OPA_COVER, 0);
         } else {
             lv_obj_set_style_image_recolor_opa(thumb_img, LV_OPA_TRANSP, 0);

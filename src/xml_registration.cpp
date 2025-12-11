@@ -105,6 +105,7 @@ void register_xml_components() {
     lv_xml_register_component_from_file("A:ui_xml/emergency_stop_button.xml");
     lv_xml_register_component_from_file("A:ui_xml/estop_confirmation_dialog.xml");
     lv_xml_register_component_from_file("A:ui_xml/klipper_recovery_dialog.xml");
+    lv_xml_register_component_from_file("A:ui_xml/print_cancel_confirm_modal.xml");
 
     // Notification history
     lv_xml_register_component_from_file("A:ui_xml/notification_history_panel.xml");
@@ -129,6 +130,7 @@ void register_xml_components() {
     lv_xml_register_component_from_file("A:ui_xml/extrusion_panel.xml");
     lv_xml_register_component_from_file("A:ui_xml/fan_panel.xml");
     lv_xml_register_component_from_file("A:ui_xml/print_status_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/print_tune_panel.xml");
     lv_xml_register_component_from_file("A:ui_xml/filament_panel.xml");
 
     // AMS (multi-filament) panel - slot component must be registered first

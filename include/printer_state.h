@@ -514,6 +514,18 @@ class PrinterState {
         return &manual_probe_z_position_;
     }
 
+    /**
+     * @brief Check if printer has a probe configured
+     *
+     * Used by Z-offset calibration to determine whether to use
+     * PROBE_CALIBRATE (has probe) or Z_ENDSTOP_CALIBRATE (no probe).
+     *
+     * @return true if [probe] or [bltouch] section exists in Klipper config
+     */
+    bool has_probe() {
+        return lv_subject_get_int(&printer_has_probe_) != 0;
+    }
+
   private:
     // Temperature subjects
     lv_subject_t extruder_temp_;

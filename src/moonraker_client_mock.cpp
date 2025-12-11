@@ -1636,9 +1636,16 @@ int MoonrakerClientMock::gcode_script(const std::string& gcode) {
     // Z-OFFSET CALIBRATION COMMANDS (manual probe mode)
     // ========================================================================
 
-    // PROBE_CALIBRATE - Start Z-offset calibration
-    // Enters manual probe mode, homes if needed, probes to find Z=0
-    if (gcode.find("PROBE_CALIBRATE") != std::string::npos) {
+    // PROBE_CALIBRATE or Z_ENDSTOP_CALIBRATE - Start Z-offset calibration
+    // - PROBE_CALIBRATE: For printers with probe (BLTouch, inductive, etc.)
+    // - Z_ENDSTOP_CALIBRATE: For printers with only mechanical Z endstop
+    // Both enter manual probe mode, home if needed, and work identically
+    bool is_probe_calibrate = gcode.find("PROBE_CALIBRATE") != std::string::npos;
+    bool is_endstop_calibrate = gcode.find("Z_ENDSTOP_CALIBRATE") != std::string::npos;
+
+    if (is_probe_calibrate || is_endstop_calibrate) {
+        const char* cmd_name = is_probe_calibrate ? "PROBE_CALIBRATE" : "Z_ENDSTOP_CALIBRATE";
+
         if (!manual_probe_active_.load()) {
             // Ensure we're homed first
             {
@@ -1649,7 +1656,7 @@ int MoonrakerClientMock::gcode_script(const std::string& gcode) {
                     pos_x_.store(0.0);
                     pos_y_.store(0.0);
                     pos_z_.store(0.0);
-                    spdlog::info("[MoonrakerClientMock] PROBE_CALIBRATE: Auto-homed all axes");
+                    spdlog::info("[MoonrakerClientMock] {}: Auto-homed all axes", cmd_name);
                 }
             }
 
@@ -1658,14 +1665,13 @@ int MoonrakerClientMock::gcode_script(const std::string& gcode) {
             manual_probe_z_.store(5.0); // Start 5mm above bed
             pos_z_.store(5.0);          // Sync toolhead Z
 
-            spdlog::info(
-                "[MoonrakerClientMock] PROBE_CALIBRATE: Entered manual probe mode, Z={:.3f}",
-                manual_probe_z_.load());
+            spdlog::info("[MoonrakerClientMock] {}: Entered manual probe mode, Z={:.3f}", cmd_name,
+                         manual_probe_z_.load());
 
             // Dispatch manual probe state change
             dispatch_manual_probe_update();
         } else {
-            spdlog::warn("[MoonrakerClientMock] PROBE_CALIBRATE: Already in manual probe mode");
+            spdlog::warn("[MoonrakerClientMock] {}: Already in manual probe mode", cmd_name);
         }
     }
 

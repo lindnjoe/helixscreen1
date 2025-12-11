@@ -24,6 +24,7 @@
 #include "ui_bed_mesh.h"
 
 #include "ui_fonts.h"
+#include "ui_theme.h"
 
 #include "bed_mesh_renderer.h"
 #include "lvgl/lvgl.h"
@@ -89,7 +90,7 @@ static void bed_mesh_draw_cb(lv_event_t* e) {
         // Draw "No mesh loaded" message in center of canvas
         lv_draw_label_dsc_t label_dsc;
         lv_draw_label_dsc_init(&label_dsc);
-        label_dsc.color = lv_color_hex(0x808080); // Gray text
+        label_dsc.color = ui_theme_get_color("text_secondary"); // Gray text
         label_dsc.text = "No mesh loaded";
         label_dsc.font = &noto_sans_16;
         label_dsc.align = LV_TEXT_ALIGN_CENTER;

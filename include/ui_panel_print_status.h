@@ -3,16 +3,61 @@
 
 #pragma once
 
+#include "ui_modal_base.h"
 #include "ui_observer_guard.h"
 #include "ui_panel_base.h"
 
 #include "printer_state.h"
 
+#include <functional>
 #include <string>
 #include <unordered_set>
 
 // Forward declarations
 class TempControlPanel;
+class PrintStatusPanel;
+
+/**
+ * @brief Confirmation dialog for canceling an active print
+ *
+ * Uses ModalBase for RAII lifecycle - dialog auto-hides when object is destroyed.
+ * Shows a warning that all progress will be lost.
+ *
+ * Usage:
+ *   cancel_modal_.set_on_confirm([this]() { execute_cancel_print(); });
+ *   cancel_modal_.show(lv_screen_active());
+ */
+class PrintCancelModal : public ModalBase {
+  public:
+    using ConfirmCallback = std::function<void()>;
+
+    const char* get_name() const override {
+        return "Print Cancel";
+    }
+    const char* get_xml_component_name() const override {
+        return "print_cancel_confirm_modal";
+    }
+
+    void set_on_confirm(ConfirmCallback cb) {
+        on_confirm_cb_ = std::move(cb);
+    }
+
+  protected:
+    void on_show() override {
+        wire_ok_button();     // "Stop" button
+        wire_cancel_button(); // "Keep Printing" button
+    }
+
+    void on_ok() override {
+        if (on_confirm_cb_) {
+            on_confirm_cb_();
+        }
+        hide();
+    }
+
+  private:
+    ConfirmCallback on_confirm_cb_;
+};
 
 /**
  * @brief Print status panel - shows active print progress and controls
@@ -256,7 +301,7 @@ class PrintStatusPanel : public PanelBase {
     char speed_buf_[32] = "100%";
     char flow_buf_[32] = "100%";
     char pause_button_buf_[32] = "\xF3\xB0\x8F\xA4"; // MDI pause icon (F03E4)
-    char timelapse_button_buf_[8] = ""; ///< MDI icon codepoint for timelapse state
+    char timelapse_button_buf_[8] = "";              ///< MDI icon codepoint for timelapse state
 
     //
     // === Instance State ===
@@ -409,6 +454,9 @@ class PrintStatusPanel : public PanelBase {
 
     /// Active confirmation dialog (if showing)
     lv_obj_t* exclude_confirm_dialog_{nullptr};
+
+    /// Print cancel confirmation modal (RAII - auto-hides when destroyed)
+    PrintCancelModal cancel_modal_;
 
     //
     // === Exclude Object Handlers ===

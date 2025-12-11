@@ -121,14 +121,16 @@ struct FilamentPathData {
 static void load_theme_colors(FilamentPathData* data) {
     bool dark_mode = ui_theme_is_dark_mode();
 
-    // Use explicit colors with dark/light mode awareness
-    // These match the app's visual style
-    data->color_idle = dark_mode ? lv_color_hex(0x606060) : lv_color_hex(0xA0A0A0);
-    data->color_error = lv_color_hex(0xE53935); // Material red for errors
-    data->color_hub_bg = dark_mode ? lv_color_hex(0x404040) : lv_color_hex(0xE0E0E0);
-    data->color_hub_border = dark_mode ? lv_color_hex(0x505050) : lv_color_hex(0xCCCCCC);
-    data->color_nozzle = dark_mode ? lv_color_hex(0x888888) : lv_color_hex(0x666666);
-    data->color_text = dark_mode ? lv_color_hex(0xE6E8F0) : lv_color_hex(0x2C2C2C);
+    // Use theme tokens with dark/light mode awareness
+    data->color_idle = ui_theme_get_color(dark_mode ? "filament_idle_dark" : "filament_idle_light");
+    data->color_error = ui_theme_get_color("filament_error");
+    data->color_hub_bg =
+        ui_theme_get_color(dark_mode ? "filament_hub_bg_dark" : "filament_hub_bg_light");
+    data->color_hub_border =
+        ui_theme_get_color(dark_mode ? "filament_hub_border_dark" : "filament_hub_border_light");
+    data->color_nozzle =
+        ui_theme_get_color(dark_mode ? "filament_nozzle_dark" : "filament_nozzle_light");
+    data->color_text = ui_theme_get_color("text_primary");
 
     // Get responsive sizing from theme
     int32_t space_xs = ui_theme_get_spacing("space_xs");
@@ -581,7 +583,7 @@ static void draw_nozzle(lv_layer_t* layer, int32_t cx, int32_t cy, lv_color_t co
     // cy is the CENTER of the entire print head assembly
 
     // Base colors - light gray metallic (like Bambu's silver/white head)
-    lv_color_t metal_base = lv_color_hex(0x808890);
+    lv_color_t metal_base = ui_theme_get_color("filament_metal");
 
     // Lighting: light comes from top-left
     lv_color_t front_light = ph_lighten(metal_base, 40);
@@ -705,10 +707,11 @@ static void draw_nozzle(lv_layer_t* layer, int32_t cx, int32_t cy, lv_color_t co
         lv_color_t tip_left = ph_lighten(metal_base, 30);
         lv_color_t tip_right = ph_darken(metal_base, 20);
 
-        // If filament loaded, tint the nozzle tip
-        if (!lv_color_eq(color, ph_darken(metal_base, 10)) &&
-            !lv_color_eq(color, lv_color_hex(0x888888)) &&
-            !lv_color_eq(color, lv_color_hex(0x666666))) {
+        // If filament loaded (color differs from nozzle defaults), tint the nozzle tip
+        lv_color_t nozzle_dark = ui_theme_get_color("filament_nozzle_dark");
+        lv_color_t nozzle_light = ui_theme_get_color("filament_nozzle_light");
+        if (!lv_color_eq(color, ph_darken(metal_base, 10)) && !lv_color_eq(color, nozzle_dark) &&
+            !lv_color_eq(color, nozzle_light)) {
             tip_left = ph_blend(tip_left, color, 0.4f);
             tip_right = ph_blend(tip_right, color, 0.4f);
         }

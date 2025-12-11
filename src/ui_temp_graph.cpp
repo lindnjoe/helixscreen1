@@ -50,9 +50,11 @@ static ui_temp_series_meta_t* find_series(ui_temp_graph_t* graph, int series_id)
 // Helper: Create a muted (reduced opacity) version of a color
 // Since LVGL chart cursors don't support opacity, we blend toward the background
 static lv_color_t mute_color(lv_color_t color, lv_opa_t opa) {
-    // Blend toward dark gray (chart background) based on opacity
+    // Blend toward chart background based on opacity
     // opa=255 = full color, opa=0 = full background
-    lv_color_t bg = lv_color_hex(0x2D2D2D); // Dark chart background
+    // Use theme token for chart background (dark mode typically used for graphs)
+    lv_color_t bg =
+        ui_theme_get_color(ui_theme_is_dark_mode() ? "graph_bg_dark" : "graph_bg_light");
     uint8_t r = (color.red * opa + bg.red * (255 - opa)) / 255;
     uint8_t g = (color.green * opa + bg.green * (255 - opa)) / 255;
     uint8_t b = (color.blue * opa + bg.blue * (255 - opa)) / 255;

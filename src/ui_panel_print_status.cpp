@@ -692,24 +692,30 @@ void PrintStatusPanel::handle_tune_button() {
 }
 
 void PrintStatusPanel::handle_cancel_button() {
-    spdlog::info("[{}] Cancel button clicked", get_name());
+    spdlog::info("[{}] Cancel button clicked - showing confirmation dialog", get_name());
 
-    // TODO: Add confirmation dialog before canceling
+    // Set up the confirm callback to execute the actual cancel
+    cancel_modal_.set_on_confirm([this]() {
+        spdlog::info("[{}] Cancel confirmed - executing cancel_print", get_name());
 
-    if (api_) {
-        api_->cancel_print(
-            [this]() {
-                spdlog::info("[{}] Cancel command sent successfully", get_name());
-                // State will update via PrinterState observer when Moonraker confirms
-            },
-            [](const MoonrakerError& err) {
-                spdlog::error("Failed to cancel print: {}", err.message);
-                NOTIFY_ERROR("Failed to cancel print: {}", err.user_message());
-            });
-    } else {
-        spdlog::warn("[{}] API not available - cannot cancel print", get_name());
-        NOTIFY_ERROR("Cannot cancel: not connected to printer");
-    }
+        if (api_) {
+            api_->cancel_print(
+                [this]() {
+                    spdlog::info("[{}] Cancel command sent successfully", get_name());
+                    // State will update via PrinterState observer when Moonraker confirms
+                },
+                [](const MoonrakerError& err) {
+                    spdlog::error("Failed to cancel print: {}", err.message);
+                    NOTIFY_ERROR("Failed to cancel print: {}", err.user_message());
+                });
+        } else {
+            spdlog::warn("[{}] API not available - cannot cancel print", get_name());
+            NOTIFY_ERROR("Cannot cancel: not connected to printer");
+        }
+    });
+
+    // Show the modal (RAII handles cleanup)
+    cancel_modal_.show(lv_screen_active());
 }
 
 void PrintStatusPanel::handle_resize() {

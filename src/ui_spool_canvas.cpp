@@ -3,6 +3,8 @@
 
 #include "ui_spool_canvas.h"
 
+#include "ui_theme.h"
+
 #include "lvgl/lvgl.h"
 #include "lvgl/src/xml/lv_xml.h"
 #include "lvgl/src/xml/lv_xml_parser.h"
@@ -26,9 +28,10 @@ static constexpr float SPOOL_DEPTH = 0.35f; // Depth/width of spool (distance be
 static constexpr int32_t DEFAULT_SIZE = 64;
 static constexpr uint32_t DEFAULT_COLOR = 0xE0E0E0; // Default white/light filament
 
-// Spool body colors (gray plastic like Bambu)
-static constexpr uint32_t SPOOL_BODY = 0x666666;      // Gray spool body (front flange)
-static constexpr uint32_t SPOOL_BODY_DARK = 0x444444; // Darker for back flange
+// Note: Spool body colors now come from theme tokens in globals.xml:
+// - spool_body: Front flange color
+// - spool_body_dark: Back flange color
+// - spool_hub_top, spool_hub_bottom: Center hub gradient
 
 struct SpoolCanvasData {
     lv_obj_t* canvas = nullptr;
@@ -228,9 +231,9 @@ static void redraw_spool(SpoolCanvasData* data) {
     int32_t filament_ry = hub_ry + (int32_t)((max_filament_ry - hub_ry) * fill);
     int32_t filament_rx = (int32_t)(filament_ry * ELLIPSE_RATIO);
 
-    // Colors
-    lv_color_t back_color = lv_color_hex(SPOOL_BODY_DARK);
-    lv_color_t front_color = lv_color_hex(SPOOL_BODY);
+    // Colors (from theme tokens)
+    lv_color_t back_color = ui_theme_get_color("spool_body_dark");
+    lv_color_t front_color = ui_theme_get_color("spool_body");
     lv_color_t filament_color = data->color;
     lv_color_t filament_side = darken_color(filament_color, 30);
 
@@ -299,8 +302,10 @@ static void redraw_spool(SpoolCanvasData* data) {
     // STEP 4: Draw CENTER HOLE ellipse (hub)
     // Stronger gradient: dark at top (deep shadow), lighter at bottom (illuminated)
     // ========================================
-    lv_color_t hub_top = lv_color_hex(0x050505);    // Nearly black at top (deep in shadow)
-    lv_color_t hub_bottom = lv_color_hex(0x404040); // Noticeably lighter at bottom (light hits it)
+    lv_color_t hub_top =
+        ui_theme_get_color("spool_hub_top"); // Nearly black at top (deep in shadow)
+    lv_color_t hub_bottom =
+        ui_theme_get_color("spool_hub_bottom"); // Noticeably lighter at bottom (light hits it)
     draw_gradient_ellipse(&layer, right_x, cy, hub_rx, hub_ry, hub_top, hub_bottom);
 
     lv_canvas_finish_layer(data->canvas, &layer);

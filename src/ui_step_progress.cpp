@@ -84,14 +84,16 @@ static void init_step_progress_colors(const char* scope_name) {
         spdlog::debug("[StepProgress] Colors loaded from scope '{}' for {} mode", scope_name,
                       use_dark_mode ? "dark" : "light");
     } else {
-        // Fallback to hardcoded defaults
-        color_pending = lv_color_hex(0x808080);
-        color_active = lv_color_hex(0xFF4444);
-        color_completed = lv_color_hex(0x4CAF50);
-        color_number_pending = use_dark_mode ? lv_color_hex(0x000000) : lv_color_hex(0xFFFFFF);
-        color_number_active = lv_color_hex(0xFFFFFF);
-        color_label_active = use_dark_mode ? lv_color_hex(0xFFFFFF) : lv_color_hex(0x000000);
-        color_label_inactive = use_dark_mode ? lv_color_hex(0xCCCCCC) : lv_color_hex(0x666666);
+        // Fallback to theme token defaults
+        color_pending = ui_theme_get_color("step_pending");
+        color_active = ui_theme_get_color("step_active");
+        color_completed = ui_theme_get_color("step_completed");
+        color_number_pending =
+            use_dark_mode ? ui_theme_get_color("ams_hub_dark") : lv_color_white();
+        color_number_active = lv_color_white();
+        color_label_active = use_dark_mode ? lv_color_white() : ui_theme_get_color("ams_hub_dark");
+        color_label_inactive = ui_theme_get_color(use_dark_mode ? "step_label_inactive_dark"
+                                                                : "step_label_inactive_light");
 
         spdlog::debug("[StepProgress] Using fallback colors for {} mode",
                       use_dark_mode ? "dark" : "light");

@@ -112,17 +112,25 @@ static void load_colors(jog_pad_state_t* state, const char* component_scope_name
     if (!scope) {
         spdlog::debug("[JogPad] No component scope '{}', using fallback colors",
                       component_scope_name ? component_scope_name : "(null)");
-        // Fallback to dark mode defaults
-        state->jog_color_outer_ring = lv_color_hex(0x3A3A3A);
-        state->jog_color_inner_circle = lv_color_hex(0x2A2A2A);
-        state->jog_color_grid_lines = lv_color_hex(0x000000);
-        state->jog_color_home_bg = lv_color_hex(0x404040);
-        state->jog_color_home_border = lv_color_hex(0x606060);
-        state->jog_color_home_text = lv_color_hex(0xFFFFFF);
-        state->jog_color_boundary_lines = lv_color_hex(0x484848);
-        state->jog_color_distance_labels = lv_color_hex(0xCCCCCC);
-        state->jog_color_axis_labels = lv_color_hex(0xFFFFFF);
-        state->jog_color_highlight = lv_color_hex(0xFFFFFF);
+        // Fallback to theme token defaults based on current mode
+        bool use_dark_mode = ui_theme_is_dark_mode();
+        state->jog_color_outer_ring =
+            ui_theme_get_color(use_dark_mode ? "jog_outer_ring_dark" : "jog_outer_ring_light");
+        state->jog_color_inner_circle =
+            ui_theme_get_color(use_dark_mode ? "jog_inner_circle_dark" : "jog_inner_circle_light");
+        state->jog_color_grid_lines =
+            ui_theme_get_color(use_dark_mode ? "jog_grid_lines_dark" : "jog_grid_lines_light");
+        state->jog_color_home_bg =
+            ui_theme_get_color(use_dark_mode ? "jog_home_bg_dark" : "jog_home_bg_light");
+        state->jog_color_home_border =
+            ui_theme_get_color(use_dark_mode ? "jog_home_border_dark" : "jog_home_border_light");
+        state->jog_color_home_text = lv_color_white();
+        state->jog_color_boundary_lines = ui_theme_get_color(
+            use_dark_mode ? "jog_boundary_lines_dark" : "jog_boundary_lines_light");
+        state->jog_color_distance_labels = ui_theme_get_color(
+            use_dark_mode ? "jog_distance_labels_dark" : "jog_distance_labels_light");
+        state->jog_color_axis_labels = lv_color_white();
+        state->jog_color_highlight = lv_color_white();
         return;
     }
 

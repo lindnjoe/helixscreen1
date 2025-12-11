@@ -300,7 +300,7 @@ static void show_overlay(const lv_area_t* key_area, const char* alternatives) {
     const char* text_color_str = lv_xml_get_const(
         NULL, ui_theme_is_dark_mode() ? "text_primary_dark" : "text_primary_light");
     lv_color_t text_color =
-        text_color_str ? ui_theme_parse_color(text_color_str) : lv_color_hex(0x000000);
+        text_color_str ? ui_theme_parse_color(text_color_str) : ui_theme_get_color("text_primary");
 
     for (size_t i = 0; i < alt_count; i++) {
         lv_obj_t* label = lv_label_create(g_overlay);
@@ -813,8 +813,8 @@ static void keyboard_draw_alternative_chars(lv_event_t* e) {
     // Get theme-appropriate gray color for alternative text
     const char* gray_color_str = lv_xml_get_const(
         NULL, ui_theme_is_dark_mode() ? "text_secondary_dark" : "text_secondary_light");
-    lv_color_t gray_color =
-        gray_color_str ? ui_theme_parse_color(gray_color_str) : lv_color_hex(0x888888);
+    lv_color_t gray_color = gray_color_str ? ui_theme_parse_color(gray_color_str)
+                                           : ui_theme_get_color("text_secondary");
 
     // Iterate through all buttons and draw alternative characters
     for (uint32_t i = 0; map[i][0] != '\0'; i++) {
