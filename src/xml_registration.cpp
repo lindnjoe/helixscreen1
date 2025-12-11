@@ -135,6 +135,25 @@ void register_xml_components() {
     lv_xml_register_component_from_file("A:ui_xml/ams_slot.xml");
     lv_xml_register_component_from_file("A:ui_xml/ams_panel.xml");
 
+    // Feature parity stub panel support
+    lv_xml_register_component_from_file("A:ui_xml/coming_soon_overlay.xml");
+
+    // Feature parity panels (functional or stub)
+    lv_xml_register_component_from_file("A:ui_xml/macro_card.xml");
+    lv_xml_register_component_from_file("A:ui_xml/macro_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/console_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/camera_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/power_device_row.xml");
+    lv_xml_register_component_from_file("A:ui_xml/power_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/screws_tilt_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/input_shaper_panel.xml");
+
+    // Print history panels
+    lv_xml_register_component_from_file("A:ui_xml/history_list_row.xml");
+    lv_xml_register_component_from_file("A:ui_xml/history_list_panel.xml");
+    lv_xml_register_component_from_file("A:ui_xml/history_detail_overlay.xml");
+    lv_xml_register_component_from_file("A:ui_xml/history_dashboard_panel.xml");
+
     // Settings components (must be registered before settings_panel)
     lv_xml_register_component_from_file("A:ui_xml/setting_section_header.xml");
     lv_xml_register_component_from_file("A:ui_xml/setting_toggle_row.xml");
