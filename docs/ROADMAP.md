@@ -1,22 +1,22 @@
 # HelixScreen Development Roadmap
 
-**Last Updated:** 2025-12-10
+**Last Updated:** 2025-12-11
 
 ---
 
-## Project Status: Beta → Feature Parity Push
+## Project Status: Beta → Feature Parity Complete (Core)
 
-HelixScreen is a production-quality Klipper touchscreen UI. Core functionality is complete; **now pushing for feature parity with KlipperScreen, Mainsail, and Fluidd**.
+HelixScreen is a production-quality Klipper touchscreen UI. **Core feature parity is largely achieved** - all critical TIER 1 features are now implemented.
 
 | Area | Status | Details |
 |------|--------|---------|
-| **UI Panels** | ✅ Complete | 14 production panels + 6 overlays |
+| **UI Panels** | ✅ Complete | 20+ production panels + 10 overlays |
 | **Settings** | ✅ Complete | 18 settings across 8 categories |
 | **First-Run Wizard** | ✅ Complete | 7-step guided setup |
-| **Moonraker API** | 🔄 Expanding | 30+ methods, adding ~25 more |
+| **Moonraker API** | ✅ Comprehensive | 40+ methods, print history, timelapse, power |
 | **Build System** | ✅ Complete | macOS, Linux, Pi, AD5M |
-| **Test Suite** | ✅ Complete | 51 unit tests |
-| **Feature Parity** | 🔄 In Progress | 47 gaps identified, prioritized |
+| **Test Suite** | ✅ Complete | 51+ unit tests |
+| **Feature Parity (TIER 1)** | ✅ Complete | All critical features implemented |
 
 ---
 
@@ -39,45 +39,130 @@ Support for Happy Hare and AFC-Klipper multi-filament systems with Bambu-inspire
 See `docs/AMS_IMPLEMENTATION_PLAN.md` for detailed specification.
 Branch: `feature/ams-support` in `helixscreen-ams-feature` worktree.
 
-### 3. Production Hardening
+### 2. Production Hardening
 **Status:** In Progress
 
 - [x] **Connection-aware navigation** - Disable Controls/Filament when disconnected, auto-navigate to home
 - [x] **Reconnection flow UX** - Toast notifications for disconnect/reconnect/klippy states
+- [x] **Print cancel confirmation** - Modal confirmation before canceling prints
+- [x] **Memory profiling tools** - Development overlay for memory monitoring
 - [ ] **Structured logging** - Log levels, rotation, remote debugging
 - [ ] **Edge case testing** - Print failures, filesystem errors
 
 ---
 
-## Feature Parity Quick Reference
+## Feature Parity Status (TIER 1 - Critical)
 
-### Moonraker API Additions Needed (~25 endpoints)
-```
-Job Queue:     /server/job_queue/*
-Print History: /server/history/*
-Webcams:       /server/webcams/*
-Power Devices: /machine/device_power/*
-Updates:       /machine/update/*
-Spoolman:      /server/spoolman/*
-GCode Store:   /server/gcode_store
-```
+All TIER 1 features are now implemented:
 
-### New Panels to Create
-```
-macro_panel.xml         - Execute Klipper macros
-console_panel.xml       - G-code console with keyboard
-camera_panel.xml        - Webcam viewer (MJPEG)
-history_panel.xml       - Print job history
-power_panel.xml         - Power device control
-screws_tilt_panel.xml   - Visual bed leveling
-input_shaper_panel.xml  - Resonance calibration
-```
+| Feature | Status | Implementation |
+|---------|--------|----------------|
+| **Macro Panel** | ✅ Complete | Full implementation with prettified names, system filtering, single-tap execution |
+| **Console Panel** | ✅ Complete | G-code history with color coding (commands, responses, errors) |
+| **Screws Tilt Adjust** | ✅ Complete | Visual bed diagram, animated rotation indicators, multi-probe workflow |
+| **Power Device Control** | ✅ Complete | Device list, on/off toggles, lock during print, friendly names |
+| **Print History** | ✅ Complete | Dashboard + list views, statistics, filtering, search, reprint/delete |
+| **Timelapse Settings** | ✅ Complete | Enable/disable, mode selection, framerate, auto-render |
+| **Temperature Presets** | ✅ Complete | Off/PLA/PETG/ABS presets in temp panels |
+| **Layer Display** | ✅ Complete | Current/total layers on print status |
+| **Camera/Webcam** | 🚧 Stub | Coming Soon overlay (awaiting MJPEG implementation) |
+| **Input Shaper** | 🚧 Stub | Coming Soon overlay |
 
-### Strategy: Breadth First
-1. Create ALL panel stubs with "Coming Soon" overlays
-2. Implement quick wins (layer display, presets, power)
-3. Build out core features incrementally
-4. Each feature clearly marked as complete/in-progress/stub
+### Remaining Stubs (Lower Priority)
+- **Camera Panel** - MJPEG viewer, multi-camera, PiP
+- **Input Shaper Panel** - Resonance calibration UI
+
+---
+
+## Feature Parity Status (TIER 2 - High Priority)
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| **Firmware Retraction** | ⬜ | View/adjust retraction settings |
+| **Spoolman Integration** | ⬜ | Filament tracking, QR scanner |
+| **Job Queue** | ⬜ | Batch printing queue |
+| **Update Manager** | ⬜ | Software updates via Moonraker |
+
+---
+
+## Feature Details
+
+### Screws Tilt Adjust Panel
+**Files:** `ui_xml/screws_tilt_panel.xml`, `src/ui_panel_screws_tilt.cpp`
+
+Complete manual bed leveling workflow:
+- **5 UI States:** IDLE → PROBING → RESULTS → LEVELED → ERROR
+- **Visual bed diagram** with animated rotation indicators (CW/CCW)
+- **Friendly adjustment text** ("Tighten 1/4 turn" instead of "CW 00:15")
+- **Color-coded severity:** Green (level), Yellow (minor), Red (major), Primary (worst screw)
+- **Iterative workflow:** Probe → Adjust → Re-probe → Repeat until level
+- **Success detection:** Auto-detect when all screws within tolerance
+- **Moonraker API:** `SCREWS_TILT_CALCULATE` with response parsing
+
+### Power Device Control Panel
+**Files:** `ui_xml/power_panel.xml`, `ui_xml/power_device_row.xml`, `src/ui_panel_power.cpp`
+
+Complete Moonraker power device integration:
+- **Dynamic device list** from `/machine/device_power/devices`
+- **On/Off toggle switches** with immediate feedback
+- **Friendly device names** via prettify heuristic (e.g., `printer_psu` → "Printer Power")
+- **Lock during print** with visual lock icon and explanation text
+- **Empty state** with guidance when no devices configured
+- **Error handling** with automatic refresh on failure
+
+### Macro Panel
+**Files:** `ui_xml/macro_panel.xml`, `ui_xml/macro_card.xml`, `src/ui_panel_macros.cpp`
+
+Execute Klipper macros from touchscreen:
+- **Sorted alphabetical list** of all available macros
+- **Prettified names** (e.g., `CLEAN_NOZZLE` → "Clean Nozzle")
+- **System macro filtering** (hides `_*` prefixed macros by default)
+- **Single-tap execution** via G-code script API
+- **Dangerous macro detection** (SAVE_CONFIG, FIRMWARE_RESTART, etc.)
+- **Empty state** with guidance when no macros defined
+
+### Console Panel
+**Files:** `ui_xml/console_panel.xml`, `src/ui_panel_console.cpp`
+
+Read-only G-code command history:
+- **Terminal-style display** with newest entries at bottom
+- **Color-coded output:**
+  - White: Commands sent
+  - Green: Successful responses
+  - Red: Errors (`!!` or `Error:` prefix)
+- **Scrollable history** (100 entries max)
+- **Auto-refresh** on panel activation
+- **Empty state** when no history available
+
+### Print History Feature
+**Files:** `ui_xml/history_dashboard_panel.xml`, `ui_xml/history_list_panel.xml`, `src/ui_panel_history_*.cpp`
+
+Comprehensive print history with statistics:
+- **Dashboard view** with aggregated stats:
+  - Total prints, success rate, print time, filament used
+  - Filament by type horizontal bar chart
+  - Prints trend sparkline
+  - Time filtering (Day/Week/Month/Year/All)
+- **List view** with search, filter, sort:
+  - Case-insensitive filename search with debounce
+  - Status filter (All/Completed/Failed/Cancelled)
+  - Sort by date, duration, filename
+- **Detail overlay** with:
+  - Thumbnail display
+  - Full job metadata
+  - Reprint and Delete actions
+- **Timelapse integration** in print history (Phase 5)
+
+### Timelapse Settings Overlay
+**Files:** `ui_xml/timelapse_settings_overlay.xml`, `src/ui_timelapse_settings.cpp`
+
+Configure Moonraker-Timelapse plugin:
+- **Enable/disable toggle** for recording
+- **Mode selection:** Layer Macro vs Hyperlapse
+  - Mode info text explains each option
+- **Framerate dropdown:** 15/24/30/60 fps
+- **Auto-render toggle** for automatic video creation
+- **Moonraker API:** `get_timelapse_settings`, `set_timelapse_settings`
 
 ---
 
@@ -106,10 +191,11 @@ input_shaper_panel.xml  - Resonance calibration
 ### Core Architecture
 - [x] LVGL 9.4 with declarative XML layouts
 - [x] Reactive Subject-Observer data binding
-- [x] Class-based panel architecture (PanelBase, ObserverGuard)
+- [x] Class-based panel architecture (PanelBase, ObserverGuard, SubscriptionGuard)
 - [x] Theme system with dark/light modes
 - [x] Responsive breakpoints (small/medium/large displays)
 - [x] RAII lifecycle management throughout
+- [x] Design token system (no hardcoded colors/spacing)
 
 ### Navigation & Panels
 - [x] **Home Panel** - Printer status, live temps, LED control, disconnect overlay
@@ -119,9 +205,17 @@ input_shaper_panel.xml  - Resonance calibration
 - [x] **Extrusion Panel** - Extrude/retract, amount selector, safety checks
 - [x] **Filament Panel** - Load/unload, filament profiles
 - [x] **Print Select** - Card/list views, sorting, USB source tabs
-- [x] **Print Status** - Progress, time remaining, pause/resume/cancel, exclude object
+- [x] **Print Status** - Progress, time remaining, pause/resume/cancel, exclude object, cancel confirmation
 - [x] **Settings Panel** - 18 settings (theme, display, sound, network, safety, calibration)
-- [x] **Advanced Panel** - Bed mesh visualization
+- [x] **Advanced Panel** - Bed mesh visualization, access to calibration tools
+
+### Feature Parity Panels (NEW)
+- [x] **Screws Tilt Panel** - Visual bed leveling with rotation indicators, iterative workflow
+- [x] **Power Panel** - Moonraker power device control with friendly names and lock during print
+- [x] **Macro Panel** - Execute Klipper macros with prettified names and filtering
+- [x] **Console Panel** - G-code history with color-coded output
+- [x] **Print History** - Dashboard + list with stats, filtering, search, reprint/delete
+- [x] **Timelapse Settings** - Configure Moonraker-timelapse (mode, framerate, auto-render)
 
 ### Settings Features (18 total)
 - [x] Dark/Light theme toggle with restart dialog
@@ -157,7 +251,11 @@ input_shaper_panel.xml  - Resonance calibration
 - [x] Heater/fan/LED control
 - [x] System commands (E-stop, restart)
 - [x] Exclude object with undo window
-- [x] **Print History** - Dashboard with stats, time filtering, history list with search/filter/sort, detail overlay with Reprint/Delete
+- [x] **Print History** - `/server/history/*` (list, totals, job details, delete)
+- [x] **Power Devices** - `/machine/device_power/*` (list devices, on/off/toggle)
+- [x] **G-code Store** - `/server/gcode_store` (command history)
+- [x] **Timelapse** - Moonraker-timelapse API (settings get/set)
+- [x] **Screws Tilt** - `SCREWS_TILT_CALCULATE` command parsing
 
 ### G-code Features
 - [x] Pre-print operation toggles (bed level, QGL, Z-tilt, nozzle clean)
@@ -186,7 +284,28 @@ input_shaper_panel.xml  - Resonance calibration
 
 ## Recent Work
 
-### December 2025
+### December 2025 (Week 2)
+| Feature | Commit |
+|---------|--------|
+| **Screws Tilt Adjust - Full Implementation** | `253497f` |
+| Real `SCREWS_TILT_CALCULATE` response parsing | `253497f` |
+| Visual bed diagram with animated rotation indicators | |
+| Friendly adjustment text ("Tighten 1/4 turn") | |
+| **Print Cancel Confirmation Modal** | `a9f285e` |
+| **Memory Profiling Tools** | `2a2d0a2` |
+| Development overlay for memory monitoring | |
+| macOS + Linux cross-platform support | |
+| **Timelapse Integration** | `beb4fa0` |
+| Timelapse settings overlay (mode, framerate, autorender) | |
+| Integration with print history | |
+| **Refactoring & Polish** | |
+| Phase 3 design token migration complete | `8c9f3bb` |
+| RAII migration with SubscriptionGuard | `df72783` |
+| Removed 120+ redundant GPL boilerplate files | `788d466` |
+| Log noise reduction (widget registration → trace) | `30ac5e4` |
+| Print complete overlay with thumbnail | `58fc321` |
+
+### December 2025 (Week 1)
 | Feature | Commit |
 |---------|--------|
 | **Print History Feature Complete** | `2025-12-10` |

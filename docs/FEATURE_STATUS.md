@@ -23,11 +23,11 @@ This document tracks the implementation status of all features identified in the
 
 | Category | Complete | In Progress | Stub | Not Started | Total |
 |----------|----------|-------------|------|-------------|-------|
-| CRITICAL (Tier 1) | 4 | 1 | 3 | 0 | 8 |
+| CRITICAL (Tier 1) | 7 | 0 | 2 | 0 | 9 |
 | HIGH (Tier 2) | 2 | 0 | 1 | 4 | 7 |
 | MEDIUM (Tier 3) | 0 | 0 | 0 | 7 | 7 |
 | DIFFERENTIATOR (Tier 4) | 0 | 0 | 0 | 5 | 5 |
-| **TOTAL** | **6** | **1** | **4** | **16** | **27** |
+| **TOTAL** | **9** | **0** | **3** | **16** | **28** |
 
 ---
 
@@ -40,10 +40,11 @@ These features ALL major competitors have. Required for feature parity.
 | **Temperature Presets** | ✅ | `nozzle_temp_panel.xml`, `bed_temp_panel.xml` | Off/PLA/PETG/ABS presets implemented |
 | **Macro Panel** | ✅ | `ui_xml/macro_panel.xml`, `src/ui_panel_macros.cpp` | List & execute Klipper macros, prettified names, system macro filtering |
 | **Console Panel** | ✅ | `ui_xml/console_panel.xml`, `src/ui_panel_console.cpp` | Complete - G-code history display with color coding |
-| **Screws Tilt Adjust** | 🚧 | `ui_xml/screws_tilt_panel.xml` | Stub with Coming Soon overlay |
+| **Screws Tilt Adjust** | ✅ | `ui_xml/screws_tilt_panel.xml`, `src/ui_panel_screws_tilt.cpp` | Complete - visual bed diagram, animated indicators, iterative workflow |
 | **Camera/Webcam** | 🚧 | `ui_xml/camera_panel.xml` | Stub with Coming Soon overlay |
-| **Print History** | 🟡 | `ui_xml/history_panel.xml` | **IN PROGRESS** in `helixscreen-print-history` worktree |
+| **Print History** | ✅ | `ui_xml/history_dashboard_panel.xml`, `ui_xml/history_list_panel.xml` | Complete - Dashboard + list with stats, filtering, reprint/delete |
 | **Power Device Control** | ✅ | `ui_xml/power_panel.xml`, `src/ui_panel_power.cpp` | Complete - polished with XML components, friendly names, empty state |
+| **Timelapse Settings** | ✅ | `ui_xml/timelapse_settings_overlay.xml`, `src/ui_timelapse_settings.cpp` | Complete - enable/disable, mode, framerate, auto-render |
 
 ### Detailed Status
 
@@ -113,24 +114,27 @@ These features ALL major competitors have. Required for feature parity.
   - [ ] Clear button (Phase 2 - deferred)
 
 #### Screws Tilt Adjust
-- **Status:** ⬜ Not Started
+- **Status:** ✅ Complete
 - **Priority:** CRITICAL
 - **Complexity:** HIGH
 - **Depends On:** None
-- **Files to Create:**
-  - [ ] `ui_xml/screws_tilt_panel.xml`
-  - [ ] `ui_xml/screw_indicator.xml`
-  - [ ] `include/ui_panel_screws_tilt.h`
-  - [ ] `src/ui_panel_screws_tilt.cpp`
-- **Files to Modify:**
-  - [ ] `ui_xml/controls_panel.xml` (add card)
-- **API:** `SCREWS_TILT_CALCULATE` command, parse response
+- **Files Created:**
+  - [x] `ui_xml/screws_tilt_panel.xml` - Full panel with 5 states
+  - [x] `include/ui_panel_screws_tilt.h` - Panel class header
+  - [x] `src/ui_panel_screws_tilt.cpp` - Full implementation
+- **API:** `SCREWS_TILT_CALCULATE` with real response parsing
 - **Checklist:**
-  - [ ] Visual bed diagram with screw positions
-  - [ ] 3x3, 4-corner support
-  - [ ] Rotation indicators ("CW 1/4 turn")
-  - [ ] Re-probe button
-  - [ ] Different bed shapes
+  - [x] Visual bed diagram with screw positions
+  - [x] 4-corner support with quadrant positioning
+  - [x] Animated rotation indicators (CW/CCW icons)
+  - [x] Friendly adjustment text ("Tighten 1/4 turn")
+  - [x] Color-coded severity (green/yellow/red)
+  - [x] Reference screw indicator (checkmark)
+  - [x] Worst screw highlighting with primary color
+  - [x] Re-probe button for iterative leveling
+  - [x] Success detection when all screws within tolerance
+  - [x] Error state with retry option
+  - [x] Probe count display on success
 
 #### Camera/Webcam
 - **Status:** ⬜ Not Started
@@ -153,25 +157,35 @@ These features ALL major competitors have. Required for feature parity.
   - [ ] Rotation/flip settings
 
 #### Print History
-- **Status:** ⬜ Not Started
+- **Status:** ✅ Complete
 - **Priority:** CRITICAL
 - **Complexity:** MEDIUM
 - **Depends On:** None
-- **Files to Create:**
-  - [ ] `ui_xml/history_panel.xml`
-  - [ ] `ui_xml/history_item.xml`
-  - [ ] `include/ui_panel_history.h`
-  - [ ] `src/ui_panel_history.cpp`
-- **Files to Modify:**
-  - [ ] `ui_xml/navigation_bar.xml` or settings
-- **API:** `/server/history/list`, `/server/history/totals`, `/server/history/job`
+- **Files Created:**
+  - [x] `ui_xml/history_dashboard_panel.xml` - Statistics dashboard with charts
+  - [x] `ui_xml/history_list_panel.xml` - Full job list with search/filter/sort
+  - [x] `ui_xml/history_detail_overlay.xml` - Job detail with thumbnail
+  - [x] `ui_xml/history_row.xml` - Reusable row component
+  - [x] `include/ui_panel_history_dashboard.h` - Dashboard panel class
+  - [x] `include/ui_panel_history_list.h` - List panel class
+  - [x] `src/ui_panel_history_dashboard.cpp` - Dashboard implementation
+  - [x] `src/ui_panel_history_list.cpp` - List implementation with filtering
+- **API:** `/server/history/list`, `/server/history/totals`, `/server/history/job`, `/server/history/delete_job`
 - **Checklist:**
-  - [ ] List past print jobs
-  - [ ] Success/failure indicators
-  - [ ] Print time, filament used
-  - [ ] Reprint from history
-  - [ ] Statistics dashboard
-  - [ ] Delete entries
+  - [x] Dashboard with aggregated statistics
+  - [x] Time filtering (Day/Week/Month/Year/All)
+  - [x] Total prints, success rate, print time, filament used
+  - [x] Filament by type horizontal bar chart
+  - [x] Prints trend sparkline
+  - [x] Full history list with scrolling
+  - [x] Search by filename (case-insensitive, debounced)
+  - [x] Status filter (All/Completed/Failed/Cancelled)
+  - [x] Sort by date, duration, filename
+  - [x] Job detail overlay with thumbnail
+  - [x] Reprint action (starts same G-code file)
+  - [x] Delete action with confirmation
+  - [x] Empty state when no history
+  - [x] Timelapse integration
 
 #### Power Device Control
 - **Status:** ✅ Complete
@@ -211,7 +225,7 @@ Most competitors have these. Should implement for competitive parity.
 | **Spoolman Integration** | ⬜ | - | Filament tracking, QR scanner |
 | **Job Queue** | ⬜ | - | Batch printing queue |
 | **Update Manager** | ⬜ | - | Software updates |
-| **Timelapse Controls** | ⬜ | - | Moonraker-timelapse settings |
+| **Timelapse Controls** | ✅ | `ui_xml/timelapse_settings_overlay.xml` | Enable/disable, mode, framerate, auto-render |
 | **Layer Display** | ✅ | `ui_xml/print_status_panel.xml:45-46` | Implemented: `bind_text="print_layer_text"` |
 
 ### Detailed Status
@@ -275,15 +289,22 @@ Most competitors have these. Should implement for competitive parity.
   - [ ] Rollback option
 
 #### Timelapse Controls
-- **Status:** ⬜ Not Started
+- **Status:** ✅ Complete
 - **Priority:** HIGH
 - **Complexity:** MEDIUM
-- **API:** Moonraker-timelapse API
+- **Files Created:**
+  - [x] `ui_xml/timelapse_settings_overlay.xml` - Full settings panel
+  - [x] `include/ui_timelapse_settings.h` - Overlay class header
+  - [x] `src/ui_timelapse_settings.cpp` - Full implementation
+- **API:** Moonraker-timelapse `get_timelapse_settings`, `set_timelapse_settings`
 - **Checklist:**
-  - [ ] Enable/disable toggle
-  - [ ] Mode selector
-  - [ ] Frame rate setting
-  - [ ] Video library browser
+  - [x] Enable/disable toggle for timelapse recording
+  - [x] Mode selector (Layer Macro vs Hyperlapse)
+  - [x] Mode info text explaining each option
+  - [x] Framerate dropdown (15/24/30/60 fps)
+  - [x] Auto-render toggle (create video on completion)
+  - [x] Lazy panel creation on first open
+  - [ ] Video library browser (future enhancement)
 
 #### Layer Display
 - **Status:** ✅ Complete
