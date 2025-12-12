@@ -145,8 +145,8 @@ RibbonGeometry::RibbonGeometry(RibbonGeometry&& other) noexcept
       color_palette(std::move(other.color_palette)),
       strip_layer_index(std::move(other.strip_layer_index)),
       layer_strip_ranges(std::move(other.layer_strip_ranges)),
-      max_layer_index(other.max_layer_index), normal_cache_ptr(other.normal_cache_ptr),
-      color_cache_ptr(other.color_cache_ptr),
+      max_layer_index(other.max_layer_index), layer_bboxes(std::move(other.layer_bboxes)),
+      normal_cache_ptr(other.normal_cache_ptr), color_cache_ptr(other.color_cache_ptr),
       extrusion_triangle_count(other.extrusion_triangle_count),
       travel_triangle_count(other.travel_triangle_count), quantization(other.quantization) {
     // Prevent double-delete
@@ -168,6 +168,7 @@ RibbonGeometry& RibbonGeometry::operator=(RibbonGeometry&& other) noexcept {
         color_palette = std::move(other.color_palette);
         strip_layer_index = std::move(other.strip_layer_index);
         layer_strip_ranges = std::move(other.layer_strip_ranges);
+        layer_bboxes = std::move(other.layer_bboxes);
         max_layer_index = other.max_layer_index;
         normal_cache_ptr = other.normal_cache_ptr;
         color_cache_ptr = other.color_cache_ptr;
@@ -190,6 +191,7 @@ void RibbonGeometry::clear() {
     color_palette.clear();
     strip_layer_index.clear();
     layer_strip_ranges.clear();
+    layer_bboxes.clear();
     max_layer_index = 0;
 
     // Clear caches
@@ -413,6 +415,9 @@ RibbonGeometry GeometryBuilder::build(const ParsedGCodeFile& gcode,
     geometry.max_layer_index =
         gcode.layers.empty() ? 0 : static_cast<uint16_t>(gcode.layers.size() - 1);
 
+    // Initialize per-layer bounding boxes for frustum culling
+    geometry.layer_bboxes.resize(gcode.layers.size());
+
     spdlog::info("[GCode::Builder] Setting max_layer_index = {} (from {} layers)",
                  geometry.max_layer_index, gcode.layers.size());
 
@@ -434,6 +439,13 @@ RibbonGeometry GeometryBuilder::build(const ParsedGCodeFile& gcode,
         auto it = z_to_layer_index.find(z_key);
         if (it != z_to_layer_index.end()) {
             layer_idx = it->second;
+        }
+
+        // Expand per-layer bounding box for frustum culling
+        if (layer_idx < geometry.layer_bboxes.size()) {
+            AABB& layer_bbox = geometry.layer_bboxes[layer_idx];
+            layer_bbox.expand(segment.start);
+            layer_bbox.expand(segment.end);
         }
 
         // Track Y range
@@ -556,6 +568,9 @@ RibbonGeometry GeometryBuilder::build(const ParsedGCodeFile& gcode,
 
     // Store quantization parameters for dequantization during rendering
     geometry.quantization = quant_params_;
+
+    // Store layer height for Z-offset calculations during LOD rendering
+    geometry.layer_height_mm = layer_height_mm_;
 
     // Update final statistics
     stats_.vertices_generated = geometry.vertices.size();

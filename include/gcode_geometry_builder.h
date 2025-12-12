@@ -131,6 +131,9 @@ struct RibbonGeometry {
     std::vector<std::pair<size_t, size_t>> layer_strip_ranges;
     uint16_t max_layer_index{0}; ///< Maximum layer index in geometry
 
+    // Per-layer bounding boxes for frustum culling (indexed by layer)
+    std::vector<AABB> layer_bboxes; ///< AABB per layer for frustum culling
+
     // Palette lookup caches (O(1) lookup instead of O(N) linear search)
     // NOTE: These use raw pointer types to avoid template bloat in header
     // Actual types: std::unordered_map<glm::vec3, uint16_t, Vec3Hash, Vec3Equal>
@@ -141,6 +144,7 @@ struct RibbonGeometry {
     size_t extrusion_triangle_count; ///< Triangles for extrusion moves
     size_t travel_triangle_count;    ///< Triangles for travel moves
     QuantizationParams quantization; ///< Quantization params for dequantization
+    float layer_height_mm{0.2f};     ///< Layer height for Z-offset calculations during LOD
 
     /**
      * @brief Calculate total memory usage in bytes
@@ -150,7 +154,8 @@ struct RibbonGeometry {
                strips.size() * sizeof(TriangleStrip) + normal_palette.size() * sizeof(glm::vec3) +
                color_palette.size() * sizeof(uint32_t) +
                strip_layer_index.size() * sizeof(uint16_t) +
-               layer_strip_ranges.size() * sizeof(std::pair<size_t, size_t>);
+               layer_strip_ranges.size() * sizeof(std::pair<size_t, size_t>) +
+               layer_bboxes.size() * sizeof(AABB);
     }
 
     /**
@@ -180,14 +185,17 @@ struct RibbonGeometry {
  */
 struct SimplificationOptions {
     bool enable_merging = true; ///< Enable collinear segment merging
-    float tolerance_mm = 0.15f; ///< Merge tolerance (0.01 - 0.2mm) - aggressive optimization
+    float tolerance_mm = 0.15f; ///< Merge tolerance (0.01 - 1.0mm) - higher = more aggressive
     float min_segment_length_mm = 0.01f; ///< Minimum segment length to keep (filter micro-segments)
 
     /**
      * @brief Validate and clamp tolerance to safe range
+     *
+     * Max tolerance of 5.0mm allows very aggressive simplification for LOD
+     * during interaction. For final quality rendering, use 0.5mm or less.
      */
     void validate() {
-        tolerance_mm = std::max(0.01f, std::min(0.2f, tolerance_mm));
+        tolerance_mm = std::max(0.01f, std::min(5.0f, tolerance_mm));
         min_segment_length_mm = std::max(0.0001f, min_segment_length_mm);
     }
 };

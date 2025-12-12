@@ -207,8 +207,8 @@ static void gcode_viewer_draw_cb(lv_event_t* e) {
         return;
     }
 
-    spdlog::trace("GCodeViewer: draw_cb called, state={}, gcode_file={}, first_render={}",
-                  (int)st->viewer_state, (void*)st->gcode_file.get(), st->first_render);
+    // NOTE: Removed per-frame trace log - it was causing log spam during normal operation
+    // The draw_cb is called every LVGL frame (~30fps) even when nothing changes
 
     // If no G-code loaded, draw placeholder message
     if (st->viewer_state != GCODE_VIEWER_STATE_LOADED || !st->gcode_file) {
@@ -238,24 +238,34 @@ static void gcode_viewer_draw_cb(lv_event_t* e) {
     auto render_duration_us =
         std::chrono::duration_cast<std::chrono::microseconds>(render_end - render_start).count();
 
-    // FPS tracking based on actual render time (debug mode only via spdlog level)
+    // FPS tracking - only count actual renders (>2ms), ignore cached frame copies
+    // Skipped renders (dirty flag hit) take ~0.5ms and shouldn't pollute the average
     static float render_time_avg_ms = 0.0f;
-    static int frame_count = 0;
+    static int actual_render_count = 0;
+    static int log_frame_count = 0;
     static constexpr float FPS_ALPHA = 0.1f; // Exponential moving average smoothing factor
+    static constexpr float MIN_ACTUAL_RENDER_MS = 2.0f; // Threshold to detect real renders
 
     float render_time_ms = render_duration_us / 1000.0f;
-    render_time_avg_ms =
-        (render_time_avg_ms == 0.0f)
-            ? render_time_ms
-            : (FPS_ALPHA * render_time_ms + (1.0f - FPS_ALPHA) * render_time_avg_ms);
+
+    // Only update average for actual renders (not cached frame copies)
+    if (render_time_ms > MIN_ACTUAL_RENDER_MS) {
+        render_time_avg_ms =
+            (render_time_avg_ms == 0.0f)
+                ? render_time_ms
+                : (FPS_ALPHA * render_time_ms + (1.0f - FPS_ALPHA) * render_time_avg_ms);
+        actual_render_count++;
+    }
 
     // Log every 30 frames (controlled by spdlog level)
-    if (++frame_count >= 30) {
-        float current_fps = (render_time_ms > 0.0f) ? 1000.0f / render_time_ms : 0.0f;
-        float avg_fps = (render_time_avg_ms > 0.0f) ? 1000.0f / render_time_avg_ms : 0.0f;
-        spdlog::debug("[GCode::Viewer] Render: {:.1f}ms ({:.1f}fps), avg: {:.1f}ms ({:.1f}fps)",
-                      render_time_ms, current_fps, render_time_avg_ms, avg_fps);
-        frame_count = 0;
+    if (++log_frame_count >= 30) {
+        if (actual_render_count > 0 && render_time_avg_ms > MIN_ACTUAL_RENDER_MS) {
+            float avg_fps = 1000.0f / render_time_avg_ms;
+            spdlog::debug("[GCode::Viewer] Avg render: {:.1f}ms ({:.1f}fps) over {} frames",
+                          render_time_avg_ms, avg_fps, actual_render_count);
+        }
+        log_frame_count = 0;
+        actual_render_count = 0;
     }
 }
 
@@ -333,6 +343,14 @@ static void gcode_viewer_press_cb(lv_event_t* e) {
     st->last_drag_pos = point;
     st->long_press_fired = false;
     st->long_press_object_name.clear();
+
+    spdlog::trace("GCodeViewer: PRESSED at ({}, {}), is_dragging={}", point.x, point.y,
+                  st->is_dragging);
+
+    // Enter interaction mode for reduced resolution during drag
+    if (st->renderer_) {
+        st->renderer_->set_interaction_mode(true);
+    }
 
     // Start long-press timer if callback is registered
     if (st->object_long_press_callback && st->gcode_file) {
@@ -495,6 +513,11 @@ static void gcode_viewer_release_cb(lv_event_t* e) {
 
     st->is_dragging = false;
 
+    // Exit interaction mode to restore full resolution for final frame
+    if (st->renderer_) {
+        st->renderer_->set_interaction_mode(false);
+    }
+
     // Always render final frame on release to ensure camera settles at correct position
     // (throttling during drag may have skipped the last frame)
     lv_obj_invalidate(obj);
@@ -602,7 +625,8 @@ lv_obj_t* ui_gcode_viewer_create(lv_obj_t* parent) {
 // Result structure for async geometry building
 struct AsyncBuildResult {
     std::unique_ptr<helix::gcode::ParsedGCodeFile> gcode_file;
-    std::unique_ptr<helix::gcode::RibbonGeometry> geometry;
+    std::unique_ptr<helix::gcode::RibbonGeometry> geometry;        ///< Full detail geometry
+    std::unique_ptr<helix::gcode::RibbonGeometry> coarse_geometry; ///< Coarse LOD for interaction
     std::string error_msg;
     bool success{true};
 };
@@ -693,7 +717,10 @@ static void ui_gcode_viewer_load_file_async(lv_obj_t* obj, const char* file_path
                 // PHASE 2: Build geometry (slow, 1-5s for large files)
                 // This is thread-safe - no OpenGL calls, just CPU work
                 helix::gcode::GeometryBuilder builder;
-                helix::gcode::SimplificationOptions opts{.tolerance_mm = 0.15f};
+                // Aggressive simplification: 0.5mm merges more collinear segments
+                // (still well within 3D printer precision of ~50 microns)
+                helix::gcode::SimplificationOptions opts{.tolerance_mm = 0.5f,
+                                                         .min_segment_length_mm = 0.05f};
 
                 // Configure builder with metadata
                 // Set tool color palette for multicolor prints
@@ -714,10 +741,39 @@ static void ui_gcode_viewer_load_file_async(lv_obj_t* obj, const char* file_path
                 result->geometry = std::make_unique<helix::gcode::RibbonGeometry>(
                     builder.build(*result->gcode_file, opts));
 
-                spdlog::info("GCodeViewer: Built geometry with {} vertices, {} triangles",
+                spdlog::info("GCodeViewer: Built full geometry with {} vertices, {} triangles",
                              result->geometry->vertices.size(),
                              result->geometry->extrusion_triangle_count +
                                  result->geometry->travel_triangle_count);
+
+                // Build coarse LOD geometry for interaction (Phase 6)
+                // More aggressive simplification for better frame rate during drag
+                // 2.0mm tolerance gives ~55% fewer triangles - good balance of quality/speed
+                helix::gcode::SimplificationOptions coarse_opts{.tolerance_mm = 2.0f,
+                                                                .min_segment_length_mm = 0.5f};
+                helix::gcode::GeometryBuilder coarse_builder;
+                if (!result->gcode_file->tool_color_palette.empty()) {
+                    coarse_builder.set_tool_color_palette(result->gcode_file->tool_color_palette);
+                }
+                if (result->gcode_file->perimeter_extrusion_width_mm > 0.0f) {
+                    coarse_builder.set_extrusion_width(
+                        result->gcode_file->perimeter_extrusion_width_mm);
+                } else if (result->gcode_file->extrusion_width_mm > 0.0f) {
+                    coarse_builder.set_extrusion_width(result->gcode_file->extrusion_width_mm);
+                }
+                coarse_builder.set_layer_height(result->gcode_file->layer_height_mm);
+
+                result->coarse_geometry = std::make_unique<helix::gcode::RibbonGeometry>(
+                    coarse_builder.build(*result->gcode_file, coarse_opts));
+
+                size_t full_tris = result->geometry->extrusion_triangle_count +
+                                   result->geometry->travel_triangle_count;
+                size_t coarse_tris = result->coarse_geometry->extrusion_triangle_count +
+                                     result->coarse_geometry->travel_triangle_count;
+                float reduction =
+                    full_tris > 0 ? 100.0f * (1.0f - float(coarse_tris) / float(full_tris)) : 0.0f;
+                spdlog::info("GCodeViewer: Built coarse LOD with {} triangles ({:.0f}% reduction)",
+                             coarse_tris, reduction);
             }
         } catch (const std::exception& ex) {
             result->success = false;
@@ -751,11 +807,15 @@ static void ui_gcode_viewer_load_file_async(lv_obj_t* obj, const char* file_path
                 // Store G-code data
                 st->gcode_file = std::move(r->gcode_file);
 
-                // Set pre-built geometry on renderer
+                // Set pre-built geometry on renderer (full detail + coarse LOD)
 #ifdef ENABLE_TINYGL_3D
                 spdlog::debug("GCodeViewer: Calling set_prebuilt_geometry");
                 st->renderer_->set_prebuilt_geometry(std::move(r->geometry),
                                                      st->gcode_file->filename);
+                // Set coarse LOD geometry for interaction (Phase 6)
+                if (r->coarse_geometry) {
+                    st->renderer_->set_prebuilt_coarse_geometry(std::move(r->coarse_geometry));
+                }
 #endif
 
                 // Fit camera to model bounds

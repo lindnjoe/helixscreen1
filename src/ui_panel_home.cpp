@@ -993,20 +993,30 @@ void HomePanel::reset_print_card_to_idle() {
 
 void HomePanel::load_current_print_thumbnail() {
     if (!print_card_thumb_ || !api_) {
-        spdlog::debug("[{}] Cannot load thumbnail - widget={}, api={}", get_name(),
-                      (void*)print_card_thumb_, (void*)api_);
         return;
     }
 
     const char* filename = lv_subject_get_string(printer_state_.get_print_filename_subject());
     if (!filename || filename[0] == '\0') {
-        spdlog::debug("[{}] No filename - keeping current thumbnail", get_name());
+        return;
+    }
+
+    // Throttle: Don't reload if we already tried this exact filename recently
+    static std::string last_attempted_filename;
+    static int last_attempted_gen = 0;
+    std::string current_filename(filename);
+
+    if (current_filename == last_attempted_filename &&
+        thumbnail_load_generation_ == last_attempted_gen) {
+        // Already attempted this filename - skip to avoid spam
         return;
     }
 
     // Increment generation to invalidate any in-flight async operations
     ++thumbnail_load_generation_;
     int current_gen = thumbnail_load_generation_;
+    last_attempted_filename = current_filename;
+    last_attempted_gen = current_gen;
 
     spdlog::debug("[{}] Loading print thumbnail for: {} (gen={})", get_name(), filename,
                   current_gen);

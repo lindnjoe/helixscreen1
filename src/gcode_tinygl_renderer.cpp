@@ -25,8 +25,10 @@ namespace gcode {
 GCodeTinyGLRenderer::GCodeTinyGLRenderer()
     : geometry_builder_(std::make_unique<GeometryBuilder>()) {
     // Set default configuration
-    simplification_.tolerance_mm = 0.15f;
-    simplification_.min_segment_length_mm = 0.01f;
+    // More aggressive simplification: 0.5mm tolerance gives ~70-80% segment reduction
+    // (vs 0.15mm which gives ~43% reduction). 0.5mm is still well within print precision.
+    simplification_.tolerance_mm = 0.5f;
+    simplification_.min_segment_length_mm = 0.05f; // Filter more micro-segments
     simplification_.enable_merging = true;
 
     geometry_builder_->set_smooth_shading(smooth_shading_);
@@ -58,6 +60,12 @@ GCodeTinyGLRenderer::~GCodeTinyGLRenderer() {
 }
 
 void GCodeTinyGLRenderer::set_viewport_size(int width, int height) {
+    // Always track full resolution (for interaction mode restore)
+    if (!interaction_mode_) {
+        full_viewport_width_ = width;
+        full_viewport_height_ = height;
+    }
+
     if (width == viewport_width_ && height == viewport_height_) {
         return; // No change
     }
@@ -67,6 +75,39 @@ void GCodeTinyGLRenderer::set_viewport_size(int width, int height) {
 
     // Reinitialize TinyGL with new size
     shutdown_tinygl();
+
+    // Invalidate cached framebuffer
+    framebuffer_valid_ = false;
+}
+
+void GCodeTinyGLRenderer::set_interaction_mode(bool interacting) {
+    if (interaction_mode_ == interacting) {
+        return; // No change
+    }
+
+    interaction_mode_ = interacting;
+
+    if (interacting) {
+        // Enter interaction mode: start with no layer skipping
+        // Progressive optimization will escalate if needed based on measured render time
+        //
+        // NOTE: We don't reduce resolution because the bottleneck is vertex processing
+        // (3M triangles), not pixel fill. Resolution reduction hurts quality without
+        // significantly improving frame rate.
+        adaptive_layer_step_ = 1;
+        smoothed_render_time_ms_ = 0.0f; // Reset EMA for fresh measurement
+
+        spdlog::debug("[GCode::Renderer] Entering interaction mode: adaptive layer skip (start=1)");
+
+        framebuffer_valid_ = false;
+    } else {
+        // Exit interaction mode: restore all layers
+        spdlog::debug("[GCode::Renderer] Exiting interaction mode (was layer_step={})",
+                      adaptive_layer_step_);
+
+        adaptive_layer_step_ = 1; // Reset for next interaction
+        framebuffer_valid_ = false;
+    }
 }
 
 void GCodeTinyGLRenderer::set_filament_color(const std::string& hex_color) {
@@ -516,6 +557,9 @@ void GCodeTinyGLRenderer::set_prebuilt_geometry(std::unique_ptr<RibbonGeometry> 
     geometry_ = std::move(*geometry); // Move the value from unique_ptr into optional
     current_gcode_filename_ = filename;
 
+    // Invalidate cached framebuffer - new geometry requires full re-render
+    framebuffer_valid_ = false;
+
     spdlog::info("[GCode::Renderer] Pre-built geometry set: {} vertices, {} triangles (extrusion: "
                  "{}, travel: {}), max_layer_index={}",
                  geometry_->vertices.size(),
@@ -524,9 +568,37 @@ void GCodeTinyGLRenderer::set_prebuilt_geometry(std::unique_ptr<RibbonGeometry> 
                  geometry_->max_layer_index);
 }
 
+void GCodeTinyGLRenderer::set_prebuilt_coarse_geometry(std::unique_ptr<RibbonGeometry> geometry) {
+    if (!geometry) {
+        coarse_geometry_.reset();
+        spdlog::debug("[GCode::Renderer] Coarse LOD geometry cleared");
+        return;
+    }
+
+    size_t coarse_tris = geometry->extrusion_triangle_count + geometry->travel_triangle_count;
+    size_t full_tris =
+        geometry_ ? geometry_->extrusion_triangle_count + geometry_->travel_triangle_count : 0;
+    float reduction =
+        full_tris > 0 ? 100.0f * (1.0f - float(coarse_tris) / float(full_tris)) : 0.0f;
+
+    coarse_geometry_ = std::move(*geometry);
+
+    spdlog::info(
+        "[GCode::Renderer] Coarse LOD geometry set: {} triangles ({:.0f}% reduction from full)",
+        coarse_tris, reduction);
+}
+
 void GCodeTinyGLRenderer::render_geometry(const GCodeCamera& camera) {
     if (!geometry_) {
         return; // No geometry to render
+    }
+
+    // LOD selection: use coarse geometry during interaction if available
+    // This gives much better frame rates than runtime layer skipping (Phase 1)
+    // because the coarse geometry has actual merged/simplified triangles
+    active_geometry_ = &(*geometry_);
+    if (interaction_mode_ && use_lod_for_interaction_ && coarse_geometry_.has_value()) {
+        active_geometry_ = &(*coarse_geometry_);
     }
 
     // Clear buffers
@@ -544,11 +616,19 @@ void GCodeTinyGLRenderer::render_geometry(const GCodeCamera& camera) {
     glMatrixMode(GL_MODELVIEW);
     glLoadMatrixf(glm::value_ptr(camera.get_view_matrix()));
 
+    // Extract frustum planes for culling (MVP = projection * view)
+    glm::mat4 mvp = camera.get_projection_matrix() * camera.get_view_matrix();
+    extract_frustum_planes(mvp);
+
+    // Reset frustum culling stats
+    frustum_culled_layers_ = 0;
+    frustum_visible_layers_ = 0;
+
     // Check if we need two-pass ghost layer rendering
     if (ghost_mode_enabled_ && current_progress_layer_ >= 0 &&
-        !geometry_->strip_layer_index.empty()) {
+        !active_geometry_->strip_layer_index.empty()) {
         // Two-pass rendering for print progress visualization
-        int max_layer = static_cast<int>(geometry_->max_layer_index);
+        int max_layer = static_cast<int>(active_geometry_->max_layer_index);
 
         // Pass 1: Render solid layers (0 to current_progress_layer_)
         render_layer_range(0, current_progress_layer_, 1.0f);
@@ -573,68 +653,39 @@ void GCodeTinyGLRenderer::render_geometry(const GCodeCamera& camera) {
         }
     } else {
         // Normal rendering - all strips at full brightness
-        render_layer_range(0, static_cast<int>(geometry_->max_layer_index), 1.0f);
+        render_layer_range(0, static_cast<int>(active_geometry_->max_layer_index), 1.0f);
+    }
+
+    // Log frustum culling stats periodically (only when culling actually happens)
+    static int log_counter = 0;
+    if (++log_counter >= 60 && frustum_culled_layers_ > 0) {
+        spdlog::debug("[GCode::Frustum] Culled {}/{} layers ({:.1f}% visible)",
+                      frustum_culled_layers_, frustum_culled_layers_ + frustum_visible_layers_,
+                      100.0f * frustum_visible_layers_ /
+                          (frustum_culled_layers_ + frustum_visible_layers_));
+        log_counter = 0;
     }
 }
 
 void GCodeTinyGLRenderer::render_layer_range(int start_layer, int end_layer, float dim_factor) {
-    if (!geometry_ || geometry_->strips.empty()) {
+    if (!active_geometry_ || active_geometry_->strips.empty()) {
         return;
     }
 
-    // If we don't have layer tracking data, render all strips
-    if (geometry_->strip_layer_index.empty()) {
-        // Fallback: render all strips with the given dim factor
-        for (size_t i = 0; i < geometry_->strips.size(); ++i) {
-            const auto& strip = geometry_->strips[i];
-
-            glBegin(GL_TRIANGLE_STRIP);
-            for (int j = 0; j < 4; j++) {
-                const auto& vertex = geometry_->vertices[strip[static_cast<size_t>(j)]];
-
-                // Lookup normal from palette
-                const glm::vec3& normal = geometry_->normal_palette[vertex.normal_index];
-                glNormal3f(normal.x, normal.y, normal.z);
-
-                // Lookup color from palette and apply dimming
-                uint32_t color_rgb = geometry_->color_palette[vertex.color_index];
-                uint8_t r = (color_rgb >> 16) & 0xFF;
-                uint8_t g = (color_rgb >> 8) & 0xFF;
-                uint8_t b = color_rgb & 0xFF;
-
-                glColor3f((r / 255.0f) * dim_factor, (g / 255.0f) * dim_factor,
-                          (b / 255.0f) * dim_factor);
-
-                // Dequantize position
-                glm::vec3 pos = geometry_->quantization.dequantize_vec3(vertex.position);
-                glVertex3f(pos.x, pos.y, pos.z);
-            }
-            glEnd();
-        }
-        return;
-    }
-
-    // Render only strips in the specified layer range
-    for (size_t i = 0; i < geometry_->strips.size(); ++i) {
-        // Check if this strip's layer is in range
-        uint16_t strip_layer = geometry_->strip_layer_index[i];
-        if (static_cast<int>(strip_layer) < start_layer ||
-            static_cast<int>(strip_layer) > end_layer) {
-            continue; // Skip strips outside the layer range
-        }
-
-        const auto& strip = geometry_->strips[i];
+    // Helper lambda to render a single strip with given dim factor
+    auto render_strip = [this, dim_factor](size_t strip_idx) {
+        const auto& strip = active_geometry_->strips[strip_idx];
 
         glBegin(GL_TRIANGLE_STRIP);
         for (int j = 0; j < 4; j++) {
-            const auto& vertex = geometry_->vertices[strip[static_cast<size_t>(j)]];
+            const auto& vertex = active_geometry_->vertices[strip[static_cast<size_t>(j)]];
 
             // Lookup normal from palette
-            const glm::vec3& normal = geometry_->normal_palette[vertex.normal_index];
+            const glm::vec3& normal = active_geometry_->normal_palette[vertex.normal_index];
             glNormal3f(normal.x, normal.y, normal.z);
 
             // Lookup color from palette and apply dimming
-            uint32_t color_rgb = geometry_->color_palette[vertex.color_index];
+            uint32_t color_rgb = active_geometry_->color_palette[vertex.color_index];
             uint8_t r = (color_rgb >> 16) & 0xFF;
             uint8_t g = (color_rgb >> 8) & 0xFF;
             uint8_t b = color_rgb & 0xFF;
@@ -643,10 +694,82 @@ void GCodeTinyGLRenderer::render_layer_range(int start_layer, int end_layer, flo
                       (b / 255.0f) * dim_factor);
 
             // Dequantize position
-            glm::vec3 pos = geometry_->quantization.dequantize_vec3(vertex.position);
+            glm::vec3 pos = active_geometry_->quantization.dequantize_vec3(vertex.position);
             glVertex3f(pos.x, pos.y, pos.z);
         }
         glEnd();
+    };
+
+    // If we don't have layer tracking data, render all strips
+    if (active_geometry_->strip_layer_index.empty()) {
+        // Fallback: render all strips with the given dim factor
+        for (size_t i = 0; i < active_geometry_->strips.size(); ++i) {
+            render_strip(i);
+        }
+        return;
+    }
+
+    // OPTIMIZATION: Use layer_strip_ranges for O(layers) instead of O(strips)
+    // This provides a significant speedup for large files with many strips
+    if (!active_geometry_->layer_strip_ranges.empty()) {
+        // Clamp layer range to valid bounds
+        int max_layer = static_cast<int>(active_geometry_->layer_strip_ranges.size()) - 1;
+        int clamped_start = std::max(0, start_layer);
+        int clamped_end = std::min(max_layer, end_layer);
+
+        // Layer skipping (Phase 1) - only used if LOD geometry not available
+        // When coarse LOD geometry is active, skip layer skipping since the geometry
+        // is already simplified and we want to render all of it.
+        int layer_step = 1;
+        if (interaction_mode_ && !coarse_geometry_.has_value()) {
+            // Fallback: use adaptive layer skipping when no LOD available
+            layer_step = adaptive_layer_step_;
+        }
+
+        // Trace: show actual rendering configuration (every 30 frames to reduce spam)
+        static int log_counter = 0;
+        if (++log_counter % 30 == 1) {
+            spdlog::trace("[GCode::Render] LOD={}, layer_step={}, layers={}-{}, triangles={}",
+                          coarse_geometry_.has_value() ? "coarse" : "full", layer_step,
+                          clamped_start, clamped_end, active_geometry_->extrusion_triangle_count);
+        }
+
+        // Iterate through layers and render strips directly using pre-computed ranges
+        // Apply frustum culling per-layer if bounding boxes are available
+        bool have_layer_bboxes =
+            !active_geometry_->layer_bboxes.empty() &&
+            active_geometry_->layer_bboxes.size() == active_geometry_->layer_strip_ranges.size();
+
+        for (int layer = clamped_start; layer <= clamped_end; layer += layer_step) {
+            // Frustum culling: skip layers that are completely outside the view
+            if (have_layer_bboxes) {
+                const AABB& layer_bbox = active_geometry_->layer_bboxes[static_cast<size_t>(layer)];
+                // Skip layers with invalid (empty) bounding boxes
+                if (layer_bbox.min.x <= layer_bbox.max.x && !is_aabb_visible(layer_bbox)) {
+                    frustum_culled_layers_++;
+                    continue; // Layer is outside view frustum
+                }
+            }
+            frustum_visible_layers_++;
+
+            auto [first_strip, strip_count] =
+                active_geometry_->layer_strip_ranges[static_cast<size_t>(layer)];
+            for (size_t i = 0; i < strip_count; ++i) {
+                render_strip(first_strip + i);
+            }
+        }
+        return;
+    }
+
+    // Fallback: O(N) scan through all strips (used if layer_strip_ranges not populated)
+    for (size_t i = 0; i < active_geometry_->strips.size(); ++i) {
+        // Check if this strip's layer is in range
+        uint16_t strip_layer = active_geometry_->strip_layer_index[i];
+        if (static_cast<int>(strip_layer) < start_layer ||
+            static_cast<int>(strip_layer) > end_layer) {
+            continue; // Skip strips outside the layer range
+        }
+        render_strip(i);
     }
 }
 
@@ -655,33 +778,57 @@ void GCodeTinyGLRenderer::draw_to_lvgl(lv_layer_t* layer, const lv_area_t* widge
         return;
     }
 
-    // Create or recreate LVGL draw buffer if size changed
-    if (!draw_buf_ || draw_buf_->header.w != static_cast<uint32_t>(viewport_width_) ||
-        draw_buf_->header.h != static_cast<uint32_t>(viewport_height_)) {
+    // Calculate widget dimensions
+    int widget_width = lv_area_get_width(widget_coords);
+    int widget_height = lv_area_get_height(widget_coords);
+
+    // Create or recreate LVGL draw buffer at WIDGET size (not viewport size)
+    // This allows us to upscale when in interaction mode
+    if (!draw_buf_ || draw_buf_->header.w != static_cast<uint32_t>(widget_width) ||
+        draw_buf_->header.h != static_cast<uint32_t>(widget_height)) {
         if (draw_buf_) {
             lv_draw_buf_destroy(draw_buf_);
         }
 
         draw_buf_ =
-            lv_draw_buf_create(static_cast<uint32_t>(viewport_width_),
-                               static_cast<uint32_t>(viewport_height_), LV_COLOR_FORMAT_RGB888, 0);
+            lv_draw_buf_create(static_cast<uint32_t>(widget_width),
+                               static_cast<uint32_t>(widget_height), LV_COLOR_FORMAT_RGB888, 0);
         if (!draw_buf_) {
             spdlog::error("Failed to create LVGL draw buffer");
             return;
         }
     }
 
-    // Copy TinyGL framebuffer to LVGL draw buffer
+    // Copy TinyGL framebuffer to LVGL draw buffer with scaling
     // TinyGL ZB_MODE_RGBA is actually ABGR format (Alpha-Blue-Green-Red)
     // LVGL uses RGB888, so we need to swap R and B
     uint8_t* dest = (uint8_t*)draw_buf_->data;
     unsigned int* src = framebuffer_;
 
-    for (int i = 0; i < viewport_width_ * viewport_height_; i++) {
-        unsigned int pixel = src[i];
-        dest[i * 3 + 0] = pixel & 0xFF;         // R (from TinyGL B channel)
-        dest[i * 3 + 1] = (pixel >> 8) & 0xFF;  // G (stays the same)
-        dest[i * 3 + 2] = (pixel >> 16) & 0xFF; // B (from TinyGL R channel)
+    // Check if we need to upscale (interaction mode renders at lower resolution)
+    bool needs_upscale = (viewport_width_ != widget_width || viewport_height_ != widget_height);
+
+    if (needs_upscale) {
+        // Nearest-neighbor upscaling from viewport to widget size
+        for (int dy = 0; dy < widget_height; dy++) {
+            int sy = dy * viewport_height_ / widget_height;
+            for (int dx = 0; dx < widget_width; dx++) {
+                int sx = dx * viewport_width_ / widget_width;
+                unsigned int pixel = src[sy * viewport_width_ + sx];
+                int dest_idx = (dy * widget_width + dx) * 3;
+                dest[dest_idx + 0] = pixel & 0xFF;         // R (from TinyGL B channel)
+                dest[dest_idx + 1] = (pixel >> 8) & 0xFF;  // G (stays the same)
+                dest[dest_idx + 2] = (pixel >> 16) & 0xFF; // B (from TinyGL R channel)
+            }
+        }
+    } else {
+        // Direct 1:1 copy (no scaling needed)
+        for (int i = 0; i < viewport_width_ * viewport_height_; i++) {
+            unsigned int pixel = src[i];
+            dest[i * 3 + 0] = pixel & 0xFF;         // R (from TinyGL B channel)
+            dest[i * 3 + 1] = (pixel >> 8) & 0xFF;  // G (stays the same)
+            dest[i * 3 + 2] = (pixel >> 16) & 0xFF; // B (from TinyGL R channel)
+        }
     }
 
     // Draw image to layer at widget's screen position
@@ -693,9 +840,7 @@ void GCodeTinyGLRenderer::draw_to_lvgl(lv_layer_t* layer, const lv_area_t* widge
     // Use widget coordinates as the draw area (absolute screen position)
     lv_area_t area = *widget_coords;
 
-    spdlog::trace("TinyGL draw_to_lvgl: draw_buf={}x{}, widget_coords=({},{}) to ({},{})",
-                  (int)draw_buf_->header.w, (int)draw_buf_->header.h, area.x1, area.y1, area.x2,
-                  area.y2);
+    // NOTE: Removed per-frame trace log - this fires every LVGL frame causing log spam
 
     lv_draw_image(layer, &img_dsc, &area);
 }
@@ -713,16 +858,65 @@ void GCodeTinyGLRenderer::render(lv_layer_t* layer, const ParsedGCodeFile& gcode
     // Build geometry if needed
     build_geometry(gcode);
 
+    // Build current render state for dirty flag check
+    CachedRenderState current_state;
+    current_state.camera_azimuth = camera.get_azimuth();
+    current_state.camera_elevation = camera.get_elevation();
+    current_state.camera_distance = camera.get_distance();
+    current_state.camera_target = camera.get_target();
+    current_state.progress_layer = current_progress_layer_;
+    current_state.ghost_enabled = ghost_mode_enabled_;
+    current_state.layer_start = layer_start_;
+    current_state.layer_end = layer_end_;
+    current_state.highlighted_count = highlighted_objects_.size();
+    current_state.excluded_count = excluded_objects_.size();
+
+    // Skip TinyGL render if state unchanged and we have a valid cached framebuffer
+    // NOTE: No trace log here - this fires every LVGL frame (~30fps) causing log spam
+    if (framebuffer_valid_ && current_state == last_render_state_) {
+        // Just redraw the cached framebuffer to LVGL
+        draw_to_lvgl(layer, widget_coords);
+        return;
+    }
+
+    // Full render required - update cached state
+    last_render_state_ = current_state;
+
+    // Time the rendering stages
+    auto t0 = std::chrono::high_resolution_clock::now();
+
     // Render 3D geometry
     render_geometry(camera);
+
+    auto t1 = std::chrono::high_resolution_clock::now();
 
     // Render bounding box wireframe for highlighted objects
     spdlog::trace("TinyGL render: {} highlighted objects, gcode.objects.size()={}",
                   highlighted_objects_.size(), gcode.objects.size());
     render_bounding_box(gcode);
 
+    auto t2 = std::chrono::high_resolution_clock::now();
+
+    // Mark framebuffer as valid for future skip-frame optimization
+    framebuffer_valid_ = true;
+
     // Draw to LVGL at widget's screen position
     draw_to_lvgl(layer, widget_coords);
+
+    auto t3 = std::chrono::high_resolution_clock::now();
+
+    // Log detailed timing every frame at trace level
+    auto geom_ms = std::chrono::duration<float, std::milli>(t1 - t0).count();
+    auto bbox_ms = std::chrono::duration<float, std::milli>(t2 - t1).count();
+    auto lvgl_ms = std::chrono::duration<float, std::milli>(t3 - t2).count();
+    auto total_ms = std::chrono::duration<float, std::milli>(t3 - t0).count();
+    spdlog::trace("TinyGL timing: geometry={:.1f}ms, bbox={:.1f}ms, lvgl={:.1f}ms, total={:.1f}ms",
+                  geom_ms, bbox_ms, lvgl_ms, total_ms);
+
+    // Update adaptive optimization based on measured render time (only during interaction)
+    if (interaction_mode_) {
+        update_adaptive_optimization(geom_ms);
+    }
 
     // Draw camera debug info overlay (if verbose mode OR camera params set via CLI)
     const RuntimeConfig& config = get_runtime_config();
@@ -748,6 +942,49 @@ void GCodeTinyGLRenderer::render(lv_layer_t* layer, const ParsedGCodeFile& gcode
 
         lv_draw_label(layer, &label_dsc, &text_area);
     }
+}
+
+// ==============================================
+// Progressive Adaptive Optimization
+// ==============================================
+
+void GCodeTinyGLRenderer::update_adaptive_optimization(float render_time_ms) {
+    // Use exponential moving average to smooth out frame time variance
+    // α = 0.3 means each new sample contributes 30%, history contributes 70%
+    constexpr float kSmoothingFactor = 0.3f;
+
+    if (smoothed_render_time_ms_ == 0.0f) {
+        // First measurement - use directly
+        smoothed_render_time_ms_ = render_time_ms;
+    } else {
+        smoothed_render_time_ms_ = kSmoothingFactor * render_time_ms +
+                                   (1.0f - kSmoothingFactor) * smoothed_render_time_ms_;
+    }
+
+    int old_step = adaptive_layer_step_;
+
+    // Escalate optimization if too slow
+    if (smoothed_render_time_ms_ > kMaxFrameTimeMs) {
+        // Too slow - skip more layers (double the skip rate, max 4 for quality)
+        if (adaptive_layer_step_ < 4) {
+            adaptive_layer_step_ = std::min(adaptive_layer_step_ * 2, 4);
+            spdlog::debug(
+                "[GCode::Adaptive] Escalating: {:.0f}ms > {:.0f}ms threshold, layer_step {} → {}",
+                smoothed_render_time_ms_, kMaxFrameTimeMs, old_step, adaptive_layer_step_);
+        }
+    }
+    // Reduce optimization if fast enough (and we have room to improve quality)
+    else if (smoothed_render_time_ms_ < kMinFrameTimeMs && adaptive_layer_step_ > 1) {
+        // Fast enough - render more layers (halve the skip rate, min 1)
+        adaptive_layer_step_ = std::max(adaptive_layer_step_ / 2, 1);
+        spdlog::debug(
+            "[GCode::Adaptive] Reducing: {:.0f}ms < {:.0f}ms threshold, layer_step {} → {}",
+            smoothed_render_time_ms_, kMinFrameTimeMs, old_step, adaptive_layer_step_);
+    }
+
+    // Log at trace level every frame for debugging
+    spdlog::trace("[GCode::Adaptive] render={:.1f}ms, smoothed={:.1f}ms, layer_step={}",
+                  render_time_ms, smoothed_render_time_ms_, adaptive_layer_step_);
 }
 
 // ==============================================
@@ -944,6 +1181,76 @@ GCodeTinyGLRenderer::RenderingOptions GCodeTinyGLRenderer::get_options() const {
     // Return first highlighted object for compatibility (RenderingOptions uses single string)
     std::string first_object = highlighted_objects_.empty() ? "" : *highlighted_objects_.begin();
     return {show_extrusions_, show_travels_, layer_start_, layer_end_, first_object};
+}
+
+// =============================================================================
+// Frustum Culling Implementation
+// =============================================================================
+
+void GCodeTinyGLRenderer::extract_frustum_planes(const glm::mat4& mvp) {
+    // Extract frustum planes using Gribb/Hartmann method
+    // Each plane: ax + by + cz + d = 0, where (a,b,c) is normal pointing inward
+
+    // Left plane: row3 + row0
+    frustum_planes_[0].normal =
+        glm::vec3(mvp[0][3] + mvp[0][0], mvp[1][3] + mvp[1][0], mvp[2][3] + mvp[2][0]);
+    frustum_planes_[0].distance = mvp[3][3] + mvp[3][0];
+
+    // Right plane: row3 - row0
+    frustum_planes_[1].normal =
+        glm::vec3(mvp[0][3] - mvp[0][0], mvp[1][3] - mvp[1][0], mvp[2][3] - mvp[2][0]);
+    frustum_planes_[1].distance = mvp[3][3] - mvp[3][0];
+
+    // Bottom plane: row3 + row1
+    frustum_planes_[2].normal =
+        glm::vec3(mvp[0][3] + mvp[0][1], mvp[1][3] + mvp[1][1], mvp[2][3] + mvp[2][1]);
+    frustum_planes_[2].distance = mvp[3][3] + mvp[3][1];
+
+    // Top plane: row3 - row1
+    frustum_planes_[3].normal =
+        glm::vec3(mvp[0][3] - mvp[0][1], mvp[1][3] - mvp[1][1], mvp[2][3] - mvp[2][1]);
+    frustum_planes_[3].distance = mvp[3][3] - mvp[3][1];
+
+    // Near plane: row3 + row2
+    frustum_planes_[4].normal =
+        glm::vec3(mvp[0][3] + mvp[0][2], mvp[1][3] + mvp[1][2], mvp[2][3] + mvp[2][2]);
+    frustum_planes_[4].distance = mvp[3][3] + mvp[3][2];
+
+    // Far plane: row3 - row2
+    frustum_planes_[5].normal =
+        glm::vec3(mvp[0][3] - mvp[0][2], mvp[1][3] - mvp[1][2], mvp[2][3] - mvp[2][2]);
+    frustum_planes_[5].distance = mvp[3][3] - mvp[3][2];
+
+    // Normalize planes for correct distance calculations
+    for (auto& plane : frustum_planes_) {
+        float length = glm::length(plane.normal);
+        if (length > 0.0001f) {
+            plane.normal /= length;
+            plane.distance /= length;
+        }
+    }
+}
+
+bool GCodeTinyGLRenderer::is_aabb_visible(const AABB& bbox) const {
+    // Test AABB against all 6 frustum planes
+    // If AABB is completely outside ANY plane, it's not visible
+
+    for (const auto& plane : frustum_planes_) {
+        // Find the corner of the AABB that is most in the direction of the plane normal
+        // (the "positive vertex" or p-vertex)
+        glm::vec3 p_vertex;
+        p_vertex.x = (plane.normal.x >= 0) ? bbox.max.x : bbox.min.x;
+        p_vertex.y = (plane.normal.y >= 0) ? bbox.max.y : bbox.min.y;
+        p_vertex.z = (plane.normal.z >= 0) ? bbox.max.z : bbox.min.z;
+
+        // If even the p-vertex is outside this plane, the entire AABB is outside
+        float distance = glm::dot(plane.normal, p_vertex) + plane.distance;
+        if (distance < 0) {
+            return false; // Completely outside this plane
+        }
+    }
+
+    return true; // Potentially visible (intersects or inside frustum)
 }
 
 } // namespace gcode

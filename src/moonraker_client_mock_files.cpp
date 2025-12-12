@@ -109,7 +109,14 @@ static json build_mock_file_list_response(const std::string& path = "") {
  * @return JSON response matching Moonraker format
  */
 static json build_mock_file_metadata_response(const std::string& filename) {
-    std::string full_path = std::string(TEST_GCODE_DIR) + "/" + filename;
+    // Handle case where filename already includes the test directory prefix
+    // (happens when CLI passes --gcode-file with full path)
+    std::string clean_filename = filename;
+    std::string prefix = std::string(TEST_GCODE_DIR) + "/";
+    if (filename.find(prefix) == 0) {
+        clean_filename = filename.substr(prefix.length());
+    }
+    std::string full_path = std::string(TEST_GCODE_DIR) + "/" + clean_filename;
 
     // Get file info from filesystem
     struct stat file_stat;
