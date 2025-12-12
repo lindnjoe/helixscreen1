@@ -80,7 +80,8 @@ static void* ui_spinner_create(lv_xml_parser_state_t* state, const char** attrs)
     lv_obj_set_size(spinner, size, size);
 
     // Apply consistent styling - primary color indicator
-    lv_color_t primary = ui_theme_parse_color("#primary_color");
+    // Use ui_theme_get_color() for token lookup (not ui_theme_parse_color which expects hex)
+    lv_color_t primary = ui_theme_get_color("primary_color");
     lv_obj_set_style_arc_color(spinner, primary, LV_PART_INDICATOR);
     lv_obj_set_style_arc_width(spinner, arc_width, LV_PART_INDICATOR);
 

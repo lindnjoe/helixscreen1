@@ -81,19 +81,22 @@
 
 | Category | ❌ Wrong | ✅ Correct |
 |----------|----------|-----------|
-| **Colors** | `lv_color_hex(0xE0E0E0)` | `ui_theme_parse_color("#card_border")` |
+| **Colors** | `lv_color_hex(0xE0E0E0)` | `ui_theme_get_color("card_bg")` |
 | **Spacing** | `style_pad_all="12"` | `style_pad_all="#space_md"` |
 | **Typography** | `<lv_label style_text_font="...">` | `<text_heading>`, `<text_body>`, `<text_small>` |
 
 **C++ Theme Color API:**
 ```cpp
-// For any token (with # prefix) - parses both hex and tokens:
-lv_color_t bg = ui_theme_parse_color("#card_bg");
-
-// For semantic colors (no # prefix) - cleaner for known tokens:
+// ✅ For theme tokens - auto-handles light/dark mode:
+lv_color_t bg = ui_theme_get_color("card_bg");      // Looks up card_bg_light or card_bg_dark
 lv_color_t ok = ui_theme_get_color("success_color");
 lv_color_t err = ui_theme_get_color("error_color");
-lv_color_t warn = ui_theme_get_color("warning_color");
+
+// ✅ For hex strings only:
+lv_color_t custom = ui_theme_parse_color("#FF4444");  // Parses literal hex
+
+// ❌ WRONG - parse_color does NOT look up tokens:
+// lv_color_t bg = ui_theme_parse_color("#card_bg");  // Parses "card_bg" as hex → garbage!
 
 // Pre-defined macros for common colors:
 lv_color_t text = UI_COLOR_TEXT_PRIMARY;   // White text

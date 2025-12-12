@@ -163,7 +163,8 @@ class GCodeViewerState {
     // Rendering settings
     bool use_filament_color{true};
     bool first_render{true};
-    bool rendering_paused_{false}; ///< When true, draw_cb skips rendering (for visibility optimization)
+    bool rendering_paused_{
+        false}; ///< When true, draw_cb skips rendering (for visibility optimization)
 
     // Loading UI elements (managed by async load function)
     lv_obj_t* loading_container{nullptr};
@@ -223,37 +224,37 @@ static void gcode_viewer_draw_cb(lv_event_t* e) {
         return; // Timer will trigger actual render
     }
 
-    // FPS tracking for performance monitoring (debug mode only via spdlog level)
-    static auto last_frame_time = std::chrono::high_resolution_clock::now();
-    static float fps_average = 0.0f;
-    static int frame_count = 0;
-    static constexpr float FPS_ALPHA = 0.1f; // Exponential moving average smoothing factor
-
-    auto frame_start = std::chrono::high_resolution_clock::now();
-    auto frame_duration =
-        std::chrono::duration_cast<std::chrono::microseconds>(frame_start - last_frame_time);
-
-    if (frame_duration.count() > 0) {
-        float current_fps = 1000000.0f / frame_duration.count();
-        fps_average = (fps_average == 0.0f)
-                          ? current_fps
-                          : (FPS_ALPHA * current_fps + (1.0f - FPS_ALPHA) * fps_average);
-    }
-
-    last_frame_time = frame_start;
-
     // Get widget's absolute screen coordinates for drawing
     lv_area_t widget_coords;
     lv_obj_get_coords(obj, &widget_coords);
 
+    // Measure actual render time for FPS calculation
+    auto render_start = std::chrono::high_resolution_clock::now();
+
     // Render G-code (viewport size is already set by SIZE_CHANGED event)
     st->renderer_->render(layer, *st->gcode_file, *st->camera_, &widget_coords);
 
-    // Log FPS every 60 frames (controlled by spdlog level)
-    if (++frame_count >= 60) {
-        spdlog::debug("[GCode::Viewer] FPS: current={:.1f}, average={:.1f}",
-                      (frame_duration.count() > 0 ? 1000000.0f / frame_duration.count() : 0.0f),
-                      fps_average);
+    auto render_end = std::chrono::high_resolution_clock::now();
+    auto render_duration_us =
+        std::chrono::duration_cast<std::chrono::microseconds>(render_end - render_start).count();
+
+    // FPS tracking based on actual render time (debug mode only via spdlog level)
+    static float render_time_avg_ms = 0.0f;
+    static int frame_count = 0;
+    static constexpr float FPS_ALPHA = 0.1f; // Exponential moving average smoothing factor
+
+    float render_time_ms = render_duration_us / 1000.0f;
+    render_time_avg_ms =
+        (render_time_avg_ms == 0.0f)
+            ? render_time_ms
+            : (FPS_ALPHA * render_time_ms + (1.0f - FPS_ALPHA) * render_time_avg_ms);
+
+    // Log every 30 frames (controlled by spdlog level)
+    if (++frame_count >= 30) {
+        float current_fps = (render_time_ms > 0.0f) ? 1000.0f / render_time_ms : 0.0f;
+        float avg_fps = (render_time_avg_ms > 0.0f) ? 1000.0f / render_time_avg_ms : 0.0f;
+        spdlog::debug("[GCode::Viewer] Render: {:.1f}ms ({:.1f}fps), avg: {:.1f}ms ({:.1f}fps)",
+                      render_time_ms, current_fps, render_time_avg_ms, avg_fps);
         frame_count = 0;
     }
 }
@@ -393,8 +394,16 @@ static void gcode_viewer_pressing_cb(lv_event_t* e) {
 
         st->camera_->rotate(delta_azimuth, delta_elevation);
 
-        // Trigger redraw
-        lv_obj_invalidate(obj);
+        // Throttled invalidation - limit to ~30fps during drag to reduce CPU load
+        // Final frame is always rendered on RELEASED event
+        static uint32_t last_invalidate_ms = 0;
+        uint32_t now_ms = lv_tick_get();
+        constexpr uint32_t MIN_FRAME_MS = 33; // ~30fps
+
+        if (now_ms - last_invalidate_ms >= MIN_FRAME_MS) {
+            lv_obj_invalidate(obj);
+            last_invalidate_ms = now_ms;
+        }
 
         st->last_drag_pos = point;
 
@@ -485,6 +494,11 @@ static void gcode_viewer_release_cb(lv_event_t* e) {
     }
 
     st->is_dragging = false;
+
+    // Always render final frame on release to ensure camera settles at correct position
+    // (throttling during drag may have skipped the last frame)
+    lv_obj_invalidate(obj);
+
     spdlog::trace("GCodeViewer: Release at ({}, {}), drag=({}, {})", point.x, point.y, dx, dy);
 }
 
@@ -625,8 +639,8 @@ static void ui_gcode_viewer_load_file_async(lv_obj_t* obj, const char* file_path
                           LV_FLEX_ALIGN_CENTER);
 
     // Style container: semi-transparent dark background, no border, padding for content
-    lv_obj_set_style_bg_color(st->loading_container, ui_theme_parse_color("#card_bg_dark"),
-                              LV_PART_MAIN);
+    // Use ui_theme_get_color() for token lookup (not ui_theme_parse_color which expects hex)
+    lv_obj_set_style_bg_color(st->loading_container, ui_theme_get_color("card_bg"), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(st->loading_container, 220, LV_PART_MAIN);
     lv_obj_set_style_border_width(st->loading_container, 0, LV_PART_MAIN);
     lv_obj_set_style_radius(st->loading_container, 8, LV_PART_MAIN);
@@ -637,7 +651,7 @@ static void ui_gcode_viewer_load_file_async(lv_obj_t* obj, const char* file_path
     lv_obj_set_size(st->loading_spinner, 48, 48); // ~lg size for small screens
 
     // Apply consistent spinner styling (matching ui_spinner component)
-    lv_color_t primary = ui_theme_parse_color("#primary_color");
+    lv_color_t primary = ui_theme_get_color("primary_color");
     lv_obj_set_style_arc_color(st->loading_spinner, primary, LV_PART_INDICATOR);
     lv_obj_set_style_arc_width(st->loading_spinner, 4, LV_PART_INDICATOR);
     lv_obj_set_style_arc_opa(st->loading_spinner, LV_OPA_0, LV_PART_MAIN);
@@ -645,7 +659,7 @@ static void ui_gcode_viewer_load_file_async(lv_obj_t* obj, const char* file_path
     st->loading_label = lv_label_create(st->loading_container);
     lv_label_set_text(st->loading_label, "Loading G-code...");
     // Set text color for visibility on dark background
-    lv_obj_set_style_text_color(st->loading_label, ui_theme_parse_color("#text_primary_dark"),
+    lv_obj_set_style_text_color(st->loading_label, ui_theme_get_color("text_primary"),
                                 LV_PART_MAIN);
 
     // Launch worker thread via RAII-managed start_build()
