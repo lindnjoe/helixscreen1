@@ -169,6 +169,14 @@ class ControlsPanel : public PanelBase {
     lv_obj_t* secondary_fans_list_ = nullptr; // Container for dynamic fan rows
 
     //
+    // === Z-Offset Banner (reactive binding - no widget caching needed) ===
+    //
+
+    lv_subject_t z_offset_delta_display_subject_{}; // Formatted delta string (e.g., "+0.05mm")
+    char z_offset_delta_display_buf_[32] = {};
+    ObserverGuard pending_z_offset_observer_; // Observer to update display when delta changes
+
+    //
     // === Private Helpers ===
     //
 
@@ -180,7 +188,11 @@ class ControlsPanel : public PanelBase {
     void update_bed_temp_display();
     void update_fan_display();
     void update_preheat_status();
-    void populate_secondary_fans(); // Build fan list from PrinterState
+    void populate_secondary_fans();                        // Build fan list from PrinterState
+    void update_z_offset_delta_display(int delta_microns); // Format delta for banner
+
+    // Z-Offset save handler
+    void handle_save_z_offset();
 
     //
     // === V2 Card Click Handlers (navigation to full panels) ===
@@ -273,6 +285,7 @@ class ControlsPanel : public PanelBase {
     static void on_preheat_off(lv_event_t* e);
     static void on_extrude(lv_event_t* e);
     static void on_retract(lv_event_t* e);
+    static void on_save_z_offset(lv_event_t* e);
 
     //
     // === Observer Callbacks (static - update dashboard display) ===
@@ -284,6 +297,7 @@ class ControlsPanel : public PanelBase {
     static void on_bed_target_changed(lv_observer_t* obs, lv_subject_t* subject);
     static void on_fan_changed(lv_observer_t* obs, lv_subject_t* subject);
     static void on_fans_version_changed(lv_observer_t* obs, lv_subject_t* subject);
+    static void on_pending_z_offset_changed(lv_observer_t* obs, lv_subject_t* subject);
 };
 
 // Global instance accessor (needed by main.cpp and XML event_cb trampolines)

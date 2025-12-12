@@ -1426,6 +1426,10 @@ void PrintStatusPanel::handle_tune_z_offset_changed(double delta) {
     std::snprintf(tune_z_offset_buf_, sizeof(tune_z_offset_buf_), "%.3fmm", current_z_offset_);
     lv_subject_copy_string(&tune_z_offset_subject_, tune_z_offset_buf_);
 
+    // Track pending delta for "unsaved adjustment" notification in Controls panel
+    int delta_microns = static_cast<int>(delta * 1000.0);
+    get_printer_state().add_pending_z_offset_delta(delta_microns);
+
     spdlog::debug("[{}] Z-offset adjust: {:+.3f}mm (total: {:.3f}mm)", get_name(), delta,
                   current_z_offset_);
 

@@ -110,6 +110,7 @@ void PrinterState::reset_for_testing() {
     lv_subject_deinit(&speed_factor_);
     lv_subject_deinit(&flow_factor_);
     lv_subject_deinit(&gcode_z_offset_);
+    lv_subject_deinit(&pending_z_offset_delta_);
     lv_subject_deinit(&fan_speed_);
     lv_subject_deinit(&fans_version_);
     lv_subject_deinit(&printer_connection_state_);
@@ -177,7 +178,8 @@ void PrinterState::init_subjects(bool register_xml) {
     // Speed/Flow subjects (percentages)
     lv_subject_init_int(&speed_factor_, 100);
     lv_subject_init_int(&flow_factor_, 100);
-    lv_subject_init_int(&gcode_z_offset_, 0); // Z-offset in microns from homing_origin[2]
+    lv_subject_init_int(&gcode_z_offset_, 0);         // Z-offset in microns from homing_origin[2]
+    lv_subject_init_int(&pending_z_offset_delta_, 0); // Accumulated adjustment during print
     lv_subject_init_int(&fan_speed_, 0);
     lv_subject_init_int(&fans_version_, 0); // Multi-fan version for UI updates
 
@@ -246,6 +248,7 @@ void PrinterState::init_subjects(bool register_xml) {
         lv_xml_register_subject(NULL, "speed_factor", &speed_factor_);
         lv_xml_register_subject(NULL, "flow_factor", &flow_factor_);
         lv_xml_register_subject(NULL, "gcode_z_offset", &gcode_z_offset_);
+        lv_xml_register_subject(NULL, "pending_z_offset_delta", &pending_z_offset_delta_);
         lv_xml_register_subject(NULL, "fan_speed", &fan_speed_);
         lv_xml_register_subject(NULL, "fans_version", &fans_version_);
         lv_xml_register_subject(NULL, "printer_connection_state", &printer_connection_state_);
@@ -840,5 +843,32 @@ void PrinterState::set_kinematics(const std::string& kinematics) {
     if (lv_subject_get_int(&printer_bed_moves_) != new_value) {
         lv_subject_set_int(&printer_bed_moves_, new_value);
         spdlog::info("[PrinterState] Kinematics: {} -> bed_moves_z={}", kinematics, bed_moves_z);
+    }
+}
+
+// ============================================================================
+// PENDING Z-OFFSET DELTA TRACKING
+// ============================================================================
+
+void PrinterState::add_pending_z_offset_delta(int delta_microns) {
+    int current = lv_subject_get_int(&pending_z_offset_delta_);
+    int new_value = current + delta_microns;
+    lv_subject_set_int(&pending_z_offset_delta_, new_value);
+    spdlog::debug("[PrinterState] Pending Z-offset delta: {:+}µm (total: {:+}µm)", delta_microns,
+                  new_value);
+}
+
+int PrinterState::get_pending_z_offset_delta() const {
+    return lv_subject_get_int(const_cast<lv_subject_t*>(&pending_z_offset_delta_));
+}
+
+bool PrinterState::has_pending_z_offset_adjustment() const {
+    return get_pending_z_offset_delta() != 0;
+}
+
+void PrinterState::clear_pending_z_offset_delta() {
+    if (has_pending_z_offset_adjustment()) {
+        spdlog::info("[PrinterState] Clearing pending Z-offset delta");
+        lv_subject_set_int(&pending_z_offset_delta_, 0);
     }
 }

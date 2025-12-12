@@ -122,6 +122,10 @@ void ControlsPanel::init_subjects() {
     UI_SUBJECT_INIT_AND_REGISTER_STRING(preheat_status_subject_, preheat_status_buf_,
                                         "Noz: --°C  Bed: --°C", "controls_preheat_status");
 
+    // Z-Offset delta display (for banner showing unsaved adjustment)
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(z_offset_delta_display_subject_,
+                                        z_offset_delta_display_buf_, "", "z_offset_delta_display");
+
     // Calibration modal visibility
     UI_SUBJECT_INIT_AND_REGISTER_INT(calibration_modal_visible_, 0, "calibration_modal_visible");
 
@@ -155,6 +159,9 @@ void ControlsPanel::init_subjects() {
     // Filament: Extrude/Retract buttons
     lv_xml_register_event_cb(nullptr, "on_controls_extrude", on_extrude);
     lv_xml_register_event_cb(nullptr, "on_controls_retract", on_retract);
+
+    // Z-Offset banner: Save button
+    lv_xml_register_event_cb(nullptr, "on_controls_save_z_offset", on_save_z_offset);
 
     subjects_initialized_ = true;
     spdlog::debug("[{}] Dashboard subjects initialized", get_name());
@@ -241,6 +248,12 @@ void ControlsPanel::register_observers() {
     // Subscribe to multi-fan list changes (fires when fans are discovered/updated)
     if (auto* fans_ver = printer_state_.get_fans_version_subject()) {
         fans_version_observer_ = ObserverGuard(fans_ver, on_fans_version_changed, this);
+    }
+
+    // Subscribe to pending Z-offset delta (for unsaved adjustment banner)
+    if (auto* pending_delta = printer_state_.get_pending_z_offset_delta_subject()) {
+        pending_z_offset_observer_ =
+            ObserverGuard(pending_delta, on_pending_z_offset_changed, this);
     }
 
     spdlog::debug("[{}] Observers registered for dashboard live data", get_name());
@@ -423,6 +436,56 @@ void ControlsPanel::populate_secondary_fans() {
     }
 
     spdlog::debug("[{}] Populated {} secondary fans", get_name(), secondary_count);
+}
+
+void ControlsPanel::update_z_offset_delta_display(int delta_microns) {
+    // Format the delta in millimeters with sign: e.g., "+0.050mm" or "-0.025mm"
+    double delta_mm = static_cast<double>(delta_microns) / 1000.0;
+
+    if (delta_microns == 0) {
+        z_offset_delta_display_buf_[0] = '\0'; // Empty string when no delta
+    } else {
+        std::snprintf(z_offset_delta_display_buf_, sizeof(z_offset_delta_display_buf_), "%+.3fmm",
+                      delta_mm);
+    }
+    lv_subject_copy_string(&z_offset_delta_display_subject_, z_offset_delta_display_buf_);
+
+    spdlog::debug("[{}] Z-offset delta display updated: '{}'", get_name(),
+                  z_offset_delta_display_buf_);
+}
+
+void ControlsPanel::handle_save_z_offset() {
+    int delta_microns = printer_state_.get_pending_z_offset_delta();
+    if (delta_microns == 0) {
+        spdlog::debug("[{}] No Z-offset adjustment to save", get_name());
+        return;
+    }
+
+    double delta_mm = static_cast<double>(delta_microns) / 1000.0;
+    spdlog::info("[{}] Saving Z-offset adjustment: {:+.3f}mm", get_name(), delta_mm);
+
+    if (!api_) {
+        ui_notification_error("Error", "No printer connection");
+        return;
+    }
+
+    // Use Z_OFFSET_APPLY_ENDSTOP to save the current gcode_offset to the endstop position
+    // This is preferred over SAVE_CONFIG because it doesn't require a Klipper restart
+    api_->execute_gcode(
+        "Z_OFFSET_APPLY_ENDSTOP",
+        [this, delta_mm]() {
+            char msg[64];
+            std::snprintf(msg, sizeof(msg), "Z-offset saved (%+.3fmm)", delta_mm);
+            ui_notification_success(msg);
+            spdlog::info("[ControlsPanel] Z-offset saved successfully");
+
+            // Clear the pending delta since it's now saved
+            printer_state_.clear_pending_z_offset_delta();
+        },
+        [](const MoonrakerError& err) {
+            spdlog::error("[ControlsPanel] Failed to save Z-offset: {}", err.user_message());
+            ui_notification_error("Save failed", err.user_message().c_str());
+        });
 }
 
 // ============================================================================
@@ -1089,6 +1152,13 @@ void ControlsPanel::on_retract(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_END();
 }
 
+void ControlsPanel::on_save_z_offset(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[ControlsPanel] on_save_z_offset");
+    (void)e;
+    get_global_controls_panel().handle_save_z_offset();
+    LVGL_SAFE_EVENT_CB_END();
+}
+
 // ============================================================================
 // OBSERVER CALLBACKS (Static - update dashboard display)
 // ============================================================================
@@ -1137,6 +1207,14 @@ void ControlsPanel::on_fans_version_changed(lv_observer_t* obs, lv_subject_t* /*
     if (self) {
         // Rebuild the secondary fans list when fan discovery completes or speeds update
         self->populate_secondary_fans();
+    }
+}
+
+void ControlsPanel::on_pending_z_offset_changed(lv_observer_t* obs, lv_subject_t* subject) {
+    auto* self = static_cast<ControlsPanel*>(lv_observer_get_user_data(obs));
+    if (self) {
+        int delta_microns = lv_subject_get_int(subject);
+        self->update_z_offset_delta_display(delta_microns);
     }
 }
 

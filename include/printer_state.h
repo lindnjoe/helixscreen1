@@ -339,6 +339,41 @@ class PrinterState {
         return &gcode_z_offset_;
     }
 
+    // ========================================================================
+    // PENDING Z-OFFSET DELTA (for tracking adjustments made during print)
+    // ========================================================================
+
+    /**
+     * @brief Get pending Z-offset delta subject
+     *
+     * Returns accumulated Z-offset adjustment made during print tuning (microns).
+     * Use this to show "unsaved adjustment" notification in Controls panel.
+     */
+    lv_subject_t* get_pending_z_offset_delta_subject() {
+        return &pending_z_offset_delta_;
+    }
+
+    /**
+     * @brief Add to pending Z-offset delta (called when user adjusts Z during print)
+     * @param delta_microns Adjustment in microns (positive = farther, negative = closer)
+     */
+    void add_pending_z_offset_delta(int delta_microns);
+
+    /**
+     * @brief Get current pending Z-offset delta in microns
+     */
+    int get_pending_z_offset_delta() const;
+
+    /**
+     * @brief Check if there's a pending Z-offset adjustment
+     */
+    bool has_pending_z_offset_adjustment() const;
+
+    /**
+     * @brief Clear pending Z-offset delta (after save or dismiss)
+     */
+    void clear_pending_z_offset_delta();
+
     // Printer connection state subjects (Moonraker WebSocket)
     lv_subject_t* get_printer_connection_state_subject() {
         return &printer_connection_state_;
@@ -613,6 +648,7 @@ class PrinterState {
     lv_subject_t speed_factor_;
     lv_subject_t flow_factor_;
     lv_subject_t gcode_z_offset_; // Integer: Z-offset * 1000 (microns) from homing_origin[2]
+    lv_subject_t pending_z_offset_delta_; // Integer: accumulated adjustment during print (microns)
     lv_subject_t fan_speed_;
 
     // Multi-fan tracking
