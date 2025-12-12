@@ -48,6 +48,7 @@
 #include "ui_spinner.h"
 #include "ui_status_bar.h"
 #include "ui_switch.h"
+#include "ui_temp_display.h"
 #include "ui_text.h"
 #include "ui_text_input.h"
 #include "ui_theme.h"
@@ -1921,6 +1922,7 @@ int main(int argc, char** argv) {
     ui_icon_register_widget();
     ui_switch_register();
     ui_card_register();
+    ui_temp_display_init();
     ui_severity_card_register();
     ui_dialog_register();
     ui_bed_mesh_register();

@@ -96,6 +96,7 @@ void register_xml_components() {
 
     // Core UI components
     lv_xml_register_component_from_file("A:ui_xml/icon.xml");
+    lv_xml_register_component_from_file("A:ui_xml/temp_display.xml");
     lv_xml_register_component_from_file("A:ui_xml/header_bar.xml");
     lv_xml_register_component_from_file("A:ui_xml/overlay_backdrop.xml");
     lv_xml_register_component_from_file("A:ui_xml/overlay_panel_base.xml");
