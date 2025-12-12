@@ -329,7 +329,7 @@ class PrintSelectPanel : public PanelBase {
     //
 
     static constexpr const char* CARD_COMPONENT_NAME = "print_file_card";
-    static constexpr int CARD_GAP = 20;
+    // Note: Card gap is now read from XML style_pad_gap on card_view_container
     static constexpr int CARD_MIN_WIDTH = 150; // Lowered to fit 4 columns on 670px container width
     static constexpr int CARD_MAX_WIDTH = 230;
     static constexpr int CARD_DEFAULT_HEIGHT = 245;
@@ -343,7 +343,7 @@ class PrintSelectPanel : public PanelBase {
     static constexpr int CARD_POOL_SIZE = 24;  ///< Fixed pool of card widgets (recycles)
     static constexpr int CARD_BUFFER_ROWS = 1; ///< Extra rows above/below viewport
     static constexpr int LIST_POOL_SIZE = 40;  ///< Fixed pool of list row widgets
-    static constexpr int LIST_ROW_HEIGHT = 48; ///< Height of each list row in pixels
+    // Note: List row height is read from actual widget height + container gap at runtime
 
     //
     // === Widget References ===
@@ -369,6 +369,9 @@ class PrintSelectPanel : public PanelBase {
     // Source selector buttons (Printer/USB toggle)
     lv_obj_t* source_printer_btn_ = nullptr;
     lv_obj_t* source_usb_btn_ = nullptr;
+
+    // Print button (disabled when print in progress)
+    lv_obj_t* print_button_ = nullptr;
 
     //
     // === Subject Buffers ===
@@ -449,6 +452,7 @@ class PrintSelectPanel : public PanelBase {
     // Observers for reactive updates (ObserverGuard handles cleanup)
     ObserverGuard active_panel_observer_;
     ObserverGuard connection_observer_;
+    ObserverGuard print_state_observer_; ///< Observes print state to enable/disable print button
 
     //
     // === Internal Methods ===

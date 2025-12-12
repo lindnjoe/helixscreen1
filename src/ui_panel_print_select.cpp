@@ -817,8 +817,11 @@ CardDimensions PrintSelectPanel::calculate_card_dimensions() {
     }
 
     lv_coord_t container_width = lv_obj_get_content_width(card_view_container_);
-    spdlog::debug("[{}] Container content width: {}px (MIN={}, MAX={}, GAP={})", get_name(),
-                  container_width, CARD_MIN_WIDTH, CARD_MAX_WIDTH, CARD_GAP);
+    // Read gap from container's XML-defined style (respects design tokens)
+    // Note: style_pad_gap in XML sets both pad_row and pad_column; we read pad_column for width calc
+    int card_gap = lv_obj_get_style_pad_column(card_view_container_, LV_PART_MAIN);
+    spdlog::trace("[{}] Container content width: {}px (MIN={}, MAX={}, GAP={})", get_name(),
+                  container_width, CARD_MIN_WIDTH, CARD_MAX_WIDTH, card_gap);
 
     // Calculate available height from parent panel dimensions
     lv_obj_t* panel_root = lv_obj_get_parent(card_view_container_);
@@ -841,19 +844,19 @@ CardDimensions PrintSelectPanel::calculate_card_dimensions() {
     dims.num_rows = (available_height >= ROW_COUNT_3_MIN_HEIGHT) ? 3 : 2;
 
     // Calculate card height based on rows
-    int total_row_gaps = (dims.num_rows - 1) * CARD_GAP;
+    int total_row_gaps = (dims.num_rows - 1) * card_gap;
     dims.card_height = (available_height - total_row_gaps) / dims.num_rows;
 
     // Try different column counts
     for (int cols = 10; cols >= 1; cols--) {
-        int total_gaps = (cols - 1) * CARD_GAP;
+        int total_gaps = (cols - 1) * card_gap;
         int card_width = (container_width - total_gaps) / cols;
 
         if (card_width >= CARD_MIN_WIDTH && card_width <= CARD_MAX_WIDTH) {
             dims.num_columns = cols;
             dims.card_width = card_width;
 
-            spdlog::debug("[{}] Calculated card layout: {} rows x {} columns, card={}x{}",
+            spdlog::trace("[{}] Calculated card layout: {} rows x {} columns, card={}x{}",
                           get_name(), dims.num_rows, dims.num_columns, dims.card_width,
                           dims.card_height);
             return dims;
@@ -861,7 +864,7 @@ CardDimensions PrintSelectPanel::calculate_card_dimensions() {
     }
 
     // Fallback
-    dims.num_columns = container_width / (CARD_MIN_WIDTH + CARD_GAP);
+    dims.num_columns = container_width / (CARD_MIN_WIDTH + card_gap);
     if (dims.num_columns < 1)
         dims.num_columns = 1;
     dims.card_width = CARD_MIN_WIDTH;
@@ -1065,7 +1068,8 @@ void PrintSelectPanel::update_visible_cards() {
     CardDimensions dims = calculate_card_dimensions();
     cards_per_row_ = dims.num_columns;
 
-    int row_height = dims.card_height + CARD_GAP;
+    int card_gap = lv_obj_get_style_pad_row(card_view_container_, LV_PART_MAIN);
+    int row_height = dims.card_height + card_gap;
     int total_rows = (static_cast<int>(file_list_.size()) + cards_per_row_ - 1) / cards_per_row_;
 
     // Calculate visible row range (with buffer)
@@ -1084,7 +1088,7 @@ void PrintSelectPanel::update_visible_cards() {
     int last_visible_idx =
         std::min(static_cast<int>(file_list_.size()), last_visible_row * cards_per_row_);
 
-    spdlog::debug("[{}] Scroll: {} viewport: {} rows: {}-{} indices: {}-{}", get_name(), scroll_y,
+    spdlog::trace("[{}] Scroll: {} viewport: {} rows: {}-{} indices: {}-{}", get_name(), scroll_y,
                   viewport_height, first_visible_row, last_visible_row, first_visible_idx,
                   last_visible_idx);
 
@@ -1148,12 +1152,9 @@ void PrintSelectPanel::populate_card_view() {
         init_card_pool();
     }
 
-    // Calculate optimal card dimensions
+    // Calculate optimal card dimensions (reads gap from container's XML style)
     CardDimensions dims = calculate_card_dimensions();
     cards_per_row_ = dims.num_columns;
-
-    // Update container gap
-    lv_obj_set_style_pad_gap(card_view_container_, CARD_GAP, LV_PART_MAIN);
 
     // Calculate total rows for debug logging
     int total_rows = (static_cast<int>(file_list_.size()) + cards_per_row_ - 1) / cards_per_row_;
@@ -1234,24 +1235,23 @@ void PrintSelectPanel::configure_list_row(lv_obj_t* row, size_t index) {
     std::string display_name =
         file.is_dir ? file.filename + "/" : strip_gcode_extension(file.filename);
 
-    // Update labels by finding them in the row
-    // The list row component has labels for each column
-    lv_obj_t* filename_label = lv_obj_find_by_name(row, "filename_col");
+    // Update labels by finding them in the row (names match XML component)
+    lv_obj_t* filename_label = lv_obj_find_by_name(row, "row_filename");
     if (filename_label) {
         lv_label_set_text(filename_label, display_name.c_str());
     }
 
-    lv_obj_t* size_label = lv_obj_find_by_name(row, "size_col");
+    lv_obj_t* size_label = lv_obj_find_by_name(row, "row_size");
     if (size_label) {
         lv_label_set_text(size_label, file.size_str.c_str());
     }
 
-    lv_obj_t* modified_label = lv_obj_find_by_name(row, "modified_col");
+    lv_obj_t* modified_label = lv_obj_find_by_name(row, "row_modified");
     if (modified_label) {
         lv_label_set_text(modified_label, file.modified_str.c_str());
     }
 
-    lv_obj_t* time_label = lv_obj_find_by_name(row, "time_col");
+    lv_obj_t* time_label = lv_obj_find_by_name(row, "row_print_time");
     if (time_label) {
         lv_label_set_text(time_label, file.print_time_str.c_str());
     }
@@ -1273,28 +1273,33 @@ void PrintSelectPanel::update_visible_list_rows() {
 
     int total_rows = static_cast<int>(file_list_.size());
 
+    // Calculate row stride from actual widget height + container gap (respects XML styling)
+    int row_height = list_pool_.empty() ? 44 : lv_obj_get_height(list_pool_[0]);
+    int row_gap = lv_obj_get_style_pad_row(list_rows_container_, LV_PART_MAIN);
+    int row_stride = row_height + row_gap;
+
     // Calculate visible row range (with buffer)
-    int first_visible = std::max(0, static_cast<int>(scroll_y / LIST_ROW_HEIGHT) - 2);
+    int first_visible = std::max(0, static_cast<int>(scroll_y / row_stride) - 2);
     int last_visible =
-        std::min(total_rows, static_cast<int>((scroll_y + viewport_height) / LIST_ROW_HEIGHT) + 3);
+        std::min(total_rows, static_cast<int>((scroll_y + viewport_height) / row_stride) + 3);
 
     // Skip update if visible range hasn't changed
     if (first_visible == visible_list_start_ && last_visible == visible_list_end_) {
         return;
     }
 
-    spdlog::debug("[{}] List scroll: {} viewport: {} visible: {}-{}", get_name(), scroll_y,
+    spdlog::trace("[{}] List scroll: {} viewport: {} visible: {}-{}", get_name(), scroll_y,
                   viewport_height, first_visible, last_visible);
 
     // Update leading spacer height
-    int leading_height = first_visible * LIST_ROW_HEIGHT;
+    int leading_height = first_visible * row_stride;
     if (list_leading_spacer_) {
         lv_obj_set_height(list_leading_spacer_, leading_height);
         lv_obj_move_to_index(list_leading_spacer_, 0);
     }
 
     // Update trailing spacer height
-    int trailing_height = (total_rows - last_visible) * LIST_ROW_HEIGHT;
+    int trailing_height = (total_rows - last_visible) * row_stride;
     if (list_trailing_spacer_) {
         lv_obj_set_height(list_trailing_spacer_, std::max(0, trailing_height));
     }
@@ -2029,6 +2034,10 @@ void PrintSelectPanel::modify_and_print(
                 // Success: start print with modified file
                 [self, temp_filename, original_filename]() {
                     spdlog::info("[{}] Modified file uploaded, starting print", self->get_name());
+
+                    // Set thumbnail source to original filename before starting print
+                    // This ensures PrintStatusPanel loads the correct thumbnail
+                    get_global_print_status_panel().set_thumbnail_source(original_filename);
 
                     // Start print with the modified file
                     self->api_->start_print(

@@ -490,7 +490,10 @@ std::shared_ptr<WiFiManager> get_wifi_manager() {
 
     if (!g_shared_wifi_manager) {
         spdlog::info("[WiFiManager] Creating global instance");
-        g_shared_wifi_manager = std::make_shared<WiFiManager>(/*silent=*/false);
+        // Use silent=true for global instance since it's used for passive status monitoring
+        // (e.g., home panel WiFi icon). Avoids modal popup when WiFi hardware is unavailable
+        // on development machines or when WiFi is simply turned off.
+        g_shared_wifi_manager = std::make_shared<WiFiManager>(/*silent=*/true);
         g_shared_wifi_manager->init_self_reference(g_shared_wifi_manager);
     }
 
