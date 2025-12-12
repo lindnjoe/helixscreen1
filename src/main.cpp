@@ -33,6 +33,7 @@
 #include "ui_panel_history_dashboard.h"
 #include "ui_panel_history_list.h"
 #include "ui_panel_home.h"
+#include "ui_panel_input_shaper.h"
 #include "ui_panel_memory_stats.h"
 #include "ui_panel_motion.h"
 #include "ui_panel_notification_history.h"
@@ -452,10 +453,10 @@ static bool parse_command_line_args(
     bool& show_bed_temp, bool& show_extrusion, bool& show_fan, bool& show_print_status,
     bool& show_file_detail, bool& show_keypad, bool& show_keyboard, bool& show_step_test,
     bool& show_test_panel, bool& show_gcode_test, bool& show_bed_mesh, bool& show_zoffset,
-    bool& show_pid, bool& show_screws_tilt, bool& show_glyphs, bool& show_gradient_test,
-    bool& show_history_dashboard, bool& force_wizard, int& wizard_step, bool& panel_requested,
-    int& display_num, int& x_pos, int& y_pos, bool& screenshot_enabled, int& screenshot_delay_sec,
-    int& timeout_sec, int& verbosity, int& dark_mode_cli, int& dpi) {
+    bool& show_pid, bool& show_screws_tilt, bool& show_input_shaper, bool& show_glyphs,
+    bool& show_gradient_test, bool& show_history_dashboard, bool& force_wizard, int& wizard_step,
+    bool& panel_requested, int& display_num, int& x_pos, int& y_pos, bool& screenshot_enabled,
+    int& screenshot_delay_sec, int& timeout_sec, int& verbosity, int& dark_mode_cli, int& dpi) {
     // Parse arguments
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-s") == 0 || strcmp(argv[i], "--size") == 0) {
@@ -541,6 +542,10 @@ static bool parse_command_line_args(
                            strcmp(panel_arg, "screws-tilt") == 0 ||
                            strcmp(panel_arg, "bed-leveling") == 0) {
                     show_screws_tilt = true;
+                } else if (strcmp(panel_arg, "input-shaper") == 0 ||
+                           strcmp(panel_arg, "input_shaper") == 0 ||
+                           strcmp(panel_arg, "shaper") == 0) {
+                    show_input_shaper = true;
                 } else if (strcmp(panel_arg, "history-dashboard") == 0 ||
                            strcmp(panel_arg, "history_dashboard") == 0 ||
                            strcmp(panel_arg, "print-history") == 0) {
@@ -552,8 +557,8 @@ static bool parse_command_line_args(
                 } else {
                     printf("Unknown panel: %s\n", panel_arg);
                     printf("Available panels: home, controls, motion, nozzle-temp, bed-temp, "
-                           "bed-mesh, zoffset, pid, screws, extrusion, fan, print-status, "
-                           "filament, settings, advanced, print-history, "
+                           "bed-mesh, zoffset, pid, screws, input-shaper, extrusion, fan, "
+                           "print-status, filament, settings, advanced, print-history, "
                            "print-select, step-test, test, gcode-test, glyphs, gradient-test\n");
                     return false;
                 }
@@ -1157,6 +1162,7 @@ static void initialize_subjects() {
                               nullptr);         // Initialize console panel
     get_global_console_panel().init_subjects(); // Console panel callbacks
     init_screws_tilt_row_handler();             // Screws tilt row callback
+    init_input_shaper_row_handler();            // Input shaper row callback
     init_zoffset_row_handler();                 // Z-Offset row callback
     ui_wizard_init_subjects();                  // Wizard subjects (for first-run config)
     ui_keypad_init_subjects();                  // Keypad display subject (for reactive binding)
@@ -1677,6 +1683,7 @@ int main(int argc, char** argv) {
     bool show_zoffset = false;           // Special flag for Z-offset calibration panel
     bool show_pid = false;               // Special flag for PID tuning panel
     bool show_screws_tilt = false;       // Special flag for screws tilt adjust panel
+    bool show_input_shaper = false;      // Special flag for input shaper panel
     bool show_glyphs = false;            // Special flag for LVGL glyphs reference panel
     bool show_gradient_test = false;     // Special flag for gradient canvas test panel
     bool show_history_dashboard = false; // Special flag for print history dashboard
@@ -1698,9 +1705,10 @@ int main(int argc, char** argv) {
             argc, argv, initial_panel, show_motion, show_nozzle_temp, show_bed_temp, show_extrusion,
             show_fan, show_print_status, show_file_detail, show_keypad, show_keyboard,
             show_step_test, show_test_panel, show_gcode_test, show_bed_mesh, show_zoffset, show_pid,
-            show_screws_tilt, show_glyphs, show_gradient_test, show_history_dashboard, force_wizard,
-            wizard_step, panel_requested, display_num, x_pos, y_pos, screenshot_enabled,
-            screenshot_delay_sec, timeout_sec, verbosity, dark_mode_cli, dpi)) {
+            show_screws_tilt, show_input_shaper, show_glyphs, show_gradient_test,
+            show_history_dashboard, force_wizard, wizard_step, panel_requested, display_num, x_pos,
+            y_pos, screenshot_enabled, screenshot_delay_sec, timeout_sec, verbosity, dark_mode_cli,
+            dpi)) {
         return 0; // Help shown or parse error
     }
 
@@ -1924,6 +1932,9 @@ int main(int argc, char** argv) {
 
     // Register screws tilt panel callbacks BEFORE creating XML
     ui_panel_screws_tilt_register_callbacks();
+
+    // Register input shaper panel callbacks BEFORE creating XML
+    ui_panel_input_shaper_register_callbacks();
 
     // Create entire UI from XML (single component contains everything)
     lv_obj_t* app_layout = (lv_obj_t*)lv_xml_create(screen, "app_layout", NULL);
@@ -2187,6 +2198,20 @@ int main(int argc, char** argv) {
             } else {
                 spdlog::error("Failed to create screws tilt overlay from XML component "
                               "'screws_tilt_panel'");
+            }
+        }
+        if (show_input_shaper) {
+            spdlog::debug("Opening input shaper overlay as requested by command-line flag");
+            lv_obj_t* shaper_panel =
+                (lv_obj_t*)lv_xml_create(screen, "input_shaper_panel", nullptr);
+            if (shaper_panel) {
+                get_global_input_shaper_panel().setup(shaper_panel, screen, moonraker_client.get(),
+                                                      moonraker_api.get());
+                ui_nav_push_overlay(shaper_panel);
+                spdlog::debug("Input shaper overlay pushed to nav stack");
+            } else {
+                spdlog::error("Failed to create input shaper overlay from XML component "
+                              "'input_shaper_panel'");
             }
         }
         if (show_history_dashboard) {

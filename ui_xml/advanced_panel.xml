@@ -92,7 +92,9 @@
       <setting_action_row name="row_input_shaping"
                           label="Input Shaping"
                           icon="inputshaper"
-                          description="Resonance compensation tuning"/>
+                          description="Resonance compensation tuning">
+        <event_cb trigger="clicked" callback="on_input_shaper_row_clicked"/>
+      </setting_action_row>
     </lv_obj>
 
     <!-- Z-Offset Calibration (hidden if no probe) -->

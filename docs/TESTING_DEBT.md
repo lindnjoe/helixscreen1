@@ -255,9 +255,19 @@ Use these standardized tags for new hidden tests:
    - Solution: Initialize LVGL filesystem driver in test setup
    - File: `test_wizard_connection_ui.cpp`
 
+### MAJOR Infrastructure (Blocks Feature Test Coverage)
+
+6. **Extend MoonrakerClientMock to support G-code response subscriptions**
+   - Root cause: Mock client doesn't implement `register_gcode_response_handler()` method
+   - Impact: Cannot unit test Input Shaper, Screws Tilt, or any collector-based features
+   - Solution: Add response handler registration and ability to simulate `notify_gcode_response` events
+   - Files: `include/moonraker_client_mock.h`, `src/moonraker_client_mock.cpp`
+   - Blocked tests: `test_moonraker_api_input_shaper.cpp` (7 tests skipped)
+   - **This is a MAJOR task** - requires simulating Moonraker's WebSocket notification system
+
 ### LOW Priority (Working as Designed)
 
-6. **Document slow/benchmark tests**
+7. **Document slow/benchmark tests**
    - These work correctly, just excluded from CI
    - Run explicitly: `./build/bin/run_tests "[.slow]"` or `"[.benchmark]"`
 

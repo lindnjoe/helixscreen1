@@ -17,6 +17,7 @@
 #include <fstream>
 #include <iomanip>
 #include <memory>
+#include <regex>
 #include <set>
 #include <sstream>
 #include <thread>
@@ -2117,6 +2118,205 @@ class ScrewsTiltCollector : public std::enable_shared_from_this<ScrewsTiltCollec
     std::vector<ScrewTiltResult> results_;
 };
 
+/**
+ * @brief State machine for collecting SHAPER_CALIBRATE responses
+ *
+ * Klipper sends input shaper results as console output lines via notify_gcode_response.
+ * This class collects and parses those lines until the sequence completes.
+ *
+ * Expected output format:
+ *   Fitted shaper 'zv' frequency = 35.8 Hz (vibrations = 22.7%, smoothing ~= 0.100)
+ *   Fitted shaper 'mzv' frequency = 36.7 Hz (vibrations = 7.2%, smoothing ~= 0.140)
+ *   ...
+ *   Recommended shaper is mzv @ 36.7 Hz
+ */
+class InputShaperCollector : public std::enable_shared_from_this<InputShaperCollector> {
+  public:
+    InputShaperCollector(MoonrakerClient& client, char axis, InputShaperCallback on_success,
+                         MoonrakerAPI::ErrorCallback on_error)
+        : client_(client), axis_(axis), on_success_(std::move(on_success)),
+          on_error_(std::move(on_error)) {}
+
+    ~InputShaperCollector() {
+        unregister();
+    }
+
+    void start() {
+        static std::atomic<uint64_t> s_collector_id{0};
+        handler_name_ = "input_shaper_collector_" + std::to_string(++s_collector_id);
+
+        auto self = shared_from_this();
+        client_.register_method_callback("notify_gcode_response", handler_name_,
+                                         [self](const json& msg) { self->on_gcode_response(msg); });
+
+        registered_.store(true);
+        spdlog::debug(
+            "[InputShaperCollector] Started collecting responses for axis {} (handler: {})", axis_,
+            handler_name_);
+    }
+
+    void unregister() {
+        bool was_registered = registered_.exchange(false);
+        if (was_registered) {
+            client_.unregister_method_callback("notify_gcode_response", handler_name_);
+            spdlog::debug("[InputShaperCollector] Unregistered callback");
+        }
+    }
+
+    void mark_completed() {
+        completed_.store(true);
+    }
+
+    void on_gcode_response(const json& msg) {
+        if (completed_.load()) {
+            return;
+        }
+
+        if (!msg.contains("params") || !msg["params"].is_array() || msg["params"].empty()) {
+            return;
+        }
+
+        const std::string& line = msg["params"][0].get_ref<const std::string&>();
+        spdlog::trace("[InputShaperCollector] Received: {}", line);
+
+        // Check for unknown command error
+        if (line.find("Unknown command") != std::string::npos &&
+            line.find("SHAPER_CALIBRATE") != std::string::npos) {
+            complete_error(
+                "SHAPER_CALIBRATE requires [resonance_tester] and ADXL345 in printer.cfg");
+            return;
+        }
+
+        // Parse shaper fit lines
+        // Format: "Fitted shaper 'mzv' frequency = 36.7 Hz (vibrations = 7.2%, smoothing ~= 0.140)"
+        if (line.find("Fitted shaper") != std::string::npos) {
+            parse_shaper_line(line);
+        }
+
+        // Parse recommendation line
+        // Format: "Recommended shaper is mzv @ 36.7 Hz"
+        if (line.find("Recommended shaper") != std::string::npos) {
+            parse_recommendation(line);
+            // Recommendation marks completion
+            complete_success();
+            return;
+        }
+
+        // Error detection - be specific to avoid false positives
+        if (line.rfind("!! ", 0) == 0 ||                // Klipper emergency errors
+            line.rfind("Error: ", 0) == 0 ||            // Standard errors
+            line.find("error:") != std::string::npos) { // Python traceback
+            complete_error(line);
+        }
+    }
+
+  private:
+    void parse_shaper_line(const std::string& line) {
+        // Static regex for performance
+        static const std::regex shaper_regex(
+            R"(Fitted shaper '(\w+)' frequency = ([\d.]+) Hz \(vibrations = ([\d.]+)%, smoothing ~= ([\d.]+)\))");
+
+        std::smatch match;
+        if (std::regex_search(line, match, shaper_regex) && match.size() == 5) {
+            ShaperFitData fit;
+            fit.type = match[1].str();
+            try {
+                fit.frequency = std::stof(match[2].str());
+                fit.vibrations = std::stof(match[3].str());
+                fit.smoothing = std::stof(match[4].str());
+            } catch (const std::exception& e) {
+                spdlog::warn("[InputShaperCollector] Failed to parse values: {}", e.what());
+                return;
+            }
+
+            spdlog::debug("[InputShaperCollector] Parsed: {} @ {:.1f} Hz (vib: {:.1f}%)", fit.type,
+                          fit.frequency, fit.vibrations);
+            shaper_fits_.push_back(fit);
+        }
+    }
+
+    void parse_recommendation(const std::string& line) {
+        static const std::regex rec_regex(R"(Recommended shaper is (\w+) @ ([\d.]+) Hz)");
+
+        std::smatch match;
+        if (std::regex_search(line, match, rec_regex) && match.size() == 3) {
+            recommended_type_ = match[1].str();
+            try {
+                recommended_freq_ = std::stof(match[2].str());
+            } catch (const std::exception&) {
+                recommended_freq_ = 0.0f;
+            }
+            spdlog::info("[InputShaperCollector] Recommendation: {} @ {:.1f} Hz", recommended_type_,
+                         recommended_freq_);
+        }
+    }
+
+    void complete_success() {
+        if (completed_.exchange(true)) {
+            return; // Already completed
+        }
+
+        spdlog::info("[InputShaperCollector] Complete with {} shaper options", shaper_fits_.size());
+        unregister();
+
+        if (on_success_) {
+            // Build the result
+            InputShaperResult result;
+            result.axis = axis_;
+            result.shaper_type = recommended_type_;
+            result.shaper_freq = recommended_freq_;
+
+            // Find the recommended shaper's details
+            for (const auto& fit : shaper_fits_) {
+                if (fit.type == recommended_type_) {
+                    result.smoothing = fit.smoothing;
+                    result.vibrations = fit.vibrations;
+                    break;
+                }
+            }
+
+            on_success_(result);
+        }
+    }
+
+    void complete_error(const std::string& message) {
+        if (completed_.exchange(true)) {
+            return;
+        }
+
+        spdlog::error("[InputShaperCollector] Error: {}", message);
+        unregister();
+
+        if (on_error_) {
+            MoonrakerError err;
+            err.type = MoonrakerErrorType::JSON_RPC_ERROR;
+            err.message = message;
+            err.method = "SHAPER_CALIBRATE";
+            on_error_(err);
+        }
+    }
+
+    // Internal struct for collecting fits before building final result
+    struct ShaperFitData {
+        std::string type;
+        float frequency = 0.0f;
+        float vibrations = 0.0f;
+        float smoothing = 0.0f;
+    };
+
+    MoonrakerClient& client_;
+    char axis_;
+    InputShaperCallback on_success_;
+    MoonrakerAPI::ErrorCallback on_error_;
+    std::string handler_name_;
+    std::atomic<bool> registered_{false};
+    std::atomic<bool> completed_{false};
+
+    std::vector<ShaperFitData> shaper_fits_;
+    std::string recommended_type_;
+    float recommended_freq_ = 0.0f;
+};
+
 void MoonrakerAPI::calculate_screws_tilt(ScrewTiltCallback on_success, ErrorCallback on_error) {
     spdlog::info("[Moonraker API] Starting SCREWS_TILT_CALCULATE");
 
@@ -2164,16 +2364,28 @@ void MoonrakerAPI::run_z_tilt_adjust(SuccessCallback /*on_success*/, ErrorCallba
     }
 }
 
-void MoonrakerAPI::start_resonance_test(char /*axis*/, AdvancedProgressCallback /*on_progress*/,
-                                        InputShaperCallback /*on_complete*/,
-                                        ErrorCallback on_error) {
-    spdlog::warn("[Moonraker API] start_resonance_test() not yet implemented");
-    if (on_error) {
-        MoonrakerError err;
-        err.type = MoonrakerErrorType::UNKNOWN;
-        err.message = "Resonance testing not yet implemented";
-        on_error(err);
-    }
+void MoonrakerAPI::start_resonance_test(char axis, AdvancedProgressCallback /*on_progress*/,
+                                        InputShaperCallback on_complete, ErrorCallback on_error) {
+    spdlog::info("[Moonraker API] Starting SHAPER_CALIBRATE AXIS={}", axis);
+
+    // Create collector to handle async response parsing
+    auto collector = std::make_shared<InputShaperCollector>(client_, axis, on_complete, on_error);
+    collector->start();
+
+    // Send the G-code command
+    std::string cmd = "SHAPER_CALIBRATE AXIS=";
+    cmd += axis;
+
+    execute_gcode(
+        cmd, []() { spdlog::debug("[Moonraker API] SHAPER_CALIBRATE command accepted"); },
+        [collector, on_error](const MoonrakerError& err) {
+            spdlog::error("[Moonraker API] Failed to send SHAPER_CALIBRATE: {}", err.message);
+            collector->mark_completed();
+            collector->unregister();
+            if (on_error) {
+                on_error(err);
+            }
+        });
 }
 
 void MoonrakerAPI::start_klippain_shaper_calibration(const std::string& /*axis*/,
@@ -2188,16 +2400,17 @@ void MoonrakerAPI::start_klippain_shaper_calibration(const std::string& /*axis*/
     }
 }
 
-void MoonrakerAPI::set_input_shaper(char /*axis*/, const std::string& /*shaper_type*/,
-                                    double /*frequency*/, SuccessCallback /*on_success*/,
-                                    ErrorCallback on_error) {
-    spdlog::warn("[Moonraker API] set_input_shaper() not yet implemented");
-    if (on_error) {
-        MoonrakerError err;
-        err.type = MoonrakerErrorType::UNKNOWN;
-        err.message = "Input shaper configuration not yet implemented";
-        on_error(err);
-    }
+void MoonrakerAPI::set_input_shaper(char axis, const std::string& shaper_type, double frequency,
+                                    SuccessCallback on_success, ErrorCallback on_error) {
+    spdlog::info("[Moonraker API] Setting input shaper: {}={} @ {:.1f} Hz", axis, shaper_type,
+                 frequency);
+
+    // Build SET_INPUT_SHAPER command
+    std::ostringstream cmd;
+    cmd << "SET_INPUT_SHAPER SHAPER_FREQ_" << axis << "=" << frequency << " SHAPER_TYPE_" << axis
+        << "=" << shaper_type;
+
+    execute_gcode(cmd.str(), on_success, on_error);
 }
 
 void MoonrakerAPI::get_spoolman_status(std::function<void(bool, int)> /*on_success*/,

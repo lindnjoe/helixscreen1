@@ -42,6 +42,9 @@ static const IconMapping ICON_MAP[] = {
     {"arrow_right",        "\xF3\xB0\x81\x94"},  // F0054 arrow-right
     {"arrow_right_bold",   "\xF3\xB0\x9C\xB4"},  // F0734 arrow-right-bold
     {"arrow_up",           "\xF3\xB0\x81\x9D"},  // F005D arrow-up
+    {"axis_arrow",         "\xF3\xB0\xB5\x89"},  // F0D49 axis-arrow (all 3 axes)
+    {"axis_x_arrow",       "\xF3\xB0\xB5\x8C"},  // F0D4C axis-x-arrow
+    {"axis_y_arrow",       "\xF3\xB0\xB5\x91"},  // F0D51 axis-y-arrow
     {"axis_z_arrow",       "\xF3\xB0\xB5\x95"},  // F0D55 axis-z-arrow
 
     // Back/navigation
