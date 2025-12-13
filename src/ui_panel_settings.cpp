@@ -114,6 +114,24 @@ void SettingsPanel::init_subjects() {
     lv_xml_register_event_cb(nullptr, "on_network_clicked", on_network_clicked);
     lv_xml_register_event_cb(nullptr, "on_factory_reset_clicked", on_factory_reset_clicked);
 
+    // Register XML event callbacks for toggle switches
+    lv_xml_register_event_cb(nullptr, "on_dark_mode_changed", on_dark_mode_changed);
+    lv_xml_register_event_cb(nullptr, "on_led_light_changed", on_led_light_changed);
+    lv_xml_register_event_cb(nullptr, "on_sounds_changed", on_sounds_changed);
+    lv_xml_register_event_cb(nullptr, "on_estop_confirm_changed", on_estop_confirm_changed);
+
+    // Register XML event callbacks for sliders
+    lv_xml_register_event_cb(nullptr, "on_scroll_throw_changed", on_scroll_throw_changed);
+    lv_xml_register_event_cb(nullptr, "on_scroll_limit_changed", on_scroll_limit_changed);
+
+    // Register XML event callbacks for action rows
+    lv_xml_register_event_cb(nullptr, "on_display_settings_clicked", on_display_settings_clicked);
+    lv_xml_register_event_cb(nullptr, "on_bed_mesh_clicked", on_bed_mesh_clicked);
+    lv_xml_register_event_cb(nullptr, "on_z_offset_clicked", on_z_offset_clicked);
+    lv_xml_register_event_cb(nullptr, "on_pid_tuning_clicked", on_pid_tuning_clicked);
+    lv_xml_register_event_cb(nullptr, "on_network_clicked", on_network_clicked);
+    lv_xml_register_event_cb(nullptr, "on_factory_reset_clicked", on_factory_reset_clicked);
+
     // Note: BedMeshPanel subjects are initialized in main.cpp during startup
 
     subjects_initialized_ = true;
