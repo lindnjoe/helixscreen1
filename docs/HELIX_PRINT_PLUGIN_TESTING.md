@@ -2,12 +2,29 @@
 
 This document outlines the testing plan for the `helix_print` Moonraker plugin once it's installed on a Klipper printer.
 
+## Installation
+
+**One-liner install** - SSH into your printer and run:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/pbrownco/helixscreen/main/moonraker-plugin/remote-install.sh | bash
+```
+
+This automatically:
+- Clones the plugin to `~/helix_print`
+- Creates symlink to Moonraker components
+- Adds `[helix_print]` config section
+- Adds `[update_manager helix_print]` for auto-updates
+- Restarts Moonraker
+
+For manual installation or more details, see `moonraker-plugin/README.md`.
+
 ## Prerequisites
 
 - [ ] Plugin installed on test printer (192.168.1.112 or 192.168.1.67)
-- [ ] `[helix_print]` section added to `moonraker.conf`
-- [ ] Moonraker restarted after installation
-- [ ] HelixScreen built from `feature/helix-print-plugin` branch
+- [ ] `[helix_print]` section added to `moonraker.conf` (automatic with one-liner)
+- [ ] Moonraker restarted after installation (automatic with one-liner)
+- [ ] HelixScreen built with helix_print support (main branch)
 
 ## Phase 1: Plugin Installation Verification
 
