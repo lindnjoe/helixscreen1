@@ -18,15 +18,19 @@ class PrinterState;
  * process. Uses Klipper's PROBE_CALIBRATE, TESTZ, ACCEPT, and ABORT commands.
  *
  * ## State Machine:
- * - IDLE: Shows instructions and Start button
- * - PROBING: Waiting for PROBE_CALIBRATE to complete (homes + probes)
- * - ADJUSTING: User adjusts Z with paper test (+/- buttons)
- * - SAVING: ACCEPT was pressed, saving config (Klipper restarts)
- * - COMPLETE: Calibration successful
- * - ERROR: Something went wrong
+ * - IDLE (0): Shows instructions and Start button
+ * - PROBING (1): Waiting for PROBE_CALIBRATE to complete (homes + probes)
+ * - ADJUSTING (2): User adjusts Z with paper test (+/- buttons)
+ * - SAVING (3): ACCEPT was pressed, saving config (Klipper restarts)
+ * - COMPLETE (4): Calibration successful
+ * - ERROR (5): Something went wrong
  *
  * ## Usage:
  * ```cpp
+ * // At startup (before XML creation):
+ * ui_panel_calibration_zoffset_register_callbacks();
+ *
+ * // When opening panel:
  * ZOffsetCalibrationPanel& panel = get_global_zoffset_cal_panel();
  * panel.setup(lv_obj, parent_screen, moonraker_client);
  * ui_nav_push_overlay(lv_obj);
@@ -36,18 +40,35 @@ class ZOffsetCalibrationPanel {
   public:
     /**
      * @brief Calibration state machine states
+     *
+     * Values must match XML bind_flag_if_not_eq ref_value attributes.
      */
     enum class State {
-        IDLE,      ///< Ready to start, showing instructions
-        PROBING,   ///< PROBE_CALIBRATE running
-        ADJUSTING, ///< Interactive Z adjustment phase
-        SAVING,    ///< ACCEPT sent, waiting for SAVE_CONFIG
-        COMPLETE,  ///< Calibration finished successfully
-        ERROR      ///< Error occurred
+        IDLE = 0,      ///< Ready to start, showing instructions
+        PROBING = 1,   ///< PROBE_CALIBRATE running
+        ADJUSTING = 2, ///< Interactive Z adjustment phase
+        SAVING = 3,    ///< ACCEPT sent, waiting for SAVE_CONFIG
+        COMPLETE = 4,  ///< Calibration finished successfully
+        ERROR = 5      ///< Error occurred
     };
 
     ZOffsetCalibrationPanel() = default;
     ~ZOffsetCalibrationPanel();
+
+    /**
+     * @brief Initialize LVGL subjects for reactive state management
+     *
+     * Must be called once before setup(), typically during application init.
+     * Registers the state subject used by XML bind_flag_if_not_eq bindings.
+     */
+    void init_subjects();
+
+    /**
+     * @brief Register XML event callbacks
+     *
+     * Must be called once during application init to wire up XML event_cb elements.
+     */
+    static void register_callbacks();
 
     /**
      * @brief Setup the panel with event handlers
@@ -83,7 +104,10 @@ class ZOffsetCalibrationPanel {
     // State management
     State state_ = State::IDLE;
     void set_state(State new_state);
-    void show_state_view(State state);
+
+    // State subject for reactive visibility control
+    lv_subject_t zoffset_cal_state_{};
+    bool subjects_initialized_ = false;
 
     // Gcode command helpers
     void send_probe_calibrate();
@@ -99,7 +123,7 @@ class ZOffsetCalibrationPanel {
     void handle_done_clicked();
     void handle_retry_clicked();
 
-    // Static trampolines
+    // Static trampolines (for XML event_cb registration)
     static void on_start_clicked(lv_event_t* e);
     static void on_z_down_1(lv_event_t* e);
     static void on_z_down_01(lv_event_t* e);
@@ -119,15 +143,7 @@ class ZOffsetCalibrationPanel {
     lv_obj_t* parent_screen_ = nullptr;
     MoonrakerClient* client_ = nullptr;
 
-    // State views
-    lv_obj_t* state_idle_ = nullptr;
-    lv_obj_t* state_probing_ = nullptr;
-    lv_obj_t* state_adjusting_ = nullptr;
-    lv_obj_t* state_saving_ = nullptr;
-    lv_obj_t* state_complete_ = nullptr;
-    lv_obj_t* state_error_ = nullptr;
-
-    // Interactive elements
+    // Interactive elements (still needed for dynamic text updates)
     lv_obj_t* z_position_display_ = nullptr;
     lv_obj_t* final_offset_label_ = nullptr;
     lv_obj_t* error_message_ = nullptr;
@@ -149,9 +165,17 @@ class ZOffsetCalibrationPanel {
 ZOffsetCalibrationPanel& get_global_zoffset_cal_panel();
 
 /**
+ * @brief Register XML event callbacks and initialize subjects for Z-Offset panel
+ *
+ * Call this once at startup before creating any calibration_zoffset_panel XML.
+ * Registers callbacks for all button events and initializes state subject.
+ */
+void ui_panel_calibration_zoffset_register_callbacks();
+
+/**
  * @brief Initialize row click callback for opening from Advanced panel
  *
- * Must be called during app initialization before XML creation.
- * Registers "on_zoffset_row_clicked" callback.
+ * @deprecated Use ui_panel_calibration_zoffset_register_callbacks() instead.
+ * This function now just calls that one for backward compatibility.
  */
 void init_zoffset_row_handler();
