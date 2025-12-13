@@ -126,6 +126,25 @@ AmsBackendMock::AmsBackendMock(int gate_count) {
         system_info_.tool_to_gate_map[i] = i;
     }
 
+    // Start with gate 0 loaded for realistic demo appearance
+    if (gate_count > 0) {
+        auto* gate = system_info_.get_gate_global(0);
+        if (gate) {
+            gate->status = GateStatus::LOADED;
+        }
+        system_info_.current_gate = 0;
+        system_info_.current_tool = 0;
+        system_info_.filament_loaded = true;
+    }
+
+    // Make gate index 3 (4th slot) empty for realistic demo
+    if (gate_count > 3) {
+        auto* gate = system_info_.get_gate_global(3);
+        if (gate) {
+            gate->status = GateStatus::EMPTY;
+        }
+    }
+
     spdlog::debug("[AmsBackendMock] Created with {} gates", gate_count);
 }
 
