@@ -51,6 +51,14 @@ class PIDCalibrationPanel {
     ~PIDCalibrationPanel() = default;
 
     /**
+     * @brief Initialize subjects and XML event callbacks
+     *
+     * Call once at startup before any panel instances are created.
+     * Registers the pid_cal_state subject and all XML event callbacks.
+     */
+    static void init_subjects();
+
+    /**
      * @brief Setup the panel with event handlers
      *
      * @param panel Root panel object from lv_xml_create()
@@ -112,13 +120,6 @@ class PIDCalibrationPanel {
     float result_ki_ = 0;
     float result_kd_ = 0;
 
-    // State view references
-    lv_obj_t* state_idle_ = nullptr;
-    lv_obj_t* state_calibrating_ = nullptr;
-    lv_obj_t* state_saving_ = nullptr;
-    lv_obj_t* state_complete_ = nullptr;
-    lv_obj_t* state_error_ = nullptr;
-
     // Widget references
     lv_obj_t* btn_heater_extruder_ = nullptr;
     lv_obj_t* btn_heater_bed_ = nullptr;
@@ -133,7 +134,6 @@ class PIDCalibrationPanel {
 
     // State management
     void set_state(State new_state);
-    void show_state_view(State state);
 
     // UI updates
     void update_heater_selection();

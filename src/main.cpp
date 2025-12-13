@@ -455,6 +455,9 @@ static void initialize_subjects() {
     bed_mesh_panel = &get_global_bed_mesh_panel();
     bed_mesh_panel->init_subjects();
 
+    // Initialize PID calibration panel subjects
+    PIDCalibrationPanel::init_subjects();
+
     // Initialize TempControlPanel (needs PrinterState ready)
     temp_control_panel = std::make_unique<TempControlPanel>(get_printer_state(), nullptr);
     temp_control_panel->init_subjects();

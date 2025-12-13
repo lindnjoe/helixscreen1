@@ -21,6 +21,9 @@
 static InputShaperPanel s_input_shaper_panel;
 static lv_obj_t* g_input_shaper_panel_obj = nullptr;
 
+// State subject (0=IDLE, 1=MEASURING, 2=RESULTS, 3=ERROR)
+static lv_subject_t s_input_shaper_state;
+
 // Forward declarations
 static void on_input_shaper_row_clicked(lv_event_t* e);
 MoonrakerClient* get_moonraker_client();
@@ -127,6 +130,10 @@ void InputShaperPanel::init_subjects() {
         return;
     }
 
+    // Initialize state subject for state machine visibility
+    lv_subject_init_int(&s_input_shaper_state, 0);
+    lv_xml_register_subject(nullptr, "input_shaper_state", &s_input_shaper_state);
+
     // Initialize subjects for reactive results rows (5 shaper types max)
     for (size_t i = 0; i < MAX_SHAPERS; i++) {
         // Initialize char buffers to empty
@@ -178,11 +185,7 @@ void InputShaperPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen, Moonraker
         return;
     }
 
-    // Find state views
-    state_idle_ = lv_obj_find_by_name(panel_, "state_idle");
-    state_measuring_ = lv_obj_find_by_name(panel_, "state_measuring");
-    state_results_ = lv_obj_find_by_name(panel_, "state_results");
-    state_error_ = lv_obj_find_by_name(panel_, "state_error");
+    // State visibility is handled via XML subject bindings
 
     // Find display elements
     status_label_ = lv_obj_find_by_name(panel_, "status_label");
@@ -209,40 +212,10 @@ void InputShaperPanel::set_state(State new_state) {
     spdlog::debug("[InputShaper] State change: {} -> {}", static_cast<int>(state_),
                   static_cast<int>(new_state));
     state_ = new_state;
-    show_state_view(new_state);
-}
 
-void InputShaperPanel::show_state_view(State state) {
-    // Hide all state views
-    if (state_idle_)
-        lv_obj_add_flag(state_idle_, LV_OBJ_FLAG_HIDDEN);
-    if (state_measuring_)
-        lv_obj_add_flag(state_measuring_, LV_OBJ_FLAG_HIDDEN);
-    if (state_results_)
-        lv_obj_add_flag(state_results_, LV_OBJ_FLAG_HIDDEN);
-    if (state_error_)
-        lv_obj_add_flag(state_error_, LV_OBJ_FLAG_HIDDEN);
-
-    // Show the appropriate view
-    lv_obj_t* view = nullptr;
-    switch (state) {
-    case State::IDLE:
-        view = state_idle_;
-        break;
-    case State::MEASURING:
-        view = state_measuring_;
-        break;
-    case State::RESULTS:
-        view = state_results_;
-        break;
-    case State::ERROR:
-        view = state_error_;
-        break;
-    }
-
-    if (view) {
-        lv_obj_remove_flag(view, LV_OBJ_FLAG_HIDDEN);
-    }
+    // Update subject - XML bindings handle visibility automatically
+    // State mapping: 0=IDLE, 1=MEASURING, 2=RESULTS, 3=ERROR
+    lv_subject_set_int(&s_input_shaper_state, static_cast<int>(new_state));
 }
 
 // ============================================================================

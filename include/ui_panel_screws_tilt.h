@@ -105,7 +105,6 @@ class ScrewsTiltPanel {
     // State management
     State state_ = State::IDLE;
     void set_state(State new_state);
-    void show_state_view(State state);
 
     // Command helpers
     void start_probing();
@@ -132,13 +131,6 @@ class ScrewsTiltPanel {
     lv_obj_t* parent_screen_ = nullptr;
     MoonrakerClient* client_ = nullptr;
     MoonrakerAPI* api_ = nullptr;
-
-    // State views
-    lv_obj_t* state_idle_ = nullptr;
-    lv_obj_t* state_probing_ = nullptr;
-    lv_obj_t* state_results_ = nullptr;
-    lv_obj_t* state_leveled_ = nullptr;
-    lv_obj_t* state_error_ = nullptr;
 
     // Results UI elements
     lv_obj_t* bed_diagram_container_ = nullptr;

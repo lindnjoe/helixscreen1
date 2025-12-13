@@ -22,6 +22,9 @@
 static ScrewsTiltPanel s_screws_tilt_panel;
 static lv_obj_t* g_screws_tilt_panel_obj = nullptr;
 
+// State subject (0=IDLE, 1=PROBING, 2=RESULTS, 3=LEVELED, 4=ERROR)
+static lv_subject_t s_screws_tilt_state;
+
 // Forward declarations
 static void on_screws_tilt_row_clicked(lv_event_t* e);
 MoonrakerClient* get_moonraker_client();
@@ -111,6 +114,10 @@ void ScrewsTiltPanel::init_subjects() {
         return;
     }
 
+    // Initialize state subject for state machine visibility
+    lv_subject_init_int(&s_screws_tilt_state, 0);
+    lv_xml_register_subject(nullptr, "screws_tilt_state", &s_screws_tilt_state);
+
     // Initialize subjects for reactive list rows (4 slots max)
     for (size_t i = 0; i < MAX_SCREWS; i++) {
         // Initialize char buffers to empty
@@ -156,12 +163,7 @@ void ScrewsTiltPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen, MoonrakerC
         return;
     }
 
-    // Find state views
-    state_idle_ = lv_obj_find_by_name(panel_, "state_idle");
-    state_probing_ = lv_obj_find_by_name(panel_, "state_probing");
-    state_results_ = lv_obj_find_by_name(panel_, "state_results");
-    state_leveled_ = lv_obj_find_by_name(panel_, "state_leveled");
-    state_error_ = lv_obj_find_by_name(panel_, "state_error");
+    // State visibility is handled via XML subject bindings
 
     // Find display elements
     bed_diagram_container_ = lv_obj_find_by_name(panel_, "bed_diagram_container");
@@ -196,45 +198,10 @@ void ScrewsTiltPanel::set_state(State new_state) {
     spdlog::debug("[ScrewsTilt] State change: {} -> {}", static_cast<int>(state_),
                   static_cast<int>(new_state));
     state_ = new_state;
-    show_state_view(new_state);
-}
 
-void ScrewsTiltPanel::show_state_view(State state) {
-    // Hide all state views
-    if (state_idle_)
-        lv_obj_add_flag(state_idle_, LV_OBJ_FLAG_HIDDEN);
-    if (state_probing_)
-        lv_obj_add_flag(state_probing_, LV_OBJ_FLAG_HIDDEN);
-    if (state_results_)
-        lv_obj_add_flag(state_results_, LV_OBJ_FLAG_HIDDEN);
-    if (state_leveled_)
-        lv_obj_add_flag(state_leveled_, LV_OBJ_FLAG_HIDDEN);
-    if (state_error_)
-        lv_obj_add_flag(state_error_, LV_OBJ_FLAG_HIDDEN);
-
-    // Show the appropriate view
-    lv_obj_t* view = nullptr;
-    switch (state) {
-    case State::IDLE:
-        view = state_idle_;
-        break;
-    case State::PROBING:
-        view = state_probing_;
-        break;
-    case State::RESULTS:
-        view = state_results_;
-        break;
-    case State::LEVELED:
-        view = state_leveled_;
-        break;
-    case State::ERROR:
-        view = state_error_;
-        break;
-    }
-
-    if (view) {
-        lv_obj_remove_flag(view, LV_OBJ_FLAG_HIDDEN);
-    }
+    // Update subject - XML bindings handle visibility automatically
+    // State mapping: 0=IDLE, 1=PROBING, 2=RESULTS, 3=LEVELED, 4=ERROR
+    lv_subject_set_int(&s_screws_tilt_state, static_cast<int>(new_state));
 }
 
 // ============================================================================

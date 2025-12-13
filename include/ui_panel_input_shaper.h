@@ -113,7 +113,6 @@ class InputShaperPanel {
     // State management
     State state_ = State::IDLE;
     void set_state(State new_state);
-    void show_state_view(State state);
 
     // Calibration commands
     void start_calibration(char axis);
@@ -137,12 +136,6 @@ class InputShaperPanel {
     lv_obj_t* parent_screen_ = nullptr;
     MoonrakerClient* client_ = nullptr;
     MoonrakerAPI* api_ = nullptr;
-
-    // State views
-    lv_obj_t* state_idle_ = nullptr;
-    lv_obj_t* state_measuring_ = nullptr;
-    lv_obj_t* state_results_ = nullptr;
-    lv_obj_t* state_error_ = nullptr;
 
     // Display elements
     lv_obj_t* status_label_ = nullptr;

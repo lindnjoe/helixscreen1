@@ -12,7 +12,37 @@
 #include <spdlog/spdlog.h>
 
 #include <cstdio>
+#include <lvgl.h>
 #include <memory>
+
+// ============================================================================
+// STATIC SUBJECT
+// ============================================================================
+
+// State subject (0=IDLE, 1=CALIBRATING, 2=SAVING, 3=COMPLETE, 4=ERROR)
+static lv_subject_t s_pid_cal_state;
+
+// ============================================================================
+// SUBJECT REGISTRATION
+// ============================================================================
+
+void PIDCalibrationPanel::init_subjects() {
+    // Register state subject
+    lv_subject_init_int(&s_pid_cal_state, 0);
+    lv_xml_register_subject(nullptr, "pid_cal_state", &s_pid_cal_state);
+
+    // Register XML event callbacks using global accessor
+    lv_xml_register_event_cb(nullptr, "on_pid_heater_extruder", on_heater_extruder_clicked);
+    lv_xml_register_event_cb(nullptr, "on_pid_heater_bed", on_heater_bed_clicked);
+    lv_xml_register_event_cb(nullptr, "on_pid_temp_up", on_temp_up);
+    lv_xml_register_event_cb(nullptr, "on_pid_temp_down", on_temp_down);
+    lv_xml_register_event_cb(nullptr, "on_pid_start", on_start_clicked);
+    lv_xml_register_event_cb(nullptr, "on_pid_abort", on_abort_clicked);
+    lv_xml_register_event_cb(nullptr, "on_pid_done", on_done_clicked);
+    lv_xml_register_event_cb(nullptr, "on_pid_retry", on_retry_clicked);
+
+    spdlog::debug("[PIDCal] Subjects and callbacks registered");
+}
 
 // ============================================================================
 // SETUP
@@ -28,14 +58,7 @@ void PIDCalibrationPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen, Moonra
         return;
     }
 
-    // Find state views
-    state_idle_ = lv_obj_find_by_name(panel_, "state_idle");
-    state_calibrating_ = lv_obj_find_by_name(panel_, "state_calibrating");
-    state_saving_ = lv_obj_find_by_name(panel_, "state_saving");
-    state_complete_ = lv_obj_find_by_name(panel_, "state_complete");
-    state_error_ = lv_obj_find_by_name(panel_, "state_error");
-
-    // Find widgets in idle state
+    // Find widgets in idle state (for heater selection styling)
     btn_heater_extruder_ = lv_obj_find_by_name(panel_, "btn_heater_extruder");
     btn_heater_bed_ = lv_obj_find_by_name(panel_, "btn_heater_bed");
     temp_display_ = lv_obj_find_by_name(panel_, "temp_display");
@@ -53,37 +76,8 @@ void PIDCalibrationPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen, Moonra
     // Find error message label
     error_message_ = lv_obj_find_by_name(panel_, "error_message");
 
-    // Wire up button handlers
-    if (btn_heater_extruder_) {
-        lv_obj_add_event_cb(btn_heater_extruder_, on_heater_extruder_clicked, LV_EVENT_CLICKED,
-                            this);
-    }
-    if (btn_heater_bed_) {
-        lv_obj_add_event_cb(btn_heater_bed_, on_heater_bed_clicked, LV_EVENT_CLICKED, this);
-    }
-
-    lv_obj_t* btn = nullptr;
-    btn = lv_obj_find_by_name(panel_, "btn_temp_up");
-    if (btn)
-        lv_obj_add_event_cb(btn, on_temp_up, LV_EVENT_CLICKED, this);
-    btn = lv_obj_find_by_name(panel_, "btn_temp_down");
-    if (btn)
-        lv_obj_add_event_cb(btn, on_temp_down, LV_EVENT_CLICKED, this);
-    btn = lv_obj_find_by_name(panel_, "btn_start");
-    if (btn)
-        lv_obj_add_event_cb(btn, on_start_clicked, LV_EVENT_CLICKED, this);
-    btn = lv_obj_find_by_name(panel_, "btn_abort");
-    if (btn)
-        lv_obj_add_event_cb(btn, on_abort_clicked, LV_EVENT_CLICKED, this);
-    btn = lv_obj_find_by_name(panel_, "btn_done");
-    if (btn)
-        lv_obj_add_event_cb(btn, on_done_clicked, LV_EVENT_CLICKED, this);
-    btn = lv_obj_find_by_name(panel_, "btn_close_error");
-    if (btn)
-        lv_obj_add_event_cb(btn, on_done_clicked, LV_EVENT_CLICKED, this);
-    btn = lv_obj_find_by_name(panel_, "btn_retry");
-    if (btn)
-        lv_obj_add_event_cb(btn, on_retry_clicked, LV_EVENT_CLICKED, this);
+    // Event callbacks are registered via XML <event_cb> elements
+    // State visibility is controlled via subject binding in XML
 
     // Set initial state
     set_state(State::IDLE);
@@ -102,45 +96,10 @@ void PIDCalibrationPanel::set_state(State new_state) {
     spdlog::debug("[PIDCal] State change: {} -> {}", static_cast<int>(state_),
                   static_cast<int>(new_state));
     state_ = new_state;
-    show_state_view(new_state);
-}
 
-void PIDCalibrationPanel::show_state_view(State state) {
-    // Hide all state views
-    if (state_idle_)
-        lv_obj_add_flag(state_idle_, LV_OBJ_FLAG_HIDDEN);
-    if (state_calibrating_)
-        lv_obj_add_flag(state_calibrating_, LV_OBJ_FLAG_HIDDEN);
-    if (state_saving_)
-        lv_obj_add_flag(state_saving_, LV_OBJ_FLAG_HIDDEN);
-    if (state_complete_)
-        lv_obj_add_flag(state_complete_, LV_OBJ_FLAG_HIDDEN);
-    if (state_error_)
-        lv_obj_add_flag(state_error_, LV_OBJ_FLAG_HIDDEN);
-
-    // Show the appropriate view
-    lv_obj_t* view = nullptr;
-    switch (state) {
-    case State::IDLE:
-        view = state_idle_;
-        break;
-    case State::CALIBRATING:
-        view = state_calibrating_;
-        break;
-    case State::SAVING:
-        view = state_saving_;
-        break;
-    case State::COMPLETE:
-        view = state_complete_;
-        break;
-    case State::ERROR:
-        view = state_error_;
-        break;
-    }
-
-    if (view) {
-        lv_obj_remove_flag(view, LV_OBJ_FLAG_HIDDEN);
-    }
+    // Update subject - XML bindings handle visibility automatically
+    // State mapping: 0=IDLE, 1=CALIBRATING, 2=SAVING, 3=COMPLETE, 4=ERROR
+    lv_subject_set_int(&s_pid_cal_state, static_cast<int>(new_state));
 }
 
 // ============================================================================
@@ -382,70 +341,62 @@ void PIDCalibrationPanel::on_calibration_result(bool success, float kp, float ki
 }
 
 // ============================================================================
-// STATIC TRAMPOLINES
+// STATIC TRAMPOLINES (for XML event_cb)
 // ============================================================================
 
 void PIDCalibrationPanel::on_heater_extruder_clicked(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[PIDCal] on_heater_extruder_clicked");
-    auto* self = static_cast<PIDCalibrationPanel*>(lv_event_get_user_data(e));
-    if (self)
-        self->handle_heater_extruder_clicked();
+    (void)e;
+    get_global_pid_cal_panel().handle_heater_extruder_clicked();
     LVGL_SAFE_EVENT_CB_END();
 }
 
 void PIDCalibrationPanel::on_heater_bed_clicked(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[PIDCal] on_heater_bed_clicked");
-    auto* self = static_cast<PIDCalibrationPanel*>(lv_event_get_user_data(e));
-    if (self)
-        self->handle_heater_bed_clicked();
+    (void)e;
+    get_global_pid_cal_panel().handle_heater_bed_clicked();
     LVGL_SAFE_EVENT_CB_END();
 }
 
 void PIDCalibrationPanel::on_temp_up(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[PIDCal] on_temp_up");
-    auto* self = static_cast<PIDCalibrationPanel*>(lv_event_get_user_data(e));
-    if (self)
-        self->handle_temp_up();
+    (void)e;
+    get_global_pid_cal_panel().handle_temp_up();
     LVGL_SAFE_EVENT_CB_END();
 }
 
 void PIDCalibrationPanel::on_temp_down(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[PIDCal] on_temp_down");
-    auto* self = static_cast<PIDCalibrationPanel*>(lv_event_get_user_data(e));
-    if (self)
-        self->handle_temp_down();
+    (void)e;
+    get_global_pid_cal_panel().handle_temp_down();
     LVGL_SAFE_EVENT_CB_END();
 }
 
 void PIDCalibrationPanel::on_start_clicked(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[PIDCal] on_start_clicked");
-    auto* self = static_cast<PIDCalibrationPanel*>(lv_event_get_user_data(e));
-    if (self)
-        self->handle_start_clicked();
+    (void)e;
+    get_global_pid_cal_panel().handle_start_clicked();
     LVGL_SAFE_EVENT_CB_END();
 }
 
 void PIDCalibrationPanel::on_abort_clicked(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[PIDCal] on_abort_clicked");
-    auto* self = static_cast<PIDCalibrationPanel*>(lv_event_get_user_data(e));
-    if (self)
-        self->handle_abort_clicked();
+    (void)e;
+    get_global_pid_cal_panel().handle_abort_clicked();
     LVGL_SAFE_EVENT_CB_END();
 }
 
 void PIDCalibrationPanel::on_done_clicked(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[PIDCal] on_done_clicked");
-    auto* self = static_cast<PIDCalibrationPanel*>(lv_event_get_user_data(e));
-    if (self)
-        self->handle_done_clicked();
+    (void)e;
+    get_global_pid_cal_panel().handle_done_clicked();
     LVGL_SAFE_EVENT_CB_END();
 }
 
 void PIDCalibrationPanel::on_retry_clicked(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[PIDCal] on_retry_clicked");
-    auto* self = static_cast<PIDCalibrationPanel*>(lv_event_get_user_data(e));
-    if (self)
-        self->handle_retry_clicked();
+    (void)e;
+    get_global_pid_cal_panel().handle_retry_clicked();
     LVGL_SAFE_EVENT_CB_END();
 }
 

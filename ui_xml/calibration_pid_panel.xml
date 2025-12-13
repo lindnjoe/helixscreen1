@@ -20,6 +20,7 @@
       <lv_obj name="state_idle"
               width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
               style_flex_main_place="start" style_flex_cross_place="center" style_pad_gap="#space_lg" scrollable="false">
+        <lv_obj-bind_flag_if_not_eq subject="pid_cal_state" flag="hidden" ref_value="0"/>
         <!-- Instructions -->
         <lv_obj width="100%"
                 height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
@@ -39,9 +40,11 @@
             <lv_button name="btn_heater_extruder"
                        height="48" flex_grow="1" style_radius="#border_radius" style_bg_color="#primary_color">
               <text_body text="Extruder" align="center"/>
+              <event_cb trigger="clicked" callback="on_pid_heater_extruder"/>
             </lv_button>
             <lv_button name="btn_heater_bed" height="48" flex_grow="1" style_radius="#border_radius">
               <text_body text="Heated Bed" align="center"/>
+              <event_cb trigger="clicked" callback="on_pid_heater_bed"/>
             </lv_button>
           </lv_obj>
         </lv_obj>
@@ -56,6 +59,7 @@
                   scrollable="false">
             <lv_button name="btn_temp_down" width="56" height="56" style_radius="#border_radius">
               <lv_label text="-" align="center" style_text_font="#font_heading"/>
+              <event_cb trigger="clicked" callback="on_pid_temp_down"/>
             </lv_button>
             <lv_obj width="120"
                     height="56" style_bg_opa="0" style_border_width="0" flex_flow="column"
@@ -64,6 +68,7 @@
             </lv_obj>
             <lv_button name="btn_temp_up" width="56" height="56" style_radius="#border_radius">
               <lv_label text="+" align="center" style_text_font="#font_heading"/>
+              <event_cb trigger="clicked" callback="on_pid_temp_up"/>
             </lv_button>
           </lv_obj>
           <text_small name="temp_hint"
@@ -82,6 +87,7 @@
         <lv_button name="btn_start"
                    width="200" height="56" style_radius="#border_radius" style_bg_color="#primary_color">
           <text_body text="Start Calibration" align="center"/>
+          <event_cb trigger="clicked" callback="on_pid_start"/>
         </lv_button>
       </lv_obj>
       <!-- ================================================================== -->
@@ -89,8 +95,9 @@
       <!-- ================================================================== -->
       <lv_obj name="state_calibrating"
               width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-              style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_lg" hidden="true"
+              style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_lg"
               scrollable="false">
+        <lv_obj-bind_flag_if_not_eq subject="pid_cal_state" flag="hidden" ref_value="1"/>
         <spinner size="lg"/>
         <text_heading text="Calibrating..." style_text_align="center"/>
         <text_body name="calibrating_heater" text="Extruder PID Tuning" style_text_color="#text_secondary"/>
@@ -107,6 +114,7 @@
         <!-- Abort Button -->
         <lv_button name="btn_abort" width="120" height="48" style_radius="#border_radius" style_bg_color="#error_color">
           <text_body text="Abort" align="center"/>
+          <event_cb trigger="clicked" callback="on_pid_abort"/>
         </lv_button>
       </lv_obj>
       <!-- ================================================================== -->
@@ -114,8 +122,9 @@
       <!-- ================================================================== -->
       <lv_obj name="state_saving"
               width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-              style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_lg" hidden="true"
+              style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_lg"
               scrollable="false">
+        <lv_obj-bind_flag_if_not_eq subject="pid_cal_state" flag="hidden" ref_value="2"/>
         <spinner size="lg"/>
         <text_heading text="Saving Configuration..." style_text_align="center"/>
         <text_small width="80%"
@@ -127,8 +136,9 @@
       <!-- ================================================================== -->
       <lv_obj name="state_complete"
               width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-              style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_lg" hidden="true"
+              style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_lg"
               scrollable="false">
+        <lv_obj-bind_flag_if_not_eq subject="pid_cal_state" flag="hidden" ref_value="3"/>
         <icon src="check_circle" size="lg" color="#success_color"/>
         <text_heading text="Calibration Complete!" style_text_align="center"/>
         <!-- PID Values Display -->
@@ -160,6 +170,7 @@
                     style_text_color="#text_secondary"/>
         <lv_button name="btn_done" width="140" height="56" style_radius="#border_radius">
           <text_body text="Done" align="center"/>
+          <event_cb trigger="clicked" callback="on_pid_done"/>
         </lv_button>
       </lv_obj>
       <!-- ================================================================== -->
@@ -167,8 +178,9 @@
       <!-- ================================================================== -->
       <lv_obj name="state_error"
               width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-              style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_lg" hidden="true"
+              style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_lg"
               scrollable="false">
+        <lv_obj-bind_flag_if_not_eq subject="pid_cal_state" flag="hidden" ref_value="4"/>
         <icon src="close_circle" size="lg" color="#error_color"/>
         <text_heading text="Calibration Failed" style_text_align="center"/>
         <text_body name="error_message"
@@ -179,10 +191,12 @@
                 style_flex_main_place="center" style_pad_gap="#space_md" scrollable="false">
           <lv_button name="btn_close_error" width="140" height="56" style_radius="#border_radius">
             <text_body text="Close" align="center"/>
+            <event_cb trigger="clicked" callback="on_pid_done"/>
           </lv_button>
           <lv_button name="btn_retry"
                      width="140" height="56" style_radius="#border_radius" style_bg_color="#primary_color">
             <text_body text="Retry" align="center"/>
+            <event_cb trigger="clicked" callback="on_pid_retry"/>
           </lv_button>
         </lv_obj>
       </lv_obj>
