@@ -1651,6 +1651,119 @@
       ]
     },
     {
+      "id": "qidi_q2",
+      "name": "Qidi Q2",
+      "manufacturer": "Qidi",
+      "image": "qidi-q2.png",
+      "heuristics": [
+        {
+          "type": "kinematics_match",
+          "field": "kinematics",
+          "pattern": "corexy",
+          "confidence": 40,
+          "reason": "CoreXY kinematics"
+        },
+        {
+          "type": "sensor_match",
+          "field": "sensors",
+          "pattern": "chamber",
+          "confidence": 70,
+          "reason": "Chamber temperature sensor (enclosed printer)"
+        },
+        {
+          "type": "object_exists",
+          "field": "printer_objects",
+          "pattern": "heater_generic chamber",
+          "confidence": 75,
+          "reason": "Active chamber heater (Qidi signature)"
+        },
+        {
+          "type": "build_volume_range",
+          "field": "bed_mesh",
+          "min_x": 230,
+          "max_x": 260,
+          "min_y": 230,
+          "max_y": 260,
+          "confidence": 50,
+          "reason": "Build volume ~245mm (Q2 size)"
+        },
+        {
+          "type": "hostname_match",
+          "field": "hostname",
+          "pattern": "qidi",
+          "confidence": 80,
+          "reason": "Hostname contains 'qidi'"
+        },
+        {
+          "type": "hostname_match",
+          "field": "hostname",
+          "pattern": "q2",
+          "confidence": 90,
+          "reason": "Hostname contains 'q2'"
+        }
+      ]
+    },
+    {
+      "id": "qidi_q2_pro",
+      "name": "Qidi Q2 Pro",
+      "manufacturer": "Qidi",
+      "image": "qidi-q2-pro.png",
+      "heuristics": [
+        {
+          "type": "kinematics_match",
+          "field": "kinematics",
+          "pattern": "corexy",
+          "confidence": 40,
+          "reason": "CoreXY kinematics"
+        },
+        {
+          "type": "sensor_match",
+          "field": "sensors",
+          "pattern": "chamber",
+          "confidence": 70,
+          "reason": "Chamber temperature sensor (enclosed printer)"
+        },
+        {
+          "type": "object_exists",
+          "field": "printer_objects",
+          "pattern": "heater_generic chamber",
+          "confidence": 80,
+          "reason": "Active chamber heater (Qidi signature)"
+        },
+        {
+          "type": "build_volume_range",
+          "field": "bed_mesh",
+          "min_x": 230,
+          "max_x": 260,
+          "min_y": 230,
+          "max_y": 260,
+          "confidence": 50,
+          "reason": "Build volume ~245mm (Q2 Pro size)"
+        },
+        {
+          "type": "hostname_match",
+          "field": "hostname",
+          "pattern": "qidi",
+          "confidence": 80,
+          "reason": "Hostname contains 'qidi'"
+        },
+        {
+          "type": "hostname_match",
+          "field": "hostname",
+          "pattern": "q2pro",
+          "confidence": 95,
+          "reason": "Hostname contains 'q2pro'"
+        },
+        {
+          "type": "hostname_match",
+          "field": "hostname",
+          "pattern": "q2-pro",
+          "confidence": 95,
+          "reason": "Hostname contains 'q2-pro'"
+        }
+      ]
+    },
+    {
       "id": "flsun_v400",
       "name": "FLSUN V400",
       "manufacturer": "FLSUN",
