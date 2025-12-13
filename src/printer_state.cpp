@@ -146,11 +146,11 @@ void PrinterState::reset_for_testing() {
 
 void PrinterState::init_subjects(bool register_xml) {
     if (subjects_initialized_) {
-        spdlog::debug("Printer state subjects already initialized, skipping");
+        spdlog::debug("[PrinterState] Subjects already initialized, skipping");
         return;
     }
 
-    spdlog::debug("Initializing printer state subjects (register_xml={})", register_xml);
+    spdlog::debug("[PrinterState] Initializing subjects (register_xml={})", register_xml);
 
     // Temperature subjects (integer, degrees Celsius)
     lv_subject_init_int(&extruder_temp_, 0);
@@ -292,7 +292,7 @@ void PrinterState::init_subjects(bool register_xml) {
     }
 
     subjects_initialized_ = true;
-    spdlog::debug("Printer state subjects initialized and registered successfully");
+    spdlog::debug("[PrinterState] Subjects initialized and registered successfully");
 }
 
 void PrinterState::update_from_notification(const json& notification) {

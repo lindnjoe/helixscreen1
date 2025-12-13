@@ -19,17 +19,17 @@ bool init_lvgl(int width, int height, LvglContext& ctx) {
     // Create display backend (auto-detects: DRM → framebuffer → SDL)
     ctx.backend = DisplayBackend::create_auto();
     if (!ctx.backend) {
-        spdlog::error("No display backend available");
+        spdlog::error("[LVGL] No display backend available");
         lv_deinit();
         return false;
     }
 
-    spdlog::info("Using display backend: {}", ctx.backend->name());
+    spdlog::info("[LVGL] Using display backend: {}", ctx.backend->name());
 
     // Create display
     ctx.display = ctx.backend->create_display(width, height);
     if (!ctx.display) {
-        spdlog::error("Failed to create display");
+        spdlog::error("[LVGL] Failed to create display");
         ctx.backend.reset();
         lv_deinit();
         return false;
@@ -40,7 +40,7 @@ bool init_lvgl(int width, int height, LvglContext& ctx) {
     if (!ctx.pointer) {
 #if defined(HELIX_DISPLAY_DRM) || defined(HELIX_DISPLAY_FBDEV)
         // On embedded platforms (DRM/fbdev), no input device is fatal - show error screen
-        spdlog::error("No input device found - cannot operate touchscreen UI");
+        spdlog::error("[LVGL] No input device found - cannot operate touchscreen UI");
 
         static const char* suggestions[] = {
             "Check /dev/input/event* devices exist",
@@ -60,7 +60,7 @@ bool init_lvgl(int width, int height, LvglContext& ctx) {
         return false;
 #else
         // On desktop (SDL), continue without pointer - mouse is optional
-        spdlog::warn("No pointer input device created - touch/mouse disabled");
+        spdlog::warn("[LVGL] No pointer input device created - touch/mouse disabled");
 #endif
     }
 
@@ -73,22 +73,22 @@ bool init_lvgl(int width, int height, LvglContext& ctx) {
         int scroll_limit = cfg->get<int>("/input/scroll_limit", 5);
         lv_indev_set_scroll_throw(ctx.pointer, static_cast<uint8_t>(scroll_throw));
         lv_indev_set_scroll_limit(ctx.pointer, static_cast<uint8_t>(scroll_limit));
-        spdlog::debug("Scroll config: throw={}, limit={}", scroll_throw, scroll_limit);
+        spdlog::debug("[LVGL] Scroll config: throw={}, limit={}", scroll_throw, scroll_limit);
     }
 
     // Create keyboard input device (optional - enables physical keyboard input)
     lv_indev_t* indev_keyboard = ctx.backend->create_input_keyboard();
     if (indev_keyboard) {
-        spdlog::debug("Physical keyboard input enabled");
+        spdlog::debug("[LVGL] Physical keyboard input enabled");
 
         // Create input group for keyboard navigation and text input
         lv_group_t* input_group = lv_group_create();
         lv_group_set_default(input_group);
         lv_indev_set_group(indev_keyboard, input_group);
-        spdlog::debug("Created default input group for keyboard");
+        spdlog::debug("[LVGL] Created default input group for keyboard");
     }
 
-    spdlog::debug("LVGL initialized: {}x{}", width, height);
+    spdlog::debug("[LVGL] Initialized: {}x{}", width, height);
 
     // Initialize SVG decoder for loading .svg files
     lv_svg_decoder_init();

@@ -34,7 +34,7 @@ std::unique_ptr<DisplayBackend> DisplayBackend::create(DisplayBackendType type) 
         return create_auto();
 
     default:
-        spdlog::error("Display backend type {} not compiled in",
+        spdlog::error("[DisplayBackend] Type {} not compiled in",
                       display_backend_type_to_string(type));
         return nullptr;
     }
@@ -44,7 +44,8 @@ std::unique_ptr<DisplayBackend> DisplayBackend::create_auto() {
     // Check environment variable override first
     const char* backend_env = std::getenv("HELIX_DISPLAY_BACKEND");
     if (backend_env != nullptr) {
-        spdlog::info("HELIX_DISPLAY_BACKEND={} - using forced backend", backend_env);
+        spdlog::info("[DisplayBackend] HELIX_DISPLAY_BACKEND={} - using forced backend",
+                     backend_env);
 
         if (strcmp(backend_env, "drm") == 0) {
 #ifdef HELIX_DISPLAY_DRM
@@ -52,9 +53,9 @@ std::unique_ptr<DisplayBackend> DisplayBackend::create_auto() {
             if (backend->is_available()) {
                 return backend;
             }
-            spdlog::warn("DRM backend forced but not available");
+            spdlog::warn("[DisplayBackend] DRM backend forced but not available");
 #else
-            spdlog::warn("DRM backend forced but not compiled in");
+            spdlog::warn("[DisplayBackend] DRM backend forced but not compiled in");
 #endif
         } else if (strcmp(backend_env, "fbdev") == 0 || strcmp(backend_env, "fb") == 0) {
 #ifdef HELIX_DISPLAY_FBDEV
@@ -62,9 +63,9 @@ std::unique_ptr<DisplayBackend> DisplayBackend::create_auto() {
             if (backend->is_available()) {
                 return backend;
             }
-            spdlog::warn("Framebuffer backend forced but not available");
+            spdlog::warn("[DisplayBackend] Framebuffer backend forced but not available");
 #else
-            spdlog::warn("Framebuffer backend forced but not compiled in");
+            spdlog::warn("[DisplayBackend] Framebuffer backend forced but not compiled in");
 #endif
         } else if (strcmp(backend_env, "sdl") == 0) {
 #ifdef HELIX_DISPLAY_SDL
@@ -72,12 +73,12 @@ std::unique_ptr<DisplayBackend> DisplayBackend::create_auto() {
             if (backend->is_available()) {
                 return backend;
             }
-            spdlog::warn("SDL backend forced but not available");
+            spdlog::warn("[DisplayBackend] SDL backend forced but not available");
 #else
-            spdlog::warn("SDL backend forced but not compiled in");
+            spdlog::warn("[DisplayBackend] SDL backend forced but not compiled in");
 #endif
         } else {
-            spdlog::warn("Unknown HELIX_DISPLAY_BACKEND value: {}", backend_env);
+            spdlog::warn("[DisplayBackend] Unknown HELIX_DISPLAY_BACKEND value: {}", backend_env);
         }
         // Fall through to auto-detection if forced backend unavailable
     }
@@ -89,10 +90,10 @@ std::unique_ptr<DisplayBackend> DisplayBackend::create_auto() {
     {
         auto backend = std::make_unique<DisplayBackendDRM>();
         if (backend->is_available()) {
-            spdlog::info("Auto-detected display backend: DRM/KMS");
+            spdlog::info("[DisplayBackend] Auto-detected: DRM/KMS");
             return backend;
         }
-        spdlog::debug("DRM backend not available");
+        spdlog::debug("[DisplayBackend] DRM backend not available");
     }
 #endif
 
@@ -101,10 +102,10 @@ std::unique_ptr<DisplayBackend> DisplayBackend::create_auto() {
     {
         auto backend = std::make_unique<DisplayBackendFbdev>();
         if (backend->is_available()) {
-            spdlog::info("Auto-detected display backend: Framebuffer");
+            spdlog::info("[DisplayBackend] Auto-detected: Framebuffer");
             return backend;
         }
-        spdlog::debug("Framebuffer backend not available");
+        spdlog::debug("[DisplayBackend] Framebuffer backend not available");
     }
 #endif
 
@@ -113,15 +114,15 @@ std::unique_ptr<DisplayBackend> DisplayBackend::create_auto() {
     {
         auto backend = std::make_unique<DisplayBackendSDL>();
         if (backend->is_available()) {
-            spdlog::info("Auto-detected display backend: SDL");
+            spdlog::info("[DisplayBackend] Auto-detected: SDL");
             return backend;
         }
-        spdlog::debug("SDL backend not available");
+        spdlog::debug("[DisplayBackend] SDL backend not available");
     }
 #endif
 
-    spdlog::error("No display backend available!");
-    spdlog::error("Compiled backends: "
+    spdlog::error("[DisplayBackend] No display backend available!");
+    spdlog::error("[DisplayBackend] Compiled backends: "
 #ifdef HELIX_DISPLAY_SDL
                   "SDL "
 #endif

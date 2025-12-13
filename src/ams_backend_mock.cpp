@@ -126,7 +126,7 @@ AmsBackendMock::AmsBackendMock(int gate_count) {
         system_info_.tool_to_gate_map[i] = i;
     }
 
-    spdlog::debug("AmsBackendMock: Created with {} gates", gate_count);
+    spdlog::debug("[AmsBackendMock] Created with {} gates", gate_count);
 }
 
 AmsBackendMock::~AmsBackendMock() {
@@ -154,7 +154,7 @@ AmsError AmsBackendMock::start() {
 
         running_ = true;
         should_emit = true;
-        spdlog::info("AmsBackendMock: Started");
+        spdlog::info("[AmsBackendMock] Started");
     }
 
     // Emit initial state event OUTSIDE the lock to avoid deadlock
@@ -271,7 +271,7 @@ AmsError AmsBackendMock::load_filament(int gate_index) {
         system_info_.action = AmsAction::LOADING;
         system_info_.operation_detail = "Loading from gate " + std::to_string(gate_index);
         filament_segment_ = PathSegment::SPOOL; // Start at spool
-        spdlog::info("AmsBackendMock: Loading from gate {}", gate_index);
+        spdlog::info("[AmsBackendMock] Loading from gate {}", gate_index);
     }
 
     emit_event(EVENT_STATE_CHANGED);
@@ -301,7 +301,7 @@ AmsError AmsBackendMock::unload_filament() {
         system_info_.action = AmsAction::UNLOADING;
         system_info_.operation_detail = "Unloading filament";
         filament_segment_ = PathSegment::NOZZLE; // Start at nozzle (working backwards)
-        spdlog::info("AmsBackendMock: Unloading filament");
+        spdlog::info("[AmsBackendMock] Unloading filament");
     }
 
     emit_event(EVENT_STATE_CHANGED);
@@ -328,7 +328,7 @@ AmsError AmsBackendMock::select_gate(int gate_index) {
 
         // Immediate selection (no filament movement)
         system_info_.current_gate = gate_index;
-        spdlog::info("AmsBackendMock: Selected gate {}", gate_index);
+        spdlog::info("[AmsBackendMock] Selected gate {}", gate_index);
     }
 
     emit_event(EVENT_STATE_CHANGED);
@@ -357,7 +357,7 @@ AmsError AmsBackendMock::change_tool(int tool_number) {
         // Start tool change (unload + load sequence)
         system_info_.action = AmsAction::UNLOADING; // Start with unload
         system_info_.operation_detail = "Tool change to T" + std::to_string(tool_number);
-        spdlog::info("AmsBackendMock: Tool change to T{}", tool_number);
+        spdlog::info("[AmsBackendMock] Tool change to T{}", tool_number);
     }
 
     emit_event(EVENT_STATE_CHANGED);
@@ -379,7 +379,7 @@ AmsError AmsBackendMock::recover() {
         system_info_.action = AmsAction::IDLE;
         system_info_.operation_detail.clear();
         error_segment_ = PathSegment::NONE; // Clear error location
-        spdlog::info("AmsBackendMock: Recovery complete");
+        spdlog::info("[AmsBackendMock] Recovery complete");
     }
 
     emit_event(EVENT_STATE_CHANGED);
@@ -400,7 +400,7 @@ AmsError AmsBackendMock::reset() {
 
         system_info_.action = AmsAction::RESETTING;
         system_info_.operation_detail = "Resetting system";
-        spdlog::info("AmsBackendMock: Resetting");
+        spdlog::info("[AmsBackendMock] Resetting");
     }
 
     emit_event(EVENT_STATE_CHANGED);
@@ -422,7 +422,7 @@ AmsError AmsBackendMock::cancel() {
 
         system_info_.action = AmsAction::IDLE;
         system_info_.operation_detail.clear();
-        spdlog::info("AmsBackendMock: Operation cancelled");
+        spdlog::info("[AmsBackendMock] Operation cancelled");
     }
 
     emit_event(EVENT_STATE_CHANGED);
@@ -455,7 +455,7 @@ AmsError AmsBackendMock::set_gate_info(int gate_index, const GateInfo& info) {
         gate->nozzle_temp_max = info.nozzle_temp_max;
         gate->bed_temp = info.bed_temp;
 
-        spdlog::info("AmsBackendMock: Updated gate {} info", gate_index);
+        spdlog::info("[AmsBackendMock] Updated gate {} info", gate_index);
     }
 
     // Emit event OUTSIDE the lock to avoid deadlock
@@ -487,7 +487,7 @@ AmsError AmsBackendMock::set_tool_mapping(int tool_number, int gate_index) {
         }
     }
 
-    spdlog::info("AmsBackendMock: Mapped T{} to gate {}", tool_number, gate_index);
+    spdlog::info("[AmsBackendMock] Mapped T{} to gate {}", tool_number, gate_index);
     return AmsErrorHelper::success();
 }
 
@@ -512,7 +512,7 @@ AmsError AmsBackendMock::enable_bypass() {
         system_info_.current_gate = -2;
         system_info_.filament_loaded = true;
         filament_segment_ = PathSegment::NOZZLE;
-        spdlog::info("AmsBackendMock: Bypass mode enabled");
+        spdlog::info("[AmsBackendMock] Bypass mode enabled");
     }
 
     emit_event(EVENT_STATE_CHANGED);
@@ -536,7 +536,7 @@ AmsError AmsBackendMock::disable_bypass() {
         system_info_.current_gate = -1;
         system_info_.filament_loaded = false;
         filament_segment_ = PathSegment::NONE;
-        spdlog::info("AmsBackendMock: Bypass mode disabled");
+        spdlog::info("[AmsBackendMock] Bypass mode disabled");
     }
 
     emit_event(EVENT_STATE_CHANGED);
@@ -580,7 +580,7 @@ void AmsBackendMock::force_gate_status(int gate_index, GateStatus status) {
     auto* gate = system_info_.get_gate_global(gate_index);
     if (gate) {
         gate->status = status;
-        spdlog::debug("AmsBackendMock: Forced gate {} status to {}", gate_index,
+        spdlog::debug("[AmsBackendMock] Forced gate {} status to {}", gate_index,
                       gate_status_to_string(status));
     }
 }
@@ -588,7 +588,7 @@ void AmsBackendMock::force_gate_status(int gate_index, GateStatus status) {
 void AmsBackendMock::set_has_hardware_bypass_sensor(bool has_sensor) {
     std::lock_guard<std::mutex> lock(mutex_);
     system_info_.has_hardware_bypass_sensor = has_sensor;
-    spdlog::debug("AmsBackendMock: Hardware bypass sensor set to {}", has_sensor);
+    spdlog::debug("[AmsBackendMock] Hardware bypass sensor set to {}", has_sensor);
 }
 
 void AmsBackendMock::emit_event(const std::string& event, const std::string& data) {

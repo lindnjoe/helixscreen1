@@ -1,6 +1,6 @@
 # Log Level Refactor Plan
 
-**Status**: In Progress
+**Status**: Phase 4 - Prefix Standardization
 **Created**: 2025-12-13
 **Reference**: `docs/LOGGING.md` (the authoritative logging guidelines)
 
@@ -8,147 +8,127 @@
 
 This plan outlines the work to standardize logging across the entire HelixScreen codebase. The goal is to make each verbosity level (`-v`, `-vv`, `-vvv`) useful and consistent.
 
-## Immediate Work (Current Session)
+---
 
-### Phase 1: DEBUG → TRACE (High-Volume Noise)
+## ✅ Completed Work
 
-Move per-item loop logging to TRACE to clean up `-vv` output.
+### Phase 1: DEBUG → TRACE (High-Volume Noise) ✅
+
+Moved per-item loop logging to TRACE to clean up `-vv` output.
 
 | File | Status | Change |
 |------|--------|--------|
 | `src/ui_theme.cpp` | ✅ Done | Per-color/spacing/font registration |
 | `src/moonraker_client.cpp` | ✅ Done | Wire protocol (send_jsonrpc, request registration) |
-| `src/moonraker_api_files.cpp` | ⏳ Pending | Per-file metadata requests, thumbnail downloads |
-| `src/ui_panel_print_select.cpp` | ⏳ Pending | Per-file metadata/thumbnail logs |
-| `src/ui_status_bar_manager.cpp` | ⏳ Pending | Observer registration, state machine |
-| `src/printer_state.cpp` | ⏳ Pending | Subject value plumbing |
-| `src/main.cpp` | ⏳ Pending | State change callback queueing |
-| `src/ui_icon.cpp` | ⏳ Pending | Icon source/variant changes |
-| `src/temp_display_widget.cpp` | ⏳ Pending | Widget creation, binding |
-| `src/ui_nav_manager.cpp` | ⏳ Pending | Per-button/icon wiring |
-| `src/ams_state.cpp` | ⏳ Pending | Per-gate updates |
-| `src/ui_ams_slot.cpp` | ⏳ Pending | Per-slot observer creation |
-| `src/gcode_viewer.cpp` | ⏳ Pending | SIZE_CHANGED events |
-| `src/thumbnail_cache.cpp` | ⏳ Pending | Per-download logs |
+| `src/moonraker_api_files.cpp` | ✅ Done | Per-file metadata requests, thumbnail downloads |
+| `src/ui_panel_print_select.cpp` | ✅ Done | Per-file metadata/thumbnail logs |
+| `src/ui_status_bar_manager.cpp` | ✅ Done | Observer registration, state machine |
+| `src/printer_state.cpp` | ✅ Done | Subject value plumbing |
+| `src/main.cpp` | ✅ Done | State change callback queueing |
+| `src/ui_icon.cpp` | ✅ Done | Icon source/variant changes |
+| `src/ui_temp_display.cpp` | ✅ Done | Widget creation, binding |
+| `src/ui_nav_manager.cpp` | ✅ Done | Per-button/icon wiring |
+| `src/ams_state.cpp` | ✅ Done | Per-gate updates |
+| `src/ui_ams_slot.cpp` | ✅ Done | Per-slot observer creation |
+| `src/ui_gcode_viewer.cpp` | ✅ Done | SIZE_CHANGED events |
+| `src/ui_bed_mesh.cpp` | ✅ Done | SIZE_CHANGED events |
+| `src/thumbnail_cache.cpp` | ✅ Done | Per-download logs |
 
-### Phase 2: INFO → DEBUG (Demote)
+### Phase 2: INFO → DEBUG (Demote) ✅
 
-Move internal details from INFO to DEBUG.
+Moved internal details from INFO to DEBUG.
 
-| File | Message Pattern | Reason |
-|------|-----------------|--------|
-| `src/ui_modal_manager.cpp` | "Initializing/registered modal dialog subjects" | Internal |
-| `src/ams_state.cpp` | "Registered N system subjects..." | Registration detail |
-| `src/printer_state.cpp` | "Tracking LED: neopixel X" | Internal |
-| `src/ui_panel_home.cpp` | "Configured LED", "Started tip rotation timer" | Internal |
-| `src/usb_manager.cpp` | "macOS platform detected", "mock USB monitoring" | Backend |
-| `src/wifi_manager.cpp` | "Starting CoreWLAN backend" | Backend |
-| `src/ams_backend_afc.cpp` | "Creating AFC backend" | Internal |
-| `src/gcode_viewer.cpp` | "using TinyGL 3D renderer" | Implementation |
-| `src/settings_manager.cpp` | "Initializing subjects" | Start log |
-| `src/ui_panel_print_select.cpp` | "Refreshing file list", "Received N items" | Frequent |
+| File | Status | Message Pattern |
+|------|--------|-----------------|
+| `src/ui_modal_manager.cpp` | ✅ Done | "Initializing/registered modal dialog subjects" |
+| `src/settings_manager.cpp` | ✅ Done | "Initializing subjects" |
+| `src/usb_backend.cpp` | ✅ Done | Platform detection, mock creation |
+| `src/ui_gcode_viewer.cpp` | ✅ Done | Renderer selection |
+| `src/wifi_backend_macos.mm` | ✅ Done | "Starting CoreWLAN backend" |
+| `src/ams_backend.cpp` | ✅ Done | Backend type selection |
 
-### Phase 3: DEBUG → INFO (Promote)
+### Phase 3: DEBUG → INFO (Promote) ✅
 
-Promote important milestones to INFO.
+Promoted important milestones to INFO.
 
-| File | Message | Reason |
-|------|---------|--------|
-| `src/main.cpp` | "XML UI created successfully" | Startup milestone |
-| `src/moonraker_client.cpp` | "Subscription complete: N objects subscribed" | ✅ Already done |
+| File | Status | Message |
+|------|--------|---------|
+| `src/main.cpp` | ✅ Done | "XML UI created successfully" |
+| `src/main.cpp` | ✅ Done | "Moonraker client initialized" |
+| `src/moonraker_client.cpp` | ✅ Done | "Subscription complete: N objects subscribed" |
 
 ---
 
-## Future Work (Full Codebase Refactor)
+## 🔄 Current Work: Phase 4 - Full Codebase Audit
 
-### Prefix Standardization
+### Problem
 
-Current inconsistencies found in codebase:
+Found **435+ non-standard logs** across the codebase needing:
+1. **Prefix standardization** - Add `[ComponentName]` format
+2. **Log level audit** - Many INFO logs are internal details (should be DEBUG)
 
-| Pattern | Count | Files |
-|---------|-------|-------|
-| `[ComponentName]` | ~80% | Most files |
-| `ComponentName:` | ~10% | Legacy patterns |
-| `[Component Name]` | ~10% | Multi-word names |
+Current inconsistencies:
+| Pattern | Example | Should Be |
+|---------|---------|-----------|
+| `ComponentName:` | `AmsBackendMock: Started` | `[AmsBackendMock] Started` |
+| No prefix | `Loaded 50 tips` | `[TipsManager] Loaded 50 tips` |
+| Sentence start | `Printer state subjects...` | `[PrinterState] Subjects...` |
 
-**Target**: 100% use of `[ComponentName]` format with spaces for multi-word names.
+### Files by Non-Standard Count
 
-### Files Needing Prefix Updates
+| File | Count | Priority |
+|------|-------|----------|
+| `src/main.cpp` | 76 | High |
+| `src/ui_gcode_viewer.cpp` | 40 | High |
+| `src/gcode_parser.cpp` | 37 | Medium |
+| `src/gcode_tinygl_renderer.cpp` | 35 | Medium |
+| `src/display_backend_drm.cpp` | 27 | Medium |
+| `src/bed_mesh_renderer.cpp` | 21 | Medium |
+| `src/display_backend.cpp` | 17 | Medium |
+| `src/ui_notification.cpp` | 16 | Medium |
+| `src/app_globals.cpp` | 16 | Medium |
+| `src/ams_backend_mock.cpp` | 15 | Low (mock) |
+| Others | ~135 | Low |
 
-```bash
-# Find non-standard prefixes
-grep -rn 'spdlog::\(debug\|info\|trace\|warn\|error\)("[A-Za-z].*:' src/ | head -50
-```
+### Standard Format
 
-Identified patterns to fix:
-- `AmsState:` → `[AMS State]`
-- `ConsolePanel initialized` → `[Console Panel] Initialized`
-- `Keypad subjects initialized` → `[Keypad] Subjects initialized`
-- `Notification system initialized` → `[NotificationSystem] Initialized`
+All logs MUST use: `spdlog::level("[ComponentName] Message", args...)`
 
-### Systematic Audit Script
-
-Create a script to audit all logging:
-
-```bash
-#!/bin/bash
-# scripts/audit-logs.sh
-
-echo "=== Log Level Distribution ==="
-for level in trace debug info warn error; do
-    count=$(grep -r "spdlog::$level" src/ | wc -l)
-    echo "$level: $count"
-done
-
-echo ""
-echo "=== Non-standard Prefixes ==="
-grep -rn 'spdlog::\(debug\|info\|trace\|warn\|error\)("[A-Za-z]' src/ | \
-    grep -v '\[' | head -20
-
-echo ""
-echo "=== DEBUG logs that might need TRACE ==="
-grep -rn 'spdlog::debug.*for.*{' src/ | head -10
-```
-
-### Estimated Scope
-
-| Category | Estimated Changes |
-|----------|-------------------|
-| DEBUG → TRACE | ~200 lines |
-| INFO → DEBUG | ~30 lines |
-| DEBUG → INFO | ~10 lines |
-| Prefix standardization | ~100 lines |
-| **Total** | ~340 lines |
-
-### Testing Strategy
-
-After each phase:
-
-1. **Build**: `make -j`
-2. **Test INFO**: `./build/bin/helix-screen --test -v 2>&1 | wc -l` (should be ~50-100 lines)
-3. **Test DEBUG**: `./build/bin/helix-screen --test -vv 2>&1 | wc -l` (should be ~200-400 lines)
-4. **Test TRACE**: `./build/bin/helix-screen --test -vvv 2>&1 | wc -l` (can be 1000+ lines)
-
-### Success Criteria
-
-- `-v` output is scannable in <50 lines (milestones only)
-- `-vv` output is useful for troubleshooting without drowning in noise
-- `-vvv` output has full wire-level detail for deep debugging
-- All prefixes follow `[ComponentName]` pattern
-- No `printf`, `std::cout`, or `LV_LOG_*` usage
+- Component name in square brackets
+- Space after closing bracket
+- PascalCase for single words: `[PrinterState]`
+- Space-separated for multi-word: `[AMS State]`, `[Moonraker Client]`
 
 ---
 
 ## Progress Tracking
 
-Update this section as work progresses:
-
 - [x] Create `docs/LOGGING.md` with guidelines
 - [x] Create this refactor plan
-- [x] Phase 1: ui_theme.cpp
-- [x] Phase 1: moonraker_client.cpp (wire protocol + INFO promotion)
-- [ ] Phase 1: Remaining files
-- [ ] Phase 2: INFO → DEBUG demotions
-- [ ] Phase 3: DEBUG → INFO promotions
-- [ ] Verification testing
-- [ ] Prefix standardization (future sprint)
+- [x] Phase 1: DEBUG → TRACE (15 files)
+- [x] Phase 2: INFO → DEBUG (6 files)
+- [x] Phase 3: DEBUG → INFO (3 promotions)
+- [x] Verification testing
+- [ ] Phase 4: Prefix standardization (~435 logs)
+  - [ ] `src/main.cpp` (76 logs)
+  - [ ] `src/ui_gcode_viewer.cpp` (40 logs)
+  - [ ] `src/gcode_parser.cpp` (37 logs)
+  - [ ] `src/display_backend*.cpp` (57 logs)
+  - [ ] Remaining files (~225 logs)
+
+---
+
+## Testing Strategy
+
+After each batch of changes:
+
+1. **Build**: `make -j`
+2. **Verify prefixes**: `grep -rn 'spdlog::' src/main.cpp | grep -v '\[' | wc -l` (should decrease)
+3. **Test runtime**: `./build/bin/helix-screen --test -vv 2>&1 | head -50`
+
+### Success Criteria
+
+- All prefixes follow `[ComponentName]` pattern
+- No `printf`, `std::cout`, or `LV_LOG_*` usage
+- Build succeeds
+- Runtime output is readable and consistent
