@@ -16,6 +16,25 @@
 #include <memory>
 
 // ============================================================================
+// STATE SUBJECT (0=IDLE, 1=PROBING, 2=ADJUSTING, 3=SAVING, 4=COMPLETE, 5=ERROR)
+// ============================================================================
+
+static lv_subject_t s_zoffset_cal_state;
+static bool s_zoffset_subjects_initialized = false;
+
+void ZOffsetCalibrationPanel::init_subjects() {
+    if (s_zoffset_subjects_initialized) {
+        return;
+    }
+
+    lv_subject_init_int(&s_zoffset_cal_state, 0);
+    lv_xml_register_subject(nullptr, "zoffset_cal_state", &s_zoffset_cal_state);
+
+    s_zoffset_subjects_initialized = true;
+    spdlog::debug("[ZOffsetCal] State subject registered");
+}
+
+// ============================================================================
 // LIFECYCLE
 // ============================================================================
 
@@ -47,13 +66,7 @@ void ZOffsetCalibrationPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen,
         return;
     }
 
-    // Find state views
-    state_idle_ = lv_obj_find_by_name(panel_, "state_idle");
-    state_probing_ = lv_obj_find_by_name(panel_, "state_probing");
-    state_adjusting_ = lv_obj_find_by_name(panel_, "state_adjusting");
-    state_saving_ = lv_obj_find_by_name(panel_, "state_saving");
-    state_complete_ = lv_obj_find_by_name(panel_, "state_complete");
-    state_error_ = lv_obj_find_by_name(panel_, "state_error");
+    // State visibility is handled via XML subject bindings
 
     // Find display elements
     z_position_display_ = lv_obj_find_by_name(panel_, "z_position_display");
@@ -150,50 +163,9 @@ void ZOffsetCalibrationPanel::set_state(State new_state) {
     spdlog::debug("[ZOffsetCal] State change: {} -> {}", static_cast<int>(state_),
                   static_cast<int>(new_state));
     state_ = new_state;
-    show_state_view(new_state);
-}
 
-void ZOffsetCalibrationPanel::show_state_view(State state) {
-    // Hide all state views
-    if (state_idle_)
-        lv_obj_add_flag(state_idle_, LV_OBJ_FLAG_HIDDEN);
-    if (state_probing_)
-        lv_obj_add_flag(state_probing_, LV_OBJ_FLAG_HIDDEN);
-    if (state_adjusting_)
-        lv_obj_add_flag(state_adjusting_, LV_OBJ_FLAG_HIDDEN);
-    if (state_saving_)
-        lv_obj_add_flag(state_saving_, LV_OBJ_FLAG_HIDDEN);
-    if (state_complete_)
-        lv_obj_add_flag(state_complete_, LV_OBJ_FLAG_HIDDEN);
-    if (state_error_)
-        lv_obj_add_flag(state_error_, LV_OBJ_FLAG_HIDDEN);
-
-    // Show the appropriate view
-    lv_obj_t* view = nullptr;
-    switch (state) {
-    case State::IDLE:
-        view = state_idle_;
-        break;
-    case State::PROBING:
-        view = state_probing_;
-        break;
-    case State::ADJUSTING:
-        view = state_adjusting_;
-        break;
-    case State::SAVING:
-        view = state_saving_;
-        break;
-    case State::COMPLETE:
-        view = state_complete_;
-        break;
-    case State::ERROR:
-        view = state_error_;
-        break;
-    }
-
-    if (view) {
-        lv_obj_remove_flag(view, LV_OBJ_FLAG_HIDDEN);
-    }
+    // Update subject - XML bindings handle visibility automatically
+    lv_subject_set_int(&s_zoffset_cal_state, static_cast<int>(new_state));
 }
 
 // ============================================================================

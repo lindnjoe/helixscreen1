@@ -458,6 +458,9 @@ static void initialize_subjects() {
     // Initialize PID calibration panel subjects
     PIDCalibrationPanel::init_subjects();
 
+    // Initialize Z-Offset calibration panel subjects
+    ZOffsetCalibrationPanel::init_subjects();
+
     // Initialize TempControlPanel (needs PrinterState ready)
     temp_control_panel = std::make_unique<TempControlPanel>(get_printer_state(), nullptr);
     temp_control_panel->init_subjects();

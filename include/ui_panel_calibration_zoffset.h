@@ -79,11 +79,18 @@ class ZOffsetCalibrationPanel {
      */
     void on_calibration_result(bool success, const std::string& message);
 
+    /**
+     * @brief Initialize subjects for reactive XML bindings
+     *
+     * Must be called BEFORE XML creation (from main.cpp initialization).
+     * Subject bindings are resolved at XML parse time.
+     */
+    static void init_subjects();
+
   private:
     // State management
     State state_ = State::IDLE;
     void set_state(State new_state);
-    void show_state_view(State state);
 
     // Gcode command helpers
     void send_probe_calibrate();
@@ -118,14 +125,6 @@ class ZOffsetCalibrationPanel {
     lv_obj_t* panel_ = nullptr;
     lv_obj_t* parent_screen_ = nullptr;
     MoonrakerClient* client_ = nullptr;
-
-    // State views
-    lv_obj_t* state_idle_ = nullptr;
-    lv_obj_t* state_probing_ = nullptr;
-    lv_obj_t* state_adjusting_ = nullptr;
-    lv_obj_t* state_saving_ = nullptr;
-    lv_obj_t* state_complete_ = nullptr;
-    lv_obj_t* state_error_ = nullptr;
 
     // Interactive elements
     lv_obj_t* z_position_display_ = nullptr;
