@@ -5,6 +5,7 @@
 #include "ui_theme.h"
 
 #include "app_globals.h"
+#include "helix_version.h"
 #include "runtime_config.h"
 
 #include <spdlog/spdlog.h>
@@ -120,6 +121,7 @@ static void print_help(const char* program_name) {
     printf("  --show-memory        Show memory stats overlay (press M to toggle)\n");
     printf("  --moonraker <url>    Override Moonraker URL (e.g., ws://192.168.1.112:7125)\n");
     printf("  -h, --help           Show this help message\n");
+    printf("  -V, --version        Show version information\n");
     printf("\nTest Mode Options:\n");
     printf("  --test               Enable test mode (uses all mocks by default)\n");
     printf("    --real-wifi        Use real WiFi hardware (requires --test)\n");
@@ -570,6 +572,11 @@ bool parse_cli_args(int argc, char** argv, CliArgs& args, int& screen_width, int
         // Help
         else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
             print_help(argv[0]);
+            return false;
+        }
+        // Version
+        else if (strcmp(argv[i], "-V") == 0 || strcmp(argv[i], "--version") == 0) {
+            printf("helix-screen %s\n", helix_version_full());
             return false;
         }
         // Legacy: first positional arg is panel name

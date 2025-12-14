@@ -118,6 +118,23 @@ DEPFLAGS = -MMD -MP
 CFLAGS := -std=c11 -Wall -Wextra -O2 -g -D_GNU_SOURCE
 CXXFLAGS := -std=c++17 -Wall -Wextra -O2 -g
 
+# Version information (read from VERSION file)
+# Format: MAJOR.MINOR.PATCH following Semantic Versioning 2.0.0
+HELIX_VERSION := $(shell cat VERSION 2>/dev/null || echo "0.0.0")
+HELIX_VERSION_MAJOR := $(word 1,$(subst ., ,$(HELIX_VERSION)))
+HELIX_VERSION_MINOR := $(word 2,$(subst ., ,$(HELIX_VERSION)))
+HELIX_VERSION_PATCH := $(word 3,$(subst ., ,$(HELIX_VERSION)))
+HELIX_GIT_HASH := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+
+# Add version defines to compiler flags
+VERSION_DEFINES := -DHELIX_VERSION=\"$(HELIX_VERSION)\" \
+                   -DHELIX_VERSION_MAJOR=$(HELIX_VERSION_MAJOR) \
+                   -DHELIX_VERSION_MINOR=$(HELIX_VERSION_MINOR) \
+                   -DHELIX_VERSION_PATCH=$(HELIX_VERSION_PATCH) \
+                   -DHELIX_GIT_HASH=\"$(HELIX_GIT_HASH)\"
+CFLAGS += $(VERSION_DEFINES)
+CXXFLAGS += $(VERSION_DEFINES)
+
 # Strict mode: -Werror plus additional useful warnings
 ifeq ($(WERROR),1)
     CFLAGS += -Werror -Wconversion -Wshadow -Wno-error=deprecated-declarations

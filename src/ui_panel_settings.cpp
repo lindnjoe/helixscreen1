@@ -15,6 +15,7 @@
 
 #include "app_globals.h"
 #include "config.h"
+#include "helix_version.h"
 #include "moonraker_client.h"
 #include "network_settings_overlay.h"
 #include "printer_state.h"
@@ -24,11 +25,6 @@
 #include <spdlog/spdlog.h>
 
 #include <memory>
-
-// Version string (could come from build system)
-#ifndef HELIX_VERSION
-#define HELIX_VERSION "1.0.0-dev"
-#endif
 
 // Forward declarations for class-based API
 class BedMeshPanel;
@@ -320,8 +316,8 @@ void SettingsPanel::populate_info_rows() {
     if (version_row) {
         version_value_ = lv_obj_find_by_name(version_row, "value");
         if (version_value_) {
-            lv_label_set_text(version_value_, HELIX_VERSION);
-            spdlog::debug("[{}]   ✓ Version: {}", get_name(), HELIX_VERSION);
+            lv_label_set_text(version_value_, helix_version());
+            spdlog::debug("[{}]   ✓ Version: {}", get_name(), helix_version());
         }
     }
 
