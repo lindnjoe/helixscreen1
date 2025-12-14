@@ -891,6 +891,7 @@ static void initialize_moonraker_client(Config* config) {
     get_global_history_dashboard_panel().set_api(moonraker_api.get());
     get_global_history_list_panel().set_api(moonraker_api.get());
     get_global_spoolman_panel().set_api(moonraker_api.get());
+    get_global_ams_panel().set_api(moonraker_api.get());
 
     // Initialize E-Stop overlay with dependencies (creates the floating button)
     EmergencyStopOverlay::instance().init(get_printer_state(), moonraker_api.get());
@@ -1597,6 +1598,7 @@ int main(int argc, char** argv) {
         }
         lv_obj_t* panel_obj = ams_panel.get_panel();
         if (panel_obj) {
+            ams_panel.on_activate(); // Sync state including Spoolman
             ui_nav_push_overlay(panel_obj);
         }
     }
