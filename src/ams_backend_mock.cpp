@@ -154,8 +154,15 @@ AmsBackendMock::~AmsBackendMock() {
     // Signal shutdown and wait for any running operation thread to finish
     // Using atomic flag - safe without mutex
     shutdown_requested_ = true;
+    dryer_stop_requested_ = true;
     shutdown_cv_.notify_all();
     wait_for_operation_thread();
+
+    // Stop dryer thread if running
+    if (dryer_thread_.joinable()) {
+        dryer_thread_.join();
+    }
+
     // Don't call stop() - it would try to lock the mutex which may be invalid
     // during static destruction. The running_ flag doesn't matter at this point.
 }
@@ -635,6 +642,192 @@ void AmsBackendMock::set_has_hardware_bypass_sensor(bool has_sensor) {
     std::lock_guard<std::mutex> lock(mutex_);
     system_info_.has_hardware_bypass_sensor = has_sensor;
     spdlog::debug("[AmsBackendMock] Hardware bypass sensor set to {}", has_sensor);
+}
+
+void AmsBackendMock::set_dryer_enabled(bool enabled) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    dryer_enabled_ = enabled;
+
+    // Initialize dryer state
+    dryer_state_.supported = enabled;
+    dryer_state_.active = false;
+    dryer_state_.allows_during_print = true;
+    dryer_state_.current_temp_c = 25.0f; // Room temperature
+    dryer_state_.target_temp_c = 0.0f;
+    dryer_state_.duration_min = 0;
+    dryer_state_.remaining_min = 0;
+    dryer_state_.fan_pct = 0;
+    dryer_state_.min_temp_c = 35.0f;
+    dryer_state_.max_temp_c = 70.0f;
+    dryer_state_.max_duration_min = 720;
+    dryer_state_.supports_fan_control = true;
+
+    // Check for environment variable override of speed
+    const char* speed_env = std::getenv("HELIX_MOCK_DRYER_SPEED");
+    if (speed_env) {
+        dryer_speed_x_ = std::max(1, std::atoi(speed_env));
+        spdlog::info("[AmsBackendMock] Dryer speed override: {}x", dryer_speed_x_);
+    }
+
+    spdlog::info("[AmsBackendMock] Dryer simulation {}", enabled ? "enabled" : "disabled");
+}
+
+void AmsBackendMock::set_dryer_speed(int speed_x) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    dryer_speed_x_ = std::max(1, speed_x);
+    spdlog::info("[AmsBackendMock] Dryer speed set to {}x", dryer_speed_x_);
+}
+
+DryerInfo AmsBackendMock::get_dryer_info() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return dryer_state_;
+}
+
+AmsError AmsBackendMock::start_drying(float temp_c, int duration_min, int fan_pct) {
+    spdlog::info("[AmsBackendMock] start_drying: {}°C for {}min, fan {}%", temp_c, duration_min,
+                 fan_pct);
+
+    int speed_x;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!dryer_enabled_) {
+            return AmsError{AmsResult::NOT_SUPPORTED, "Dryer not available"};
+        }
+
+        // Stop any existing dryer thread
+        dryer_stop_requested_ = true;
+        speed_x = dryer_speed_x_;
+    }
+
+    // Wait for previous thread to finish
+    if (dryer_thread_.joinable()) {
+        dryer_thread_.join();
+    }
+
+    float start_temp;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        dryer_stop_requested_ = false;
+
+        // Set initial dryer state
+        dryer_state_.active = true;
+        dryer_state_.target_temp_c = temp_c;
+        dryer_state_.duration_min = duration_min;
+        dryer_state_.remaining_min = duration_min;
+        dryer_state_.fan_pct = (fan_pct >= 0) ? fan_pct : 50;
+        start_temp = dryer_state_.current_temp_c; // Use current temp as starting point
+    }
+
+    // Start simulation thread
+    // speed_x: how many simulated seconds pass per real second
+    // At default 60x: 1 real second = 1 simulated minute, so 4h completes in 4min
+    dryer_thread_ = std::thread([this, temp_c, duration_min, speed_x, start_temp]() {
+        float current_temp = start_temp;
+        int total_sec = duration_min * 60; // Total simulated seconds
+        int elapsed_sim_sec = 0;
+
+        // Update interval: 100ms real time, but simulate speed_x/10 seconds
+        // With speed_x=60: each 100ms tick = 6 simulated seconds
+        const int tick_ms = 100;
+        const int sim_sec_per_tick = std::max(1, speed_x / 10);
+
+        // Temperature ramping: reach 95% of target in first 5 minutes (300 sim sec)
+        // Then hold at target. Typical heater behavior.
+        const int ramp_time_sec = 300; // 5 minutes to reach target
+
+        spdlog::debug("[AmsBackendMock] Dryer starting: target={}°C, duration={}min, speed={}x",
+                      temp_c, duration_min, speed_x);
+
+        while (!dryer_stop_requested_ && elapsed_sim_sec < total_sec) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(tick_ms));
+            elapsed_sim_sec += sim_sec_per_tick;
+
+            // Temperature simulation: exponential approach to target
+            // During ramp phase: aggressive heating
+            // After ramp: maintain at target with small fluctuations
+            float temp_diff = temp_c - current_temp;
+            if (elapsed_sim_sec < ramp_time_sec) {
+                // Ramp phase: approach target quickly (time constant ~60 sec)
+                current_temp += temp_diff * 0.05f * sim_sec_per_tick;
+            } else {
+                // Holding phase: maintain with minor fluctuation
+                current_temp = temp_c + (static_cast<float>(std::rand() % 100) / 100.0f - 0.5f);
+            }
+
+            // Clamp to valid range
+            current_temp = std::max(25.0f, std::min(current_temp, temp_c + 1.0f));
+
+            int remaining_min = std::max(0, (total_sec - elapsed_sim_sec) / 60);
+
+            {
+                std::lock_guard<std::mutex> lock(mutex_);
+                dryer_state_.current_temp_c = current_temp;
+                dryer_state_.remaining_min = remaining_min;
+            }
+
+            // Emit state change every tick for smooth UI updates
+            emit_event(EVENT_STATE_CHANGED);
+        }
+
+        // Drying complete or stopped - simulate cool-down
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            dryer_state_.active = false;
+            dryer_state_.target_temp_c = 0.0f;
+            dryer_state_.remaining_min = 0;
+            dryer_state_.fan_pct = 0;
+            // Start cooling from current temp (not instant)
+        }
+        emit_event(EVENT_STATE_CHANGED);
+
+        // Quick cool-down simulation (10 ticks)
+        for (int i = 0; i < 10 && !dryer_stop_requested_; ++i) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(tick_ms));
+            float room_temp = 25.0f;
+            current_temp = current_temp * 0.8f + room_temp * 0.2f; // Cool towards room temp
+            {
+                std::lock_guard<std::mutex> lock(mutex_);
+                dryer_state_.current_temp_c = current_temp;
+            }
+            emit_event(EVENT_STATE_CHANGED);
+        }
+
+        // Final room temp
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            dryer_state_.current_temp_c = 25.0f;
+        }
+        emit_event(EVENT_STATE_CHANGED);
+
+        spdlog::info("[AmsBackendMock] Drying complete/stopped, cooled to room temp");
+    });
+
+    emit_event(EVENT_STATE_CHANGED);
+    return AmsError{AmsResult::SUCCESS};
+}
+
+AmsError AmsBackendMock::stop_drying() {
+    spdlog::info("[AmsBackendMock] stop_drying");
+
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!dryer_enabled_) {
+            return AmsError{AmsResult::NOT_SUPPORTED, "Dryer not available"};
+        }
+
+        if (!dryer_state_.active) {
+            return AmsError{AmsResult::SUCCESS}; // Already stopped
+        }
+
+        dryer_stop_requested_ = true;
+    }
+
+    // Wait for thread to finish
+    if (dryer_thread_.joinable()) {
+        dryer_thread_.join();
+    }
+
+    return AmsError{AmsResult::SUCCESS};
 }
 
 void AmsBackendMock::emit_event(const std::string& event, const std::string& data) {

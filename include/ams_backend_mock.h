@@ -76,6 +76,11 @@ class AmsBackendMock : public AmsBackend {
     AmsError disable_bypass() override;
     [[nodiscard]] bool is_bypass_active() const override;
 
+    // Dryer
+    [[nodiscard]] DryerInfo get_dryer_info() const override;
+    AmsError start_drying(float temp_c, int duration_min, int fan_pct = -1) override;
+    AmsError stop_drying() override;
+
     // ========================================================================
     // Mock-specific methods (for testing)
     // ========================================================================
@@ -108,6 +113,26 @@ class AmsBackendMock : public AmsBackend {
      * - Bypass is controlled by the sensor, not user clicks
      */
     void set_has_hardware_bypass_sensor(bool has_sensor);
+
+    /**
+     * @brief Enable dryer simulation for this mock
+     * @param enabled true to simulate a dryer, false to disable
+     *
+     * When enabled, the mock will:
+     * - Report dryer_supported = true in get_dryer_info()
+     * - Simulate temperature ramping and progress when drying
+     * - Support start_drying() and stop_drying() commands
+     */
+    void set_dryer_enabled(bool enabled);
+
+    /**
+     * @brief Set dryer simulation speed multiplier
+     * @param speed_x Speed multiplier (default 60 = 1 real second = 1 simulated minute)
+     *
+     * Can also be set via HELIX_MOCK_DRYER_SPEED environment variable.
+     * Set to 1 for real-time, 60 for fast testing (4h = 4min), 3600 for instant.
+     */
+    void set_dryer_speed(int speed_x);
 
   private:
     /**
@@ -153,4 +178,11 @@ class AmsBackendMock : public AmsBackend {
     std::atomic<bool> shutdown_requested_{false}; ///< Signal thread to exit
     std::condition_variable shutdown_cv_;         ///< For interruptible sleep
     mutable std::mutex shutdown_mutex_;           ///< Protects shutdown_cv_ wait
+
+    // Dryer simulation state
+    bool dryer_enabled_ = false;                    ///< Whether dryer is simulated
+    DryerInfo dryer_state_;                         ///< Current dryer state
+    std::thread dryer_thread_;                      ///< Background thread for dryer simulation
+    std::atomic<bool> dryer_stop_requested_{false}; ///< Signal dryer thread to stop
+    int dryer_speed_x_ = 60; ///< Speed multiplier (60 = 1 real sec = 1 sim min)
 };

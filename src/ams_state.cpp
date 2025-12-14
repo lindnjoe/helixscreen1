@@ -49,6 +49,9 @@ AmsState& AmsState::instance() {
 AmsState::AmsState() {
     std::memset(action_detail_buf_, 0, sizeof(action_detail_buf_));
     std::memset(system_name_buf_, 0, sizeof(system_name_buf_));
+    std::memset(current_material_text_buf_, 0, sizeof(current_material_text_buf_));
+    std::memset(current_slot_text_buf_, 0, sizeof(current_slot_text_buf_));
+    std::memset(current_weight_text_buf_, 0, sizeof(current_weight_text_buf_));
 }
 
 AmsState::~AmsState() {
@@ -78,6 +81,7 @@ void AmsState::init_subjects(bool register_xml) {
     lv_subject_init_int(&current_tool_, -1);
     lv_subject_init_int(&filament_loaded_, 0);
     lv_subject_init_int(&bypass_active_, 0);
+    lv_subject_init_int(&supports_bypass_, 0);
     lv_subject_init_int(&slot_count_, 0);
     lv_subject_init_int(&slots_version_, 0);
 
@@ -107,6 +111,23 @@ void AmsState::init_subjects(bool register_xml) {
                            sizeof(dryer_target_temp_text_buf_), "---");
     lv_subject_init_string(&dryer_time_text_, dryer_time_text_buf_, nullptr,
                            sizeof(dryer_time_text_buf_), "");
+    lv_subject_init_int(&dryer_modal_visible_, 0);
+
+    // Dryer modal editing subjects
+    lv_subject_init_string(&dryer_modal_temp_text_, dryer_modal_temp_text_buf_, nullptr,
+                           sizeof(dryer_modal_temp_text_buf_), "55°C");
+    lv_subject_init_string(&dryer_modal_duration_text_, dryer_modal_duration_text_buf_, nullptr,
+                           sizeof(dryer_modal_duration_text_buf_), "4h");
+
+    // Currently Loaded display subjects (for reactive UI binding)
+    lv_subject_init_string(&current_material_text_, current_material_text_buf_, nullptr,
+                           sizeof(current_material_text_buf_), "---");
+    lv_subject_init_string(&current_slot_text_, current_slot_text_buf_, nullptr,
+                           sizeof(current_slot_text_buf_), "None");
+    lv_subject_init_string(&current_weight_text_, current_weight_text_buf_, nullptr,
+                           sizeof(current_weight_text_buf_), "");
+    lv_subject_init_int(&current_has_weight_, 0);
+    lv_subject_init_int(&current_color_, 0x505050); // Default gray
 
     // Per-slot subjects
     for (int i = 0; i < MAX_SLOTS; ++i) {
@@ -124,6 +145,7 @@ void AmsState::init_subjects(bool register_xml) {
         lv_xml_register_subject(NULL, "ams_current_tool", &current_tool_);
         lv_xml_register_subject(NULL, "ams_filament_loaded", &filament_loaded_);
         lv_xml_register_subject(NULL, "ams_bypass_active", &bypass_active_);
+        lv_xml_register_subject(NULL, "ams_supports_bypass", &supports_bypass_);
         lv_xml_register_subject(NULL, "ams_slot_count", &slot_count_);
         lv_xml_register_subject(NULL, "ams_slots_version", &slots_version_);
 
@@ -144,6 +166,16 @@ void AmsState::init_subjects(bool register_xml) {
         lv_xml_register_subject(NULL, "dryer_current_temp_text", &dryer_current_temp_text_);
         lv_xml_register_subject(NULL, "dryer_target_temp_text", &dryer_target_temp_text_);
         lv_xml_register_subject(NULL, "dryer_time_text", &dryer_time_text_);
+        lv_xml_register_subject(NULL, "dryer_modal_visible", &dryer_modal_visible_);
+        lv_xml_register_subject(NULL, "dryer_modal_temp_text", &dryer_modal_temp_text_);
+        lv_xml_register_subject(NULL, "dryer_modal_duration_text", &dryer_modal_duration_text_);
+
+        // Currently Loaded display subjects (for binding in ams_panel.xml)
+        lv_xml_register_subject(NULL, "ams_current_material_text", &current_material_text_);
+        lv_xml_register_subject(NULL, "ams_current_slot_text", &current_slot_text_);
+        lv_xml_register_subject(NULL, "ams_current_weight_text", &current_weight_text_);
+        lv_xml_register_subject(NULL, "ams_current_has_weight", &current_has_weight_);
+        lv_xml_register_subject(NULL, "ams_current_color", &current_color_);
 
         // Register per-slot subjects with indexed names
         char name_buf[32];
@@ -156,9 +188,9 @@ void AmsState::init_subjects(bool register_xml) {
         }
 
         spdlog::info(
-            "[AMS State] Registered {} system subjects, {} path subjects, {} dryer subjects, {} "
-            "per-slot subjects",
-            10, 5, 9, MAX_SLOTS * 2);
+            "[AMS State] Registered {} system subjects, {} path subjects, {} dryer subjects, "
+            "{} current-loaded subjects, {} per-slot subjects",
+            10, 5, 10, 5, MAX_SLOTS * 2);
     }
 
     // Ask the factory for a backend. In mock mode, it returns a mock backend.
@@ -322,6 +354,7 @@ void AmsState::sync_from_backend() {
     lv_subject_set_int(&current_tool_, info.current_tool);
     lv_subject_set_int(&filament_loaded_, info.filament_loaded ? 1 : 0);
     lv_subject_set_int(&bypass_active_, info.current_slot == -2 ? 1 : 0);
+    lv_subject_set_int(&supports_bypass_, info.supports_bypass ? 1 : 0);
     lv_subject_set_int(&slot_count_, info.total_slots);
 
     // Update action detail string
@@ -357,6 +390,9 @@ void AmsState::sync_from_backend() {
 
     // Sync dryer state (for systems with integrated drying like ValgACE)
     sync_dryer_from_backend();
+
+    // Sync "Currently Loaded" display subjects
+    sync_current_loaded_from_backend();
 
     spdlog::debug("[AMS State] Synced from backend - type={}, slots={}, action={}, segment={}",
                   ams_type_to_string(info.type), info.total_slots,
@@ -490,4 +526,146 @@ void AmsState::sync_dryer_from_backend() {
     spdlog::trace("[AMS State] Synced dryer - supported={}, active={}, temp={}→{}°C, {}min left",
                   dryer.supported, dryer.active, static_cast<int>(dryer.current_temp_c),
                   static_cast<int>(dryer.target_temp_c), dryer.remaining_min);
+}
+
+void AmsState::sync_current_loaded_from_backend() {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
+
+    if (!backend_) {
+        // No backend - show empty state
+        lv_subject_copy_string(&current_material_text_, "---");
+        lv_subject_copy_string(&current_slot_text_, "None");
+        lv_subject_copy_string(&current_weight_text_, "");
+        lv_subject_set_int(&current_has_weight_, 0);
+        lv_subject_set_int(&current_color_, 0x505050);
+        return;
+    }
+
+    int slot_index = lv_subject_get_int(&current_slot_);
+    bool filament_loaded = lv_subject_get_int(&filament_loaded_) != 0;
+
+    // Check for bypass mode (slot_index == -2)
+    if (slot_index == -2 && backend_->is_bypass_active()) {
+        lv_subject_copy_string(&current_material_text_, "External");
+        lv_subject_copy_string(&current_slot_text_, "Bypass");
+        lv_subject_copy_string(&current_weight_text_, "");
+        lv_subject_set_int(&current_has_weight_, 0);
+        lv_subject_set_int(&current_color_, 0x888888);
+    } else if (slot_index >= 0 && filament_loaded) {
+        // Filament is loaded - show slot info
+        SlotInfo slot_info = backend_->get_slot_info(slot_index);
+
+        // Set color
+        lv_subject_set_int(&current_color_, static_cast<int>(slot_info.color_rgb));
+
+        // Build material label - combine color name with material when Spoolman linked
+        if (slot_info.spoolman_id > 0 && !slot_info.color_name.empty()) {
+            std::string label = slot_info.color_name;
+            if (!slot_info.material.empty()) {
+                label += " " + slot_info.material;
+            }
+            lv_subject_copy_string(&current_material_text_, label.c_str());
+        } else if (!slot_info.material.empty()) {
+            lv_subject_copy_string(&current_material_text_, slot_info.material.c_str());
+        } else {
+            lv_subject_copy_string(&current_material_text_, "Filament");
+        }
+
+        // Set slot label (1-based for user display)
+        snprintf(current_slot_text_buf_, sizeof(current_slot_text_buf_), "Slot %d", slot_index + 1);
+        lv_subject_copy_string(&current_slot_text_, current_slot_text_buf_);
+
+        // Show remaining weight if available (Spoolman linked with weight data)
+        if (slot_info.spoolman_id > 0 && slot_info.total_weight_g > 0.0f) {
+            snprintf(current_weight_text_buf_, sizeof(current_weight_text_buf_), "%.0fg",
+                     slot_info.remaining_weight_g);
+            lv_subject_copy_string(&current_weight_text_, current_weight_text_buf_);
+            lv_subject_set_int(&current_has_weight_, 1);
+        } else {
+            lv_subject_copy_string(&current_weight_text_, "");
+            lv_subject_set_int(&current_has_weight_, 0);
+        }
+    } else {
+        // No filament loaded - show empty state
+        lv_subject_copy_string(&current_material_text_, "---");
+        lv_subject_copy_string(&current_slot_text_, "None");
+        lv_subject_copy_string(&current_weight_text_, "");
+        lv_subject_set_int(&current_has_weight_, 0);
+        lv_subject_set_int(&current_color_, 0x505050);
+    }
+
+    spdlog::trace("[AMS State] Synced current loaded - slot={}, has_weight={}", slot_index,
+                  lv_subject_get_int(&current_has_weight_));
+}
+
+// ============================================================================
+// Dryer Modal Editing Methods
+// ============================================================================
+
+void AmsState::adjust_modal_temp(int delta_c) {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
+
+    // Get limits from backend if available
+    float min_temp = 35.0f;
+    float max_temp = 70.0f;
+    if (backend_) {
+        DryerInfo dryer = backend_->get_dryer_info();
+        min_temp = dryer.min_temp_c;
+        max_temp = dryer.max_temp_c;
+    }
+
+    int new_temp = modal_target_temp_c_ + delta_c;
+    new_temp = std::max(static_cast<int>(min_temp), std::min(new_temp, static_cast<int>(max_temp)));
+    modal_target_temp_c_ = new_temp;
+
+    update_modal_text_subjects();
+    spdlog::debug("[AMS State] Modal temp adjusted to {}°C", modal_target_temp_c_);
+}
+
+void AmsState::adjust_modal_duration(int delta_min) {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
+
+    // Get max duration from backend if available
+    int max_duration = 720; // 12 hours default
+    if (backend_) {
+        DryerInfo dryer = backend_->get_dryer_info();
+        max_duration = dryer.max_duration_min;
+    }
+
+    int new_duration = modal_duration_min_ + delta_min;
+    new_duration = std::max(30, std::min(new_duration, max_duration)); // Minimum 30 minutes
+    modal_duration_min_ = new_duration;
+
+    update_modal_text_subjects();
+    spdlog::debug("[AMS State] Modal duration adjusted to {} min", modal_duration_min_);
+}
+
+void AmsState::set_modal_preset(int temp_c, int duration_min) {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    modal_target_temp_c_ = temp_c;
+    modal_duration_min_ = duration_min;
+    update_modal_text_subjects();
+    spdlog::debug("[AMS State] Modal preset set: {}°C for {} min", temp_c, duration_min);
+}
+
+void AmsState::update_modal_text_subjects() {
+    // Format temperature (e.g., "55°C")
+    snprintf(dryer_modal_temp_text_buf_, sizeof(dryer_modal_temp_text_buf_), "%d°C",
+             modal_target_temp_c_);
+    lv_subject_copy_string(&dryer_modal_temp_text_, dryer_modal_temp_text_buf_);
+
+    // Format duration (e.g., "4h" or "4h 30m")
+    int hours = modal_duration_min_ / 60;
+    int mins = modal_duration_min_ % 60;
+    if (mins == 0) {
+        snprintf(dryer_modal_duration_text_buf_, sizeof(dryer_modal_duration_text_buf_), "%dh",
+                 hours);
+    } else if (hours == 0) {
+        snprintf(dryer_modal_duration_text_buf_, sizeof(dryer_modal_duration_text_buf_), "%dm",
+                 mins);
+    } else {
+        snprintf(dryer_modal_duration_text_buf_, sizeof(dryer_modal_duration_text_buf_), "%dh %dm",
+                 hours, mins);
+    }
+    lv_subject_copy_string(&dryer_modal_duration_text_, dryer_modal_duration_text_buf_);
 }

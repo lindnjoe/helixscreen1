@@ -179,6 +179,14 @@ class AmsState {
     }
 
     /**
+     * @brief Get supports bypass subject
+     * @return Subject holding 1 if backend supports bypass, 0 otherwise
+     */
+    lv_subject_t* get_supports_bypass_subject() {
+        return &supports_bypass_;
+    }
+
+    /**
      * @brief Get slot count subject
      * @return Subject holding total number of slots
      */
@@ -327,6 +335,114 @@ class AmsState {
         return &dryer_time_text_;
     }
 
+    /**
+     * @brief Get dryer modal visible subject
+     * @return Subject holding 1 if modal is visible, 0 otherwise
+     */
+    lv_subject_t* get_dryer_modal_visible_subject() {
+        return &dryer_modal_visible_;
+    }
+
+    /**
+     * @brief Get dryer modal temperature text subject
+     * @return Subject holding formatted temp string (e.g., "55°C")
+     */
+    lv_subject_t* get_dryer_modal_temp_text_subject() {
+        return &dryer_modal_temp_text_;
+    }
+
+    /**
+     * @brief Get dryer modal duration text subject
+     * @return Subject holding formatted duration string (e.g., "4h", "4h 30m")
+     */
+    lv_subject_t* get_dryer_modal_duration_text_subject() {
+        return &dryer_modal_duration_text_;
+    }
+
+    /**
+     * @brief Get current modal target temperature
+     * @return Temperature in degrees C
+     */
+    [[nodiscard]] int get_modal_target_temp() const {
+        return modal_target_temp_c_;
+    }
+
+    /**
+     * @brief Get current modal duration
+     * @return Duration in minutes
+     */
+    [[nodiscard]] int get_modal_duration_min() const {
+        return modal_duration_min_;
+    }
+
+    /**
+     * @brief Adjust modal target temperature
+     * @param delta_c Change in degrees (+5 or -5)
+     */
+    void adjust_modal_temp(int delta_c);
+
+    /**
+     * @brief Adjust modal duration
+     * @param delta_min Change in minutes (+30 or -30)
+     */
+    void adjust_modal_duration(int delta_min);
+
+    /**
+     * @brief Set modal values from a preset
+     * @param temp_c Target temperature
+     * @param duration_min Duration in minutes
+     */
+    void set_modal_preset(int temp_c, int duration_min);
+
+    /**
+     * @brief Update modal text subjects from current values
+     */
+    void update_modal_text_subjects();
+
+    // ========================================================================
+    // Currently Loaded Display Subjects (for reactive "Currently Loaded" card)
+    // ========================================================================
+
+    /**
+     * @brief Get current material text subject
+     * @return Subject holding material/color text (e.g., "Red PLA", "External", "---")
+     */
+    lv_subject_t* get_current_material_text_subject() {
+        return &current_material_text_;
+    }
+
+    /**
+     * @brief Get current slot text subject
+     * @return Subject holding slot text (e.g., "Slot 1", "Bypass", "None")
+     */
+    lv_subject_t* get_current_slot_text_subject() {
+        return &current_slot_text_;
+    }
+
+    /**
+     * @brief Get current weight text subject
+     * @return Subject holding weight text (e.g., "450g", "")
+     */
+    lv_subject_t* get_current_weight_text_subject() {
+        return &current_weight_text_;
+    }
+
+    /**
+     * @brief Get current has weight subject
+     * @return Subject holding 1 if weight data available, 0 otherwise (for visibility binding)
+     */
+    lv_subject_t* get_current_has_weight_subject() {
+        return &current_has_weight_;
+    }
+
+    /**
+     * @brief Get current color subject
+     * @return Subject holding 0xRRGGBB color value for the swatch
+     */
+    lv_subject_t* get_current_color_subject() {
+        return &current_color_;
+    }
+
     // ========================================================================
     // Per-Slot Subject Accessors
     // ========================================================================
@@ -379,6 +495,14 @@ class AmsState {
      * Updates all dryer-related subjects for UI binding.
      */
     void sync_dryer_from_backend();
+
+    /**
+     * @brief Update "Currently Loaded" display subjects from backend
+     *
+     * Called when current slot changes to update the reactive UI.
+     * Updates material text, slot text, weight info, and color subjects.
+     */
+    void sync_current_loaded_from_backend();
 
   private:
     AmsState();
@@ -441,6 +565,7 @@ class AmsState {
     lv_subject_t current_tool_;
     lv_subject_t filament_loaded_;
     lv_subject_t bypass_active_;
+    lv_subject_t supports_bypass_;
     lv_subject_t slot_count_;
     lv_subject_t slots_version_;
 
@@ -472,6 +597,25 @@ class AmsState {
     char dryer_target_temp_text_buf_[16];
     lv_subject_t dryer_time_text_;
     char dryer_time_text_buf_[32];
+    lv_subject_t dryer_modal_visible_;
+
+    // Dryer modal editing subjects (user-adjustable values)
+    lv_subject_t dryer_modal_temp_text_;
+    char dryer_modal_temp_text_buf_[16];
+    lv_subject_t dryer_modal_duration_text_;
+    char dryer_modal_duration_text_buf_[16];
+    int modal_target_temp_c_ = 55; ///< Modal's target temp (default 55°C for PETG)
+    int modal_duration_min_ = 240; ///< Modal's duration (default 4 hours)
+
+    // Currently Loaded display subjects (reactive binding for "Currently Loaded" card)
+    lv_subject_t current_material_text_;
+    char current_material_text_buf_[48];
+    lv_subject_t current_slot_text_;
+    char current_slot_text_buf_[16];
+    lv_subject_t current_weight_text_;
+    char current_weight_text_buf_[16];
+    lv_subject_t current_has_weight_;
+    lv_subject_t current_color_;
 
     // Per-slot subjects (color and status)
     lv_subject_t slot_colors_[MAX_SLOTS];
