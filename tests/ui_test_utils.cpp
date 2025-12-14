@@ -1,14 +1,5 @@
-/*
- * Copyright (C) 2025 356C LLC
- * Author: Preston Brown <pbrown@brown-house.net>
- *
- * This file is part of HelixScreen.
- *
- * HelixScreen is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (c) 2025 Preston Brown
 
 #include "ui_test_utils.h"
 
@@ -433,8 +424,23 @@ KeyboardHint ui_text_input_get_keyboard_hint(lv_obj_t* /* textarea */) {
     return KeyboardHint::TEXT;
 }
 
-// Stub for ui_status_bar_set_backdrop_visible (tests don't have status bar)
+// Stub for ui_status_bar functions (tests don't have status bar)
+#include "ui_notification.h"
 #include "ui_status_bar.h"
+
 void ui_status_bar_set_backdrop_visible(bool /* visible */) {
+    // No-op in tests
+}
+
+void ui_status_bar_update_notification(NotificationStatus /* status */) {
+    // No-op in tests
+}
+
+void ui_status_bar_update_notification_count(size_t /* count */) {
+    // No-op in tests
+}
+
+// Stub for ui_text_input_init (tests don't need text input initialization)
+void ui_text_input_init() {
     // No-op in tests
 }

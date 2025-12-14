@@ -5,22 +5,24 @@
 # Handles all test compilation and execution targets
 
 # ============================================================================
-# Test Dependency Groups
+# Test Dependency System - AUTOMATIC DISCOVERY
 # ============================================================================
-# These semantic groups make it clear what each test binary requires.
-# When adding a new source file, add the corresponding .o to the appropriate group.
+# Instead of manually listing every .o file (error-prone, causes CI failures),
+# we use automatic discovery: include ALL app objects except a small exclude list.
 #
-# Dependency Philosophy:
-# - TEST_CORE_DEPS: Always required (Catch2, test utilities, test objects)
-# - TEST_LVGL_DEPS: Required for all UI tests (includes ThorVG for SVG support)
-# - TEST_WIZARD_DEPS: Wizard validation and UI screens
-# - TEST_UI_DEPS: Common UI components (navigation, theme, modals, utils)
-# - TEST_PANEL_DEPS: UI panel components (home, controls, settings, etc.)
-# - TEST_WIFI_DEPS: Network managers and backends
-# - TEST_MOONRAKER_DEPS: Printer communication (includes libhv WebSocket)
-# - TEST_CONFIG_DEPS: Configuration and utilities
-# - TEST_GCODE_DEPS: GCode parsing, geometry, bed mesh transforms
+# Benefits:
+# - New source files are automatically included in tests
+# - No more "undefined symbol" CI failures from forgetting to add files
+# - Exclude list is much smaller and easier to maintain
+#
+# What we keep:
+# - TEST_CORE_DEPS: Test infrastructure (Catch2, test utilities)
+# - TEST_LVGL_DEPS: LVGL library objects (from submodule)
 # - TEST_PLATFORM_DEPS: Platform-specific (wpa_supplicant on Linux)
+# - FONT_OBJS, OBJCPP_OBJS: Assets and platform code
+#
+# What we replace with automatic discovery:
+# - All the manual TEST_*_DEPS groups → single TEST_APP_OBJS
 
 # Core test infrastructure (always required)
 TEST_CORE_DEPS := $(TEST_MAIN_OBJ) $(CATCH2_OBJ) $(UI_TEST_UTILS_OBJ) $(LVGL_TEST_FIXTURE_OBJ) $(TEST_FIXTURES_OBJ) $(TEST_OBJS)
@@ -28,153 +30,46 @@ TEST_CORE_DEPS := $(TEST_MAIN_OBJ) $(CATCH2_OBJ) $(UI_TEST_UTILS_OBJ) $(LVGL_TES
 # LVGL + Graphics stack (required for all UI tests)
 TEST_LVGL_DEPS := $(LVGL_OBJS) $(THORVG_OBJS)
 
-# Wizard components (validation, UI screens)
-TEST_WIZARD_DEPS := \
-    $(OBJ_DIR)/wizard_validation.o \
-    $(OBJ_DIR)/ui_wizard.o \
-    $(OBJ_DIR)/ui_wizard_wifi.o \
-    $(OBJ_DIR)/ui_wizard_connection.o \
-    $(OBJ_DIR)/ui_wizard_heater_select.o \
-    $(OBJ_DIR)/ui_wizard_fan_select.o \
-    $(OBJ_DIR)/ui_wizard_led_select.o \
-    $(OBJ_DIR)/ui_wizard_printer_identify.o \
-    $(OBJ_DIR)/ui_wizard_summary.o \
-    $(OBJ_DIR)/ui_wizard_helpers.o \
-    $(OBJ_DIR)/ui_wizard_hardware_selector.o
-
-# UI components (theme, modals, navigation)
-# Note: ui_switch.o excluded - its test includes the .cpp directly
-# Note: ui_notification.o and ui_toast.o excluded - they require full UI init
-#       ui_notification_history.o is the pure C++ circular buffer that tests need
-#       ui_test_utils.o provides stub implementations for ui_toast_* functions
-TEST_UI_DEPS := \
-    $(OBJ_DIR)/ui_icon.o \
-    $(OBJ_DIR)/ui_nav_manager.o \
-    $(OBJ_DIR)/ui_temp_graph.o \
-    $(OBJ_DIR)/ui_keyboard_manager.o \
-    $(OBJ_DIR)/keyboard_layout_provider.o \
-    $(OBJ_DIR)/ui_modal_manager.o \
-    $(OBJ_DIR)/ui_modal_base.o \
-    $(OBJ_DIR)/ui_theme.o \
-    $(OBJ_DIR)/helix_theme.o \
-    $(OBJ_DIR)/ui_utils.o \
-    $(OBJ_DIR)/ui_temperature_utils.o \
-    $(OBJ_DIR)/ui_component_keypad.o \
-    $(OBJ_DIR)/ui_jog_pad.o \
-    $(OBJ_DIR)/ui_component_header_bar.o \
-    $(OBJ_DIR)/ui_bed_mesh.o \
-    $(OBJ_DIR)/ui_notification_history.o \
-    $(OBJ_DIR)/ui_heating_animator.o \
-    $(OBJ_DIR)/ui_ams_mini_status.o \
-    $(OBJ_DIR)/ui_panel_memory_stats.o \
-    $(OBJ_DIR)/memory_utils.o \
-    $(FONT_OBJS)
-
-# UI panel components (all panels for smoke tests)
-TEST_PANEL_DEPS := \
-    $(OBJ_DIR)/ui_panel_base.o \
-    $(OBJ_DIR)/ui_panel_home.o \
-    $(OBJ_DIR)/ui_panel_controls.o \
-    $(OBJ_DIR)/ui_panel_fan.o \
-    $(OBJ_DIR)/ui_panel_temp_control.o \
-    $(OBJ_DIR)/ui_panel_extrusion.o \
-    $(OBJ_DIR)/ui_panel_motion.o \
-    $(OBJ_DIR)/ui_panel_filament.o \
-    $(OBJ_DIR)/ui_panel_settings.o \
-    $(OBJ_DIR)/ui_panel_bed_mesh.o \
-    $(OBJ_DIR)/ui_panel_print_select.o \
-    $(OBJ_DIR)/ui_panel_print_status.o \
-    $(OBJ_DIR)/ui_panel_common.o
-
-# Network/WiFi components
-TEST_WIFI_DEPS := \
-    $(OBJ_DIR)/wifi_manager.o \
-    $(OBJ_DIR)/wifi_backend.o \
-    $(OBJ_DIR)/wifi_backend_mock.o \
-    $(OBJ_DIR)/network_settings_overlay.o \
-    $(OBJ_DIR)/wifi_ui_utils.o \
-    $(OBJ_DIR)/network_tester.o \
-    $(OBJ_DIR)/ethernet_manager.o \
-    $(OBJ_DIR)/ethernet_backend.o \
-    $(OBJ_DIR)/ethernet_backend_mock.o \
-    $(OBJCPP_OBJS)
-
-# USB components
-TEST_USB_DEPS := \
-    $(OBJ_DIR)/usb_backend.o \
-    $(OBJ_DIR)/usb_backend_mock.o \
-    $(OBJ_DIR)/usb_manager.o
-
-# Settings components (required by ui_panel_settings.o)
-TEST_SETTINGS_DEPS := \
-    $(OBJ_DIR)/settings_manager.o \
-    $(OBJ_DIR)/sound_manager.o \
-    $(OBJ_DIR)/ui_panel_calibration_zoffset.o \
-    $(OBJ_DIR)/ui_panel_calibration_pid.o \
-    $(OBJ_DIR)/network_settings_overlay.o \
-    $(OBJ_DIR)/sound_manager.o
-
-# Moonraker/printer components
-# Note: LIBHV_LIB is in LDFLAGS via LIBHV_LIBS, not needed here
-# Note: app_globals.o excluded - ui_test_utils.o provides stub implementations
-TEST_MOONRAKER_DEPS := \
-    $(OBJ_DIR)/moonraker_client.o \
-    $(OBJ_DIR)/moonraker_client_mock.o \
-    $(OBJ_DIR)/moonraker_client_mock_files.o \
-    $(OBJ_DIR)/moonraker_client_mock_print.o \
-    $(OBJ_DIR)/moonraker_client_mock_objects.o \
-    $(OBJ_DIR)/moonraker_client_mock_history.o \
-    $(OBJ_DIR)/moonraker_api.o \
-    $(OBJ_DIR)/moonraker_api_files.o \
-    $(OBJ_DIR)/moonraker_api_print.o \
-    $(OBJ_DIR)/moonraker_api_motion.o \
-    $(OBJ_DIR)/moonraker_api_advanced.o \
-    $(OBJ_DIR)/moonraker_api_history.o \
-    $(OBJ_DIR)/moonraker_api_rest.o \
-    $(OBJ_DIR)/moonraker_api_mock.o \
-    $(OBJ_DIR)/printer_state.o \
-    $(OBJ_DIR)/printer_detector.o \
-    $(OBJ_DIR)/printer_capabilities.o \
-    $(OBJ_DIR)/printer_hardware.o \
-    $(OBJ_DIR)/capability_overrides.o \
-    $(OBJ_DIR)/command_sequencer.o \
-    $(OBJ_DIR)/helix_macro_manager.o \
-    $(OBJ_DIR)/ams_backend.o \
-    $(OBJ_DIR)/ams_backend_afc.o \
-    $(OBJ_DIR)/ams_backend_happy_hare.o \
-    $(OBJ_DIR)/ams_backend_mock.o \
-    $(OBJ_DIR)/ams_backend_valgace.o \
-    $(OBJ_DIR)/ams_state.o \
-    $(OBJ_DIR)/thumbnail_cache.o
-
-# Configuration and utilities
-TEST_CONFIG_DEPS := \
-    $(OBJ_DIR)/config.o \
-    $(OBJ_DIR)/tips_manager.o
-
-# GCode parsing, geometry, rendering, and file modification (for gcode tests and bed mesh)
-# ui_gcode_viewer.o is required by ui_panel_print_status.o for integrated layer tracking
-# gcode_renderer.o + gcode_tinygl_renderer.o are required by ui_gcode_viewer.o
-# bed_mesh_*.o files provide rendering primitives for the 3D bed mesh visualization
-TEST_GCODE_DEPS := \
-    $(OBJ_DIR)/gcode_parser.o \
-    $(OBJ_DIR)/gcode_ops_detector.o \
-    $(OBJ_DIR)/gcode_file_modifier.o \
-    $(OBJ_DIR)/gcode_geometry_builder.o \
-    $(OBJ_DIR)/gcode_camera.o \
-    $(OBJ_DIR)/gcode_renderer.o \
-    $(OBJ_DIR)/gcode_tinygl_renderer.o \
-    $(OBJ_DIR)/ui_gcode_viewer.o \
-    $(OBJ_DIR)/bed_mesh_coordinate_transform.o \
-    $(OBJ_DIR)/bed_mesh_renderer.o \
-    $(OBJ_DIR)/bed_mesh_gradient.o \
-    $(OBJ_DIR)/bed_mesh_projection.o \
-    $(OBJ_DIR)/bed_mesh_geometry.o \
-    $(OBJ_DIR)/bed_mesh_overlays.o \
-    $(OBJ_DIR)/bed_mesh_rasterizer.o
-
 # Platform-specific dependencies (Linux wpa_supplicant, macOS frameworks via LDFLAGS)
 TEST_PLATFORM_DEPS := $(WPA_DEPS)
+
+# ============================================================================
+# AUTOMATIC APP OBJECT DISCOVERY
+# ============================================================================
+# Include ALL application objects except those that conflict with tests.
+# This replaces ~150 lines of manual object listings that needed constant updates.
+#
+# Exclusions (add files here ONLY if they cause linker conflicts):
+#
+# Group 1: App entry point and globals
+# - main.o: Has main() function, tests have their own entry point
+# - app_globals.o: Contains global subjects/state, ui_test_utils.o provides stubs
+# - cli_args.o: References globals from app_globals.o, not needed for tests
+#
+# Group 2: Files where ui_test_utils.o provides stub implementations
+# - ui_notification.o: Needs get_notification_subject() from app_globals.o
+# - ui_toast.o, ui_toast_manager.o: ui_test_utils.o provides stub toast functions
+# - ui_status_bar_manager.o: ui_test_utils.o stubs ui_status_bar_set_backdrop_visible()
+# - ui_text_input.o: ui_test_utils.o stubs ui_text_input_get_keyboard_hint()
+# - ui_emergency_stop.o: ui_test_utils.o stubs EmergencyStopOverlay
+#
+# Group 3: Test-specific conflicts
+# - ui_switch.o: test_ui_switch.cpp includes the .cpp directly for unit testing
+#
+# Everything else is automatically included - new files just work!
+
+TEST_APP_OBJS := $(filter-out \
+    $(OBJ_DIR)/main.o \
+    $(OBJ_DIR)/app_globals.o \
+    $(OBJ_DIR)/cli_args.o \
+    $(OBJ_DIR)/ui_notification.o \
+    $(OBJ_DIR)/ui_toast.o \
+    $(OBJ_DIR)/ui_toast_manager.o \
+    $(OBJ_DIR)/ui_status_bar_manager.o \
+    $(OBJ_DIR)/ui_text_input.o \
+    $(OBJ_DIR)/ui_emergency_stop.o \
+    $(OBJ_DIR)/ui_switch.o \
+    ,$(APP_OBJS) $(APP_C_OBJS))
 
 # ============================================================================
 # Test Targets
@@ -351,20 +246,14 @@ test-config: $(TEST_BIN)
 	}
 	$(ECHO) "$(GREEN)$(BOLD)✓ Config tests passed!$(RESET)"
 
-# Unified test binary - links all dependencies using semantic groups
-# If you get linker errors about missing symbols, check which group contains
-# the required .o file and ensure it's included in the appropriate TEST_*_DEPS above
+# Unified test binary - uses automatic app object discovery
+# No more manual dependency lists! New source files are automatically included.
+# If you get linker errors, check if the file needs to be excluded (TEST_APP_OBJS filter).
 $(TEST_BIN): $(TEST_CORE_DEPS) \
              $(TEST_LVGL_DEPS) \
-             $(TEST_WIZARD_DEPS) \
-             $(TEST_UI_DEPS) \
-             $(TEST_PANEL_DEPS) \
-             $(TEST_WIFI_DEPS) \
-             $(TEST_USB_DEPS) \
-             $(TEST_SETTINGS_DEPS) \
-             $(TEST_MOONRAKER_DEPS) \
-             $(TEST_CONFIG_DEPS) \
-             $(TEST_GCODE_DEPS) \
+             $(TEST_APP_OBJS) \
+             $(FONT_OBJS) \
+             $(OBJCPP_OBJS) \
              $(TEST_PLATFORM_DEPS)
 	$(Q)mkdir -p $(BIN_DIR)
 	$(ECHO) "$(MAGENTA)$(BOLD)[LD]$(RESET) run_tests"
