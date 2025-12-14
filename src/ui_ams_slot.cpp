@@ -418,6 +418,7 @@ static void create_slot_children(lv_obj_t* container, AmsSlotData* data) {
     lv_obj_set_style_text_font(material, font_small, LV_PART_MAIN);
     lv_obj_set_style_text_color(material, ui_theme_get_color("text_primary"), LV_PART_MAIN);
     lv_obj_set_style_text_letter_space(material, 1, LV_PART_MAIN);
+    lv_obj_add_flag(material, LV_OBJ_FLAG_EVENT_BUBBLE); // Propagate clicks to slot
     data->material_label = material;
 
     // ========================================================================
@@ -446,6 +447,7 @@ static void create_slot_children(lv_obj_t* container, AmsSlotData* data) {
         lv_obj_set_style_pad_all(spool_container, 0, LV_PART_MAIN);
         lv_obj_remove_flag(spool_container, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_add_flag(spool_container, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
+        lv_obj_add_flag(spool_container, LV_OBJ_FLAG_EVENT_BUBBLE); // Propagate clicks to slot
         data->spool_container = spool_container;
 
         // Create the 3D spool canvas inside the container (centered)
@@ -459,6 +461,7 @@ static void create_slot_children(lv_obj_t* container, AmsSlotData* data) {
             lv_obj_set_style_max_height(canvas, spool_size, LV_PART_MAIN);
             ui_spool_canvas_set_color(canvas, lv_color_hex(AMS_DEFAULT_GATE_COLOR));
             ui_spool_canvas_set_fill_level(canvas, data->fill_level);
+            lv_obj_add_flag(canvas, LV_OBJ_FLAG_EVENT_BUBBLE); // Propagate clicks to slot
             data->spool_canvas = canvas;
 
             spdlog::debug("[AmsSlot] Created 3D spool_canvas ({}x{})", spool_size, spool_size);
@@ -478,6 +481,7 @@ static void create_slot_children(lv_obj_t* container, AmsSlotData* data) {
         lv_obj_set_style_border_width(spool_container, 0, LV_PART_MAIN);
         lv_obj_set_style_pad_all(spool_container, 0, LV_PART_MAIN);
         lv_obj_remove_flag(spool_container, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_add_flag(spool_container, LV_OBJ_FLAG_EVENT_BUBBLE); // Propagate clicks to slot
         // Shadow for 3D depth effect
         lv_obj_set_style_shadow_width(spool_container, 8, LV_PART_MAIN);
         lv_obj_set_style_shadow_opa(spool_container, LV_OPA_20, LV_PART_MAIN);
@@ -497,6 +501,7 @@ static void create_slot_children(lv_obj_t* container, AmsSlotData* data) {
         lv_obj_set_style_border_color(outer_ring, ui_theme_get_color("ams_hub_dark"), LV_PART_MAIN);
         lv_obj_set_style_border_opa(outer_ring, LV_OPA_50, LV_PART_MAIN);
         lv_obj_remove_flag(outer_ring, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_add_flag(outer_ring, LV_OBJ_FLAG_EVENT_BUBBLE); // Propagate clicks to slot
         data->spool_outer = outer_ring;
 
         // Layer 2: Main filament color ring (the actual vibrant filament color)
@@ -509,6 +514,7 @@ static void create_slot_children(lv_obj_t* container, AmsSlotData* data) {
         lv_obj_set_style_bg_opa(filament_ring, LV_OPA_COVER, LV_PART_MAIN);
         lv_obj_set_style_border_width(filament_ring, 0, LV_PART_MAIN);
         lv_obj_remove_flag(filament_ring, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_add_flag(filament_ring, LV_OBJ_FLAG_EVENT_BUBBLE); // Propagate clicks to slot
         data->color_swatch = filament_ring;
 
         // Layer 3: Center hub (the dark hole where filament feeds from)
@@ -521,6 +527,7 @@ static void create_slot_children(lv_obj_t* container, AmsSlotData* data) {
         lv_obj_set_style_border_width(hub, 1, LV_PART_MAIN);
         lv_obj_set_style_border_color(hub, ui_theme_get_color("ams_hub_border"), LV_PART_MAIN);
         lv_obj_remove_flag(hub, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_add_flag(hub, LV_OBJ_FLAG_EVENT_BUBBLE); // Propagate clicks to slot
         data->spool_hub = hub;
 
         spdlog::debug("[AmsSlot] Created flat spool rings ({}x{})", spool_size, spool_size);
@@ -545,6 +552,7 @@ static void create_slot_children(lv_obj_t* container, AmsSlotData* data) {
     lv_obj_set_style_border_color(status_badge, ui_theme_get_color("card_bg"), LV_PART_MAIN);
     lv_obj_remove_flag(status_badge, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_style_pad_all(status_badge, 0, LV_PART_MAIN);
+    lv_obj_add_flag(status_badge, LV_OBJ_FLAG_EVENT_BUBBLE); // Propagate clicks to slot
     data->status_badge_bg = status_badge;
 
     // Slot number label inside badge (replaces status icon)
@@ -555,6 +563,7 @@ static void create_slot_children(lv_obj_t* container, AmsSlotData* data) {
     lv_obj_set_style_text_font(slot_label, font_xs, LV_PART_MAIN);
     lv_obj_set_style_text_color(slot_label, lv_color_white(), LV_PART_MAIN);
     lv_obj_center(slot_label);
+    lv_obj_add_flag(slot_label, LV_OBJ_FLAG_EVENT_BUBBLE); // Propagate clicks to slot
     data->slot_badge = slot_label;
 
     data->container = container;
