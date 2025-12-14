@@ -118,9 +118,11 @@ DEPFLAGS = -MMD -MP
 CFLAGS := -std=c11 -Wall -Wextra -O2 -g -D_GNU_SOURCE
 CXXFLAGS := -std=c++17 -Wall -Wextra -O2 -g
 
-# Version information (read from VERSION file)
+# Version information (read from VERSION.txt file)
 # Format: MAJOR.MINOR.PATCH following Semantic Versioning 2.0.0
-HELIX_VERSION := $(shell cat VERSION 2>/dev/null || echo "0.0.0")
+# NOTE: Must use .txt extension to avoid shadowing C++20 <version> header on macOS
+#       (macOS filesystem is case-insensitive, so VERSION would match <version>)
+HELIX_VERSION := $(shell cat VERSION.txt 2>/dev/null || echo "0.0.0")
 HELIX_VERSION_MAJOR := $(word 1,$(subst ., ,$(HELIX_VERSION)))
 HELIX_VERSION_MINOR := $(word 2,$(subst ., ,$(HELIX_VERSION)))
 HELIX_VERSION_PATCH := $(word 3,$(subst ., ,$(HELIX_VERSION)))
