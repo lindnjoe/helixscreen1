@@ -47,10 +47,11 @@ jobs:
       id: cache-deps
       with:
         path: |
+          build/lib/
           lib/libhv/lib/
           lib/libhv/include/hv/
           lib/tinygl/lib/
-        key: deps-ubuntu-22.04-${{ hashFiles('lib/libhv/**/*.c', 'lib/libhv/**/*.cpp', 'lib/libhv/**/*.h', 'lib/tinygl/src/*.c', 'lib/tinygl/include/**/*.h') }}
+        key: deps-ubuntu-22.04-${{ hashFiles('lib/libhv/**/*.c', 'lib/libhv/**/*.cpp', 'lib/libhv/**/*.h', 'lib/tinygl/src/*.c', 'lib/tinygl/include/**/*.h', 'lib/wpa_supplicant/src/**/*.c', 'lib/wpa_supplicant/src/**/*.h', 'Makefile', 'mk/deps.mk') }}
         restore-keys: |
           deps-ubuntu-22.04-
 
@@ -68,7 +69,7 @@ jobs:
         command: npm install
 
     - name: Build HelixScreen (includes all dependencies)
-      timeout-minutes: 10
+      timeout-minutes: 15
       run: |
         # The Makefile handles all dependency builds automatically:
         # - libhv (HTTP/WebSocket library)
@@ -141,7 +142,7 @@ jobs:
         command: npm install
 
     - name: Build HelixScreen (includes all dependencies)
-      timeout-minutes: 10
+      timeout-minutes: 15
       run: |
         # The Makefile handles all dependency builds automatically:
         # - libhv (HTTP/WebSocket library)
