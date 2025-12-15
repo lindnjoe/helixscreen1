@@ -28,9 +28,18 @@ ifneq ($(UNAME_S),Darwin)
     endif
 endif
 
-# Only build splash for embedded targets (not macOS)
-# On macOS, the main app handles its own splash via SDL
-ifneq ($(UNAME_S),Darwin)
+# Only build splash for embedded targets (DRM or fbdev backends)
+# On macOS and SDL desktop builds, the main app handles its own splash
+# Determine if we should build splash based on display backend
+SPLASH_BUILD :=
+ifeq ($(DISPLAY_BACKEND),drm)
+    SPLASH_BUILD := yes
+endif
+ifeq ($(DISPLAY_BACKEND),fbdev)
+    SPLASH_BUILD := yes
+endif
+
+ifdef SPLASH_BUILD
 
 # Compile splash source (with dependency tracking for header changes)
 $(BUILD_DIR)/splash/%.o: src/%.cpp | $(BUILD_DIR)/splash
@@ -72,16 +81,16 @@ clean-splash:
 -include $(wildcard $(BUILD_DIR)/splash/*.d)
 
 else
-# macOS: no-op targets
+# No splash for SDL/desktop builds
 
 .PHONY: splash clean-splash
 splash:
-	@echo "Splash binary not built on macOS (uses SDL splash in main app)"
+	@echo "Splash binary not built (SDL/desktop build)"
 
 clean-splash:
 	@true
 
-endif  # not Darwin
+endif  # SPLASH_BUILD
 
 # Help text
 .PHONY: help-splash
