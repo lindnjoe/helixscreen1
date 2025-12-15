@@ -324,7 +324,8 @@ $(WPA_CLIENT_LIB): | $(BUILD_DIR)/lib
 		fi; \
 	fi
 	$(Q)$(MAKE) -C $(WPA_DIR)/wpa_supplicant libwpa_client.a
-	$(Q)cp -f $(WPA_DIR)/wpa_supplicant/libwpa_client.a $(BUILD_DIR)/lib/libwpa_client.a
+	$(Q)rm -f $(BUILD_DIR)/lib/libwpa_client.a 2>/dev/null || true
+	$(Q)cp $(WPA_DIR)/wpa_supplicant/libwpa_client.a $(BUILD_DIR)/lib/libwpa_client.a
 	$(Q)$(RANLIB) $(BUILD_DIR)/lib/libwpa_client.a
 	$(ECHO) "$(GREEN)✓ libwpa_client.a built: $(BUILD_DIR)/lib/libwpa_client.a$(RESET)"
 endif
@@ -357,7 +358,8 @@ $(WPA_CLIENT_LIB): | $(BUILD_DIR)/lib
 	@# Use env -u to unset inherited CFLAGS from parent make, then set clean values
 	@# wpa_supplicant uses EXTRA_CFLAGS for additional flags
 	$(Q)env -u CFLAGS CC="$(CC)" EXTRA_CFLAGS="$(WPA_CFLAGS)" $(MAKE) -C $(WPA_DIR)/wpa_supplicant libwpa_client.a
-	$(Q)cp -f $(WPA_DIR)/wpa_supplicant/libwpa_client.a $(BUILD_DIR)/lib/libwpa_client.a
+	$(Q)rm -f $(BUILD_DIR)/lib/libwpa_client.a 2>/dev/null || true
+	$(Q)cp $(WPA_DIR)/wpa_supplicant/libwpa_client.a $(BUILD_DIR)/lib/libwpa_client.a
 	$(Q)$(RANLIB) $(BUILD_DIR)/lib/libwpa_client.a
 	$(ECHO) "$(GREEN)✓ libwpa_client.a built: $(BUILD_DIR)/lib/libwpa_client.a$(RESET)"
 endif
