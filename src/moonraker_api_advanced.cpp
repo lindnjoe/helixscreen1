@@ -730,6 +730,58 @@ void MoonrakerAPI::get_spool_usage_history(
     }
 }
 
+void MoonrakerAPI::update_spoolman_spool_weight(int spool_id, double remaining_weight_g,
+                                                SuccessCallback on_success, ErrorCallback on_error) {
+    spdlog::info("[Moonraker API] Updating spool {} remaining weight to {:.1f}g", spool_id,
+                 remaining_weight_g);
+
+    // Build the Spoolman proxy request
+    // Method: server.spoolman.proxy
+    // Params: { request_method: "PATCH", path: "/v1/spool/{id}", body: {...} }
+    nlohmann::json body;
+    body["remaining_weight"] = remaining_weight_g;
+
+    nlohmann::json params;
+    params["request_method"] = "PATCH";
+    params["path"] = "/v1/spool/" + std::to_string(spool_id);
+    params["body"] = body;
+
+    client_.send_jsonrpc(
+        "server.spoolman.proxy", params,
+        [on_success, spool_id](json /*response*/) {
+            spdlog::debug("[Moonraker API] Spool {} weight updated successfully", spool_id);
+            if (on_success) {
+                on_success();
+            }
+        },
+        on_error);
+}
+
+void MoonrakerAPI::update_spoolman_filament_color(int filament_id, const std::string& color_hex,
+                                                  SuccessCallback on_success,
+                                                  ErrorCallback on_error) {
+    spdlog::info("[Moonraker API] Updating filament {} color to {}", filament_id, color_hex);
+
+    // Build the Spoolman proxy request for filament update
+    nlohmann::json body;
+    body["color_hex"] = color_hex;
+
+    nlohmann::json params;
+    params["request_method"] = "PATCH";
+    params["path"] = "/v1/filament/" + std::to_string(filament_id);
+    params["body"] = body;
+
+    client_.send_jsonrpc(
+        "server.spoolman.proxy", params,
+        [on_success, filament_id, color_hex](json /*response*/) {
+            spdlog::debug("[Moonraker API] Filament {} color updated to {}", filament_id, color_hex);
+            if (on_success) {
+                on_success();
+            }
+        },
+        on_error);
+}
+
 void MoonrakerAPI::get_machine_limits(MachineLimitsCallback /*on_success*/,
                                       ErrorCallback on_error) {
     spdlog::warn("[Moonraker API] get_machine_limits() not yet implemented");

@@ -872,6 +872,44 @@ void MoonrakerAPIMock::set_active_spool(int spool_id, SuccessCallback on_success
     }
 }
 
+void MoonrakerAPIMock::update_spoolman_spool_weight(int spool_id, double remaining_weight_g,
+                                                    SuccessCallback on_success,
+                                                    ErrorCallback /*on_error*/) {
+    spdlog::info("[MoonrakerAPIMock] update_spoolman_spool_weight({}, {:.1f}g)", spool_id,
+                 remaining_weight_g);
+
+    // Find and update the mock spool
+    for (auto& spool : mock_spools_) {
+        if (spool.id == spool_id) {
+            spool.remaining_weight_g = remaining_weight_g;
+            spdlog::debug("[MoonrakerAPIMock] Updated spool {} remaining weight to {:.1f}g",
+                          spool_id, remaining_weight_g);
+            break;
+        }
+    }
+
+    if (on_success) {
+        on_success();
+    }
+}
+
+void MoonrakerAPIMock::update_spoolman_filament_color(int filament_id, const std::string& color_hex,
+                                                      SuccessCallback on_success,
+                                                      ErrorCallback /*on_error*/) {
+    spdlog::info("[MoonrakerAPIMock] update_spoolman_filament_color({}, {})", filament_id,
+                 color_hex);
+
+    // In a real Spoolman, filament_id refers to a shared filament definition.
+    // For mock purposes, we'll update the color on all spools (simulating the shared nature).
+    // In practice, you'd need to track filament_id separately from spool_id.
+    spdlog::debug("[MoonrakerAPIMock] Mock: color update logged (filament {} -> {})", filament_id,
+                  color_hex);
+
+    if (on_success) {
+        on_success();
+    }
+}
+
 // ============================================================================
 // MoonrakerAPIMock - REST Endpoint Methods
 // ============================================================================

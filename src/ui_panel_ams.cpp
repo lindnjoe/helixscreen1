@@ -2496,9 +2496,36 @@ void AmsPanel::handle_edit_sync_spoolman() {
     spdlog::info("[{}] Sync to Spoolman requested for spool ID {}", get_name(),
                  edit_slot_info_.spoolman_id);
 
-    // TODO: Phase 4 - Call Spoolman PATCH API to update spool
-    // api_->update_spoolman_spool(edit_slot_info_.spoolman_id, ...)
-    NOTIFY_INFO("Spoolman sync coming in Phase 4");
+    // Check if weight changed - this is the primary sync we support
+    bool weight_changed = std::abs(edit_slot_info_.remaining_weight_g -
+                                   edit_original_slot_info_.remaining_weight_g) > 0.1f;
+
+    if (!weight_changed) {
+        NOTIFY_INFO("No changes to sync");
+        return;
+    }
+
+    // Sync remaining weight to Spoolman
+    int spool_id = edit_slot_info_.spoolman_id;
+    double new_weight = static_cast<double>(edit_slot_info_.remaining_weight_g);
+
+    spdlog::info("[{}] Syncing spool {} weight: {:.1f}g -> {:.1f}g", get_name(), spool_id,
+                 edit_original_slot_info_.remaining_weight_g, new_weight);
+
+    api_->update_spoolman_spool_weight(
+        spool_id, new_weight,
+        [this, spool_id]() {
+            spdlog::info("[{}] Spoolman spool {} weight synced successfully", get_name(), spool_id);
+            NOTIFY_SUCCESS("Synced to Spoolman");
+
+            // Update original to match - no longer "dirty"
+            edit_original_slot_info_.remaining_weight_g = edit_slot_info_.remaining_weight_g;
+            update_sync_button_state();
+        },
+        [this](const MoonrakerError& err) {
+            spdlog::error("[{}] Failed to sync to Spoolman: {}", get_name(), err.message);
+            NOTIFY_ERROR("Sync failed: " + err.message);
+        });
 }
 
 void AmsPanel::handle_edit_reset() {

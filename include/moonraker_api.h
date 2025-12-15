@@ -901,6 +901,34 @@ class MoonrakerAPI {
                             std::function<void(const std::vector<FilamentUsageRecord>&)> on_success,
                             ErrorCallback on_error);
 
+    /**
+     * @brief Update a spool's remaining weight in Spoolman
+     *
+     * Uses Moonraker's Spoolman proxy to PATCH /v1/spool/{id}.
+     * This updates the spool's remaining_weight field.
+     *
+     * @param spool_id Spoolman spool ID
+     * @param remaining_weight_g New remaining weight in grams
+     * @param on_success Called when update succeeds
+     * @param on_error Called on failure
+     */
+    virtual void update_spoolman_spool_weight(int spool_id, double remaining_weight_g,
+                                              SuccessCallback on_success, ErrorCallback on_error);
+
+    /**
+     * @brief Update a filament's color in Spoolman
+     *
+     * Uses Moonraker's Spoolman proxy to PATCH /v1/filament/{id}.
+     * WARNING: This affects ALL spools using this filament definition.
+     *
+     * @param filament_id Spoolman filament ID (not spool ID!)
+     * @param color_hex New color as hex string (e.g., "#FF0000")
+     * @param on_success Called when update succeeds
+     * @param on_error Called on failure
+     */
+    virtual void update_spoolman_filament_color(int filament_id, const std::string& color_hex,
+                                                SuccessCallback on_success, ErrorCallback on_error);
+
     // ========================================================================
     // Advanced Panel Operations - Machine Limits
     // ========================================================================

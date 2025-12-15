@@ -331,6 +331,32 @@ class MoonrakerAPIMock : public MoonrakerAPI {
                           ErrorCallback on_error) override;
 
     /**
+     * @brief Update spool remaining weight in mock storage
+     *
+     * Updates the remaining_weight_g field for the specified spool.
+     *
+     * @param spool_id Spool ID to update
+     * @param remaining_weight_g New remaining weight in grams
+     * @param on_success Success callback (always called)
+     * @param on_error Error callback (never called)
+     */
+    void update_spoolman_spool_weight(int spool_id, double remaining_weight_g,
+                                      SuccessCallback on_success, ErrorCallback on_error) override;
+
+    /**
+     * @brief Update filament color in mock storage
+     *
+     * Logs the color update (mock doesn't track filament definitions separately).
+     *
+     * @param filament_id Filament definition ID
+     * @param color_hex New color as hex string
+     * @param on_success Success callback (always called)
+     * @param on_error Error callback (never called)
+     */
+    void update_spoolman_filament_color(int filament_id, const std::string& color_hex,
+                                        SuccessCallback on_success, ErrorCallback on_error) override;
+
+    /**
      * @brief Enable or disable mock Spoolman integration
      *
      * Controls whether get_spoolman_status returns connected=true or false.
