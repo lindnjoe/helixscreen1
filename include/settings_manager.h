@@ -6,8 +6,10 @@
 #include "lvgl/lvgl.h"
 
 #include <functional>
+#include <memory>
 #include <string>
 
+class BacklightBackend;
 class MoonrakerClient;
 
 /** @brief Print completion notification mode (Off=0, Notification=1, Alert=2) */
@@ -127,6 +129,17 @@ class SettingsManager {
     void set_brightness(int percent);
 
     /**
+     * @brief Check if hardware backlight control is available
+     *
+     * Returns true if a hardware backend is active (Sysfs or Allwinner).
+     * In test mode, returns true (simulated backlight for UI testing).
+     * On desktop without hardware, returns false.
+     *
+     * @return true if brightness slider should be shown in UI
+     */
+    bool has_backlight_control() const;
+
+    /**
      * @brief Get animations enabled state
      * @return true if UI animations are enabled
      */
@@ -141,6 +154,22 @@ class SettingsManager {
      * @param enabled true to enable animations, false for instant transitions
      */
     void set_animations_enabled(bool enabled);
+
+    /**
+     * @brief Get G-code 3D preview enabled state
+     * @return true if 3D G-code rendering is enabled during print status
+     */
+    bool get_gcode_3d_enabled() const;
+
+    /**
+     * @brief Set G-code 3D preview enabled state
+     *
+     * When enabled, print status shows interactive 3D G-code preview.
+     * When disabled, shows thumbnail only (saves memory on constrained devices).
+     *
+     * @param enabled true to enable 3D preview, false for thumbnail only
+     */
+    void set_gcode_3d_enabled(bool enabled);
 
     // =========================================================================
     // PRINTER SETTINGS
@@ -278,9 +307,19 @@ class SettingsManager {
         return &brightness_subject_;
     }
 
+    /** @brief Has backlight control subject (integer: 0=no, 1=yes) */
+    lv_subject_t* subject_has_backlight() {
+        return &has_backlight_subject_;
+    }
+
     /** @brief Animations enabled subject (integer: 0=off, 1=on) */
     lv_subject_t* subject_animations_enabled() {
         return &animations_enabled_subject_;
+    }
+
+    /** @brief G-code 3D preview subject (integer: 0=off, 1=on) */
+    lv_subject_t* subject_gcode_3d_enabled() {
+        return &gcode_3d_enabled_subject_;
     }
 
     /** @brief LED enabled subject (integer: 0=off, 1=on) */
@@ -390,11 +429,16 @@ class SettingsManager {
     // Apply immediate effects
     void send_led_command(bool enabled);
 
+    // Backlight backend
+    std::unique_ptr<BacklightBackend> backlight_backend_;
+
     // LVGL subjects
     lv_subject_t dark_mode_subject_;
     lv_subject_t display_sleep_subject_;
     lv_subject_t brightness_subject_;
+    lv_subject_t has_backlight_subject_;
     lv_subject_t animations_enabled_subject_;
+    lv_subject_t gcode_3d_enabled_subject_;
     lv_subject_t led_enabled_subject_;
     lv_subject_t sounds_enabled_subject_;
     lv_subject_t completion_alert_subject_;

@@ -20,6 +20,10 @@
     <setting_toggle_row name="row_animations"
                         label="Animations" icon="animation" description="Enable UI motion effects"
                         callback="on_animations_changed"/>
+    <!-- 3D Preview Toggle -->
+    <setting_toggle_row name="row_gcode_3d"
+                        label="3D Preview" icon="cube" description="Interactive 3D G-code during prints"
+                        callback="on_gcode_3d_changed"/>
     <!-- Display Settings (opens overlay for brightness + sleep timeout) -->
     <setting_action_row name="row_display_settings"
                         label="Display Settings" icon="light" description="Brightness and screen timeout"

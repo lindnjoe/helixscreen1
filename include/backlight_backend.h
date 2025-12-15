@@ -1,0 +1,91 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+#pragma once
+
+#include <memory>
+#include <string>
+
+/**
+ * @brief Abstract backlight control interface
+ *
+ * Provides platform-agnostic backlight brightness control with intelligent
+ * hardware probing. Supports multiple backends for different hardware:
+ *
+ * - **Sysfs**: Standard Linux backlight interface (/sys/class/backlight/)
+ *   Used by Raspberry Pi and most Linux systems with proper driver support.
+ *
+ * - **Allwinner**: Direct ioctl on /dev/disp for Allwinner SoCs (AD5M, sunxi)
+ *   Used when sysfs backlight isn't exposed by the kernel.
+ *
+ * - **None**: No-op backend for platforms without hardware control.
+ *   In test mode, simulates brightness for UI testing.
+ *
+ * Factory auto-detection order:
+ * 1. Test mode → None (simulated, UI works normally)
+ * 2. HELIX_BACKLIGHT_DEVICE env override
+ * 3. Sysfs (most portable Linux approach)
+ * 4. Allwinner ioctl (AD5M/sunxi specific)
+ * 5. None fallback (no hardware control)
+ *
+ * Usage:
+ * @code
+ * auto backend = BacklightBackend::create();
+ * spdlog::info("Using {} backlight backend", backend->name());
+ *
+ * if (backend->is_available()) {
+ *     backend->set_brightness(75);  // 75%
+ *     int current = backend->get_brightness();
+ * }
+ * @endcode
+ */
+class BacklightBackend {
+  public:
+    virtual ~BacklightBackend() = default;
+
+    /**
+     * @brief Set backlight brightness
+     *
+     * @param percent Brightness percentage (0-100). 0 turns off backlight completely.
+     * @return true if brightness was set successfully, false on error
+     */
+    virtual bool set_brightness(int percent) = 0;
+
+    /**
+     * @brief Get current backlight brightness
+     *
+     * @return Brightness percentage (0-100), or -1 if unable to read
+     */
+    virtual int get_brightness() const = 0;
+
+    /**
+     * @brief Check if this backend can control the backlight
+     *
+     * For hardware backends, this verifies the device is accessible.
+     * For the None backend in test mode, returns true (simulated).
+     * For the None backend in production, returns false (no hardware).
+     *
+     * @return true if backlight control is available
+     */
+    virtual bool is_available() const = 0;
+
+    /**
+     * @brief Get backend name for logging
+     *
+     * @return Backend identifier ("Sysfs", "Allwinner", "None", "Simulated")
+     */
+    virtual const char* name() const = 0;
+
+    /**
+     * @brief Factory: create best available backend with auto-detection
+     *
+     * Detection order:
+     * 1. Test mode check → Simulated (None with tracking)
+     * 2. HELIX_BACKLIGHT_DEVICE env var ("sysfs", "allwinner", "none")
+     * 3. Sysfs (/sys/class/backlight/*)
+     * 4. Allwinner (/dev/disp with ioctl)
+     * 5. None fallback
+     *
+     * @return Unique pointer to selected backend (never null)
+     */
+    static std::unique_ptr<BacklightBackend> create();
+};

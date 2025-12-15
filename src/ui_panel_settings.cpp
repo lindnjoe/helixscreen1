@@ -95,6 +95,7 @@ void SettingsPanel::init_subjects() {
     // Register XML event callbacks for toggle switches
     lv_xml_register_event_cb(nullptr, "on_dark_mode_changed", on_dark_mode_changed);
     lv_xml_register_event_cb(nullptr, "on_animations_changed", on_animations_changed);
+    lv_xml_register_event_cb(nullptr, "on_gcode_3d_changed", on_gcode_3d_changed);
     lv_xml_register_event_cb(nullptr, "on_led_light_changed", on_led_light_changed);
     lv_xml_register_event_cb(nullptr, "on_sounds_changed", on_sounds_changed);
     lv_xml_register_event_cb(nullptr, "on_estop_confirm_changed", on_estop_confirm_changed);
@@ -376,6 +377,11 @@ void SettingsPanel::handle_dark_mode_changed(bool enabled) {
 void SettingsPanel::handle_animations_changed(bool enabled) {
     spdlog::info("[{}] Animations toggled: {}", get_name(), enabled ? "ON" : "OFF");
     SettingsManager::instance().set_animations_enabled(enabled);
+}
+
+void SettingsPanel::handle_gcode_3d_changed(bool enabled) {
+    spdlog::info("[{}] G-code 3D preview toggled: {}", get_name(), enabled ? "ON" : "OFF");
+    SettingsManager::instance().set_gcode_3d_enabled(enabled);
 }
 
 void SettingsPanel::show_theme_restart_dialog() {
@@ -835,6 +841,14 @@ void SettingsPanel::on_animations_changed(lv_event_t* e) {
     auto* toggle = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
     bool enabled = lv_obj_has_state(toggle, LV_STATE_CHECKED);
     get_global_settings_panel().handle_animations_changed(enabled);
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+void SettingsPanel::on_gcode_3d_changed(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_gcode_3d_changed");
+    auto* toggle = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
+    bool enabled = lv_obj_has_state(toggle, LV_STATE_CHECKED);
+    get_global_settings_panel().handle_gcode_3d_changed(enabled);
     LVGL_SAFE_EVENT_CB_END();
 }
 
