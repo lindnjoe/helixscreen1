@@ -436,6 +436,9 @@ void PrintSelectPanel::refresh_files() {
         return;
     }
 
+    // Record refresh start time (for on_activate dedup - prevents flash on first navigation)
+    last_refresh_tick_ = lv_tick_get();
+
     spdlog::debug("[{}] Refreshing file list from Moonraker (path: '{}')...", get_name(),
                   current_path_.empty() ? "/" : current_path_);
 
@@ -788,13 +791,26 @@ void PrintSelectPanel::set_api(MoonrakerAPI* api) {
 }
 
 void PrintSelectPanel::on_activate() {
-    // Always refresh when panel becomes visible to pick up external changes
+    // Refresh when panel becomes visible to pick up external changes
     // (e.g., files uploaded via web UI, deleted from another client)
-    // This also handles the race condition where set_api() was called before WebSocket connection
+    // Skip if we just refreshed recently (prevents flash on first navigation)
+    constexpr uint32_t REFRESH_SKIP_THRESHOLD_MS = 2000;
+    uint32_t elapsed = lv_tick_get() - last_refresh_tick_;
+
     if (current_source_ == FileSource::PRINTER && api_) {
+        if (!file_list_.empty() && elapsed < REFRESH_SKIP_THRESHOLD_MS) {
+            spdlog::debug("[{}] Panel activated - skipping refresh ({}ms since last)", get_name(),
+                          elapsed);
+            return;
+        }
         spdlog::info("[{}] Panel activated, refreshing file list", get_name());
         refresh_files();
     } else if (current_source_ == FileSource::USB) {
+        if (!file_list_.empty() && elapsed < REFRESH_SKIP_THRESHOLD_MS) {
+            spdlog::debug("[{}] Panel activated - skipping refresh ({}ms since last)", get_name(),
+                          elapsed);
+            return;
+        }
         spdlog::info("[{}] Panel activated, refreshing USB file list", get_name());
         refresh_usb_files();
     }
@@ -2584,6 +2600,9 @@ void PrintSelectPanel::refresh_usb_files() {
 
         file_list_.push_back(std::move(file_data));
     }
+
+    // Record refresh completion time (for on_activate dedup)
+    last_refresh_tick_ = lv_tick_get();
 
     // Apply sort and update view
     apply_sort();
