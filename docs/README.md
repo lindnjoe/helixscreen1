@@ -40,6 +40,7 @@ Welcome to the HelixScreen documentation. Choose your path:
 |----------|-------------|
 | [**LVGL 9 XML Guide**](LVGL9_XML_GUIDE.md) | Complete XML syntax reference (92K) |
 | [**Quick Reference**](QUICK_REFERENCE.md) | Common patterns and code snippets |
+| [**Environment Variables**](ENVIRONMENT_VARIABLES.md) | All runtime and build env vars |
 | [**Moonraker Architecture**](MOONRAKER_ARCHITECTURE.md) | Moonraker integration details |
 | [**Logging Guidelines**](LOGGING.md) | Log levels and message format |
 | [**Copyright Headers**](COPYRIGHT_HEADERS.md) | SPDX license requirements |
@@ -91,6 +92,7 @@ docs/
 │
 ├── LVGL9_XML_GUIDE.md        # XML reference
 ├── QUICK_REFERENCE.md        # Code patterns
+├── ENVIRONMENT_VARIABLES.md  # Env var reference
 ├── MOONRAKER_ARCHITECTURE.md # Moonraker integration
 ├── LOGGING.md                # Logging standards
 │

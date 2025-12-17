@@ -32,6 +32,7 @@
 | Doc | When |
 |-----|------|
 | `docs/LVGL9_XML_GUIDE.md` | Modifying XML layouts, debugging XML |
+| `docs/ENVIRONMENT_VARIABLES.md` | Runtime env vars, mock config, automation |
 | `docs/MOONRAKER_SECURITY_REVIEW.md` | Moonraker/security work |
 | `docs/WIFI_WPA_SUPPLICANT_MIGRATION.md` | WiFi features |
 | `docs/BUILD_SYSTEM.md` | Build troubleshooting, Makefile changes |
