@@ -130,6 +130,51 @@ if [ "$lv_malloc_count" -gt "$LV_MALLOC_THRESHOLD" ]; then
 fi
 
 #
+# === P2b: Memory Safety Anti-Patterns (Critical) ===
+#
+section "P2b: Memory Safety Anti-Patterns"
+
+# Check for dangerous vector element pointer storage
+# Pattern: &vec.back(), &vec[i], &vec_.back() stored in user_data
+echo "Checking for vector element pointer storage (dangling pointer risk):"
+set +e
+vector_ptr_issues=$(grep -rn '&[a-z_]*\.\(back\|front\)()' src/ui_*.cpp 2>/dev/null | wc -l | tr -d ' ')
+vector_idx_issues=$(grep -rn '&[a-z_]*\[[0-9a-z_]*\]' src/ui_*.cpp 2>/dev/null | grep -v 'const\|static' | wc -l | tr -d ' ')
+set -e
+
+if [ "$vector_ptr_issues" -gt 0 ]; then
+    error "Found $vector_ptr_issues instances of &vec.back()/.front() - dangling pointer risk!"
+    set +e
+    grep -rn '&[a-z_]*\.\(back\|front\)()' src/ui_*.cpp 2>/dev/null | head -5
+    set -e
+else
+    success "No vector element pointer storage found"
+fi
+
+# Check for user_data allocations without DELETE handlers
+# Files that have 'new' + 'set_user_data' should also have 'LV_EVENT_DELETE'
+echo ""
+echo "Checking for user_data allocations without DELETE handlers:"
+userdata_leak_risk=0
+for f in src/ui_*.cpp; do
+    [ -f "$f" ] || continue
+    set +e
+    has_new_userdata=$(grep -l 'set_user_data.*new\|new.*\n.*set_user_data' "$f" 2>/dev/null)
+    if [ -n "$has_new_userdata" ]; then
+        # Check if this file registers a DELETE handler
+        has_delete_handler=$(grep -l 'LV_EVENT_DELETE' "$f" 2>/dev/null)
+        if [ -z "$has_delete_handler" ]; then
+            error "$(basename "$f"): allocates user_data but has no LV_EVENT_DELETE handler!"
+            ((userdata_leak_risk++)) || true
+        fi
+    fi
+    set -e
+done
+if [ "$userdata_leak_risk" -eq 0 ]; then
+    success "All user_data allocations have DELETE handlers"
+fi
+
+#
 # === P3: Design Tokens ===
 #
 section "P3: XML Design Token Compliance"
