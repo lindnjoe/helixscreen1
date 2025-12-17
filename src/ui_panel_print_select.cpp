@@ -250,8 +250,7 @@ void PrintSelectPanel::init_subjects() {
                              on_print_select_header_print_time);
 
     // Register detail view callbacks
-    lv_xml_register_event_cb(nullptr, "on_print_select_print_button",
-                             on_print_select_print_button);
+    lv_xml_register_event_cb(nullptr, "on_print_select_print_button", on_print_select_print_button);
     lv_xml_register_event_cb(nullptr, "on_print_select_delete_button",
                              on_print_select_delete_button);
     lv_xml_register_event_cb(nullptr, "on_print_select_detail_backdrop",
@@ -288,7 +287,8 @@ void PrintSelectPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     lv_obj_add_event_cb(card_view_container_, on_scroll_static, LV_EVENT_SCROLL, this);
     lv_obj_add_event_cb(list_rows_container_, on_scroll_static, LV_EVENT_SCROLL, this);
 
-    // Note: view_toggle_btn, source buttons, and header click handlers are now in XML via <event_cb>
+    // Note: view_toggle_btn, source buttons, and header click handlers are now in XML via
+    // <event_cb>
 
     // Setup source selector buttons (Printer/USB)
     setup_source_buttons();
@@ -1932,7 +1932,8 @@ void PrintSelectPanel::create_detail_view() {
 
     lv_obj_add_flag(detail_view_widget_, LV_OBJ_FLAG_HIDDEN);
 
-    // Note: Back button, delete/print buttons, and backdrop click handlers are now in XML via <event_cb>
+    // Note: Back button, delete/print buttons, and backdrop click handlers are now in XML via
+    // <event_cb>
 
     // Store reference to print button for enable/disable state management
     print_button_ = lv_obj_find_by_name(detail_view_widget_, "print_button");

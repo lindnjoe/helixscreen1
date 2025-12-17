@@ -628,6 +628,28 @@ void AmsPanel::init_subjects() {
     path_topology_observer_ = ObserverGuard(AmsState::instance().get_path_topology_subject(),
                                             on_path_state_changed, this);
 
+    // Initialize string subjects for edit modal text binding
+    lv_subject_init_string(&edit_slot_indicator_subject_, edit_slot_indicator_buf_, nullptr,
+                           sizeof(edit_slot_indicator_buf_), "--");
+    lv_subject_init_string(&edit_color_name_subject_, edit_color_name_buf_, nullptr,
+                           sizeof(edit_color_name_buf_), "");
+    lv_subject_init_string(&edit_temp_nozzle_subject_, edit_temp_nozzle_buf_, nullptr,
+                           sizeof(edit_temp_nozzle_buf_), "200-230°C");
+    lv_subject_init_string(&edit_temp_bed_subject_, edit_temp_bed_buf_, nullptr,
+                           sizeof(edit_temp_bed_buf_), "60°C");
+    lv_subject_init_string(&edit_remaining_pct_subject_, edit_remaining_pct_buf_, nullptr,
+                           sizeof(edit_remaining_pct_buf_), "75%");
+
+    // Initialize string subjects for spoolman picker
+    lv_subject_init_string(&picker_slot_indicator_subject_, picker_slot_indicator_buf_, nullptr,
+                           sizeof(picker_slot_indicator_buf_), "Assigning to Slot 1");
+
+    // Initialize string subjects for color picker
+    lv_subject_init_string(&color_hex_subject_, color_hex_buf_, nullptr,
+                           sizeof(color_hex_buf_), "#808080");
+    lv_subject_init_string(&color_name_subject_, color_name_buf_, nullptr,
+                           sizeof(color_name_buf_), "Gray");
+
     subjects_initialized_ = true;
     spdlog::debug("[{}] Subjects initialized via AmsState + observers registered", get_name());
 }
@@ -1852,12 +1874,15 @@ void AmsPanel::show_spoolman_picker(int slot_index) {
         return;
     }
 
-    // Update slot indicator text
+    // Update slot indicator text via subject
+    snprintf(picker_slot_indicator_buf_, sizeof(picker_slot_indicator_buf_),
+             "Assigning to Slot %d", slot_index + 1);
+    lv_subject_copy_string(&picker_slot_indicator_subject_, picker_slot_indicator_buf_);
+
+    // Bind slot indicator label to subject
     lv_obj_t* slot_indicator = lv_obj_find_by_name(spoolman_picker_, "slot_indicator");
     if (slot_indicator) {
-        char buf[32];
-        snprintf(buf, sizeof(buf), "Assigning to Slot %d", slot_index + 1);
-        lv_label_set_text(slot_indicator, buf);
+        lv_label_bind_text(slot_indicator, &picker_slot_indicator_subject_, nullptr);
     }
 
     // Check if slot already has a Spoolman spool assigned - show unlink button
@@ -2165,6 +2190,32 @@ void AmsPanel::show_edit_modal(int slot_index) {
         return;
     }
 
+    // Bind labels to subjects for reactive text updates
+    lv_obj_t* slot_indicator = lv_obj_find_by_name(edit_modal_, "slot_indicator");
+    if (slot_indicator) {
+        lv_label_bind_text(slot_indicator, &edit_slot_indicator_subject_, nullptr);
+    }
+
+    lv_obj_t* color_name_label = lv_obj_find_by_name(edit_modal_, "color_name_label");
+    if (color_name_label) {
+        lv_label_bind_text(color_name_label, &edit_color_name_subject_, nullptr);
+    }
+
+    lv_obj_t* temp_nozzle_label = lv_obj_find_by_name(edit_modal_, "temp_nozzle_label");
+    if (temp_nozzle_label) {
+        lv_label_bind_text(temp_nozzle_label, &edit_temp_nozzle_subject_, nullptr);
+    }
+
+    lv_obj_t* temp_bed_label = lv_obj_find_by_name(edit_modal_, "temp_bed_label");
+    if (temp_bed_label) {
+        lv_label_bind_text(temp_bed_label, &edit_temp_bed_subject_, nullptr);
+    }
+
+    lv_obj_t* remaining_pct_label = lv_obj_find_by_name(edit_modal_, "remaining_pct_label");
+    if (remaining_pct_label) {
+        lv_label_bind_text(remaining_pct_label, &edit_remaining_pct_subject_, nullptr);
+    }
+
     // Update the modal UI with current slot data
     update_edit_modal_ui();
 
@@ -2222,13 +2273,10 @@ void AmsPanel::update_edit_modal_ui() {
         return;
     }
 
-    // Update slot indicator
-    lv_obj_t* slot_indicator = lv_obj_find_by_name(edit_modal_, "slot_indicator");
-    if (slot_indicator) {
-        char buf[32];
-        snprintf(buf, sizeof(buf), "Slot %d", edit_slot_index_ + 1);
-        lv_label_set_text(slot_indicator, buf);
-    }
+    // Update slot indicator via subject
+    snprintf(edit_slot_indicator_buf_, sizeof(edit_slot_indicator_buf_), "Slot %d",
+             edit_slot_index_ + 1);
+    lv_subject_copy_string(&edit_slot_indicator_subject_, edit_slot_indicator_buf_);
 
     // Set dropdown options (requires \n separators in C++)
     lv_obj_t* vendor_dropdown = lv_obj_find_by_name(edit_modal_, "vendor_dropdown");
@@ -2248,11 +2296,14 @@ void AmsPanel::update_edit_modal_ui() {
         lv_obj_set_style_bg_color(color_swatch, lv_color_hex(edit_slot_info_.color_rgb), 0);
     }
 
-    // Update color name label
-    lv_obj_t* color_name_label = lv_obj_find_by_name(edit_modal_, "color_name_label");
-    if (color_name_label && !edit_slot_info_.color_name.empty()) {
-        lv_label_set_text(color_name_label, edit_slot_info_.color_name.c_str());
+    // Update color name label via subject
+    if (!edit_slot_info_.color_name.empty()) {
+        snprintf(edit_color_name_buf_, sizeof(edit_color_name_buf_), "%s",
+                 edit_slot_info_.color_name.c_str());
+    } else {
+        edit_color_name_buf_[0] = '\0';
     }
+    lv_subject_copy_string(&edit_color_name_subject_, edit_color_name_buf_);
 
     // Update remaining slider and label
     int remaining_pct = 75; // Default
@@ -2267,12 +2318,9 @@ void AmsPanel::update_edit_modal_ui() {
         lv_slider_set_value(remaining_slider, remaining_pct, LV_ANIM_OFF);
     }
 
-    lv_obj_t* remaining_label = lv_obj_find_by_name(edit_modal_, "remaining_pct_label");
-    if (remaining_label) {
-        char buf[16];
-        snprintf(buf, sizeof(buf), "%d%%", remaining_pct);
-        lv_label_set_text(remaining_label, buf);
-    }
+    // Update remaining percentage label via subject
+    snprintf(edit_remaining_pct_buf_, sizeof(edit_remaining_pct_buf_), "%d%%", remaining_pct);
+    lv_subject_copy_string(&edit_remaining_pct_subject_, edit_remaining_pct_buf_);
 
     // Update progress bar fill width (shown in view mode)
     // Note: lv_obj_update_layout() required to get accurate container width
@@ -2328,21 +2376,14 @@ void AmsPanel::update_edit_temp_display() {
         }
     }
 
-    // Update nozzle temp label
-    lv_obj_t* nozzle_label = lv_obj_find_by_name(edit_modal_, "temp_nozzle_label");
-    if (nozzle_label) {
-        char buf[32];
-        snprintf(buf, sizeof(buf), "%d-%d°C", nozzle_min, nozzle_max);
-        lv_label_set_text(nozzle_label, buf);
-    }
+    // Update nozzle temp label via subject
+    snprintf(edit_temp_nozzle_buf_, sizeof(edit_temp_nozzle_buf_), "%d-%d°C", nozzle_min,
+             nozzle_max);
+    lv_subject_copy_string(&edit_temp_nozzle_subject_, edit_temp_nozzle_buf_);
 
-    // Update bed temp label
-    lv_obj_t* bed_label = lv_obj_find_by_name(edit_modal_, "temp_bed_label");
-    if (bed_label) {
-        char buf[16];
-        snprintf(buf, sizeof(buf), "%d°C", bed_temp);
-        lv_label_set_text(bed_label, buf);
-    }
+    // Update bed temp label via subject
+    snprintf(edit_temp_bed_buf_, sizeof(edit_temp_bed_buf_), "%d°C", bed_temp);
+    lv_subject_copy_string(&edit_temp_bed_subject_, edit_temp_bed_buf_);
 }
 
 // ============================================================================
@@ -2396,13 +2437,9 @@ void AmsPanel::handle_edit_remaining_changed(int percent) {
         return;
     }
 
-    // Update the percentage label
-    lv_obj_t* remaining_label = lv_obj_find_by_name(edit_modal_, "remaining_pct_label");
-    if (remaining_label) {
-        char buf[16];
-        snprintf(buf, sizeof(buf), "%d%%", percent);
-        lv_label_set_text(remaining_label, buf);
-    }
+    // Update the percentage label via subject
+    snprintf(edit_remaining_pct_buf_, sizeof(edit_remaining_pct_buf_), "%d%%", percent);
+    lv_subject_copy_string(&edit_remaining_pct_subject_, edit_remaining_pct_buf_);
 
     // Update slot info remaining weight based on percentage
     if (edit_slot_info_.total_weight_g > 0) {
@@ -2465,13 +2502,10 @@ void AmsPanel::handle_edit_remaining_cancel() {
         lv_slider_set_value(slider, edit_remaining_pre_edit_pct_, LV_ANIM_OFF);
     }
 
-    // Revert the percentage label
-    lv_obj_t* remaining_label = lv_obj_find_by_name(edit_modal_, "remaining_pct_label");
-    if (remaining_label) {
-        char buf[16];
-        snprintf(buf, sizeof(buf), "%d%%", edit_remaining_pre_edit_pct_);
-        lv_label_set_text(remaining_label, buf);
-    }
+    // Revert the percentage label via subject
+    snprintf(edit_remaining_pct_buf_, sizeof(edit_remaining_pct_buf_), "%d%%",
+             edit_remaining_pre_edit_pct_);
+    lv_subject_copy_string(&edit_remaining_pct_subject_, edit_remaining_pct_buf_);
 
     // Revert the remaining weight in edit_slot_info_
     if (edit_slot_info_.total_weight_g > 0) {
@@ -2619,6 +2653,17 @@ void AmsPanel::show_color_picker() {
         return;
     }
 
+    // Bind hex and name labels to subjects
+    lv_obj_t* hex_label = lv_obj_find_by_name(color_picker_, "selected_hex_label");
+    if (hex_label) {
+        lv_label_bind_text(hex_label, &color_hex_subject_, nullptr);
+    }
+
+    lv_obj_t* name_label = lv_obj_find_by_name(color_picker_, "selected_name_label");
+    if (name_label) {
+        lv_label_bind_text(name_label, &color_name_subject_, nullptr);
+    }
+
     // Initialize preview with current color
     update_color_picker_selection(picker_selected_color_);
 
@@ -2662,19 +2707,14 @@ void AmsPanel::update_color_picker_selection(uint32_t color_rgb, bool from_hsv_p
         lv_obj_set_style_bg_color(preview, lv_color_hex(color_rgb), 0);
     }
 
-    // Update the hex label
-    lv_obj_t* hex_label = lv_obj_find_by_name(color_picker_, "selected_hex_label");
-    if (hex_label) {
-        char buf[16];
-        snprintf(buf, sizeof(buf), "#%06X", color_rgb);
-        lv_label_set_text(hex_label, buf);
-    }
+    // Update the hex label via subject
+    snprintf(color_hex_buf_, sizeof(color_hex_buf_), "#%06X", color_rgb);
+    lv_subject_copy_string(&color_hex_subject_, color_hex_buf_);
 
-    // Update the color name label
-    lv_obj_t* name_label = lv_obj_find_by_name(color_picker_, "selected_name_label");
-    if (name_label) {
-        lv_label_set_text(name_label, get_color_name_from_hex(color_rgb).c_str());
-    }
+    // Update the color name label via subject
+    snprintf(color_name_buf_, sizeof(color_name_buf_), "%s",
+             get_color_name_from_hex(color_rgb).c_str());
+    lv_subject_copy_string(&color_name_subject_, color_name_buf_);
 
     // Sync HSV picker if change came from preset swatch (not from HSV picker itself)
     if (!from_hsv_picker) {
@@ -2724,10 +2764,10 @@ void AmsPanel::handle_color_picker_select() {
             lv_obj_set_style_bg_color(swatch, lv_color_hex(picker_selected_color_), 0);
         }
 
-        lv_obj_t* name_label = lv_obj_find_by_name(edit_modal_, "color_name_label");
-        if (name_label) {
-            lv_label_set_text(name_label, edit_slot_info_.color_name.c_str());
-        }
+        // Update color name label via subject
+        snprintf(edit_color_name_buf_, sizeof(edit_color_name_buf_), "%s",
+                 edit_slot_info_.color_name.c_str());
+        lv_subject_copy_string(&edit_color_name_subject_, edit_color_name_buf_);
 
         update_sync_button_state();
     }

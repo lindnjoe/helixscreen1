@@ -18,6 +18,7 @@
     <prop name="action_button_text" type="string" default=""/>
     <!-- Use hide_action_button="false" to show the action button -->
     <prop name="hide_action_button" type="string" default="true"/>
+    <prop name="action_button_callback" type="string" default=""/>
   </api>
   <view extends="lv_obj"
         width="100%" height="#header_height" style_bg_opa="0" style_border_width="0" style_pad_left="#space_md"
@@ -37,6 +38,7 @@
                width="#header_action_button_width" height="#header_action_button_height" style_radius="#border_radius"
                style_border_width="0" style_shadow_width="0" scrollable="false" hidden="$hide_action_button">
       <text_body name="action_button_label" text="$action_button_text" align="center"/>
+      <event_cb trigger="clicked" callback="$action_button_callback"/>
     </lv_button>
   </view>
 </component>
