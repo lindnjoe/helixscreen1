@@ -630,6 +630,10 @@ void GCodeTinyGLRenderer::render_geometry(const GCodeCamera& camera) {
     glMatrixMode(GL_MODELVIEW);
     glLoadMatrixf(glm::value_ptr(camera.get_view_matrix()));
 
+    // Rotate model 180° around Z axis to match slicer orientation
+    // (G-code Y+ points away from user in most slicers, but our camera expects Y+ toward user)
+    glRotatef(180.0f, 0.0f, 0.0f, 1.0f);
+
     // Extract frustum planes for culling (MVP = projection * view)
     glm::mat4 mvp = camera.get_projection_matrix() * camera.get_view_matrix();
     extract_frustum_planes(mvp);
