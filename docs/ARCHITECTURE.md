@@ -578,6 +578,57 @@ MyManager::~MyManager() {
 
 **Note:** This is separate from the weak_ptr pattern used for async callback safety - that protects against managers being explicitly destroyed via `.reset()` while async operations are queued.
 
+### ⚠️ Timer Lifecycle Management
+
+**LVGL timers are NOT automatically cleaned up.** Timers created with `lv_timer_create()` continue running until explicitly deleted with `lv_timer_delete()`. If the object passed as `user_data` is destroyed without deleting the timer, the timer will fire with a dangling pointer causing use-after-free crashes.
+
+**Recommended: Use LvglTimerGuard RAII wrapper**
+
+```cpp
+#include "ui_timer_guard.h"
+
+class MyPanel {
+    LvglTimerGuard update_timer_;
+
+    void start_updates() {
+        // Timer automatically deleted when MyPanel is destroyed
+        update_timer_.reset(lv_timer_create(update_cb, 1000, this));
+    }
+
+    void stop_updates() {
+        update_timer_.reset();  // Explicitly stop timer
+    }
+};
+```
+
+**Alternative: Manual cleanup with lv_is_initialized() guard**
+
+For panels/classes that manage timers manually:
+
+```cpp
+MyPanel::~MyPanel() {
+    // Check LVGL is still running (avoids crash during static destruction)
+    if (lv_is_initialized()) {
+        if (my_timer_) {
+            lv_timer_delete(my_timer_);
+            my_timer_ = nullptr;
+        }
+    }
+}
+```
+
+**Timer patterns:**
+
+| Pattern | Safe? | Notes |
+|---------|-------|-------|
+| One-shot with `lv_timer_delete(t)` in callback | YES | Timer self-destructs |
+| One-shot with `lv_timer_set_repeat_count(t, 1)` | YES | LVGL auto-deletes |
+| LvglTimerGuard member | YES | RAII cleanup |
+| Manual delete in destructor with `lv_is_initialized()` check | YES | Explicit cleanup |
+| Timer stored in member, no cleanup | **NO** | Use-after-free risk |
+
+**See also:** `include/ui_timer_guard.h` for full API documentation
+
 ## Thread Safety
 
 ### ⚠️ CRITICAL: LVGL Main Thread Requirement
