@@ -69,8 +69,10 @@ echo "========================================"
 section "P1: Memory Safety (Critical)"
 
 # Timer leak detection
+set +e
 timer_creates=$(grep -rn 'lv_timer_create' src/ --include='*.cpp' 2>/dev/null | wc -l | tr -d ' ')
 timer_deletes=$(grep -rn 'lv_timer_del' src/ --include='*.cpp' 2>/dev/null | wc -l | tr -d ' ')
+set -e
 echo "Timer creates: $timer_creates"
 echo "Timer deletes: $timer_deletes"
 
@@ -80,9 +82,13 @@ echo "Checking for unbalanced timer usage:"
 unbalanced=0
 for f in src/*.cpp; do
     [ -f "$f" ] || continue
-    creates=$(grep -c "lv_timer_create" "$f" 2>/dev/null || echo 0)
-    deletes=$(grep -c "lv_timer_del" "$f" 2>/dev/null || echo 0)
-    if [ "$creates" -gt 0 ] && [ "$creates" -gt "$deletes" ]; then
+    creates=$(grep -c "lv_timer_create" "$f" 2>/dev/null || true)
+    creates=$(echo "$creates" | tr -d '[:space:]')
+    creates=${creates:-0}
+    deletes=$(grep -c "lv_timer_del" "$f" 2>/dev/null || true)
+    deletes=$(echo "$deletes" | tr -d '[:space:]')
+    deletes=${deletes:-0}
+    if [ "$creates" -gt 0 ] 2>/dev/null && [ "$creates" -gt "$deletes" ] 2>/dev/null; then
         echo "  REVIEW: $f (creates: $creates, deletes: $deletes)"
         ((unbalanced++)) || true
     fi
@@ -97,9 +103,12 @@ fi
 section "P2: RAII Compliance"
 
 # Manual new/delete in UI files
+# Note: Temporarily disable errexit for grep commands (grep returns 1 when no matches)
+set +e
 manual_new=$(grep -rn '\bnew \w\+(' src/ui_*.cpp 2>/dev/null | grep -v 'make_unique\|placement' | wc -l | tr -d ' ')
 manual_delete=$(grep -rn '^\s*delete ' src/ --include='*.cpp' 2>/dev/null | grep -v lib/ | wc -l | tr -d ' ')
 lv_malloc_count=$(grep -rn 'lv_malloc' src/ --include='*.cpp' 2>/dev/null | grep -v lib/ | wc -l | tr -d ' ')
+set -e
 
 echo "Manual 'new' in UI code: $manual_new"
 echo "Manual 'delete': $manual_delete"
@@ -125,9 +134,11 @@ fi
 #
 section "P3: XML Design Token Compliance"
 
+set +e
 hardcoded_padding=$(grep -rn 'style_pad[^=]*="[1-9]' ui_xml/ --include='*.xml' 2>/dev/null | wc -l | tr -d ' ')
 hardcoded_margin=$(grep -rn 'style_margin[^=]*="[1-9]' ui_xml/ --include='*.xml' 2>/dev/null | wc -l | tr -d ' ')
 hardcoded_gap=$(grep -rn 'style_gap[^=]*="[1-9]' ui_xml/ --include='*.xml' 2>/dev/null | wc -l | tr -d ' ')
+set -e
 
 echo "Hardcoded padding values: $hardcoded_padding"
 echo "Hardcoded margin values: $hardcoded_margin"
@@ -144,10 +155,12 @@ fi
 #
 section "P4: Declarative UI Compliance"
 
+set +e
 event_handlers=$(grep -rn 'lv_obj_add_event_cb' src/ui_*.cpp 2>/dev/null | wc -l | tr -d ' ')
 text_updates=$(grep -rn 'lv_label_set_text' src/ui_*.cpp 2>/dev/null | wc -l | tr -d ' ')
 visibility_toggles=$(grep -rn 'lv_obj_add_flag.*HIDDEN\|lv_obj_clear_flag.*HIDDEN' src/ui_*.cpp 2>/dev/null | wc -l | tr -d ' ')
 inline_styles=$(grep -rn 'lv_obj_set_style_' src/ui_*.cpp 2>/dev/null | wc -l | tr -d ' ')
+set -e
 
 echo "Imperative event handlers: $event_handlers"
 echo "Direct text updates: $text_updates"
@@ -198,7 +211,9 @@ fi
 #
 section "C++ Hardcoded Colors"
 
+set +e
 color_literals=$(grep -rn 'lv_color_hex\|lv_color_make' src/ui_*.cpp 2>/dev/null | grep -v 'theme\|parse' | wc -l | tr -d ' ')
+set -e
 echo "Hardcoded color literals: $color_literals"
 
 COLOR_LITERAL_THRESHOLD=50

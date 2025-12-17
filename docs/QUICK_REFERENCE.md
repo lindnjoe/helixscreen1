@@ -1,31 +1,75 @@
 # LVGL 9 XML UI Quick Reference
 
-Quick patterns and cheat sheets. For comprehensive docs, see [LVGL9_XML_GUIDE.md](LVGL9_XML_GUIDE.md).
+Quick patterns and cheat sheets for common implementation tasks. For system design and architectural rationale, see [ARCHITECTURE.md](ARCHITECTURE.md). For comprehensive XML syntax, see [LVGL9_XML_GUIDE.md](LVGL9_XML_GUIDE.md).
 
 ---
 
 ## Class Patterns
 
-**Panel:** See `include/ui_panel_motion.h` + `src/ui_panel_motion.cpp` for canonical example.
+HelixScreen uses class-based patterns for all new code. For architectural rationale, see [ARCHITECTURE.md](ARCHITECTURE.md#preferred-class-based-architecture).
+
+### Panel Pattern
+
+**Canonical example:** `include/ui_panel_motion.h` + `src/ui_panel_motion.cpp`
 
 ```cpp
 class ExamplePanel : public PanelBase {
 public:
     explicit ExamplePanel(lv_obj_t* parent);
+    ~ExamplePanel() override;
+
     void show() override;
     void hide() override;
     lv_obj_t* get_root() const override { return root_; }
+
 private:
     void init_subjects();  // Call BEFORE lv_xml_create()
+    void setup_events();   // Wire UI callbacks
+
     lv_obj_t* root_ = nullptr;
     lv_subject_t my_subject_{};
-    char buf_[128]{};
+    char buf_[128]{};  // Static storage for string subjects
 };
 ```
 
-**Manager:** Singleton with pluggable backend. See `include/network_manager.h`.
+### Manager Pattern (Backend)
 
-**Modal:** Backdrop + dialog. See `src/ui_wizard_*.cpp` for examples.
+**Canonical example:** `include/wifi_manager.h` + `src/wifi_manager.cpp`
+
+```cpp
+class WiFiManager {
+public:
+    static WiFiManager& instance();  // Singleton access
+
+    bool start();   // Initialize and begin operation
+    void stop();    // Graceful shutdown
+
+    // Async operations with callbacks
+    void scan(ScanCallback on_complete);
+    void connect(const std::string& ssid, ConnectCallback on_result);
+
+private:
+    WiFiManager();  // Private constructor for singleton
+    ~WiFiManager();
+    std::unique_ptr<WifiBackend> backend_;  // Pluggable implementation
+};
+```
+
+### Modal Pattern
+
+**Canonical example:** `src/ui_wizard_*.cpp`
+
+```cpp
+class ConfirmDialog : public ModalBase {
+public:
+    void show(const std::string& title, ConfirmCallback on_confirm);
+    void dismiss() override;
+
+private:
+    lv_obj_t* backdrop_ = nullptr;
+    lv_obj_t* dialog_ = nullptr;
+};
+```
 
 ---
 
@@ -104,6 +148,8 @@ ui_step_progress_set_current(progress, 2);  // Advance to step 3
 
 **Screen breakpoints:** SMALL (≤480px), MEDIUM (481-800px), LARGE (>800px)
 
+**For theme architecture and rationale, see [ARCHITECTURE.md](ARCHITECTURE.md#custom-helixscreen-theme).**
+
 ### Spacing (`#space_*`)
 
 | Token | SMALL | MEDIUM | LARGE |
@@ -123,13 +169,34 @@ ui_step_progress_set_current(progress, 2);  // Advance to step 3
 | `#font_body` | `<text_body>` | montserrat_14 | montserrat_18 | montserrat_20 |
 | `#font_small` | `<text_small>` | montserrat_12 | montserrat_16 | montserrat_18 |
 
-### Theme Colors
+### Theme Colors (XML)
 
 Define `mycolor_light` + `mycolor_dark` in globals.xml → use as `#mycolor`:
 
 ```xml
 <lv_obj style_bg_color="#card_bg"/>  <!-- Auto-selects light/dark variant -->
 ```
+
+### Theme Colors (C++ API)
+
+```cpp
+// ✅ For theme tokens - auto-handles light/dark mode:
+lv_color_t bg = ui_theme_get_color("card_bg");      // Looks up card_bg_light or card_bg_dark
+lv_color_t ok = ui_theme_get_color("success_color");
+lv_color_t err = ui_theme_get_color("error_color");
+
+// ✅ For hex strings only:
+lv_color_t custom = ui_theme_parse_color("#FF4444");  // Parses literal hex
+
+// ❌ WRONG - parse_color does NOT look up tokens:
+// lv_color_t bg = ui_theme_parse_color("#card_bg");  // Parses "card_bg" as hex → garbage!
+
+// Pre-defined macros for common colors:
+lv_color_t text = UI_COLOR_TEXT_PRIMARY;   // White text
+lv_font_t* font = UI_FONT_SMALL;           // Responsive small font
+```
+
+**Reference:** See `src/ui_icon.cpp` for semantic color usage pattern.
 
 ### Adding Tokens
 
@@ -180,6 +247,8 @@ lv_subject_init_color(&subj, lv_color_hex(0xFF0000));
 
 ## Registration Order (CRITICAL)
 
+Subjects must be initialized BEFORE creating XML to ensure bindings find initialized values. For detailed rationale, see [ARCHITECTURE.md](ARCHITECTURE.md#subject-initialization-pattern).
+
 ```cpp
 lv_xml_register_font(...);                    // 1. Fonts
 lv_xml_register_image(...);                   // 2. Images
@@ -222,19 +291,23 @@ style_flex_cross_place="center"
 
 ## Common Gotchas
 
-| ❌ Wrong | ✅ Correct |
-|----------|-----------|
-| `char buf[128];` (stack) | `static char buf[128];` (static/heap) |
-| `flex_align="..."` | `style_flex_main_place` + `style_flex_cross_place` |
-| Register subjects after `lv_xml_create` | Register subjects BEFORE |
-| `style_img_recolor` | `style_image_recolor` (full word) |
-| `style_pad_row` + `style_flex_track_place="space_evenly"` | Use one or the other (track_place overrides pad_row) |
-| `<lv_label><lv_label-bind_text subject="x"/></lv_label>` | `<lv_label bind_text="x"/>` (attribute, not child) |
+| ❌ Wrong | ✅ Correct | See Also |
+|----------|-----------|----------|
+| `char buf[128];` (stack) | `static char buf[128];` (static/heap) | [ARCHITECTURE.md - Subject Lifecycle](ARCHITECTURE.md#subject-lifecycle) |
+| `flex_align="..."` | `style_flex_main_place` + `style_flex_cross_place` | [LVGL9_XML_GUIDE.md](LVGL9_XML_GUIDE.md) |
+| Register subjects after `lv_xml_create` | Register subjects BEFORE | [ARCHITECTURE.md - Subject Initialization](ARCHITECTURE.md#subject-initialization-pattern) |
+| `style_img_recolor` | `style_image_recolor` (full word) | |
+| `style_pad_row` + `style_flex_track_place="space_evenly"` | Use one or the other (track_place overrides pad_row) | |
+| `<lv_label><lv_label-bind_text subject="x"/></lv_label>` | `<lv_label bind_text="x"/>` (attribute, not child) | |
+| `lv_obj_add_event_cb()` in C++ | XML `<event_cb trigger="clicked" callback="name"/>` | [ARCHITECTURE.md - Reactive-First](ARCHITECTURE.md#critical-reactive-first-principle---the-helixscreen-way) |
+| `lv_label_set_text()` for reactive data | `bind_text` subject binding | [ARCHITECTURE.md - Reactive Patterns](ARCHITECTURE.md#reactive-patterns-for-common-ui-tasks) |
+| Hardcoded colors in C++ | `ui_theme_get_color("card_bg")` | [Responsive Design Tokens](#responsive-design-tokens) |
 
 ---
 
 ## See Also
 
-- **[LVGL9_XML_GUIDE.md](LVGL9_XML_GUIDE.md)** - Complete XML reference
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System design
-- **[DEVELOPMENT.md](DEVELOPMENT.md)** - Build & workflow
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System design, patterns, architectural decisions, "why" explanations
+- **[LVGL9_XML_GUIDE.md](LVGL9_XML_GUIDE.md)** - Complete XML syntax reference
+- **[DEVELOPMENT.md](DEVELOPMENT.md)** - Build system and daily workflow
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Code standards and git workflow

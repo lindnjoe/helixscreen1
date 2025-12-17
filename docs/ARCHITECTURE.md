@@ -249,57 +249,7 @@ app_layout.xml
 | **Testability** | Mock via interface inheritance, isolate dependencies |
 | **Lifecycle** | Explicit init/start/stop/destroy - no hidden state |
 
-### Pattern: Manager Classes (Backend)
-
-```cpp
-class WiFiManager {
-public:
-    static WiFiManager& instance();  // Singleton access
-
-    bool start();   // Initialize and begin operation
-    void stop();    // Graceful shutdown
-
-    // Async operations with callbacks
-    void scan(ScanCallback on_complete);
-    void connect(const std::string& ssid, ConnectCallback on_result);
-
-private:
-    WiFiManager();  // Private constructor for singleton
-    std::unique_ptr<WifiBackend> backend_;  // Pluggable implementation
-};
-```
-
-### Pattern: Panel Classes (Frontend)
-
-```cpp
-class MotionPanel : public PanelBase {
-public:
-    explicit MotionPanel(lv_obj_t* parent);
-    ~MotionPanel() override;
-
-    void show() override;
-    void hide() override;
-
-private:
-    void init_subjects();   // Reactive data setup
-    void setup_events();    // Wire UI callbacks
-    lv_obj_t* root_ = nullptr;
-};
-```
-
-### Pattern: Modal Classes
-
-```cpp
-class ConfirmDialog : public ModalBase {
-public:
-    void show(const std::string& title, ConfirmCallback on_confirm);
-    void dismiss() override;
-
-private:
-    lv_obj_t* backdrop_ = nullptr;
-    lv_obj_t* dialog_ = nullptr;
-};
-```
+**For implementation examples, see [QUICK_REFERENCE.md](QUICK_REFERENCE.md#class-patterns).**
 
 ### ❌ AVOID: Function-Based Patterns
 
@@ -901,6 +851,8 @@ std::unique_ptr<WifiBackend> WifiBackend::create() {
 
 **Why:** Component names in `<view name="...">` definitions do NOT propagate to `<component_tag/>` instantiations. Without explicit names, `lv_obj_find_by_name()` returns NULL.
 
+**See [QUICK_REFERENCE.md](QUICK_REFERENCE.md#component-names-critical) for quick syntax reference.**
+
 ### Widget Lookup by Name
 
 Use `lv_obj_find_by_name()` instead of index-based child access:
@@ -955,6 +907,8 @@ if (!ui_nav_go_back()) {
 - Automatic history management
 - Consistent back button behavior
 - State preservation when navigating back
+
+**For common implementation patterns and code snippets, see [QUICK_REFERENCE.md](QUICK_REFERENCE.md).**
 
 ## Performance Characteristics
 
@@ -1021,8 +975,10 @@ The XML/Subject architecture adapts easily to different display sizes:
 
 ## Related Documentation
 
+This document focuses on system design, patterns, and architectural decisions ("why"). For implementation details:
+
+- **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - Code snippets, common patterns, quick lookups ("how")
+- **[LVGL9_XML_GUIDE.md](LVGL9_XML_GUIDE.md)** - Complete XML syntax reference
 - **[DEVELOPMENT.md](DEVELOPMENT.md)** - Build system and daily workflow
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Code standards and patterns
-- **[LVGL 9 XML Guide](docs/LVGL9_XML_GUIDE.md)** - Complete XML syntax reference
-- **[Quick Reference](docs/QUICK_REFERENCE.md)** - Common patterns and examples
-- **[BUILD_SYSTEM.md](docs/BUILD_SYSTEM.md)** - Build configuration and patches
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Code standards and git workflow
+- **[BUILD_SYSTEM.md](BUILD_SYSTEM.md)** - Build configuration and patches
