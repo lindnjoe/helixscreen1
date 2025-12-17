@@ -305,8 +305,7 @@ static void hue_touch_handler(lv_event_t* e) {
 static void picker_delete_cb(lv_event_t* e) {
     lv_obj_t* obj = lv_event_get_target_obj(e);
     // Transfer ownership to unique_ptr for RAII cleanup (exception-safe)
-    std::unique_ptr<HsvPickerData> data(
-        static_cast<HsvPickerData*>(lv_obj_get_user_data(obj)));
+    std::unique_ptr<HsvPickerData> data(static_cast<HsvPickerData*>(lv_obj_get_user_data(obj)));
     lv_obj_set_user_data(obj, nullptr);
 
     if (data) {

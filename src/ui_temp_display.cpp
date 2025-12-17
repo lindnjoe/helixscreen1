@@ -17,6 +17,7 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <memory>
 #include <unordered_map>
 
 // ============================================================================
@@ -248,8 +249,9 @@ static void on_delete(lv_event_t* e) {
     lv_obj_t* obj = lv_event_get_target_obj(e);
     auto it = s_registry.find(obj);
     if (it != s_registry.end()) {
-        delete it->second;
+        std::unique_ptr<TempDisplayData> data(it->second);
         s_registry.erase(it);
+        // data automatically freed when unique_ptr goes out of scope
     }
 }
 
@@ -335,7 +337,7 @@ static void* ui_temp_display_create_cb(lv_xml_parser_state_t* state, const char*
     lv_obj_set_style_pad_column(container, 0, LV_PART_MAIN); // No gap between labels
 
     // Create user data
-    auto* data = new TempDisplayData();
+    auto data_ptr = std::make_unique<TempDisplayData>();
 
     // Parse size attribute for font selection
     const char* size = lv_xml_get_value_of(attrs, "size");
@@ -345,47 +347,47 @@ static void* ui_temp_display_create_cb(lv_xml_parser_state_t* state, const char*
     // Parse show_target attribute
     const char* show_target_str = lv_xml_get_value_of(attrs, "show_target");
     if (show_target_str && strcmp(show_target_str, "false") == 0) {
-        data->show_target = false;
+        data_ptr->show_target = false;
     }
 
     // Create current temp label
-    data->current_label = lv_label_create(container);
-    lv_label_set_text(data->current_label, "--");
-    lv_obj_set_style_text_font(data->current_label, font, LV_PART_MAIN);
-    lv_obj_set_style_text_color(data->current_label, text_color, LV_PART_MAIN);
+    data_ptr->current_label = lv_label_create(container);
+    lv_label_set_text(data_ptr->current_label, "--");
+    lv_obj_set_style_text_font(data_ptr->current_label, font, LV_PART_MAIN);
+    lv_obj_set_style_text_color(data_ptr->current_label, text_color, LV_PART_MAIN);
 
     // Create separator label " / "
-    data->separator_label = lv_label_create(container);
-    lv_label_set_text(data->separator_label, " / ");
-    lv_obj_set_style_text_font(data->separator_label, font, LV_PART_MAIN);
-    lv_obj_set_style_text_color(data->separator_label, ui_theme_get_color("text_secondary"),
+    data_ptr->separator_label = lv_label_create(container);
+    lv_label_set_text(data_ptr->separator_label, " / ");
+    lv_obj_set_style_text_font(data_ptr->separator_label, font, LV_PART_MAIN);
+    lv_obj_set_style_text_color(data_ptr->separator_label, ui_theme_get_color("text_secondary"),
                                 LV_PART_MAIN);
-    if (!data->show_target) {
-        lv_obj_add_flag(data->separator_label, LV_OBJ_FLAG_HIDDEN);
+    if (!data_ptr->show_target) {
+        lv_obj_add_flag(data_ptr->separator_label, LV_OBJ_FLAG_HIDDEN);
     }
 
     // Create target temp label
-    data->target_label = lv_label_create(container);
-    lv_label_set_text(data->target_label, "--");
-    lv_obj_set_style_text_font(data->target_label, font, LV_PART_MAIN);
-    lv_obj_set_style_text_color(data->target_label, text_color, LV_PART_MAIN);
-    if (!data->show_target) {
-        lv_obj_add_flag(data->target_label, LV_OBJ_FLAG_HIDDEN);
+    data_ptr->target_label = lv_label_create(container);
+    lv_label_set_text(data_ptr->target_label, "--");
+    lv_obj_set_style_text_font(data_ptr->target_label, font, LV_PART_MAIN);
+    lv_obj_set_style_text_color(data_ptr->target_label, text_color, LV_PART_MAIN);
+    if (!data_ptr->show_target) {
+        lv_obj_add_flag(data_ptr->target_label, LV_OBJ_FLAG_HIDDEN);
     }
 
     // Create unit label "°C"
-    data->unit_label = lv_label_create(container);
-    lv_label_set_text(data->unit_label, "°C");
-    lv_obj_set_style_text_font(data->unit_label, font, LV_PART_MAIN);
-    lv_obj_set_style_text_color(data->unit_label, ui_theme_get_color("text_secondary"),
+    data_ptr->unit_label = lv_label_create(container);
+    lv_label_set_text(data_ptr->unit_label, "°C");
+    lv_obj_set_style_text_font(data_ptr->unit_label, font, LV_PART_MAIN);
+    lv_obj_set_style_text_color(data_ptr->unit_label, ui_theme_get_color("text_secondary"),
                                 LV_PART_MAIN);
 
     // Register data and cleanup
-    s_registry[container] = data;
+    s_registry[container] = data_ptr.release();
     lv_obj_add_event_cb(container, on_delete, LV_EVENT_DELETE, nullptr);
 
     spdlog::trace("[temp_display] Created widget (size={}, show_target={})", size ? size : "md",
-                  data->show_target);
+                  s_registry[container]->show_target);
 
     return container;
 }

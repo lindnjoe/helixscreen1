@@ -21,6 +21,7 @@
 #include <spdlog/spdlog.h>
 
 #include <cstring>
+#include <memory>
 #include <unordered_map>
 
 // ============================================================================
@@ -105,7 +106,8 @@ static void register_slot_data(lv_obj_t* obj, AmsSlotData* data) {
 static void unregister_slot_data(lv_obj_t* obj) {
     auto it = s_slot_registry.find(obj);
     if (it != s_slot_registry.end()) {
-        AmsSlotData* data = it->second;
+        // Take ownership with unique_ptr for automatic cleanup
+        std::unique_ptr<AmsSlotData> data(it->second);
         if (data) {
             // Release observers before delete to prevent destructors
             // from calling lv_observer_remove() on destroyed subjects
@@ -113,7 +115,7 @@ static void unregister_slot_data(lv_obj_t* obj) {
             data->status_observer.release();
             data->current_slot_observer.release();
             data->filament_loaded_observer.release();
-            delete data;
+            // data automatically freed when unique_ptr goes out of scope
         }
         s_slot_registry.erase(it);
     }
@@ -661,9 +663,10 @@ static void* ams_slot_xml_create(lv_xml_parser_state_t* state, const char** attr
     }
 
     // Allocate and register user data
-    auto* data = new AmsSlotData();
-    data->slot_index = -1; // Will be set by xml_apply when slot_index attr is parsed
-    register_slot_data(obj, data);
+    auto data_ptr = std::make_unique<AmsSlotData>();
+    data_ptr->slot_index = -1; // Will be set by xml_apply when slot_index attr is parsed
+    AmsSlotData* data = data_ptr.get();
+    register_slot_data(obj, data_ptr.release());
 
     // Register event handler for cleanup
     lv_obj_add_event_cb(obj, ams_slot_event_cb, LV_EVENT_DELETE, nullptr);
