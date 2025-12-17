@@ -35,14 +35,14 @@
                 style_border_width="0" flex_flow="column" style_pad_gap="#space_sm">
           <text_body text="Select Heater"/>
           <lv_obj width="100%"
-                  height="48" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+                  height="#button_height_normal" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
                   style_pad_gap="#space_md" scrollable="false">
             <lv_button name="btn_heater_extruder"
-                       height="48" flex_grow="1" style_radius="#border_radius" style_bg_color="#primary_color">
+                       height="#button_height_normal" flex_grow="1" style_radius="#border_radius" style_bg_color="#primary_color">
               <text_body text="Extruder" align="center"/>
               <event_cb trigger="clicked" callback="on_pid_heater_extruder"/>
             </lv_button>
-            <lv_button name="btn_heater_bed" height="48" flex_grow="1" style_radius="#border_radius">
+            <lv_button name="btn_heater_bed" height="#button_height_normal" flex_grow="1" style_radius="#border_radius">
               <text_body text="Heated Bed" align="center"/>
               <event_cb trigger="clicked" callback="on_pid_heater_bed"/>
             </lv_button>
@@ -112,7 +112,7 @@
                     text="The heater will cycle on and off several times." style_text_align="center"
                     style_text_color="#text_secondary"/>
         <!-- Abort Button -->
-        <lv_button name="btn_abort" width="120" height="48" style_radius="#border_radius" style_bg_color="#error_color">
+        <lv_button name="btn_abort" width="120" height="#button_height_normal" style_radius="#border_radius" style_bg_color="#error_color">
           <text_body text="Abort" align="center"/>
           <event_cb trigger="clicked" callback="on_pid_abort"/>
         </lv_button>
