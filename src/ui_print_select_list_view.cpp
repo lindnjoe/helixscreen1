@@ -141,8 +141,8 @@ void PrintSelectListView::init_pool() {
 
     // Create pool rows (initially hidden)
     for (int i = 0; i < POOL_SIZE; i++) {
-        const char* attrs[] = {"filename", "", "file_size", "", "modified_date", "", "print_time",
-                               "",         NULL};
+        const char* attrs[] = {"filename", "",           "file_size", "",  "modified_date",
+                               "",         "print_time", "",          NULL};
 
         lv_obj_t* row =
             static_cast<lv_obj_t*>(lv_xml_create(container_, "print_file_list_row", attrs));
@@ -302,9 +302,8 @@ void PrintSelectListView::update_visible(const std::vector<PrintFileData>& file_
 
     // Calculate visible row range (with buffer)
     int first_visible = std::max(0, static_cast<int>(scroll_y / row_stride) - BUFFER_ROWS);
-    int last_visible =
-        std::min(total_rows,
-                 static_cast<int>((scroll_y + viewport_height) / row_stride) + 1 + BUFFER_ROWS);
+    int last_visible = std::min(
+        total_rows, static_cast<int>((scroll_y + viewport_height) / row_stride) + 1 + BUFFER_ROWS);
 
     // Skip update if visible range hasn't changed
     if (first_visible == visible_start_ && last_visible == visible_end_) {

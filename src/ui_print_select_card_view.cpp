@@ -142,8 +142,15 @@ void PrintSelectCardView::init_pool(const CardDimensions& dims) {
 
     // Create pool cards (initially hidden)
     for (int i = 0; i < POOL_SIZE; i++) {
-        const char* attrs[] = {"thumbnail_src", DEFAULT_THUMB, "filename",   "",
-                               "print_time",    "",            "filament_weight", "", NULL};
+        const char* attrs[] = {"thumbnail_src",
+                               DEFAULT_THUMB,
+                               "filename",
+                               "",
+                               "print_time",
+                               "",
+                               "filament_weight",
+                               "",
+                               NULL};
 
         lv_obj_t* card = static_cast<lv_obj_t*>(lv_xml_create(container_, COMPONENT_NAME, attrs));
 
@@ -320,8 +327,8 @@ void PrintSelectCardView::populate(const std::vector<PrintFileData>& file_list,
     update_visible(file_list, dims);
 
     int total_rows = (static_cast<int>(file_list.size()) + cards_per_row_ - 1) / cards_per_row_;
-    spdlog::debug("[PrintSelectCardView] Populated: {} files, {} rows, pool size {}", file_list.size(),
-                  total_rows, card_pool_.size());
+    spdlog::debug("[PrintSelectCardView] Populated: {} files, {} rows, pool size {}",
+                  file_list.size(), total_rows, card_pool_.size());
 }
 
 void PrintSelectCardView::update_visible(const std::vector<PrintFileData>& file_list,
@@ -342,9 +349,8 @@ void PrintSelectCardView::update_visible(const std::vector<PrintFileData>& file_
 
     // Calculate visible row range (with buffer)
     int first_visible_row = std::max(0, static_cast<int>(scroll_y / row_height) - BUFFER_ROWS);
-    int last_visible_row =
-        std::min(total_rows,
-                 static_cast<int>((scroll_y + viewport_height) / row_height) + 1 + BUFFER_ROWS);
+    int last_visible_row = std::min(
+        total_rows, static_cast<int>((scroll_y + viewport_height) / row_height) + 1 + BUFFER_ROWS);
 
     // Skip update if visible range hasn't changed
     if (first_visible_row == visible_start_row_ && last_visible_row == visible_end_row_) {

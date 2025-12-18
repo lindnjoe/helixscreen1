@@ -973,9 +973,8 @@ void MoonrakerClient::discover_printer(std::function<void()> on_complete) {
                                   json(components).dump());
 
                     // Check for Spoolman component and verify connection
-                    bool has_spoolman_component =
-                        std::find(components.begin(), components.end(), "spoolman") !=
-                        components.end();
+                    bool has_spoolman_component = std::find(components.begin(), components.end(),
+                                                            "spoolman") != components.end();
                     if (has_spoolman_component) {
                         spdlog::info("[Moonraker Client] Spoolman component detected, "
                                      "checking status...");
@@ -989,14 +988,13 @@ void MoonrakerClient::discover_printer(std::function<void()> on_complete) {
                                     connected =
                                         response["result"].value("spoolman_connected", false);
                                 }
-                                spdlog::info(
-                                    "[Moonraker Client] Spoolman status: connected={}", connected);
+                                spdlog::info("[Moonraker Client] Spoolman status: connected={}",
+                                             connected);
                                 get_printer_state().set_spoolman_available(connected);
                             },
                             [](const MoonrakerError& err) {
-                                spdlog::warn(
-                                    "[Moonraker Client] Spoolman status check failed: {}",
-                                    err.message);
+                                spdlog::warn("[Moonraker Client] Spoolman status check failed: {}",
+                                             err.message);
                                 get_printer_state().set_spoolman_available(false);
                             });
                     }

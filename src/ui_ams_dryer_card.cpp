@@ -127,7 +127,8 @@ void AmsDryerCard::cleanup() {
     progress_observer_.reset();
 
     // Delete modal (created on top layer, won't auto-delete with panel)
-    // CRITICAL: Check if LVGL is initialized - may be called from destructor during static destruction
+    // CRITICAL: Check if LVGL is initialized - may be called from destructor during static
+    // destruction
     if (dryer_modal_ && lv_is_initialized()) {
         lv_obj_delete(dryer_modal_);
         dryer_modal_ = nullptr;

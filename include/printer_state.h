@@ -792,7 +792,7 @@ class PrinterState {
     lv_subject_t printer_has_speaker_;       // Integer: 0=no, 1=yes (for M300 audio feedback)
     lv_subject_t printer_has_timelapse_; // Integer: 0=no, 1=yes (for Moonraker-Timelapse plugin)
     lv_subject_t printer_has_firmware_retraction_; // Integer: 0=no, 1=yes (for G10/G11 retraction)
-    lv_subject_t printer_bed_moves_;     // Integer: 0=no (gantry moves), 1=yes (bed moves on Z)
+    lv_subject_t printer_bed_moves_; // Integer: 0=no (gantry moves), 1=yes (bed moves on Z)
 
     // Manual probe subjects (for Z-offset calibration)
     lv_subject_t manual_probe_active_; // Integer: 0=inactive, 1=active (PROBE_CALIBRATE running)

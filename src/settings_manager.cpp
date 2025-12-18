@@ -545,8 +545,8 @@ void SettingsManager::wake_display() {
 
     // Sync subject with config value (ensures get_brightness() returns correct value)
     if (subject_value != brightness) {
-        spdlog::warn("[DisplaySleep] Subject out of sync! Updating {} -> {}",
-                     subject_value, brightness);
+        spdlog::warn("[DisplaySleep] Subject out of sync! Updating {} -> {}", subject_value,
+                     brightness);
         lv_subject_set_int(&brightness_subject_, brightness);
     }
 
