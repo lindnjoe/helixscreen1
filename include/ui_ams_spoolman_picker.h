@@ -5,9 +5,8 @@
 
 #include "spoolman_types.h"
 
-#include <lvgl.h>
-
 #include <functional>
+#include <lvgl.h>
 #include <memory>
 #include <string>
 #include <vector>
@@ -45,9 +44,9 @@ class AmsSpoolmanPicker {
 
     struct PickerResult {
         PickerAction action = PickerAction::CANCELLED;
-        int slot_index = -1;        ///< Slot the picker was opened for
-        int spool_id = 0;           ///< Selected spool ID (if action == ASSIGN)
-        SpoolInfo spool_info;       ///< Full spool info (if action == ASSIGN)
+        int slot_index = -1;  ///< Slot the picker was opened for
+        int spool_id = 0;     ///< Selected spool ID (if action == ASSIGN)
+        SpoolInfo spool_info; ///< Full spool info (if action == ASSIGN)
     };
 
     using CompletionCallback = std::function<void(const PickerResult& result)>;
@@ -81,7 +80,9 @@ class AmsSpoolmanPicker {
     /**
      * @brief Check if picker is currently visible
      */
-    [[nodiscard]] bool is_visible() const { return picker_ != nullptr; }
+    [[nodiscard]] bool is_visible() const {
+        return picker_ != nullptr;
+    }
 
     /**
      * @brief Set callback for when picker closes
@@ -105,7 +106,7 @@ class AmsSpoolmanPicker {
 
     // === Subjects for XML binding ===
     lv_subject_t slot_indicator_subject_;
-    lv_subject_t picker_state_subject_;  ///< 0=LOADING, 1=EMPTY, 2=CONTENT
+    lv_subject_t picker_state_subject_; ///< 0=LOADING, 1=EMPTY, 2=CONTENT
     char slot_indicator_buf_[48] = {0};
     bool subjects_initialized_ = false;
 

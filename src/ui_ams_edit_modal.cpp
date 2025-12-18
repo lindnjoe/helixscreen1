@@ -3,13 +3,14 @@
 
 #include "ui_ams_edit_modal.h"
 
+#include "ui_error_reporting.h"
+#include "ui_theme.h"
+
 #include "ams_backend.h"
 #include "ams_state.h"
 #include "color_utils.h"
 #include "filament_database.h"
 #include "moonraker_api.h"
-#include "ui_error_reporting.h"
-#include "ui_theme.h"
 
 #include <spdlog/spdlog.h>
 
@@ -36,8 +37,9 @@ AmsEditModal::~AmsEditModal() {
 
 AmsEditModal::AmsEditModal(AmsEditModal&& other) noexcept
     : ModalBase(std::move(other)), slot_index_(other.slot_index_),
-      original_info_(std::move(other.original_info_)), working_info_(std::move(other.working_info_)),
-      api_(other.api_), completion_callback_(std::move(other.completion_callback_)),
+      original_info_(std::move(other.original_info_)),
+      working_info_(std::move(other.working_info_)), api_(other.api_),
+      completion_callback_(std::move(other.completion_callback_)),
       remaining_pre_edit_pct_(other.remaining_pre_edit_pct_),
       color_picker_(std::move(other.color_picker_)),
       subjects_initialized_(other.subjects_initialized_) {
@@ -86,7 +88,7 @@ void AmsEditModal::set_completion_callback(CompletionCallback callback) {
 }
 
 bool AmsEditModal::show_for_slot(lv_obj_t* parent, int slot_index, const SlotInfo& initial_info,
-                                  MoonrakerAPI* api) {
+                                 MoonrakerAPI* api) {
     // Register callbacks once (idempotent)
     register_callbacks();
 
@@ -126,7 +128,8 @@ void AmsEditModal::on_show() {
     // Bind labels to subjects for reactive text updates (save observers for cleanup)
     lv_obj_t* slot_indicator = find_widget("slot_indicator");
     if (slot_indicator) {
-        slot_indicator_observer_ = lv_label_bind_text(slot_indicator, &slot_indicator_subject_, nullptr);
+        slot_indicator_observer_ =
+            lv_label_bind_text(slot_indicator, &slot_indicator_subject_, nullptr);
     }
 
     lv_obj_t* color_name_label = find_widget("color_name_label");
@@ -136,7 +139,8 @@ void AmsEditModal::on_show() {
 
     lv_obj_t* temp_nozzle_label = find_widget("temp_nozzle_label");
     if (temp_nozzle_label) {
-        temp_nozzle_observer_ = lv_label_bind_text(temp_nozzle_label, &temp_nozzle_subject_, nullptr);
+        temp_nozzle_observer_ =
+            lv_label_bind_text(temp_nozzle_label, &temp_nozzle_subject_, nullptr);
     }
 
     lv_obj_t* temp_bed_label = find_widget("temp_bed_label");
@@ -146,7 +150,8 @@ void AmsEditModal::on_show() {
 
     lv_obj_t* remaining_pct_label = find_widget("remaining_pct_label");
     if (remaining_pct_label) {
-        remaining_pct_observer_ = lv_label_bind_text(remaining_pct_label, &remaining_pct_subject_, nullptr);
+        remaining_pct_observer_ =
+            lv_label_bind_text(remaining_pct_label, &remaining_pct_subject_, nullptr);
     }
 
     // Update the modal UI with current slot data

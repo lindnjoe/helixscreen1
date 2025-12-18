@@ -1336,22 +1336,21 @@ void AmsPanel::show_edit_modal(int slot_index) {
     SlotInfo initial_info = backend->get_slot_info(slot_index);
 
     // Set completion callback to handle save result
-    edit_modal_->set_completion_callback(
-        [this](const helix::ui::AmsEditModal::EditResult& result) {
-            if (result.saved && result.slot_index >= 0) {
-                // Apply the edited slot info to the backend
-                AmsBackend* backend = AmsState::instance().get_backend();
-                if (backend) {
-                    backend->set_slot_info(result.slot_index, result.slot_info);
+    edit_modal_->set_completion_callback([this](const helix::ui::AmsEditModal::EditResult& result) {
+        if (result.saved && result.slot_index >= 0) {
+            // Apply the edited slot info to the backend
+            AmsBackend* backend = AmsState::instance().get_backend();
+            if (backend) {
+                backend->set_slot_info(result.slot_index, result.slot_info);
 
-                    // Update the slot display
-                    AmsState::instance().sync_from_backend();
-                    refresh_slots();
+                // Update the slot display
+                AmsState::instance().sync_from_backend();
+                refresh_slots();
 
-                    NOTIFY_INFO("Slot {} updated", result.slot_index + 1);
-                }
+                NOTIFY_INFO("Slot {} updated", result.slot_index + 1);
             }
-        });
+        }
+    });
 
     // Show the modal
     edit_modal_->show_for_slot(parent_screen_, slot_index, initial_info, api_);

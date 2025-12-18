@@ -3,9 +3,8 @@
 
 #pragma once
 
-#include <lvgl.h>
-
 #include <functional>
+#include <lvgl.h>
 
 namespace helix::ui {
 
@@ -34,11 +33,11 @@ namespace helix::ui {
 class AmsContextMenu {
   public:
     enum class MenuAction {
-        CANCELLED,  ///< User dismissed menu without action
-        LOAD,       ///< Load filament from this slot
-        UNLOAD,     ///< Unload filament
-        EDIT,       ///< Edit slot properties
-        SPOOLMAN    ///< Assign Spoolman spool
+        CANCELLED, ///< User dismissed menu without action
+        LOAD,      ///< Load filament from this slot
+        UNLOAD,    ///< Unload filament
+        EDIT,      ///< Edit slot properties
+        SPOOLMAN   ///< Assign Spoolman spool
     };
 
     using ActionCallback = std::function<void(MenuAction action, int slot_index)>;
@@ -71,12 +70,16 @@ class AmsContextMenu {
     /**
      * @brief Check if menu is currently visible
      */
-    [[nodiscard]] bool is_visible() const { return menu_ != nullptr; }
+    [[nodiscard]] bool is_visible() const {
+        return menu_ != nullptr;
+    }
 
     /**
      * @brief Get slot index the menu is currently shown for
      */
-    [[nodiscard]] int get_slot_index() const { return slot_index_; }
+    [[nodiscard]] int get_slot_index() const {
+        return slot_index_;
+    }
 
     /**
      * @brief Set callback for menu actions

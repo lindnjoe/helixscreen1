@@ -3,8 +3,9 @@
 
 #include "ui_ams_color_picker.h"
 
-#include "color_utils.h"
 #include "ui_hsv_picker.h"
+
+#include "color_utils.h"
 
 #include <spdlog/spdlog.h>
 
@@ -136,7 +137,8 @@ void AmsColorPicker::on_show() {
                 self->update_preview(rgb, true); // from HSV picker
             },
             this);
-        spdlog::debug("[AmsColorPicker] HSV picker initialized with color #{:06X}", selected_color_);
+        spdlog::debug("[AmsColorPicker] HSV picker initialized with color #{:06X}",
+                      selected_color_);
     }
 }
 

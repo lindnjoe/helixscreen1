@@ -137,10 +137,10 @@ void AmsContextMenu::hide() {
 // ============================================================================
 
 void AmsContextMenu::handle_backdrop_clicked() {
-    int slot = slot_index_;  // Capture before hide() resets it
+    int slot = slot_index_; // Capture before hide() resets it
     spdlog::debug("[AmsContextMenu] Backdrop clicked");
 
-    hide();  // Hide before callback (consistent with other handlers)
+    hide(); // Hide before callback (consistent with other handlers)
 
     if (action_callback_) {
         action_callback_(MenuAction::CANCELLED, slot);

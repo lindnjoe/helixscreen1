@@ -3,9 +3,10 @@
 
 #pragma once
 
-#include "ams_types.h"
 #include "ui_ams_color_picker.h"
 #include "ui_modal_base.h"
+
+#include "ams_types.h"
 
 #include <functional>
 #include <memory>
@@ -39,9 +40,9 @@ class AmsEditModal : public ModalBase {
      * @brief Result returned when modal closes
      */
     struct EditResult {
-        bool saved = false;        ///< True if user saved, false if cancelled
-        int slot_index = -1;       ///< Slot that was edited
-        SlotInfo slot_info;        ///< Final slot info (valid if saved)
+        bool saved = false;  ///< True if user saved, false if cancelled
+        int slot_index = -1; ///< Slot that was edited
+        SlotInfo slot_info;  ///< Final slot info (valid if saved)
     };
 
     using CompletionCallback = std::function<void(const EditResult& result)>;
@@ -89,11 +90,11 @@ class AmsEditModal : public ModalBase {
   private:
     // === State ===
     int slot_index_ = -1;
-    SlotInfo original_info_;    ///< Original info for reset
-    SlotInfo working_info_;     ///< Working copy being edited
+    SlotInfo original_info_; ///< Original info for reset
+    SlotInfo working_info_;  ///< Working copy being edited
     MoonrakerAPI* api_ = nullptr;
     CompletionCallback completion_callback_;
-    int remaining_pre_edit_pct_ = 0;  ///< Remaining % before edit mode
+    int remaining_pre_edit_pct_ = 0; ///< Remaining % before edit mode
 
     // === Owned color picker ===
     std::unique_ptr<AmsColorPicker> color_picker_;
@@ -104,7 +105,7 @@ class AmsEditModal : public ModalBase {
     lv_subject_t temp_nozzle_subject_;
     lv_subject_t temp_bed_subject_;
     lv_subject_t remaining_pct_subject_;
-    lv_subject_t remaining_mode_subject_;  ///< 0=view, 1=edit
+    lv_subject_t remaining_mode_subject_; ///< 0=view, 1=edit
 
     char slot_indicator_buf_[32] = {0};
     char color_name_buf_[32] = {0};

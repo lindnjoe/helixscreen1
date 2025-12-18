@@ -3,8 +3,9 @@
 
 #include "ui_ams_dryer_card.h"
 
-#include "ams_state.h"
 #include "ui_error_reporting.h"
+
+#include "ams_state.h"
 
 #include <spdlog/spdlog.h>
 

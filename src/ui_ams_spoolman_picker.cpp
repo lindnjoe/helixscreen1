@@ -3,8 +3,9 @@
 
 #include "ui_ams_spoolman_picker.h"
 
-#include "moonraker_api.h"
 #include "ui_theme.h"
+
+#include "moonraker_api.h"
 
 #include <spdlog/spdlog.h>
 
@@ -85,7 +86,7 @@ void AmsSpoolmanPicker::set_completion_callback(CompletionCallback callback) {
 }
 
 bool AmsSpoolmanPicker::show_for_slot(lv_obj_t* parent, int slot_index, int current_spool_id,
-                                       MoonrakerAPI* api) {
+                                      MoonrakerAPI* api) {
     // Hide any existing picker first
     hide();
 
@@ -127,7 +128,8 @@ bool AmsSpoolmanPicker::show_for_slot(lv_obj_t* parent, int slot_index, int curr
     // Bind slot indicator label to subject (save observer for cleanup)
     lv_obj_t* slot_indicator = lv_obj_find_by_name(picker_, "slot_indicator");
     if (slot_indicator) {
-        slot_indicator_observer_ = lv_label_bind_text(slot_indicator, &slot_indicator_subject_, nullptr);
+        slot_indicator_observer_ =
+            lv_label_bind_text(slot_indicator, &slot_indicator_subject_, nullptr);
     }
 
     // Show/hide unlink button based on whether slot has current assignment

@@ -59,7 +59,9 @@ class AmsDryerCard {
     /**
      * @brief Check if dryer card is set up
      */
-    [[nodiscard]] bool is_setup() const { return dryer_card_ != nullptr; }
+    [[nodiscard]] bool is_setup() const {
+        return dryer_card_ != nullptr;
+    }
 
     // === Actions ===
 

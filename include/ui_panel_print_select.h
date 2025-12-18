@@ -5,12 +5,13 @@
 
 #include "ui_observer_guard.h"
 #include "ui_panel_base.h"
+#include "ui_print_select_card_view.h"
+#include "ui_print_select_detail_view.h"
+#include "ui_print_select_file_provider.h"
+#include "ui_print_select_list_view.h"
+#include "ui_print_select_usb_source.h"
 
-#include "command_sequencer.h"
-#include "gcode_file_modifier.h"
-#include "gcode_ops_detector.h"
 #include "usb_backend.h"
-#include "usb_manager.h"
 
 #include <ctime>
 #include <memory>
@@ -67,13 +68,7 @@ enum class PrintSelectSortColumn { FILENAME, SIZE, MODIFIED, PRINT_TIME, FILAMEN
  */
 enum class PrintSelectSortDirection { ASCENDING, DESCENDING };
 
-/**
- * @brief File source for print select panel
- */
-enum class FileSource {
-    PRINTER = 0, ///< Files from Moonraker (printer storage)
-    USB = 1      ///< Files from USB drive
-};
+// FileSource enum is defined in ui_print_select_usb_source.h
 
 /**
  * @brief File data structure for print files and directories
@@ -95,56 +90,6 @@ struct PrintFileData {
     std::string print_time_str;
     std::string filament_str;
     std::string layer_count_str; ///< Formatted layer count string
-};
-
-/**
- * @brief Per-card widget data for declarative text binding
- *
- * Stored with each pooled card widget. Subjects are bound to labels once
- * at pool creation, then updated via lv_subject_copy_string() when card is recycled.
- */
-struct CardWidgetData {
-    // Subjects and buffers for card labels
-    lv_subject_t filename_subject;
-    char filename_buf[128] = {0};
-
-    lv_subject_t time_subject;
-    char time_buf[32] = {0};
-
-    lv_subject_t filament_subject;
-    char filament_buf[32] = {0};
-
-    // Observer handles (saved for cleanup before DELETE)
-    lv_observer_t* filename_observer = nullptr;
-    lv_observer_t* time_observer = nullptr;
-    lv_observer_t* filament_observer = nullptr;
-};
-
-/**
- * @brief Per-row widget data for declarative text binding
- *
- * Stored with each pooled list row widget. Subjects are bound to labels once
- * at pool creation, then updated via lv_subject_copy_string() when row is recycled.
- */
-struct ListRowWidgetData {
-    // Subjects and buffers for row labels
-    lv_subject_t filename_subject;
-    char filename_buf[128] = {0};
-
-    lv_subject_t size_subject;
-    char size_buf[16] = {0};
-
-    lv_subject_t modified_subject;
-    char modified_buf[32] = {0};
-
-    lv_subject_t time_subject;
-    char time_buf[32] = {0};
-
-    // Observer handles (saved for cleanup before DELETE)
-    lv_observer_t* filename_observer = nullptr;
-    lv_observer_t* size_observer = nullptr;
-    lv_observer_t* modified_observer = nullptr;
-    lv_observer_t* time_observer = nullptr;
 };
 
 /**
@@ -412,22 +357,12 @@ class PrintSelectPanel : public PanelBase {
     // === Constants ===
     //
 
-    static constexpr const char* CARD_COMPONENT_NAME = "print_file_card";
-    // Note: Card gap is now read from XML style_pad_gap on card_view_container
-    static constexpr int CARD_MIN_WIDTH = 150; // Lowered to fit 4 columns on 670px container width
+    // Card layout constants (used by calculate_card_dimensions)
+    static constexpr int CARD_MIN_WIDTH = 150;
     static constexpr int CARD_MAX_WIDTH = 230;
     static constexpr int CARD_DEFAULT_HEIGHT = 245;
     static constexpr int ROW_COUNT_3_MIN_HEIGHT = 520;
-    static constexpr const char* DEFAULT_PLACEHOLDER_THUMB =
-        "A:assets/images/thumbnail-placeholder.png";
-    static constexpr const char* FOLDER_ICON = "A:assets/images/folder.png";
     static constexpr const char* FOLDER_UP_ICON = "A:assets/images/folder-up.png";
-
-    // Virtualization constants - fixed pool sizes to minimize RAM usage
-    static constexpr int CARD_POOL_SIZE = 24;  ///< Fixed pool of card widgets (recycles)
-    static constexpr int CARD_BUFFER_ROWS = 1; ///< Extra rows above/below viewport
-    static constexpr int LIST_POOL_SIZE = 40;  ///< Fixed pool of list row widgets
-    // Note: List row height is read from actual widget height + container gap at runtime
 
     //
     // === Widget References ===
@@ -439,23 +374,7 @@ class PrintSelectPanel : public PanelBase {
     lv_obj_t* empty_state_container_ = nullptr;
     lv_obj_t* view_toggle_btn_ = nullptr;
     lv_obj_t* view_toggle_icon_ = nullptr;
-    lv_obj_t* detail_view_widget_ = nullptr;
-    lv_obj_t* confirmation_dialog_widget_ = nullptr;
     lv_obj_t* print_status_panel_widget_ = nullptr;
-
-    // Pre-print option checkboxes (looked up during create_detail_view)
-    lv_obj_t* bed_leveling_checkbox_ = nullptr;
-    lv_obj_t* qgl_checkbox_ = nullptr;
-    lv_obj_t* z_tilt_checkbox_ = nullptr;
-    lv_obj_t* nozzle_clean_checkbox_ = nullptr;
-    lv_obj_t* timelapse_checkbox_ = nullptr; ///< Record Timelapse option (Moonraker-Timelapse)
-
-    // Source selector buttons (Printer/USB toggle)
-    lv_obj_t* source_printer_btn_ = nullptr;
-    lv_obj_t* source_usb_btn_ = nullptr;
-
-    // Print button (disabled when print in progress)
-    lv_obj_t* print_button_ = nullptr;
 
     //
     // === Subject Buffers ===
@@ -505,43 +424,18 @@ class PrintSelectPanel : public PanelBase {
     lv_timer_t* refresh_timer_ = nullptr;
     static constexpr uint32_t REFRESH_DEBOUNCE_MS = 50; ///< Debounce delay for view refresh
 
-    // Virtualization state for card view (fixed pool, recycled on scroll)
-    std::vector<lv_obj_t*> card_pool_; ///< Fixed pool of reusable card widgets
-    std::vector<ssize_t>
-        card_pool_indices_; ///< Which file index each pool card shows (-1 = unused)
-    std::vector<std::unique_ptr<CardWidgetData>>
-        card_data_pool_; ///< Per-card data with subjects (parallel to card_pool_)
-    lv_obj_t* card_leading_spacer_ = nullptr; ///< Spacer before visible cards (pushes them down)
-    lv_obj_t* card_trailing_spacer_ =
-        nullptr;                 ///< Spacer after visible cards (enables scroll range)
-    int cards_per_row_ = 3;      ///< Cards per row (calculated from container width)
-    int visible_start_row_ = -1; ///< First visible row index (-1 = uninitialized)
-    int visible_end_row_ = -1;   ///< Last visible row index (exclusive)
+    // Virtualized view modules (extracted for maintainability)
+    std::unique_ptr<helix::ui::PrintSelectCardView> card_view_;
+    std::unique_ptr<helix::ui::PrintSelectListView> list_view_;
 
-    // Virtualization state for list view
-    std::vector<lv_obj_t*> list_pool_;       ///< Fixed pool of reusable list row widgets
-    std::vector<ssize_t> list_pool_indices_; ///< Which file index each pool row shows (-1 = unused)
-    std::vector<std::unique_ptr<ListRowWidgetData>>
-        list_data_pool_; ///< Per-row data with subjects (parallel to list_pool_)
-    lv_obj_t* list_leading_spacer_ = nullptr;  ///< Spacer before visible rows
-    lv_obj_t* list_trailing_spacer_ = nullptr; ///< Spacer after visible rows
-    int visible_list_start_ = -1;              ///< First visible list index (-1 = uninitialized)
-    int visible_list_end_ = -1;                ///< Last visible list index (exclusive)
+    // Detail view overlay manager (handles file detail display, delete confirmation)
+    std::unique_ptr<helix::ui::PrintSelectDetailView> detail_view_;
 
-    // USB file source state
-    FileSource current_source_ = FileSource::PRINTER; ///< Current file source (Printer or USB)
-    std::vector<UsbGcodeFile> usb_files_;             ///< USB G-code files (when USB source active)
-    class UsbManager* usb_manager_ = nullptr;         ///< USB manager (injected or global)
+    // USB file source manager (handles Printer/USB source switching)
+    std::unique_ptr<helix::ui::PrintSelectUsbSource> usb_source_;
 
-    /// Command sequencer for pre-print operations (created lazily when print starts)
-    std::unique_ptr<helix::gcode::CommandSequencer> pre_print_sequencer_;
-
-    /// Cached G-code scan result for selected file (populated when detail view opens)
-    /// Used to detect if user disabled options that are embedded in the G-code file
-    std::optional<helix::gcode::ScanResult> cached_scan_result_;
-
-    /// Filename corresponding to cached_scan_result_ (to detect stale cache)
-    std::string cached_scan_filename_;
+    // File data provider (handles Moonraker file fetching and metadata)
+    std::unique_ptr<helix::ui::PrintSelectFileProvider> file_provider_;
 
     // Observers for reactive updates (ObserverGuard handles cleanup)
     ObserverGuard active_panel_observer_;
@@ -558,93 +452,29 @@ class PrintSelectPanel : public PanelBase {
     CardDimensions calculate_card_dimensions();
 
     /**
-     * @brief Initialize virtualized card view
-     *
-     * Creates the fixed card pool and spacer element.
-     * Pool cards are reused as user scrolls - we never create more than CARD_POOL_SIZE.
-     */
-    void init_card_pool();
-
-    /**
-     * @brief Update card view based on current scroll position
-     *
-     * Determines which file indices are visible, recycles pool cards
-     * to show the correct content at the correct positions.
+     * @brief Populate card view with file list (delegates to card_view_)
      */
     void populate_card_view();
 
     /**
-     * @brief Update visible range and recycle cards as needed
-     *
-     * Called on scroll events. Calculates new visible rows,
-     * recycles cards that scrolled out of view to show new content.
-     */
-    void update_visible_cards();
-
-    /**
-     * @brief Configure a pool card to display a specific file
-     *
-     * @param card Pool card widget to configure
-     * @param pool_index Index into card_pool_ and card_data_pool_
-     * @param file_index Index into file_list_
-     * @param dims Pre-calculated card dimensions
-     */
-    void configure_card(lv_obj_t* card, size_t pool_index, size_t file_index,
-                        const CardDimensions& dims);
-
-    /**
-     * @brief Initialize virtualized list view
-     *
-     * Creates the fixed list row pool and spacer element.
-     */
-    void init_list_pool();
-
-    /**
-     * @brief Update list view based on current scroll position
+     * @brief Populate list view with file list (delegates to list_view_)
      */
     void populate_list_view();
 
     /**
-     * @brief Update visible range and recycle list rows as needed
-     */
-    void update_visible_list_rows();
-
-    /**
-     * @brief Configure a pool list row to display a specific file
-     *
-     * @param row Pool row widget to configure
-     * @param pool_index Index into list_pool_ and list_data_pool_
-     * @param file_index Index into file_list_
-     */
-    void configure_list_row(lv_obj_t* row, size_t pool_index, size_t file_index);
-
-    /**
-     * @brief Animate visible list rows with staggered entrance
-     *
-     * Each row slides up and fades in with a staggered delay.
-     * Called when switching to list view or initial population.
-     */
-    void animate_list_entrance();
-
-    /**
      * @brief Animate view container entrance with fade-in
-     *
      * @param container The view container to animate (card or list)
      */
     void animate_view_entrance(lv_obj_t* container);
 
     /**
      * @brief Handle scroll event for virtualization
-     *
      * @param container The scrolled container (card or list view)
      */
     void handle_scroll(lv_obj_t* container);
 
     /**
-     * @brief Refresh content of currently visible cards without repositioning
-     *
-     * Called when metadata/thumbnails update. Only reconfigures visible pool
-     * cards with new data - does not reset spacer positions or visible range.
+     * @brief Refresh content of currently visible cards/rows
      */
     void refresh_visible_content();
 
@@ -713,74 +543,6 @@ class PrintSelectPanel : public PanelBase {
      */
     void handle_file_click(size_t file_index);
 
-    /**
-     * @brief Scan G-code file for embedded operations (async)
-     *
-     * Downloads file content from Moonraker and scans for operations like
-     * bed leveling, QGL, nozzle clean. Result is cached in cached_scan_result_.
-     *
-     * @param filename File to scan (relative to gcodes root)
-     */
-    void scan_gcode_for_operations(const std::string& filename);
-
-    /**
-     * @brief Download, modify, upload, and print a G-code file
-     *
-     * Used when user disabled an option that's embedded in the G-code.
-     * Flow: download original → comment out disabled ops → upload to temp dir → print
-     *
-     * @param original_filename Original file to modify
-     * @param ops_to_disable Operations to comment out in the file
-     */
-    void modify_and_print(const std::string& original_filename,
-                          const std::vector<helix::gcode::OperationType>& ops_to_disable);
-
-    /**
-     * @brief Collect operations user wants to disable from unchecked checkboxes
-     *
-     * Compares checkbox states against cached scan result to identify
-     * operations that are embedded in the file but disabled by user.
-     *
-     * @return Vector of operation types that need to be disabled in file
-     */
-    [[nodiscard]] std::vector<helix::gcode::OperationType> collect_ops_to_disable() const;
-
-    //
-    // === USB Source Methods ===
-    //
-
-    /**
-     * @brief Setup source selector buttons (Printer/USB)
-     *
-     * Finds buttons by name, wires up click handlers, sets initial state.
-     */
-    void setup_source_buttons();
-
-    /**
-     * @brief Update source button visual states (LV_STATE_CHECKED)
-     *
-     * Applies checked state to the active source button, removes from inactive.
-     */
-    void update_source_buttons();
-
-    /**
-     * @brief Refresh USB file list
-     *
-     * Scans USB drives for G-code files and populates the view.
-     * Shows empty state if no USB drive detected.
-     */
-    void refresh_usb_files();
-
-    /**
-     * @brief Populate card view with USB files
-     */
-    void populate_usb_card_view();
-
-    /**
-     * @brief Populate list view with USB files
-     */
-    void populate_usb_list_view();
-
     //
     // === Static Callbacks (trampolines) ===
     //
@@ -788,7 +550,6 @@ class PrintSelectPanel : public PanelBase {
     static void on_resize_static(void* user_data);
     static void on_scroll_static(lv_event_t* e);
     static void on_file_clicked_static(lv_event_t* e);
-    static void on_source_button_clicked_static(lv_event_t* e);
 };
 
 // ============================================================================
