@@ -1116,14 +1116,20 @@ void PrintStatusPanel::on_print_state_changed(PrintJobState job_state) {
 }
 
 void PrintStatusPanel::on_print_filename_changed(const char* filename) {
-    // Guard: preserve final values when in Complete state
-    // Moonraker may send empty filename when transitioning to Standby
-    if (current_state_ == PrintState::Complete) {
-        spdlog::trace("[{}] Ignoring filename update in Complete state", get_name());
+    // Check if this is a non-empty filename (new print starting)
+    bool has_filename = filename && filename[0] != '\0';
+
+    // Guard: preserve final values when in Complete state and filename is empty
+    // Moonraker sends empty filename when transitioning to Standby, but we want
+    // to keep showing the completed print's filename. However, if a NEW print
+    // starts (non-empty filename), we should accept it even if current_state_
+    // hasn't been updated yet (race condition between state and filename observers)
+    if (current_state_ == PrintState::Complete && !has_filename) {
+        spdlog::trace("[{}] Ignoring empty filename update in Complete state", get_name());
         return;
     }
 
-    if (filename && filename[0] != '\0') {
+    if (has_filename) {
         // Compute effective filename for comparison (respects thumbnail_source override)
         // This ensures we compare apples-to-apples: the effective display name
         std::string raw_filename = filename;
@@ -1742,6 +1748,7 @@ void PrintStatusPanel::load_gcode_for_viewing(const std::string& filename) {
     if (!gcode_3d_enabled) {
         spdlog::info("[{}] G-code 3D rendering disabled via config - using thumbnail only",
                      get_name());
+        show_gcode_viewer(false); // Ensure thumbnail is shown, not empty viewer
         return;
     }
 
@@ -1758,6 +1765,8 @@ void PrintStatusPanel::load_gcode_for_viewing(const std::string& filename) {
                     "[{}] G-code too large for 3D rendering: file={} bytes, available RAM={}MB "
                     "- using thumbnail only",
                     get_name(), metadata.size, mem.available_mb());
+                // Revert to thumbnail mode since 3D rendering is not safe
+                show_gcode_viewer(false);
                 return;
             }
 
@@ -1794,11 +1803,15 @@ void PrintStatusPanel::load_gcode_for_viewing(const std::string& filename) {
                 [this, filename](const MoonrakerError& err) {
                     spdlog::warn("[{}] Failed to download G-code for viewing '{}': {}", get_name(),
                                  filename, err.message);
+                    // Revert to thumbnail mode on download failure
+                    show_gcode_viewer(false);
                 });
         },
         [this, filename](const MoonrakerError& err) {
             spdlog::debug("[{}] Failed to get G-code metadata for '{}': {} - skipping 3D render",
                           get_name(), filename, err.message);
+            // Revert to thumbnail mode on metadata fetch failure
+            show_gcode_viewer(false);
         });
 }
 

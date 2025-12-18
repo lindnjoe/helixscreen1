@@ -220,6 +220,41 @@ void ui_theme_register_responsive_spacing(lv_display_t* display) {
 
     spdlog::debug("[Theme] Responsive spacing: {} ({}px) - auto-registered {} tokens", size_label,
                   greater_res, registered);
+
+    // ========================================================================
+    // Register computed layout constants (not from globals.xml variants)
+    // ========================================================================
+
+    // Select responsive nav_width based on breakpoint
+    // Nav width macros: TINY=64, SMALL=76, MEDIUM=94, LARGE=102
+    // Mapping: breakpoint SMALL→64, MEDIUM→76, LARGE→102
+    int32_t nav_width;
+    if (greater_res <= UI_BREAKPOINT_SMALL_MAX) {
+        nav_width = UI_NAV_WIDTH_TINY; // 64px for 480x320
+    } else if (greater_res <= UI_BREAKPOINT_MEDIUM_MAX) {
+        nav_width = UI_NAV_WIDTH_SMALL; // 76px for 800x480
+    } else {
+        nav_width = UI_NAV_WIDTH_LARGE; // 102px for 1024x600, 1280x720+
+    }
+
+    // Get space_lg value (already registered above)
+    const char* space_lg_str = lv_xml_get_const(nullptr, "space_lg");
+    int32_t gap = space_lg_str ? std::atoi(space_lg_str) : 16; // fallback to 16px
+
+    // Calculate overlay width: screen - nav - gap
+    int32_t overlay_width = hor_res - nav_width - gap;
+
+    // Register as string constants for XML consumption
+    char nav_width_str[16];
+    char overlay_width_str[16];
+    snprintf(nav_width_str, sizeof(nav_width_str), "%d", nav_width);
+    snprintf(overlay_width_str, sizeof(overlay_width_str), "%d", overlay_width);
+
+    lv_xml_register_const(scope, "nav_width", nav_width_str);
+    lv_xml_register_const(scope, "overlay_panel_width", overlay_width_str);
+
+    spdlog::debug("[Theme] Layout: nav_width={}px, gap={}px, overlay_width={}px", nav_width, gap,
+                  overlay_width);
 }
 
 /**
@@ -567,9 +602,17 @@ void ui_set_overlay_width(lv_obj_t* obj, lv_obj_t* screen) {
         return;
     }
 
-    lv_coord_t screen_width = lv_obj_get_width(screen);
-    lv_coord_t nav_width = UI_NAV_WIDTH(screen_width);
-    lv_obj_set_width(obj, screen_width - nav_width);
+    // Use registered overlay_panel_width constant (consistent with XML overlays)
+    const char* width_str = lv_xml_get_const(nullptr, "overlay_panel_width");
+    if (width_str) {
+        lv_obj_set_width(obj, std::atoi(width_str));
+    } else {
+        // Fallback if theme not initialized: calculate from screen size
+        lv_coord_t screen_width = lv_obj_get_width(screen);
+        lv_coord_t nav_width = UI_NAV_WIDTH(screen_width);
+        lv_obj_set_width(obj, screen_width - nav_width - 16); // 16px gap fallback
+        spdlog::warn("[Theme] overlay_panel_width not registered, using fallback");
+    }
 }
 
 /**

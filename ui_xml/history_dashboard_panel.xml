@@ -19,7 +19,7 @@
     <style name="filter_label_active" text_color="0xE6E8F0"/>
   </styles>
   <view name="history_dashboard_panel"
-        extends="lv_obj" width="#overlay_panel_width_large" height="100%" align="right_mid" style_bg_opa="255"
+        extends="lv_obj" width="#overlay_panel_width" height="100%" align="right_mid" style_bg_opa="255"
         style_bg_color="#card_bg" style_pad_all="0" style_border_width="0" scrollable="false" flex_flow="column">
     <!-- Header Bar -->
     <header_bar name="overlay_header" title="Print History"/>

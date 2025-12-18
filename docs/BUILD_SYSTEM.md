@@ -171,6 +171,29 @@ make deploy-pi-run                # Deploy and run
 make deploy-pi PI_HOST=192.168.1.50 PI_USER=pi
 ```
 
+**Using make targets for AD5M:**
+```bash
+# Full cycle: remote build on thelio + deploy + run
+make ad5m-test
+
+# Remote build only (builds on thelio.local, fetches binaries)
+make remote-ad5m
+
+# Deploy only (after building)
+make deploy-ad5m                  # Deploy binaries + assets, restart in background
+make deploy-ad5m-fg               # Deploy and run in foreground (debug)
+make deploy-ad5m-bin              # Deploy binaries only (fast iteration)
+
+# Customize target (mDNS may not resolve - use IP instead)
+make deploy-ad5m AD5M_HOST=192.168.1.67
+```
+
+**Note:** The AD5M's mDNS (`ad5m.local`) may not resolve reliably. Use the IP address directly:
+```bash
+# Find your AD5M's IP from your router or the printer's network settings
+AD5M_HOST=192.168.1.67 make deploy-ad5m
+```
+
 **Manual deployment:**
 ```bash
 # Raspberry Pi
