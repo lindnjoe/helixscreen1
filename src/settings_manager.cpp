@@ -532,8 +532,23 @@ void SettingsManager::wake_display() {
 
     // Restore configured brightness from config file (source of truth)
     Config* config = Config::get_instance();
+
+    // Check if brightness key exists in config
+    bool has_brightness = config->get_json("/").contains("brightness");
     int brightness = config->get<int>("/brightness", 50);
+    int subject_value = lv_subject_get_int(const_cast<lv_subject_t*>(&brightness_subject_));
+
+    spdlog::debug("[DisplaySleep] Wake: config_has_key={}, config_value={}, subject_value={}",
+                  has_brightness, brightness, subject_value);
+
     brightness = std::clamp(brightness, 10, 100);
+
+    // Sync subject with config value (ensures get_brightness() returns correct value)
+    if (subject_value != brightness) {
+        spdlog::warn("[DisplaySleep] Subject out of sync! Updating {} -> {}",
+                     subject_value, brightness);
+        lv_subject_set_int(&brightness_subject_, brightness);
+    }
 
     if (backlight_backend_) {
         backlight_backend_->set_brightness(brightness);
