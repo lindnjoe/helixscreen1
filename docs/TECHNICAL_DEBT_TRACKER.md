@@ -1,9 +1,9 @@
-# HelixScreen Refactoring Plan
+# HelixScreen Technical Debt Tracker
 
 **Created:** 2024-12-16
-**Last Updated:** 2024-12-16
-**Status:** PLANNING (Not Started)
-**Overall Progress:** 0%
+**Last Updated:** 2025-12-18
+**Status:** IN PROGRESS
+**Overall Progress:** ~45%
 
 ---
 
@@ -25,17 +25,29 @@
 
 ## 1. Executive Summary
 
-### Current State (as of 2024-12-16)
-- **Overall Grade:** A- (88/100)
-- **Critical Issues:** 2 (timer leak, RAII violations)
-- **High Priority Issues:** ~800 declarative UI violations
-- **Technical Debt:** XML hardcoded spacing in 85+ files
+### Current State (as of 2025-12-18)
+- **Overall Grade:** A- (90/100)
+- **Critical Issues:** 1 (RAII violations in 3 files)
+- **High Priority Issues:** ~140 event handlers, 533 inline styles
+- **Technical Debt:** 16 hardcoded spacing values, 2 files >1500 LOC
 
 ### Target State
 - **Target Grade:** A (95/100)
 - **Zero critical safety issues**
 - **Documented exceptions for legitimate imperative code**
 - **Design tokens used consistently**
+
+### Current Metrics (2025-12-18)
+| Category | Count | Target |
+|----------|-------|--------|
+| Timer creates | 18 | — |
+| Timer deletes | 25 | ≥ creates ✅ |
+| Manual `delete` | 8 | 0 |
+| `lv_malloc` in src/ | 1 | 0 |
+| Hardcoded padding | 16 | 0 |
+| Event handlers | 140 | Documented |
+| Inline styles | 533 | <100 |
+| Files >1500 LOC | 2 | 0 |
 
 ### Estimated Effort
 | Priority | Effort | Impact |
@@ -84,9 +96,11 @@ All search patterns are designed to work even if the codebase has changed. **Alw
 
 ## 3. Priority 1: Critical Safety Fixes
 
-**Status:** [ ] Not Started
-**Estimated Time:** 2-4 hours
+**Status:** [~] 75% Complete
+**Estimated Time:** 1-2 hours remaining
 **Risk if Skipped:** Crashes, memory corruption, use-after-free
+
+> **2025-12-18 Status:** Timer leak in HomePanel fixed with manual `lv_timer_delete()`. `LvglTimerGuard` RAII wrapper created but not yet adopted. Remaining work: migrate HomePanel and other panels to use `LvglTimerGuard` for automatic cleanup.
 
 ### 3.1 Timer Leak Audit
 
@@ -312,9 +326,11 @@ kill $PID 2>/dev/null
 
 ## 4. Priority 2: RAII Compliance
 
-**Status:** [ ] Not Started
-**Estimated Time:** 4-6 hours
+**Status:** [~] 15% Complete
+**Estimated Time:** 3-4 hours remaining
 **Risk if Skipped:** Memory leaks, exception-unsafe code
+
+> **2025-12-18 Status:** `ui_hsv_picker.cpp` migrated to RAII pattern. Remaining: 8 manual `delete` statements in 3 files (`ui_bed_mesh.cpp`, `ui_modal_manager.cpp`, `ui_wizard_wifi.cpp`).
 
 ### 4.1 Discovery - Find All RAII Violations
 
@@ -480,9 +496,11 @@ make -j
 
 ## 5. Priority 3: XML Design Token Migration
 
-**Status:** [ ] Not Started
-**Estimated Time:** 8-12 hours
+**Status:** [~] 80% Complete
+**Estimated Time:** 1-2 hours remaining
 **Risk if Skipped:** Maintenance burden, inconsistent theming
+
+> **2025-12-18 Status:** Major migration completed. Only 16 hardcoded padding values remain (down from 85+ files). Most violations are in edge cases or intentional overrides.
 
 ### 5.1 Discovery - Current State
 
@@ -633,9 +651,11 @@ grep -rn 'style_pad[^=]*="[1-9]' ui_xml/ --include="*.xml"
 
 ## 6. Priority 4: Declarative UI Cleanup
 
-**Status:** [ ] Not Started
-**Estimated Time:** 16-24 hours
+**Status:** [~] 20% Complete (Triage Done)
+**Estimated Time:** 12-16 hours remaining
 **Risk if Skipped:** Architecture inconsistency, maintenance burden
+
+> **2025-12-18 Status:** Actual counts lower than original estimate (~140 event handlers vs ~800 claimed). Many are legitimate (DELETE callbacks, dynamic widgets). Primary debt: 533 inline styles. Needs triage to identify true violations.
 
 ### 6.1 Discovery - Current Violations
 
@@ -800,9 +820,11 @@ echo "Visibility toggles: $(grep -rn 'lv_obj_add_flag.*HIDDEN' src/ui_panel_*.cp
 
 ## 7. Priority 5: Large File Refactoring
 
-**Status:** [ ] Not Started
-**Estimated Time:** 16-24 hours
+**Status:** [~] 33% Complete
+**Estimated Time:** 10-16 hours remaining
 **Risk if Skipped:** Maintainability, cognitive load
+
+> **2025-12-18 Status:** `ui_panel_ams.cpp` reduced to 1,469 lines (under 1,500 target). Two files remain over limit: `ui_panel_print_status.cpp` (2,414 LOC), `ui_panel_print_select.cpp` (1,845 LOC).
 
 ### 7.1 Discovery - File Sizes
 
@@ -1288,11 +1310,11 @@ Update this table as work progresses:
 
 | Priority | Status | Progress | Completed Date | Notes |
 |----------|--------|----------|----------------|-------|
-| P1: Critical Safety | [x] | 100% | 2025-12-16 | Timer leak fix + LvglTimerGuard RAII wrapper |
-| P2: RAII Compliance | [~] | 10% | | Example fix in ui_hsv_picker.cpp; 14+ files remaining |
-| P3: XML Tokens | [ ] | 0% | | |
-| P4: Declarative UI | [ ] | 0% | | |
-| P5: File Splitting | [ ] | 0% | | |
+| P1: Critical Safety | [~] | 75% | | Timer leak fix done; `LvglTimerGuard` created but not adopted |
+| P2: RAII Compliance | [~] | 15% | | `ui_hsv_picker.cpp` migrated; 3 files remaining (8 deletes) |
+| P3: XML Tokens | [~] | 80% | | Down from 85+ files to 16 occurrences |
+| P4: Declarative UI | [~] | 20% | | 140 event handlers (many legitimate); 533 inline styles |
+| P5: File Splitting | [~] | 33% | | `ui_panel_ams.cpp` now <1500; 2 files remain over limit |
 | P6: Documentation | [~] | 50% | | Timer docs + doc consolidation in progress |
 | P7: Tooling | [ ] | 0% | | |
 
@@ -1302,8 +1324,11 @@ Update this table as work progresses:
 
 | Date | Author | Changes |
 |------|--------|---------|
-| 2025-12-16 | Claude | P1 completed: HomePanel timer fix, LvglTimerGuard RAII wrapper, ARCHITECTURE.md timer docs |
-| 2025-12-16 | Claude | P2 started: Example RAII fix in ui_hsv_picker.cpp |
+| 2025-12-18 | Claude | Audit & rebaseline: Updated all metrics, corrected progress percentages, renamed to Technical Debt Tracker |
+| 2025-12-16 | Claude | P1 partial: HomePanel timer fix, LvglTimerGuard RAII wrapper created (not yet adopted) |
+| 2025-12-16 | Claude | P2 started: RAII fix in ui_hsv_picker.cpp |
+| 2025-12-16 | Claude | P3 major progress: XML design tokens migrated (16 remaining from 85+) |
+| 2025-12-16 | Claude | P5 partial: ui_panel_ams.cpp reduced below 1500 lines |
 | 2025-12-16 | Claude | P6 in progress: Documentation consolidation (ARCHITECTURE.md + QUICK_REFERENCE.md) |
 | 2024-12-16 | Claude | Initial plan created from comprehensive 5-agent audit |
 
