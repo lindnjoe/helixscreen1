@@ -261,6 +261,16 @@ class FilamentSensorManager {
      */
     [[nodiscard]] lv_subject_t* get_sensor_count_subject();
 
+    /**
+     * @brief Reset all state for testing.
+     *
+     * Clears all sensors, states, and resets flags.
+     * Call this between tests to ensure isolation.
+     *
+     * @note This method is for testing purposes only.
+     */
+    void reset_for_testing();
+
   private:
     FilamentSensorManager();
     ~FilamentSensorManager();

@@ -5,7 +5,9 @@
 
 #include "lvgl/lvgl.h"
 
+#include <cstdint>
 #include <ctime>
+#include <optional>
 #include <string>
 
 // ============================================================================
@@ -118,6 +120,46 @@ std::string format_modified_date(time_t timestamp);
  * @return Padding value in pixels (20px for large/medium, 10px for small, 6px for tiny)
  */
 lv_coord_t ui_get_header_content_padding(lv_coord_t screen_height);
+
+// ============================================================================
+// Color Utilities
+// ============================================================================
+
+/**
+ * @brief Parse hex color string to RGB integer value
+ *
+ * Converts color strings like "#ED1C24" or "ED1C24" to 0xRRGGBB format.
+ * Returns std::nullopt for invalid input, allowing black (#000000) to be
+ * correctly distinguished from parse errors.
+ *
+ * @param hex_str Color string with optional # prefix (e.g., "#FF0000", "00FF00")
+ * @return RGB value as 0xRRGGBB, or std::nullopt if invalid/empty
+ *
+ * @code
+ * auto red = ui_parse_hex_color("#FF0000");    // returns 0xFF0000
+ * auto black = ui_parse_hex_color("#000000");  // returns 0x000000 (not nullopt!)
+ * auto invalid = ui_parse_hex_color("xyz");    // returns std::nullopt
+ * @endcode
+ */
+std::optional<uint32_t> ui_parse_hex_color(const std::string& hex_str);
+
+/**
+ * @brief Calculate perceptual color distance between two RGB colors
+ *
+ * Uses weighted Euclidean distance with human perception weights
+ * (R=0.30, G=0.59, B=0.11 based on luminance). Returns a value where
+ * 0 = identical colors, ~100+ = very different colors.
+ *
+ * @param color1 First color as 0xRRGGBB
+ * @param color2 Second color as 0xRRGGBB
+ * @return Perceptual distance (0 = identical, larger = more different)
+ *
+ * @code
+ * int dist = ui_color_distance(0xFF0000, 0xFF1111);  // Small (similar reds)
+ * int dist2 = ui_color_distance(0xFF0000, 0x0000FF); // Large (red vs blue)
+ * @endcode
+ */
+int ui_color_distance(uint32_t color1, uint32_t color2);
 
 /**
  * @brief Get responsive header height based on screen size

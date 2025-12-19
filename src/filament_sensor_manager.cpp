@@ -612,4 +612,31 @@ void FilamentSensorManager::update_subjects() {
         lv_subject_get_int(&entry_detected_), lv_subject_get_int(&any_runout_));
 }
 
+void FilamentSensorManager::reset_for_testing() {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
+
+    // Clear all sensors and states
+    sensors_.clear();
+    states_.clear();
+
+    // Reset master enabled
+    master_enabled_ = true;
+
+    // Clear callback
+    state_change_callback_ = nullptr;
+
+    // Reset subjects if initialized
+    if (subjects_initialized_) {
+        lv_subject_set_int(&runout_detected_, -1);
+        lv_subject_set_int(&toolhead_detected_, -1);
+        lv_subject_set_int(&entry_detected_, -1);
+        lv_subject_set_int(&any_runout_, 0);
+        lv_subject_set_int(&motion_active_, 0);
+        lv_subject_set_int(&master_enabled_subject_, 1);
+        lv_subject_set_int(&sensor_count_, 0);
+    }
+
+    spdlog::debug("[FilamentSensorManager] Reset for testing");
+}
+
 } // namespace helix

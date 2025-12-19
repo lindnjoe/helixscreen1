@@ -325,15 +325,13 @@ void PrintSelectDetailView::update_color_swatches(const std::vector<std::string>
         lv_obj_set_style_text_font(label, UI_FONT_SMALL, 0);
 
         // Use contrasting text color based on background brightness
-        if (!hex_color.empty()) {
-            // Simple brightness check: if hex value is > 0x808080, use dark text
-            uint32_t rgb = 0;
-            if (hex_color[0] == '#' && hex_color.length() >= 7) {
-                rgb = static_cast<uint32_t>(std::stoul(hex_color.substr(1, 6), nullptr, 16));
-            }
+        auto parsed_color = ui_parse_hex_color(hex_color);
+        if (parsed_color) {
+            uint32_t rgb = *parsed_color;
             int r = (rgb >> 16) & 0xFF;
             int g = (rgb >> 8) & 0xFF;
             int b = rgb & 0xFF;
+            // Simple brightness check using luminance weights
             int brightness = (r * 299 + g * 587 + b * 114) / 1000;
             lv_color_t text_color = brightness > 128 ? lv_color_black() : lv_color_white();
             lv_obj_set_style_text_color(label, text_color, 0);

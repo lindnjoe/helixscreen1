@@ -5,6 +5,8 @@
 
 #include "gcode_geometry_builder.h"
 
+#include "ui_utils.h"
+
 #include "config.h"
 
 #include <spdlog/spdlog.h>
@@ -1146,25 +1148,8 @@ void GeometryBuilder::set_filament_color(const std::string& hex_color) {
 }
 
 uint32_t GeometryBuilder::parse_hex_color(const std::string& hex_color) const {
-    if (hex_color.length() < 6) {
-        return 0x808080; // Default gray for invalid input
-    }
-
-    // Skip '#' prefix if present
-    const char* hex_str = hex_color.c_str();
-    if (hex_str[0] == '#') {
-        hex_str++;
-    }
-
-    // Parse #RRGGBB format
-    unsigned long value = std::strtoul(hex_str, nullptr, 16);
-
-    uint8_t r = (value >> 16) & 0xFF;
-    uint8_t g = (value >> 8) & 0xFF;
-    uint8_t b = value & 0xFF;
-
-    return (static_cast<uint32_t>(r) << 16) | (static_cast<uint32_t>(g) << 8) |
-           static_cast<uint32_t>(b);
+    auto parsed = ui_parse_hex_color(hex_color);
+    return parsed.value_or(0x808080); // Default gray for invalid input
 }
 
 uint32_t GeometryBuilder::compute_segment_color(const ToolpathSegment& segment, float z_min,

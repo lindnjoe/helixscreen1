@@ -1701,61 +1701,6 @@ void PrintSelectPanel::on_filament_warning_cancel_static(lv_event_t* e) {
 // AMS Color Mismatch Detection
 // ============================================================================
 
-/**
- * @brief Calculate perceptual color distance between two RGB colors
- *
- * Uses weighted Euclidean distance in RGB space with human perception weights.
- * Returns a value where 0 = identical, ~100 = very different.
- */
-static int color_distance(uint32_t color1, uint32_t color2) {
-    int r1 = (color1 >> 16) & 0xFF;
-    int g1 = (color1 >> 8) & 0xFF;
-    int b1 = color1 & 0xFF;
-
-    int r2 = (color2 >> 16) & 0xFF;
-    int g2 = (color2 >> 8) & 0xFF;
-    int b2 = color2 & 0xFF;
-
-    // Weighted distance - green is most perceptible to human eye
-    int dr = r1 - r2;
-    int dg = g1 - g2;
-    int db = b1 - b2;
-
-    // Weights: R=0.30, G=0.59, B=0.11 (standard luminance)
-    // Squared for distance calculation, then sqrt approximation
-    int dist_sq = (dr * dr * 30 + dg * dg * 59 + db * db * 11) / 100;
-    return static_cast<int>(std::sqrt(static_cast<double>(dist_sq)));
-}
-
-/**
- * @brief Parse hex color string to RGB value
- *
- * Uses std::optional to distinguish invalid input from black (#000000).
- *
- * @param hex_str Color string like "#ED1C24" or "ED1C24"
- * @return RGB value as 0xRRGGBB, or std::nullopt if invalid/empty
- */
-static std::optional<uint32_t> parse_hex_color(const std::string& hex_str) {
-    if (hex_str.empty()) {
-        return std::nullopt;
-    }
-
-    std::string hex = hex_str;
-    if (hex[0] == '#') {
-        hex = hex.substr(1);
-    }
-
-    if (hex.length() != 6) {
-        return std::nullopt;
-    }
-
-    try {
-        return static_cast<uint32_t>(std::stoul(hex, nullptr, 16));
-    } catch (...) {
-        return std::nullopt;
-    }
-}
-
 std::vector<int> PrintSelectPanel::check_ams_color_match() {
     std::vector<int> missing_tools;
 
@@ -1794,7 +1739,7 @@ std::vector<int> PrintSelectPanel::check_ams_color_match() {
 
     // Check each required tool color
     for (size_t tool_idx = 0; tool_idx < selected_filament_colors_.size(); ++tool_idx) {
-        auto required_color = parse_hex_color(selected_filament_colors_[tool_idx]);
+        auto required_color = ui_parse_hex_color(selected_filament_colors_[tool_idx]);
         if (!required_color) {
             continue; // Skip invalid/empty colors (but NOT black #000000!)
         }
@@ -1802,7 +1747,7 @@ std::vector<int> PrintSelectPanel::check_ams_color_match() {
         // Look for a matching slot
         bool found_match = false;
         for (uint32_t slot_color : slot_colors) {
-            if (color_distance(*required_color, slot_color) <= COLOR_MATCH_TOLERANCE) {
+            if (ui_color_distance(*required_color, slot_color) <= COLOR_MATCH_TOLERANCE) {
                 found_match = true;
                 break;
             }
