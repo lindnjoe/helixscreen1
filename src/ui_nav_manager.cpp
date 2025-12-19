@@ -51,7 +51,9 @@ void NavigationManager::clear_overlay_stack() {
     while (panel_stack_.size() > 1) {
         lv_obj_t* overlay = panel_stack_.back();
         lv_obj_add_flag(overlay, LV_OBJ_FLAG_HIDDEN);
+        // Reset transform and opacity for potential reuse
         lv_obj_set_style_translate_x(overlay, 0, LV_PART_MAIN);
+        lv_obj_set_style_opa(overlay, LV_OPA_COVER, LV_PART_MAIN);
         panel_stack_.pop_back();
         spdlog::trace("[NavigationManager] Cleared overlay {} from stack", (void*)overlay);
     }
@@ -71,8 +73,11 @@ void NavigationManager::clear_overlay_stack() {
 void NavigationManager::overlay_slide_out_complete_cb(lv_anim_t* anim) {
     lv_obj_t* panel = static_cast<lv_obj_t*>(anim->var);
     lv_obj_add_flag(panel, LV_OBJ_FLAG_HIDDEN);
+    // Reset transform and opacity for potential reuse
     lv_obj_set_style_translate_x(panel, 0, LV_PART_MAIN);
-    spdlog::debug("[NavigationManager] Overlay slide-out complete, panel {} hidden", (void*)panel);
+    lv_obj_set_style_opa(panel, LV_OPA_COVER, LV_PART_MAIN);
+    spdlog::debug("[NavigationManager] Overlay slide+fade-out complete, panel {} hidden",
+                  (void*)panel);
 
     // Invoke close callback if registered (AFTER animation completes, before any deletion)
     auto& mgr = NavigationManager::instance();
@@ -91,20 +96,35 @@ void NavigationManager::overlay_animate_slide_in(lv_obj_t* panel) {
         panel_width = OVERLAY_SLIDE_OFFSET;
     }
 
+    // Set initial state: off-screen and transparent
     lv_obj_set_style_translate_x(panel, panel_width, LV_PART_MAIN);
+    lv_obj_set_style_opa(panel, LV_OPA_TRANSP, LV_PART_MAIN);
 
-    lv_anim_t anim;
-    lv_anim_init(&anim);
-    lv_anim_set_var(&anim, panel);
-    lv_anim_set_values(&anim, panel_width, 0);
-    lv_anim_set_duration(&anim, OVERLAY_ANIM_DURATION_MS);
-    lv_anim_set_path_cb(&anim, lv_anim_path_ease_out);
-    lv_anim_set_exec_cb(&anim, [](void* obj, int32_t value) {
+    // Slide animation: translate from right to final position
+    lv_anim_t slide_anim;
+    lv_anim_init(&slide_anim);
+    lv_anim_set_var(&slide_anim, panel);
+    lv_anim_set_values(&slide_anim, panel_width, 0);
+    lv_anim_set_duration(&slide_anim, OVERLAY_ANIM_DURATION_MS);
+    lv_anim_set_path_cb(&slide_anim, lv_anim_path_ease_out);
+    lv_anim_set_exec_cb(&slide_anim, [](void* obj, int32_t value) {
         lv_obj_set_style_translate_x(static_cast<lv_obj_t*>(obj), value, LV_PART_MAIN);
     });
-    lv_anim_start(&anim);
+    lv_anim_start(&slide_anim);
 
-    spdlog::debug("[NavigationManager] Started slide-in animation for panel {} (width={})",
+    // Fade animation: opacity from transparent to opaque (runs simultaneously)
+    lv_anim_t fade_anim;
+    lv_anim_init(&fade_anim);
+    lv_anim_set_var(&fade_anim, panel);
+    lv_anim_set_values(&fade_anim, LV_OPA_TRANSP, LV_OPA_COVER);
+    lv_anim_set_duration(&fade_anim, OVERLAY_ANIM_DURATION_MS);
+    lv_anim_set_path_cb(&fade_anim, lv_anim_path_ease_out);
+    lv_anim_set_exec_cb(&fade_anim, [](void* obj, int32_t value) {
+        lv_obj_set_style_opa(static_cast<lv_obj_t*>(obj), value, LV_PART_MAIN);
+    });
+    lv_anim_start(&fade_anim);
+
+    spdlog::debug("[NavigationManager] Started slide+fade-in animation for panel {} (width={})",
                   (void*)panel, panel_width);
 }
 
@@ -118,19 +138,32 @@ void NavigationManager::overlay_animate_slide_out(lv_obj_t* panel) {
         panel_width = OVERLAY_SLIDE_OFFSET;
     }
 
-    lv_anim_t anim;
-    lv_anim_init(&anim);
-    lv_anim_set_var(&anim, panel);
-    lv_anim_set_values(&anim, 0, panel_width);
-    lv_anim_set_duration(&anim, OVERLAY_ANIM_DURATION_MS);
-    lv_anim_set_path_cb(&anim, lv_anim_path_ease_in);
-    lv_anim_set_exec_cb(&anim, [](void* obj, int32_t value) {
+    // Slide animation: translate to off-screen right
+    lv_anim_t slide_anim;
+    lv_anim_init(&slide_anim);
+    lv_anim_set_var(&slide_anim, panel);
+    lv_anim_set_values(&slide_anim, 0, panel_width);
+    lv_anim_set_duration(&slide_anim, OVERLAY_ANIM_DURATION_MS);
+    lv_anim_set_path_cb(&slide_anim, lv_anim_path_ease_in);
+    lv_anim_set_exec_cb(&slide_anim, [](void* obj, int32_t value) {
         lv_obj_set_style_translate_x(static_cast<lv_obj_t*>(obj), value, LV_PART_MAIN);
     });
-    lv_anim_set_completed_cb(&anim, overlay_slide_out_complete_cb);
-    lv_anim_start(&anim);
+    lv_anim_set_completed_cb(&slide_anim, overlay_slide_out_complete_cb);
+    lv_anim_start(&slide_anim);
 
-    spdlog::debug("[NavigationManager] Started slide-out animation for panel {} (width={})",
+    // Fade animation: opacity from opaque to transparent (runs simultaneously)
+    lv_anim_t fade_anim;
+    lv_anim_init(&fade_anim);
+    lv_anim_set_var(&fade_anim, panel);
+    lv_anim_set_values(&fade_anim, LV_OPA_COVER, LV_OPA_TRANSP);
+    lv_anim_set_duration(&fade_anim, OVERLAY_ANIM_DURATION_MS);
+    lv_anim_set_path_cb(&fade_anim, lv_anim_path_ease_in);
+    lv_anim_set_exec_cb(&fade_anim, [](void* obj, int32_t value) {
+        lv_obj_set_style_opa(static_cast<lv_obj_t*>(obj), value, LV_PART_MAIN);
+    });
+    lv_anim_start(&fade_anim);
+
+    spdlog::debug("[NavigationManager] Started slide+fade-out animation for panel {} (width={})",
                   (void*)panel, panel_width);
 }
 
@@ -288,6 +321,9 @@ void NavigationManager::nav_button_clicked_cb(lv_event_t* event) {
 
                 if (!is_main_panel) {
                     lv_obj_add_flag(child, LV_OBJ_FLAG_HIDDEN);
+                    // Reset transform and opacity for potential reuse
+                    lv_obj_set_style_translate_x(child, 0, LV_PART_MAIN);
+                    lv_obj_set_style_opa(child, LV_OPA_COVER, LV_PART_MAIN);
                     spdlog::trace(
                         "[NavigationManager] Hiding overlay panel {} (nav button clicked)",
                         (void*)child);
@@ -626,6 +662,9 @@ bool NavigationManager::go_back() {
 
             if (!is_main_panel && !lv_obj_has_flag(child, LV_OBJ_FLAG_HIDDEN)) {
                 lv_obj_add_flag(child, LV_OBJ_FLAG_HIDDEN);
+                // Reset transform and opacity for potential reuse
+                lv_obj_set_style_translate_x(child, 0, LV_PART_MAIN);
+                lv_obj_set_style_opa(child, LV_OPA_COVER, LV_PART_MAIN);
                 spdlog::trace("[NavigationManager] Child {}: {} - HIDING stale overlay", i,
                               (void*)child);
             }
