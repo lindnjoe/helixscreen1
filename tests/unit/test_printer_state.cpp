@@ -831,19 +831,74 @@ TEST_CASE("PrinterState: Klippy state initialization defaults to READY", "[state
             static_cast<int>(KlippyState::READY));
 }
 
-// DISABLED: set_klippy_state uses lv_async_call which requires LVGL timer pump.
-// lv_timer_handler() causes infinite loop in tests due to background timers.
-// This functionality is tested via integration tests with MoonrakerClientMock.
-TEST_CASE("PrinterState: set_klippy_state changes subject value",
-          "[.][state][klippy][async_disabled]") {
-    // Test disabled - see comment above
-    REQUIRE(true);
+TEST_CASE("PrinterState: set_klippy_state_sync changes subject value", "[state][klippy]") {
+    lv_init();
+
+    PrinterState& state = get_printer_state();
+    state.reset_for_testing();
+    state.init_subjects(false);
+
+    // Default should be READY
+    REQUIRE(lv_subject_get_int(state.get_klippy_state_subject()) ==
+            static_cast<int>(KlippyState::READY));
+
+    // Call set_klippy_state_sync (direct call, no async)
+    state.set_klippy_state_sync(KlippyState::SHUTDOWN);
+
+    // Subject should now be SHUTDOWN
+    REQUIRE(lv_subject_get_int(state.get_klippy_state_subject()) ==
+            static_cast<int>(KlippyState::SHUTDOWN));
+
+    // Test other states
+    state.set_klippy_state_sync(KlippyState::STARTUP);
+    REQUIRE(lv_subject_get_int(state.get_klippy_state_subject()) ==
+            static_cast<int>(KlippyState::STARTUP));
+
+    state.set_klippy_state_sync(KlippyState::ERROR);
+    REQUIRE(lv_subject_get_int(state.get_klippy_state_subject()) ==
+            static_cast<int>(KlippyState::ERROR));
+
+    state.set_klippy_state_sync(KlippyState::READY);
+    REQUIRE(lv_subject_get_int(state.get_klippy_state_subject()) ==
+            static_cast<int>(KlippyState::READY));
 }
 
-// DISABLED: set_klippy_state uses lv_async_call - see above.
-TEST_CASE("PrinterState: Observer fires when klippy state changes",
-          "[.][state][klippy][observer][async_disabled]") {
-    REQUIRE(true);
+TEST_CASE("PrinterState: Observer fires when klippy state changes", "[state][klippy][observer]") {
+    lv_init();
+
+    PrinterState& state = get_printer_state();
+    state.reset_for_testing();
+    state.init_subjects(false);
+
+    // Register observer
+    auto observer_cb = [](lv_observer_t* observer, lv_subject_t* subject) {
+        int* count_ptr = static_cast<int*>(lv_observer_get_user_data(observer));
+        int* value_ptr = count_ptr + 1;
+
+        (*count_ptr)++;
+        *value_ptr = lv_subject_get_int(subject);
+    };
+
+    int user_data[2] = {0, -1}; // [callback_count, last_value]
+
+    lv_subject_add_observer(state.get_klippy_state_subject(), observer_cb, user_data);
+
+    // LVGL auto-notifies observers when first added (fires immediately with current value)
+    REQUIRE(user_data[0] == 1);
+    REQUIRE(user_data[1] == static_cast<int>(KlippyState::READY));
+
+    // Change state via sync call (direct, no async)
+    state.set_klippy_state_sync(KlippyState::SHUTDOWN);
+
+    // Observer should have fired with new value
+    REQUIRE(user_data[0] == 2);
+    REQUIRE(user_data[1] == static_cast<int>(KlippyState::SHUTDOWN));
+
+    // Change again
+    state.set_klippy_state_sync(KlippyState::READY);
+
+    REQUIRE(user_data[0] == 3);
+    REQUIRE(user_data[1] == static_cast<int>(KlippyState::READY));
 }
 
 TEST_CASE("PrinterState: Update klippy state from webhooks notification",

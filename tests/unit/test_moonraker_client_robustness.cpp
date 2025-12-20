@@ -200,7 +200,7 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
 
 TEST_CASE_METHOD(MoonrakerRobustnessFixture,
                  "MoonrakerClient handles concurrent connect/disconnect",
-                 "[connection][edge][concurrent][priority1]") {
+                 "[connection][edge][concurrent][slow][priority1]") {
     SECTION("Multiple threads calling connect() simultaneously") {
         constexpr int NUM_THREADS = 5;
         std::atomic<int> connect_attempts{0};

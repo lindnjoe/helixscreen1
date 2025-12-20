@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /*
  * Copyright (C) 2025 356C LLC
  * Author: Preston Brown <pbrown@brown-house.net>
@@ -21,8 +22,9 @@
 #pragma once
 
 #include "lvgl/lvgl.h"
-#include <string>
+
 #include <functional>
+#include <string>
 
 /**
  * @brief UI Test Utilities - Simulate user interactions and wait for UI updates

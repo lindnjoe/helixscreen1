@@ -1576,26 +1576,19 @@ TEST_CASE("MoonrakerClientMock homed_axes in notifications", "[api][notification
         // Home all axes
         mock.gcode_script("G28");
 
-        // Wait for multiple notifications to verify homed_axes persists
-        REQUIRE(fixture.wait_for_callbacks(3, 3000));
-        mock.stop_temperature_simulation();
-
-        // All notifications after G28 should show homed_axes="xyz"
-        bool found_homed = false;
-        for (const auto& notification : fixture.get_notifications()) {
-            if (notification.contains("params") && notification["params"].is_array() &&
-                !notification["params"].empty()) {
-                const json& status = notification["params"][0];
-                if (status.contains("toolhead") && status["toolhead"].contains("homed_axes")) {
-                    std::string homed = status["toolhead"]["homed_axes"].get<std::string>();
-                    if (homed == "xyz") {
-                        found_homed = true;
-                    }
+        // Wait for a notification showing homed_axes="xyz"
+        REQUIRE(fixture.wait_for_matching(
+            [](const json& n) {
+                if (!n.contains("params") || !n["params"].is_array() || n["params"].empty()) {
+                    return false;
                 }
-            }
-        }
-        REQUIRE(found_homed);
+                const json& status = n["params"][0];
+                return status.contains("toolhead") && status["toolhead"].contains("homed_axes") &&
+                       status["toolhead"]["homed_axes"] == "xyz";
+            },
+            3000));
 
+        mock.stop_temperature_simulation();
         mock.disconnect();
     }
 
@@ -1608,31 +1601,23 @@ TEST_CASE("MoonrakerClientMock homed_axes in notifications", "[api][notification
         mock.gcode_script("G28");
         mock.gcode_script("G0 X150 Y75 Z25");
 
-        // Wait for several notifications
-        REQUIRE(fixture.wait_for_callbacks(5, 3000));
-        mock.stop_temperature_simulation();
-
-        // Later notifications should still show the same position (not auto-changing)
-        bool found_correct_position = false;
-        // Check the last few notifications
-        auto notifications = fixture.get_notifications();
-        for (size_t i = notifications.size() > 3 ? notifications.size() - 3 : 0;
-             i < notifications.size(); i++) {
-            const auto& notification = notifications[i];
-            if (notification.contains("params") && notification["params"].is_array() &&
-                !notification["params"].empty()) {
-                const json& status = notification["params"][0];
-                if (status.contains("toolhead") && status["toolhead"].contains("position")) {
-                    const json& pos = status["toolhead"]["position"];
-                    if (pos.is_array() && pos.size() >= 3 && pos[0].get<double>() == 150.0 &&
-                        pos[1].get<double>() == 75.0 && pos[2].get<double>() == 25.0) {
-                        found_correct_position = true;
-                    }
+        // Wait for a notification showing the correct position
+        REQUIRE(fixture.wait_for_matching(
+            [](const json& n) {
+                if (!n.contains("params") || !n["params"].is_array() || n["params"].empty()) {
+                    return false;
                 }
-            }
-        }
-        REQUIRE(found_correct_position);
+                const json& status = n["params"][0];
+                if (!status.contains("toolhead") || !status["toolhead"].contains("position")) {
+                    return false;
+                }
+                const json& pos = status["toolhead"]["position"];
+                return pos.is_array() && pos.size() >= 3 && pos[0].get<double>() == 150.0 &&
+                       pos[1].get<double>() == 75.0 && pos[2].get<double>() == 25.0;
+            },
+            3000));
 
+        mock.stop_temperature_simulation();
         mock.disconnect();
     }
 }
