@@ -14,7 +14,7 @@
 #   gen-images-pi    - Generate all sizes (Pi variable displays)
 #   gen-images       - Generate all sizes (generic)
 #
-# Output: build/assets/images/prerendered/*.lvbin
+# Output: build/assets/images/prerendered/*.bin
 #
 # See: docs/PRE_RENDERED_IMAGES.md
 
@@ -23,14 +23,14 @@ REGEN_IMAGES_SCRIPT := scripts/regen_images.sh
 
 # Pre-rendered image files (build artifacts, not in repo)
 # AD5M only needs 'small' (800x480)
-PRERENDERED_IMAGES_AD5M := $(PRERENDERED_DIR)/splash-logo-small.lvbin
+PRERENDERED_IMAGES_AD5M := $(PRERENDERED_DIR)/splash-logo-small.bin
 
 # Pi needs all sizes (unknown display at build time)
 PRERENDERED_IMAGES_ALL := \
-    $(PRERENDERED_DIR)/splash-logo-tiny.lvbin \
-    $(PRERENDERED_DIR)/splash-logo-small.lvbin \
-    $(PRERENDERED_DIR)/splash-logo-medium.lvbin \
-    $(PRERENDERED_DIR)/splash-logo-large.lvbin
+    $(PRERENDERED_DIR)/splash-logo-tiny.bin \
+    $(PRERENDERED_DIR)/splash-logo-small.bin \
+    $(PRERENDERED_DIR)/splash-logo-medium.bin \
+    $(PRERENDERED_DIR)/splash-logo-large.bin
 
 # Generate images for AD5M (800x480 fixed display only)
 .PHONY: gen-images-ad5m
@@ -91,8 +91,8 @@ check-images:
 .PHONY: help-images
 help-images:
 	@echo "Pre-rendered image targets:"
-	@echo "  gen-images    - Generate pre-rendered .lvbin files to build/"
-	@echo "  clean-images  - Remove generated .lvbin files"
+	@echo "  gen-images    - Generate pre-rendered .bin files to build/"
+	@echo "  clean-images  - Remove generated .bin files"
 	@echo "  list-images   - Show what images would be generated"
 	@echo "  check-images  - Verify all pre-rendered images exist"
 	@echo ""

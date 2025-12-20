@@ -14,6 +14,7 @@
 # Options:
 #   --update    Update existing installation (preserves config)
 #   --uninstall Remove HelixScreen
+#   --clean     Remove old installation completely before installing (no config backup)
 #   --version   Specify version (default: latest)
 #
 
@@ -794,6 +795,84 @@ uninstall() {
     fi
 }
 
+# Clean up old installation completely (for --clean flag)
+# Removes all files, config, and caches without backup
+clean_old_installation() {
+    local platform=$1
+
+    log_warn "=========================================="
+    log_warn "  CLEAN INSTALL MODE"
+    log_warn "=========================================="
+    log_warn ""
+    log_warn "This will PERMANENTLY DELETE:"
+    log_warn "  - All HelixScreen files in ${INSTALL_DIR}"
+    log_warn "  - Your configuration (helixconfig.json)"
+    log_warn "  - Thumbnail cache files"
+    log_warn ""
+
+    # Interactive confirmation if stdin is a terminal
+    if [ -t 0 ]; then
+        printf "Are you sure? [y/N] "
+        read -r response
+        case "$response" in
+            [yY][eE][sS]|[yY])
+                ;;
+            *)
+                log_info "Clean install cancelled."
+                exit 0
+                ;;
+        esac
+    fi
+
+    log_info "Cleaning old installation..."
+
+    # Stop any running services
+    stop_service
+
+    # Remove installation directories (check all possible locations)
+    for install_dir in "/root/printer_software/helixscreen" "/opt/helixscreen"; do
+        if [ -d "$install_dir" ]; then
+            log_info "Removing $install_dir..."
+            $SUDO rm -rf "$install_dir"
+        fi
+    done
+
+    # Remove thumbnail caches
+    local cache_dirs=(
+        "/root/.cache/helix/helix_thumbs"
+        "/home/*/.cache/helix/helix_thumbs"
+        "/tmp/helix_thumbs"
+        "/var/tmp/helix_thumbs"
+    )
+    for cache_pattern in "${cache_dirs[@]}"; do
+        for cache_dir in $cache_pattern; do
+            if [ -d "$cache_dir" ] 2>/dev/null; then
+                log_info "Removing cache: $cache_dir"
+                $SUDO rm -rf "$cache_dir"
+            fi
+        done
+    done
+
+    # Remove init scripts (check both possible locations)
+    for init_script in /etc/init.d/S80helixscreen /etc/init.d/S90helixscreen; do
+        if [ -f "$init_script" ]; then
+            log_info "Removing init script: $init_script"
+            $SUDO rm -f "$init_script"
+        fi
+    done
+
+    # Remove systemd service if present
+    if [ -f "/etc/systemd/system/${SERVICE_NAME}.service" ]; then
+        log_info "Removing systemd service..."
+        $SUDO systemctl disable "$SERVICE_NAME" 2>/dev/null || true
+        $SUDO rm -f "/etc/systemd/system/${SERVICE_NAME}.service"
+        $SUDO systemctl daemon-reload 2>/dev/null || true
+    fi
+
+    log_success "Old installation cleaned"
+    echo ""
+}
+
 # Print usage
 usage() {
     echo "HelixScreen Installer"
@@ -803,12 +882,15 @@ usage() {
     echo "Options:"
     echo "  --update       Update existing installation (preserves config)"
     echo "  --uninstall    Remove HelixScreen"
+    echo "  --clean        Clean install: remove old installation completely,"
+    echo "                 including config and caches (asks for confirmation)"
     echo "  --version VER  Install specific version (default: latest)"
     echo "  --help         Show this help message"
     echo ""
     echo "Examples:"
     echo "  $0                    # Fresh install, latest version"
     echo "  $0 --update           # Update existing installation"
+    echo "  $0 --clean            # Remove old install completely, then install"
     echo "  $0 --version v1.1.0   # Install specific version"
 }
 
@@ -816,6 +898,7 @@ usage() {
 main() {
     local update_mode=false
     local uninstall_mode=false
+    local clean_mode=false
     local version=""
 
     # Initialize SUDO (will be set properly in check_permissions)
@@ -830,6 +913,10 @@ main() {
                 ;;
             --uninstall)
                 uninstall_mode=true
+                shift
+                ;;
+            --clean)
+                clean_mode=true
                 shift
                 ;;
             --version)
@@ -900,6 +987,11 @@ main() {
 
     # Stop competing UIs (GuppyScreen, KlipperScreen, FeatherScreen, etc.)
     stop_competing_uis
+
+    # Clean old installation if requested (removes everything including config)
+    if [ "$clean_mode" = true ]; then
+        clean_old_installation "$platform"
+    fi
 
     # Stop existing service if updating
     if [ "$update_mode" = true ]; then
