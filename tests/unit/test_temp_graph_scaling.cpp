@@ -2,6 +2,7 @@
 // Copyright 2025 HelixScreen
 
 #include "../../include/ui_temp_graph_scaling.h"
+
 #include "../catch_amalgamated.hpp"
 
 // ============================================================================
@@ -163,28 +164,28 @@ TEST_CASE("Edge cases for Y-axis scaling", "[scaling][edge]") {
     SECTION("Exactly at expand threshold") {
         // 90% of 150 = 135 exactly
         float result = calculate_mini_graph_y_max(150.0f, 135.0f, 25.0f);
-        REQUIRE(result == 150.0f);  // Should NOT expand (need > threshold)
+        REQUIRE(result == 150.0f); // Should NOT expand (need > threshold)
     }
 
     SECTION("Just above expand threshold") {
         float result = calculate_mini_graph_y_max(150.0f, 135.1f, 25.0f);
-        REQUIRE(result == 200.0f);  // Should expand
+        REQUIRE(result == 200.0f); // Should expand
     }
 
     SECTION("Exactly at shrink threshold") {
         // 60% of (200-50) = 90 exactly
         float result = calculate_mini_graph_y_max(200.0f, 90.0f, 25.0f);
-        REQUIRE(result == 200.0f);  // Should NOT shrink (need < threshold)
+        REQUIRE(result == 200.0f); // Should NOT shrink (need < threshold)
     }
 
     SECTION("Just below shrink threshold") {
         float result = calculate_mini_graph_y_max(200.0f, 89.9f, 25.0f);
-        REQUIRE(result == 150.0f);  // Should shrink
+        REQUIRE(result == 150.0f); // Should shrink
     }
 
     SECTION("Very high temperature") {
         float result = calculate_mini_graph_y_max(300.0f, 500.0f, 100.0f);
-        REQUIRE(result == 300.0f);  // Capped at 300
+        REQUIRE(result == 300.0f); // Capped at 300
     }
 }
 

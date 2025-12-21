@@ -28,11 +28,11 @@
  *       that prevents rapid oscillation when temps hover near a boundary.
  */
 inline float calculate_mini_graph_y_max(float current_max, float nozzle_temp, float bed_temp) {
-    constexpr float Y_MAX_MIN = 150.0f;   // Minimum Y-axis max (good for room temp visibility)
-    constexpr float Y_MAX_MAX = 300.0f;   // Maximum Y-axis max (covers highest nozzle temps)
-    constexpr float Y_STEP = 50.0f;       // Step size for scaling
-    constexpr float EXPAND_THRESHOLD = 0.9f;  // Expand at 90% of current max
-    constexpr float SHRINK_THRESHOLD = 0.6f;  // Shrink at 60% of previous step
+    constexpr float Y_MAX_MIN = 150.0f;      // Minimum Y-axis max (good for room temp visibility)
+    constexpr float Y_MAX_MAX = 300.0f;      // Maximum Y-axis max (covers highest nozzle temps)
+    constexpr float Y_STEP = 50.0f;          // Step size for scaling
+    constexpr float EXPAND_THRESHOLD = 0.9f; // Expand at 90% of current max
+    constexpr float SHRINK_THRESHOLD = 0.6f; // Shrink at 60% of previous step
 
     float max_temp = (nozzle_temp > bed_temp) ? nozzle_temp : bed_temp;
 

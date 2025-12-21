@@ -4,11 +4,11 @@
 #include "ui_panel_temp_control.h"
 
 #include "ui_component_keypad.h"
-#include "ui_temp_graph_scaling.h"
 #include "ui_error_reporting.h"
 #include "ui_nav.h"
 #include "ui_panel_common.h"
 #include "ui_subject_registry.h"
+#include "ui_temp_graph_scaling.h"
 #include "ui_temperature_utils.h"
 #include "ui_theme.h"
 #include "ui_utils.h"
@@ -154,7 +154,8 @@ void TempControlPanel::on_nozzle_temp_changed(int temp_centi) {
             ui_temp_graph_set_temp_range(mini_graph_, 0.0f, mini_graph_y_max_);
         }
 
-        ui_temp_graph_update_series_with_time(mini_graph_, mini_nozzle_series_id_, temp_deg, now_ms);
+        ui_temp_graph_update_series_with_time(mini_graph_, mini_nozzle_series_id_, temp_deg,
+                                              now_ms);
     }
 }
 
@@ -1076,8 +1077,7 @@ void TempControlPanel::setup_mini_combined_graph(lv_obj_t* container) {
     ui_temp_graph_set_y_axis(mini_graph_, 50.0f, true);
 
     // Add nozzle series (red/heating color) with stronger gradient fill
-    mini_nozzle_series_id_ =
-        ui_temp_graph_add_series(mini_graph_, "Nozzle", nozzle_config_.color);
+    mini_nozzle_series_id_ = ui_temp_graph_add_series(mini_graph_, "Nozzle", nozzle_config_.color);
     if (mini_nozzle_series_id_ >= 0) {
         // Subtle gradient to not obscure bed line
         ui_temp_graph_set_series_gradient(mini_graph_, mini_nozzle_series_id_, LV_OPA_0, LV_OPA_10);
@@ -1103,7 +1103,8 @@ void TempControlPanel::setup_mini_combined_graph(lv_obj_t* container) {
         ui_temp_graph_set_series_target(mini_graph_, mini_bed_series_id_, target_deg, true);
     }
 
-    spdlog::info("[TempPanel] Mini combined graph created with {} point capacity", MINI_GRAPH_POINTS);
+    spdlog::info("[TempPanel] Mini combined graph created with {} point capacity",
+                 MINI_GRAPH_POINTS);
 }
 
 void TempControlPanel::replay_history_to_mini_graph() {
@@ -1157,8 +1158,9 @@ void TempControlPanel::replay_history_to_mini_graph() {
     // Replay bed history
     if (mini_bed_series_id_ >= 0 && bed_history_count_ > 0) {
         int samples_available = std::min(bed_history_count_, TEMP_HISTORY_SIZE);
-        int start_idx =
-            (bed_history_count_ <= TEMP_HISTORY_SIZE) ? 0 : (bed_history_count_ % TEMP_HISTORY_SIZE);
+        int start_idx = (bed_history_count_ <= TEMP_HISTORY_SIZE)
+                            ? 0
+                            : (bed_history_count_ % TEMP_HISTORY_SIZE);
 
         int64_t last_graphed_time = 0;
         int replayed = 0;
