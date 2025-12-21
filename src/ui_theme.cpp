@@ -227,12 +227,12 @@ void ui_theme_register_responsive_spacing(lv_display_t* display) {
 
     // Select responsive nav_width based on breakpoint
     // Nav width macros: TINY=64, SMALL=76, MEDIUM=94, LARGE=102
-    // Mapping: breakpoint SMALL→64, MEDIUM→76, LARGE→102
+    // Mapping: breakpoint SMALL→64, MEDIUM→94, LARGE→102
     int32_t nav_width;
     if (greater_res <= UI_BREAKPOINT_SMALL_MAX) {
         nav_width = UI_NAV_WIDTH_TINY; // 64px for 480x320
     } else if (greater_res <= UI_BREAKPOINT_MEDIUM_MAX) {
-        nav_width = UI_NAV_WIDTH_SMALL; // 76px for 800x480
+        nav_width = UI_NAV_WIDTH_MEDIUM; // 94px for 800x480
     } else {
         nav_width = UI_NAV_WIDTH_LARGE; // 102px for 1024x600, 1280x720+
     }
