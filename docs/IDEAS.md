@@ -10,6 +10,7 @@
 * **LVGL slider knob clipping bug** - When width="100%" the knob extends beyond widget bounds at min/max. Workaround: extra padding + flag_overflow_visible. Root cause: slider doesn't account for knob radius. Check `lv_slider.c` position_knob() and ext_draw_size.
 * **LVGL lv_bar value=0 bug** (upstream issue) - Bar shows FULL instead of empty when created with cur_value=0 and XML sets value=0. `lv_bar_set_value()` returns early without invalidation. Workaround: set to 1 then 0.
 * Improve filament sensor widget on home screen
+* **Button label centering without flex** - Currently buttons use `flex_flow="row"` just to center child labels. Consider a simpler pattern using `style_text_align="center"` or a dedicated centered button component.
 
 ---
 

@@ -22,18 +22,16 @@
 #include "moonraker_api.h"
 #include "printer_state.h"
 
+#include <spdlog/fmt/fmt.h>
 #include <spdlog/spdlog.h>
 
 #include <cstring>
 #include <memory>
 
-// Material temperature presets (indexed by material ID)
-static const int MATERIAL_TEMPS[] = {
-    AppConstants::MaterialPresets::PLA,           // 0 = PLA (210°C)
-    AppConstants::MaterialPresets::PETG,          // 1 = PETG (240°C)
-    AppConstants::MaterialPresets::ABS,           // 2 = ABS (250°C)
-    AppConstants::MaterialPresets::CUSTOM_DEFAULT // 3 = Custom default (200°C)
-};
+// Material temperature presets (indexed by material ID: 0=PLA, 1=PETG, 2=ABS, 3=TPU)
+static const int MATERIAL_NOZZLE_TEMPS[] = {210, 240, 250, 230};
+static const int MATERIAL_BED_TEMPS[] = {60, 80, 100, 50};
+static const char* MATERIAL_NAMES[] = {"PLA", "PETG", "ABS", "TPU"};
 
 // ============================================================================
 // CONSTRUCTOR
@@ -47,6 +45,12 @@ FilamentPanel::FilamentPanel(PrinterState& printer_state, MoonrakerAPI* api)
     std::snprintf(status_buf_, sizeof(status_buf_), "%s", "Select material to begin");
     std::snprintf(warning_temps_buf_, sizeof(warning_temps_buf_), "Current: %d°C | Target: %d°C",
                   nozzle_current_, nozzle_target_);
+    std::snprintf(material_nozzle_buf_, sizeof(material_nozzle_buf_), "--");
+    std::snprintf(material_bed_buf_, sizeof(material_bed_buf_), "--");
+    std::snprintf(nozzle_current_buf_, sizeof(nozzle_current_buf_), "%d°C", nozzle_current_);
+    std::snprintf(nozzle_target_buf_, sizeof(nozzle_target_buf_), "--");
+    std::snprintf(bed_current_buf_, sizeof(bed_current_buf_), "%d°C", bed_current_);
+    std::snprintf(bed_target_buf_, sizeof(bed_target_buf_), "--");
 
     // Register XML event callbacks
     lv_xml_register_event_cb(nullptr, "filament_manage_slots_cb", on_manage_slots_clicked);
@@ -92,6 +96,26 @@ void FilamentPanel::init_subjects() {
     UI_SUBJECT_INIT_AND_REGISTER_STRING(warning_temps_subject_, warning_temps_buf_,
                                         warning_temps_buf_, "filament_warning_temps");
 
+    // Material temperature display subjects (for right side preset displays)
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(material_nozzle_temp_subject_, material_nozzle_buf_,
+                                        material_nozzle_buf_, "filament_material_nozzle_temp");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(material_bed_temp_subject_, material_bed_buf_,
+                                        material_bed_buf_, "filament_material_bed_temp");
+
+    // Left card temperature subjects (current and target for nozzle/bed)
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(nozzle_current_subject_, nozzle_current_buf_,
+                                        nozzle_current_buf_, "filament_nozzle_current");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(nozzle_target_subject_, nozzle_target_buf_,
+                                        nozzle_target_buf_, "filament_nozzle_target");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(bed_current_subject_, bed_current_buf_, bed_current_buf_,
+                                        "filament_bed_current");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(bed_target_subject_, bed_target_buf_, bed_target_buf_,
+                                        "filament_bed_target");
+
+    // Operation in progress subject (for disabling buttons during filament ops)
+    UI_SUBJECT_INIT_AND_REGISTER_INT(operation_in_progress_subject_, 0,
+                                     "filament_operation_in_progress");
+
     subjects_initialized_ = true;
     spdlog::debug("[{}] Subjects initialized: temp={}/{}°C, material={}", get_name(),
                   nozzle_current_, nozzle_target_, selected_material_);
@@ -108,23 +132,51 @@ void FilamentPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
 
     spdlog::debug("[{}] Setting up event handlers...", get_name());
 
-    // Find and setup preset buttons
-    const char* preset_names[] = {"preset_pla", "preset_petg", "preset_abs", "preset_custom"};
+    // Find and setup preset buttons (PLA, PETG, ABS, TPU)
+    const char* preset_names[] = {"preset_pla", "preset_petg", "preset_abs", "preset_tpu"};
     for (int i = 0; i < 4; i++) {
         preset_buttons_[i] = lv_obj_find_by_name(panel_, preset_names[i]);
         if (preset_buttons_[i]) {
-            if (i < 3) {
-                // Standard presets (PLA, PETG, ABS) - use common trampoline
-                lv_obj_add_event_cb(preset_buttons_[i], on_preset_button_clicked, LV_EVENT_CLICKED,
-                                    this);
-            } else {
-                // Custom preset (opens keypad) - different handler
-                lv_obj_add_event_cb(preset_buttons_[i], on_custom_button_clicked, LV_EVENT_CLICKED,
-                                    this);
-            }
+            lv_obj_add_event_cb(preset_buttons_[i], on_preset_button_clicked, LV_EVENT_CLICKED,
+                                this);
         }
     }
     spdlog::debug("[{}] Preset buttons configured (4)", get_name());
+
+    // Find and setup tappable temperature displays for custom input (right side)
+    lv_obj_t* nozzle_temp_tap = lv_obj_find_by_name(panel_, "nozzle_temp_tap");
+    if (nozzle_temp_tap) {
+        lv_obj_add_event_cb(nozzle_temp_tap, on_nozzle_temp_clicked, LV_EVENT_CLICKED, this);
+    }
+    lv_obj_t* bed_temp_tap = lv_obj_find_by_name(panel_, "bed_temp_tap");
+    if (bed_temp_tap) {
+        lv_obj_add_event_cb(bed_temp_tap, on_bed_temp_clicked, LV_EVENT_CLICKED, this);
+    }
+
+    // Find and setup tappable targets in left card
+    lv_obj_t* nozzle_target_tap = lv_obj_find_by_name(panel_, "nozzle_target_tap");
+    if (nozzle_target_tap) {
+        lv_obj_add_event_cb(nozzle_target_tap, on_nozzle_target_tap_clicked, LV_EVENT_CLICKED,
+                            this);
+    }
+    lv_obj_t* bed_target_tap = lv_obj_find_by_name(panel_, "bed_target_tap");
+    if (bed_target_tap) {
+        lv_obj_add_event_cb(bed_target_tap, on_bed_target_tap_clicked, LV_EVENT_CLICKED, this);
+    }
+
+    // Find and setup purge amount selector buttons
+    purge_5mm_btn_ = lv_obj_find_by_name(panel_, "purge_5mm");
+    purge_10mm_btn_ = lv_obj_find_by_name(panel_, "purge_10mm");
+    purge_25mm_btn_ = lv_obj_find_by_name(panel_, "purge_25mm");
+    if (purge_5mm_btn_) {
+        lv_obj_add_event_cb(purge_5mm_btn_, on_purge_amount_clicked, LV_EVENT_CLICKED, this);
+    }
+    if (purge_10mm_btn_) {
+        lv_obj_add_event_cb(purge_10mm_btn_, on_purge_amount_clicked, LV_EVENT_CLICKED, this);
+    }
+    if (purge_25mm_btn_) {
+        lv_obj_add_event_cb(purge_25mm_btn_, on_purge_amount_clicked, LV_EVENT_CLICKED, this);
+    }
 
     // Find action buttons (events handled by XML event_cb, but refs needed for state management)
     btn_load_ = lv_obj_find_by_name(panel_, "btn_load");
@@ -141,9 +193,13 @@ void FilamentPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     // Initialize visual state
     update_preset_buttons_visual();
     update_temp_display();
+    update_left_card_temps();
+    update_material_temp_display();
     update_status();
+    update_status_icon_for_state();
     update_warning_text();
     update_safety_state();
+    update_purge_button_highlight();
 
     // Setup combined temperature graph if TempControlPanel is available
     if (temp_control_panel_) {
@@ -267,17 +323,19 @@ void FilamentPanel::update_preset_buttons_visual() {
 
 void FilamentPanel::handle_preset_button(int material_id) {
     selected_material_ = material_id;
-    nozzle_target_ = MATERIAL_TEMPS[material_id];
+    nozzle_target_ = MATERIAL_NOZZLE_TEMPS[material_id];
+    bed_target_ = MATERIAL_BED_TEMPS[material_id];
 
     lv_subject_set_int(&material_selected_subject_, selected_material_);
     update_preset_buttons_visual();
     update_temp_display();
+    update_material_temp_display();
     update_status();
 
-    spdlog::info("[{}] Material selected: {} (target={}°C)", get_name(), material_id,
-                 nozzle_target_);
+    spdlog::info("[{}] Material selected: {} (nozzle={}°C, bed={}°C)", get_name(),
+                 MATERIAL_NAMES[material_id], nozzle_target_, bed_target_);
 
-    // Send temperature command to printer
+    // Send temperature commands to printer (both nozzle and bed)
     if (api_) {
         api_->set_temperature(
             "extruder", static_cast<double>(nozzle_target_),
@@ -285,36 +343,60 @@ void FilamentPanel::handle_preset_button(int material_id) {
             [](const MoonrakerError& error) {
                 NOTIFY_ERROR("Failed to set nozzle temp: {}", error.user_message());
             });
+        api_->set_temperature(
+            "heater_bed", static_cast<double>(bed_target_),
+            [target = bed_target_]() { NOTIFY_SUCCESS("Bed target set to {}°C", target); },
+            [](const MoonrakerError& error) {
+                NOTIFY_ERROR("Failed to set bed temp: {}", error.user_message());
+            });
     }
 }
 
-void FilamentPanel::handle_custom_button() {
-    spdlog::debug("[{}] Opening custom temperature keypad", get_name());
+void FilamentPanel::handle_nozzle_temp_tap() {
+    spdlog::debug("[{}] Opening custom nozzle temperature keypad", get_name());
 
-    ui_keypad_config_t config = {
-        .initial_value = static_cast<float>(nozzle_target_ > 0 ? nozzle_target_ : 200),
-        .min_value = 0.0f,
-        .max_value = static_cast<float>(nozzle_max_temp_),
-        .title_label = "Custom Temperature",
-        .unit_label = "°C",
-        .allow_decimal = false,
-        .allow_negative = false,
-        .callback = custom_temp_keypad_cb,
-        .user_data = this // Pass 'this' for callback
-    };
+    ui_keypad_config_t config = {.initial_value =
+                                     static_cast<float>(nozzle_target_ > 0 ? nozzle_target_ : 200),
+                                 .min_value = 0.0f,
+                                 .max_value = static_cast<float>(nozzle_max_temp_),
+                                 .title_label = "Nozzle Temperature",
+                                 .unit_label = "°C",
+                                 .allow_decimal = false,
+                                 .allow_negative = false,
+                                 .callback = custom_nozzle_keypad_cb,
+                                 .user_data = this};
 
     ui_keypad_show(&config);
 }
 
-void FilamentPanel::handle_custom_temp_confirmed(float value) {
-    spdlog::info("[{}] Custom temperature confirmed: {}°C", get_name(), static_cast<int>(value));
+void FilamentPanel::handle_bed_temp_tap() {
+    spdlog::debug("[{}] Opening custom bed temperature keypad", get_name());
 
-    selected_material_ = 3; // Custom
+    ui_keypad_config_t config = {.initial_value =
+                                     static_cast<float>(bed_target_ > 0 ? bed_target_ : 60),
+                                 .min_value = 0.0f,
+                                 .max_value = static_cast<float>(bed_max_temp_),
+                                 .title_label = "Bed Temperature",
+                                 .unit_label = "°C",
+                                 .allow_decimal = false,
+                                 .allow_negative = false,
+                                 .callback = custom_bed_keypad_cb,
+                                 .user_data = this};
+
+    ui_keypad_show(&config);
+}
+
+void FilamentPanel::handle_custom_nozzle_confirmed(float value) {
+    spdlog::info("[{}] Custom nozzle temperature confirmed: {}°C", get_name(),
+                 static_cast<int>(value));
+
     nozzle_target_ = static_cast<int>(value);
-
+    // Deselect any preset since user set custom temp
+    selected_material_ = -1;
     lv_subject_set_int(&material_selected_subject_, selected_material_);
     update_preset_buttons_visual();
     update_temp_display();
+    update_material_temp_display();
     update_status();
 
     // Send temperature command to printer
@@ -326,6 +408,113 @@ void FilamentPanel::handle_custom_temp_confirmed(float value) {
                 NOTIFY_ERROR("Failed to set nozzle temp: {}", error.user_message());
             });
     }
+}
+
+void FilamentPanel::handle_custom_bed_confirmed(float value) {
+    spdlog::info("[{}] Custom bed temperature confirmed: {}°C", get_name(),
+                 static_cast<int>(value));
+
+    bed_target_ = static_cast<int>(value);
+    // Deselect any preset since user set custom temp
+    selected_material_ = -1;
+    lv_subject_set_int(&material_selected_subject_, selected_material_);
+    update_preset_buttons_visual();
+    update_material_temp_display();
+
+    // Send temperature command to printer
+    if (api_) {
+        api_->set_temperature(
+            "heater_bed", static_cast<double>(bed_target_),
+            [target = bed_target_]() { NOTIFY_SUCCESS("Bed target set to {}°C", target); },
+            [](const MoonrakerError& error) {
+                NOTIFY_ERROR("Failed to set bed temp: {}", error.user_message());
+            });
+    }
+}
+
+void FilamentPanel::update_material_temp_display() {
+    // Show "--" for unset targets, otherwise show temperature
+    if (nozzle_target_ == 0) {
+        std::snprintf(material_nozzle_buf_, sizeof(material_nozzle_buf_), "--");
+    } else {
+        std::snprintf(material_nozzle_buf_, sizeof(material_nozzle_buf_), "%d°C", nozzle_target_);
+    }
+    if (bed_target_ == 0) {
+        std::snprintf(material_bed_buf_, sizeof(material_bed_buf_), "--");
+    } else {
+        std::snprintf(material_bed_buf_, sizeof(material_bed_buf_), "%d°C", bed_target_);
+    }
+    lv_subject_copy_string(&material_nozzle_temp_subject_, material_nozzle_buf_);
+    lv_subject_copy_string(&material_bed_temp_subject_, material_bed_buf_);
+}
+
+void FilamentPanel::update_left_card_temps() {
+    // Update current temps
+    std::snprintf(nozzle_current_buf_, sizeof(nozzle_current_buf_), "%d°C", nozzle_current_);
+    std::snprintf(bed_current_buf_, sizeof(bed_current_buf_), "%d°C", bed_current_);
+    lv_subject_copy_string(&nozzle_current_subject_, nozzle_current_buf_);
+    lv_subject_copy_string(&bed_current_subject_, bed_current_buf_);
+
+    // Update target temps (show "--" for unset)
+    if (nozzle_target_ == 0) {
+        std::snprintf(nozzle_target_buf_, sizeof(nozzle_target_buf_), "--");
+    } else {
+        std::snprintf(nozzle_target_buf_, sizeof(nozzle_target_buf_), "%d°C", nozzle_target_);
+    }
+    if (bed_target_ == 0) {
+        std::snprintf(bed_target_buf_, sizeof(bed_target_buf_), "--");
+    } else {
+        std::snprintf(bed_target_buf_, sizeof(bed_target_buf_), "%d°C", bed_target_);
+    }
+    lv_subject_copy_string(&nozzle_target_subject_, nozzle_target_buf_);
+    lv_subject_copy_string(&bed_target_subject_, bed_target_buf_);
+}
+
+void FilamentPanel::update_status_icon_for_state() {
+    // Determine icon and color based on current state
+    if (nozzle_target_ == 0 && bed_target_ == 0) {
+        // Idle - no target set
+        update_status_icon("info", "secondary");
+    } else if (nozzle_current_ < nozzle_target_ - 5 || bed_current_ < bed_target_ - 5) {
+        // Heating
+        update_status_icon("fire", "warning");
+    } else if (nozzle_current_ > nozzle_target_ + 5 && nozzle_target_ > 0) {
+        // Cooling down
+        update_status_icon("cooldown", "info");
+    } else {
+        // At temperature
+        update_status_icon("check", "success");
+    }
+}
+
+void FilamentPanel::update_purge_button_highlight() {
+    // Highlight selected purge amount button with primary color
+    lv_color_t selected_color = ui_theme_get_color("primary_color");
+    lv_color_t default_color = ui_theme_get_color("card_bg");
+
+    if (purge_5mm_btn_) {
+        lv_obj_set_style_bg_color(
+            purge_5mm_btn_, purge_amount_ == 5 ? selected_color : default_color, LV_PART_MAIN);
+    }
+    if (purge_10mm_btn_) {
+        lv_obj_set_style_bg_color(
+            purge_10mm_btn_, purge_amount_ == 10 ? selected_color : default_color, LV_PART_MAIN);
+    }
+    if (purge_25mm_btn_) {
+        lv_obj_set_style_bg_color(
+            purge_25mm_btn_, purge_amount_ == 25 ? selected_color : default_color, LV_PART_MAIN);
+    }
+}
+
+void FilamentPanel::set_operation_in_progress(bool in_progress) {
+    operation_in_progress_ = in_progress;
+    lv_subject_set_int(&operation_in_progress_subject_, in_progress ? 1 : 0);
+}
+
+void FilamentPanel::handle_purge_amount_select(int amount) {
+    purge_amount_ = amount;
+    update_purge_button_highlight();
+    spdlog::info("[{}] Purge amount set to {}mm", get_name(), amount);
 }
 
 void FilamentPanel::handle_load_button() {
@@ -380,15 +569,43 @@ void FilamentPanel::handle_purge_button() {
         return;
     }
 
-    spdlog::info("[{}] Purging 10mm", get_name());
+    if (operation_in_progress_) {
+        NOTIFY_WARNING("Operation already in progress");
+        return;
+    }
+
+    set_operation_in_progress(true);
+    spdlog::info("[{}] Purging {}mm", get_name(), purge_amount_);
 
     if (api_) {
-        // M83 = relative extrusion mode, G1 E10 F300 = extrude 10mm at 300mm/min
+        // TODO: Check for PURGE macro and use if available
+        // For now, use direct gcode: M83 = relative extrusion, G1 E{amount} F300
+        std::string gcode = fmt::format("M83\nG1 E{} F300", purge_amount_);
+
+        NOTIFY_INFO("Purging {}mm...", purge_amount_);
+
         api_->execute_gcode(
-            "M83\nG1 E10 F300", []() { NOTIFY_SUCCESS("Purging 10mm"); },
-            [](const MoonrakerError& error) {
+            gcode,
+            [this, amount = purge_amount_]() {
+                lv_async_call(
+                    [](void* ud) {
+                        auto* self = static_cast<FilamentPanel*>(ud);
+                        self->set_operation_in_progress(false);
+                    },
+                    this);
+                NOTIFY_SUCCESS("Purge complete ({}mm)", amount);
+            },
+            [this](const MoonrakerError& error) {
+                lv_async_call(
+                    [](void* ud) {
+                        auto* self = static_cast<FilamentPanel*>(ud);
+                        self->set_operation_in_progress(false);
+                    },
+                    this);
                 NOTIFY_ERROR("Purge failed: {}", error.user_message());
             });
+    } else {
+        set_operation_in_progress(false);
     }
 }
 
@@ -441,6 +658,8 @@ void FilamentPanel::on_preset_button_clicked(lv_event_t* e) {
                 material_id = 1;
             else if (strcmp(name, "preset_abs") == 0)
                 material_id = 2;
+            else if (strcmp(name, "preset_tpu") == 0)
+                material_id = 3;
         }
 
         if (material_id >= 0) {
@@ -450,20 +669,75 @@ void FilamentPanel::on_preset_button_clicked(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_END();
 }
 
-void FilamentPanel::on_custom_button_clicked(lv_event_t* e) {
-    LVGL_SAFE_EVENT_CB_BEGIN("[FilamentPanel] on_custom_button_clicked");
+void FilamentPanel::on_nozzle_temp_clicked(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[FilamentPanel] on_nozzle_temp_clicked");
     auto* self = static_cast<FilamentPanel*>(lv_event_get_user_data(e));
     if (self) {
-        self->handle_custom_button();
+        self->handle_nozzle_temp_tap();
     }
     LVGL_SAFE_EVENT_CB_END();
 }
 
-void FilamentPanel::custom_temp_keypad_cb(float value, void* user_data) {
+void FilamentPanel::on_bed_temp_clicked(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[FilamentPanel] on_bed_temp_clicked");
+    auto* self = static_cast<FilamentPanel*>(lv_event_get_user_data(e));
+    if (self) {
+        self->handle_bed_temp_tap();
+    }
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+void FilamentPanel::custom_nozzle_keypad_cb(float value, void* user_data) {
     auto* self = static_cast<FilamentPanel*>(user_data);
     if (self) {
-        self->handle_custom_temp_confirmed(value);
+        self->handle_custom_nozzle_confirmed(value);
     }
+}
+
+void FilamentPanel::custom_bed_keypad_cb(float value, void* user_data) {
+    auto* self = static_cast<FilamentPanel*>(user_data);
+    if (self) {
+        self->handle_custom_bed_confirmed(value);
+    }
+}
+
+void FilamentPanel::on_nozzle_target_tap_clicked(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[FilamentPanel] on_nozzle_target_tap_clicked");
+    auto* self = static_cast<FilamentPanel*>(lv_event_get_user_data(e));
+    if (self) {
+        self->handle_nozzle_temp_tap();
+    }
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+void FilamentPanel::on_bed_target_tap_clicked(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[FilamentPanel] on_bed_target_tap_clicked");
+    auto* self = static_cast<FilamentPanel*>(lv_event_get_user_data(e));
+    if (self) {
+        self->handle_bed_temp_tap();
+    }
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+void FilamentPanel::on_purge_amount_clicked(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[FilamentPanel] on_purge_amount_clicked");
+    auto* self = static_cast<FilamentPanel*>(lv_event_get_user_data(e));
+    if (self) {
+        lv_obj_t* btn = static_cast<lv_obj_t*>(lv_event_get_target(e));
+        const char* name = lv_obj_get_name(btn);
+
+        int amount = 10; // Default
+        if (name) {
+            if (strcmp(name, "purge_5mm") == 0)
+                amount = 5;
+            else if (strcmp(name, "purge_10mm") == 0)
+                amount = 10;
+            else if (strcmp(name, "purge_25mm") == 0)
+                amount = 25;
+        }
+        self->handle_purge_amount_select(amount);
+    }
+    LVGL_SAFE_EVENT_CB_END();
 }
 
 // ============================================================================
@@ -498,14 +772,17 @@ void FilamentPanel::set_material(int material_id) {
     }
 
     selected_material_ = material_id;
-    nozzle_target_ = MATERIAL_TEMPS[material_id];
+    nozzle_target_ = MATERIAL_NOZZLE_TEMPS[material_id];
+    bed_target_ = MATERIAL_BED_TEMPS[material_id];
 
     lv_subject_set_int(&material_selected_subject_, selected_material_);
     update_preset_buttons_visual();
     update_temp_display();
+    update_material_temp_display();
     update_status();
 
-    spdlog::info("[{}] Material set: {} (target={}°C)", get_name(), material_id, nozzle_target_);
+    spdlog::info("[{}] Material set: {} (nozzle={}°C, bed={}°C)", get_name(),
+                 MATERIAL_NAMES[material_id], nozzle_target_, bed_target_);
 }
 
 bool FilamentPanel::is_extrusion_allowed() const {

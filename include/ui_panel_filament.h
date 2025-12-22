@@ -160,11 +160,32 @@ class FilamentPanel : public PanelBase {
     lv_subject_t extrusion_allowed_subject_;
     lv_subject_t safety_warning_visible_subject_;
     lv_subject_t warning_temps_subject_;
+    lv_subject_t material_nozzle_temp_subject_;
+    lv_subject_t material_bed_temp_subject_;
+
+    // Left card temperature subjects (current and target for nozzle/bed)
+    lv_subject_t nozzle_current_subject_;
+    lv_subject_t nozzle_target_subject_;
+    lv_subject_t bed_current_subject_;
+    lv_subject_t bed_target_subject_;
+
+    // Operation state
+    lv_subject_t operation_in_progress_subject_;
+    bool operation_in_progress_ = false;
+
+    // Purge amount state
+    int purge_amount_ = 10; // Default 10mm
 
     // Subject storage buffers
     char temp_display_buf_[32];
     char status_buf_[64];
     char warning_temps_buf_[64];
+    char material_nozzle_buf_[16];
+    char material_bed_buf_[16];
+    char nozzle_current_buf_[16];
+    char nozzle_target_buf_[16];
+    char bed_current_buf_[16];
+    char bed_target_buf_[16];
 
     //
     // === Instance State ===
@@ -172,9 +193,13 @@ class FilamentPanel : public PanelBase {
 
     int nozzle_current_ = 25;
     int nozzle_target_ = 0;
-    int selected_material_ = -1; // -1=none, 0=PLA, 1=PETG, 2=ABS, 3=Custom
+    int bed_current_ = 25;
+    int bed_target_ = 0;
+    int selected_material_ = -1; // -1=none, 0=PLA, 1=PETG, 2=ABS, 3=TPU
     int nozzle_min_temp_ = 0;
     int nozzle_max_temp_ = 500;
+    int bed_min_temp_ = 0;
+    int bed_max_temp_ = 150;
 
     // Child widgets (for imperative state management)
     lv_obj_t* btn_load_ = nullptr;
@@ -183,6 +208,11 @@ class FilamentPanel : public PanelBase {
     lv_obj_t* safety_warning_ = nullptr;
     lv_obj_t* status_icon_ = nullptr;
     lv_obj_t* preset_buttons_[4] = {nullptr};
+
+    // Purge amount selector buttons
+    lv_obj_t* purge_5mm_btn_ = nullptr;
+    lv_obj_t* purge_10mm_btn_ = nullptr;
+    lv_obj_t* purge_25mm_btn_ = nullptr;
 
     // Warning dialogs for filament sensor integration
     lv_obj_t* load_warning_dialog_ = nullptr;
@@ -207,11 +237,19 @@ class FilamentPanel : public PanelBase {
     //
 
     void handle_preset_button(int material_id);
-    void handle_custom_button();
-    void handle_custom_temp_confirmed(float value);
+    void handle_nozzle_temp_tap();
+    void handle_bed_temp_tap();
+    void handle_custom_nozzle_confirmed(float value);
+    void handle_custom_bed_confirmed(float value);
     void handle_load_button();
     void handle_unload_button();
     void handle_purge_button();
+    void handle_purge_amount_select(int amount);
+    void update_material_temp_display();
+    void update_left_card_temps();
+    void update_status_icon_for_state();
+    void update_purge_button_highlight();
+    void set_operation_in_progress(bool in_progress);
 
     // Filament sensor warning helpers
     void show_load_warning();
@@ -231,10 +269,15 @@ class FilamentPanel : public PanelBase {
 
     // Imperative callbacks (use user_data for instance access)
     static void on_preset_button_clicked(lv_event_t* e);
-    static void on_custom_button_clicked(lv_event_t* e);
+    static void on_nozzle_temp_clicked(lv_event_t* e);
+    static void on_bed_temp_clicked(lv_event_t* e);
+    static void on_nozzle_target_tap_clicked(lv_event_t* e);
+    static void on_bed_target_tap_clicked(lv_event_t* e);
+    static void on_purge_amount_clicked(lv_event_t* e);
 
-    // Keypad callback bridge (different signature - not an LVGL event)
-    static void custom_temp_keypad_cb(float value, void* user_data);
+    // Keypad callback bridges (different signature - not LVGL events)
+    static void custom_nozzle_keypad_cb(float value, void* user_data);
+    static void custom_bed_keypad_cb(float value, void* user_data);
 
     // Filament sensor warning dialog callbacks
     static void on_load_warning_proceed(lv_event_t* e);

@@ -132,8 +132,9 @@ static const IconMapping ICON_MAP[] = {
     {"network",            "\xF3\xB0\x88\x80"},  // F0200 ethernet (network)
     {"notifications",      "\xF3\xB0\x82\x9A"},  // F009A bell
 
-    // Pause/Play/Plus
+    // Pause/Pencil/Play/Plus
     {"pause",              "\xF3\xB0\x8F\xA4"},  // F03E4 pause
+    {"pencil",             "\xF3\xB0\x8F\xAB"},  // F03EB pencil (edit)
     {"play",               "\xF3\xB0\x90\x8A"},  // F040A play
     {"play_circle",        "\xF3\xB0\x90\x8C"},  // F040C play-circle
     {"plus",               "\xF3\xB0\x90\x95"},  // F0415 plus
