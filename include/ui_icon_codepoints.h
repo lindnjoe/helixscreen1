@@ -145,6 +145,7 @@ static const IconMapping ICON_MAP[] = {
     {"print",              "\xF3\xB0\x90\xAA"},  // F042A printer
     {"printer_3d",         "\xF3\xB0\x90\xAB"},  // F042B printer-3d
     {"prohibited",         "\xF3\xB0\x82\xAD"},  // F00AD block-helper
+    {"puzzle_outline",     "\xF3\xB0\xA9\xA6"},  // F0A66 puzzle-outline (plugin)
     {"rabbit",             "\xF3\xB0\xA4\x87"},  // F0907 rabbit (Happy Hare logo)
 
     // Radiator/Heating

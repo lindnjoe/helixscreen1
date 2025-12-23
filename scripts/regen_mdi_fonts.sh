@@ -237,6 +237,7 @@ MDI_ICONS+=",0xF092A"    # wifi-strength-4-lock
 MDI_ICONS+=",0xF095B"    # sine-wave (input shaper)
 MDI_ICONS+=",0xF022F"    # film (filament - film reel icon)
 MDI_ICONS+=",0xF0A46"    # engine-off (motor-off)
+MDI_ICONS+=",0xF0A66"    # puzzle-outline (plugin)
 MDI_ICONS+=",0xF0D17"    # tortoise (AFC/Box Turtle logo)
 MDI_ICONS+=",0xF0D49"    # axis-arrow (all 3 axes)
 MDI_ICONS+=",0xF0D4C"    # axis-x-arrow
