@@ -8,7 +8,9 @@
 
 #include <spdlog/spdlog.h>
 
+#ifdef HELIX_DISPLAY_SDL
 #include <SDL.h>
+#endif
 #include <thread>
 
 // ============================================================================
@@ -289,6 +291,7 @@ void PluginInstallModal::on_copy_clicked() {
 
     spdlog::info("[Plugin Install] Copying command to clipboard");
 
+#ifdef HELIX_DISPLAY_SDL
     // Use SDL's cross-platform clipboard API (safe, no shell injection)
     int result = SDL_SetClipboardText(cmd);
 
@@ -302,6 +305,14 @@ void PluginInstallModal::on_copy_clicked() {
         }
         lv_obj_remove_flag(copy_feedback_, LV_OBJ_FLAG_HIDDEN);
     }
+#else
+    // No clipboard support on framebuffer displays
+    if (copy_feedback_) {
+        lv_label_set_text(copy_feedback_, "Clipboard unavailable - use SSH");
+        lv_obj_remove_flag(copy_feedback_, LV_OBJ_FLAG_HIDDEN);
+    }
+    spdlog::info("[Plugin Install] Clipboard not available on this platform");
+#endif
 }
 
 // ============================================================================
