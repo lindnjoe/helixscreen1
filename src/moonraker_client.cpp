@@ -689,8 +689,9 @@ void MoonrakerClient::dispatch_status_update(const json& status) {
         }
     }
 
-    spdlog::debug("[Moonraker Client] Dispatched status update to {} callbacks",
-                  callbacks_copy.size());
+    spdlog::info(
+        "[Moonraker Client] Dispatched status update to {} callbacks (has print_stats: {})",
+        callbacks_copy.size(), status.contains("print_stats"));
 }
 
 void MoonrakerClient::register_method_callback(const std::string& method,
@@ -1189,9 +1190,19 @@ void MoonrakerClient::complete_discovery_subscription(std::function<void()> on_c
                 // Process initial state from subscription response
                 // Moonraker returns current values in result.status
                 if (sub_response["result"].contains("status")) {
+                    const auto& status = sub_response["result"]["status"];
                     spdlog::info(
                         "[Moonraker Client] Processing initial printer state from subscription");
-                    dispatch_status_update(sub_response["result"]["status"]);
+
+                    // DEBUG: Log print_stats specifically to diagnose startup sync issues
+                    if (status.contains("print_stats")) {
+                        spdlog::info("[Moonraker Client] INITIAL print_stats: {}",
+                                     status["print_stats"].dump());
+                    } else {
+                        spdlog::warn("[Moonraker Client] INITIAL status has NO print_stats!");
+                    }
+
+                    dispatch_status_update(status);
                 }
             } else if (sub_response.contains("error")) {
                 spdlog::error("[Moonraker Client] Subscription failed: {}",
