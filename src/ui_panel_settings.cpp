@@ -47,15 +47,18 @@ SettingsPanel::~SettingsPanel() {
     // Remove observers BEFORE labels are destroyed to prevent use-after-free
     // The subjects (in PrinterState) outlive this panel, so observers must be
     // explicitly removed or LVGL will try to update destroyed labels
-    if (klipper_version_observer_) {
-        lv_observer_remove(klipper_version_observer_);
-        klipper_version_observer_ = nullptr;
+    // Check lv_is_initialized() to handle static destruction order safely
+    if (lv_is_initialized()) {
+        if (klipper_version_observer_) {
+            lv_observer_remove(klipper_version_observer_);
+            klipper_version_observer_ = nullptr;
+        }
+        if (moonraker_version_observer_) {
+            lv_observer_remove(moonraker_version_observer_);
+            moonraker_version_observer_ = nullptr;
+        }
     }
-    if (moonraker_version_observer_) {
-        lv_observer_remove(moonraker_version_observer_);
-        moonraker_version_observer_ = nullptr;
-    }
-    spdlog::trace("[{}] Destructor - observers cleaned up", get_name());
+    // Note: Don't log here - spdlog may be destroyed during static destruction
 }
 
 // ============================================================================

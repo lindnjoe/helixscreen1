@@ -36,9 +36,11 @@ class ObserverGuard {
     ObserverGuard& operator=(const ObserverGuard&) = delete;
 
     void reset() {
-        if (observer_) {
+        if (observer_ && lv_is_initialized()) {
             lv_observer_remove(observer_);
             observer_ = nullptr;
+        } else {
+            observer_ = nullptr; // Just clear the pointer if LVGL is gone
         }
     }
 
