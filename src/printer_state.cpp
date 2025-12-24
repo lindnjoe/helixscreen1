@@ -231,6 +231,10 @@ void PrinterState::reset_for_testing() {
     lv_subject_deinit(&helix_plugin_installed_);
     lv_subject_deinit(&printer_has_firmware_retraction_);
     lv_subject_deinit(&printer_bed_moves_);
+    lv_subject_deinit(&can_show_bed_mesh_);
+    lv_subject_deinit(&can_show_qgl_);
+    lv_subject_deinit(&can_show_z_tilt_);
+    lv_subject_deinit(&can_show_nozzle_clean_);
     lv_subject_deinit(&retract_length_);
     lv_subject_deinit(&retract_speed_);
     lv_subject_deinit(&unretract_extra_length_);
@@ -329,6 +333,13 @@ void PrinterState::init_subjects(bool register_xml) {
     lv_subject_init_int(&printer_has_firmware_retraction_, 0);
     lv_subject_init_int(&printer_bed_moves_, 0); // 0=gantry moves, 1=bed moves (cartesian)
 
+    // Composite subjects for G-code modification option visibility
+    // These are derived from helix_plugin_installed AND printer_has_* subjects
+    lv_subject_init_int(&can_show_bed_mesh_, 0);
+    lv_subject_init_int(&can_show_qgl_, 0);
+    lv_subject_init_int(&can_show_z_tilt_, 0);
+    lv_subject_init_int(&can_show_nozzle_clean_, 0);
+
     // Firmware retraction settings (defaults: disabled)
     lv_subject_init_int(&retract_length_, 0);         // 0 = disabled
     lv_subject_init_int(&retract_speed_, 20);         // 20 mm/s default
@@ -395,6 +406,10 @@ void PrinterState::init_subjects(bool register_xml) {
         lv_xml_register_subject(NULL, "printer_has_firmware_retraction",
                                 &printer_has_firmware_retraction_);
         lv_xml_register_subject(NULL, "printer_bed_moves", &printer_bed_moves_);
+        lv_xml_register_subject(NULL, "can_show_bed_mesh", &can_show_bed_mesh_);
+        lv_xml_register_subject(NULL, "can_show_qgl", &can_show_qgl_);
+        lv_xml_register_subject(NULL, "can_show_z_tilt", &can_show_z_tilt_);
+        lv_xml_register_subject(NULL, "can_show_nozzle_clean", &can_show_nozzle_clean_);
         lv_xml_register_subject(NULL, "retract_length", &retract_length_);
         lv_xml_register_subject(NULL, "retract_speed", &retract_speed_);
         lv_xml_register_subject(NULL, "unretract_extra_length", &unretract_extra_length_);
@@ -977,6 +992,10 @@ void PrinterState::set_printer_capabilities_internal(const PrinterCapabilities& 
                  has_speaker, caps.has_timelapse(), has_fw_retraction);
     spdlog::info("[PrinterState] Capabilities set (with overrides): {}",
                  capability_overrides_.summary());
+
+    // Update composite subjects for G-code modification options
+    // (visibility depends on both plugin status and capability)
+    update_gcode_modification_visibility();
 }
 
 void PrinterState::set_klipper_version(const std::string& version) {
@@ -1030,9 +1049,44 @@ void PrinterState::set_helix_plugin_installed(bool installed) {
         auto* ctx = static_cast<HelixPluginContext*>(user_data);
         lv_subject_set_int(&ctx->state->helix_plugin_installed_, ctx->installed ? 1 : 0);
         spdlog::info("[PrinterState] HelixPrint plugin installed: {}", ctx->installed);
+
+        // Update composite subjects for G-code modification options
+        ctx->state->update_gcode_modification_visibility();
+
         delete ctx;
     };
     ui_async_call(callback, new HelixPluginContext{this, installed});
+}
+
+bool PrinterState::service_has_helix_plugin() const {
+    // Note: lv_subject_get_int is thread-safe (atomic read)
+    return lv_subject_get_int(const_cast<lv_subject_t*>(&helix_plugin_installed_)) != 0;
+}
+
+void PrinterState::update_gcode_modification_visibility() {
+    // Recalculate composite subjects: can_show_X = helix_plugin_installed && printer_has_X
+    // These control visibility of pre-print G-code modification options in the UI
+    bool plugin = lv_subject_get_int(&helix_plugin_installed_) != 0;
+
+    auto update_if_changed = [](lv_subject_t* subject, int new_value) {
+        if (lv_subject_get_int(subject) != new_value) {
+            lv_subject_set_int(subject, new_value);
+        }
+    };
+
+    update_if_changed(&can_show_bed_mesh_,
+                      (plugin && lv_subject_get_int(&printer_has_bed_mesh_)) ? 1 : 0);
+    update_if_changed(&can_show_qgl_, (plugin && lv_subject_get_int(&printer_has_qgl_)) ? 1 : 0);
+    update_if_changed(&can_show_z_tilt_,
+                      (plugin && lv_subject_get_int(&printer_has_z_tilt_)) ? 1 : 0);
+    update_if_changed(&can_show_nozzle_clean_,
+                      (plugin && lv_subject_get_int(&printer_has_nozzle_clean_)) ? 1 : 0);
+
+    spdlog::debug("[PrinterState] G-code modification visibility updated: bed_mesh={}, qgl={}, "
+                  "z_tilt={}, nozzle_clean={} (plugin={})",
+                  lv_subject_get_int(&can_show_bed_mesh_), lv_subject_get_int(&can_show_qgl_),
+                  lv_subject_get_int(&can_show_z_tilt_),
+                  lv_subject_get_int(&can_show_nozzle_clean_), plugin);
 }
 
 void PrinterState::set_excluded_objects(const std::unordered_set<std::string>& objects) {

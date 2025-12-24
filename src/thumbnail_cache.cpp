@@ -541,10 +541,10 @@ size_t ThumbnailCache::invalidate(const std::string& relative_path) {
             std::string filename = entry.path().filename().string();
             // .bin files are named: {hash}_{w}x{h}_{format}.bin
             std::string prefix = hash + "_";
-            bool has_prefix = filename.size() >= prefix.size() &&
-                              filename.compare(0, prefix.size(), prefix) == 0;
-            bool has_suffix = filename.size() >= 4 &&
-                              filename.compare(filename.size() - 4, 4, ".bin") == 0;
+            bool has_prefix =
+                filename.size() >= prefix.size() && filename.compare(0, prefix.size(), prefix) == 0;
+            bool has_suffix =
+                filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".bin") == 0;
             if (has_prefix && has_suffix) {
                 std::filesystem::remove(entry.path());
                 ++count;
@@ -553,10 +553,12 @@ size_t ThumbnailCache::invalidate(const std::string& relative_path) {
         }
 
         if (count > 0) {
-            spdlog::info("[ThumbnailCache] Invalidated {} cached files for {}", count, relative_path);
+            spdlog::info("[ThumbnailCache] Invalidated {} cached files for {}", count,
+                         relative_path);
         }
     } catch (const std::filesystem::filesystem_error& e) {
-        spdlog::warn("[ThumbnailCache] Error invalidating cache for {}: {}", relative_path, e.what());
+        spdlog::warn("[ThumbnailCache] Error invalidating cache for {}: {}", relative_path,
+                     e.what());
     }
 
     return count;

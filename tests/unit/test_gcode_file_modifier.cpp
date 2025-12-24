@@ -252,7 +252,8 @@ TEST_CASE("GCodeFileModifier - File operations", "[gcode][modifier][file]") {
     SECTION("Generate temp path") {
         std::string path = GCodeFileModifier::generate_temp_path("/path/to/3DBenchy.gcode");
 
-        REQUIRE(path.find("/tmp/helixscreen_mod_") != std::string::npos);
+        // Path should be in test cache directory with mod_ prefix and original filename
+        REQUIRE(path.find("/tmp/helix_test_gcode_mod/mod_") != std::string::npos);
         REQUIRE(path.find("3DBenchy.gcode") != std::string::npos);
     }
 

@@ -700,6 +700,27 @@ class PrinterState {
     void set_helix_plugin_installed(bool installed);
 
     /**
+     * @brief Check if HelixPrint plugin is available
+     *
+     * Convenience getter for checking plugin status. This is the preferred
+     * way to query plugin availability (vs accessing the subject directly).
+     *
+     * @return True if the HelixPrint Moonraker plugin is installed
+     */
+    bool service_has_helix_plugin() const;
+
+    /**
+     * @brief Get helix_plugin_installed subject for observers
+     *
+     * Use this when you need to observe plugin status changes (e.g., for install prompts).
+     *
+     * @return Pointer to the helix_plugin_installed_ subject
+     */
+    lv_subject_t* get_helix_plugin_installed_subject() {
+        return &helix_plugin_installed_;
+    }
+
+    /**
      * @brief Set printer kinematics type and update bed_moves subject
      *
      * Updates printer_bed_moves_ subject based on kinematics type.
@@ -832,6 +853,14 @@ class PrinterState {
     lv_subject_t printer_has_firmware_retraction_; // Integer: 0=no, 1=yes (for G10/G11 retraction)
     lv_subject_t printer_bed_moves_; // Integer: 0=no (gantry moves), 1=yes (bed moves on Z)
 
+    // Composite subjects for G-code modification option visibility
+    // These combine helix_plugin_installed with individual printer capabilities.
+    // An option is shown only when BOTH: plugin installed AND printer has capability.
+    lv_subject_t can_show_bed_mesh_;     // helix_plugin_installed && printer_has_bed_mesh
+    lv_subject_t can_show_qgl_;          // helix_plugin_installed && printer_has_qgl
+    lv_subject_t can_show_z_tilt_;       // helix_plugin_installed && printer_has_z_tilt
+    lv_subject_t can_show_nozzle_clean_; // helix_plugin_installed && printer_has_nozzle_clean
+
     // Firmware retraction settings (from firmware_retraction Klipper module)
     // Lengths stored as centimillimeters (x100) to preserve 0.01mm precision with integers
     lv_subject_t retract_length_;         // centimm (e.g., 80 = 0.8mm)
@@ -888,4 +917,13 @@ class PrinterState {
     void set_klipper_version_internal(const std::string& version);
     void set_moonraker_version_internal(const std::string& version);
     void set_klippy_state_internal(KlippyState state);
+
+    /**
+     * @brief Update composite visibility subjects for G-code modification options
+     *
+     * Recalculates can_show_* subjects based on current plugin and capability state.
+     * Called whenever helix_plugin_installed or printer_has_* subjects change.
+     * Must be called from main thread (typically via async callbacks).
+     */
+    void update_gcode_modification_visibility();
 };

@@ -6,6 +6,7 @@
 #include "spdlog/spdlog.h"
 
 #include <chrono>
+#include <filesystem>
 #include <thread>
 
 namespace UITest {
@@ -447,7 +448,9 @@ void app_request_restart() {
 // Stub for get_helix_cache_dir (tests use temp directory)
 #include "app_globals.h"
 std::string get_helix_cache_dir(const std::string& subdir) {
-    return "/tmp/helix_test_" + subdir;
+    std::string path = "/tmp/helix_test_" + subdir;
+    std::filesystem::create_directories(path);
+    return path;
 }
 
 // Stub for get_moonraker_manager (tests don't have manager)

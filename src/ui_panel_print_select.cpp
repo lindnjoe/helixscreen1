@@ -507,50 +507,13 @@ void PrintSelectPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
                         self->refresh_files();
                     }
 
-                    // Check for helix_print plugin on each connection/reconnection
+                    // Update installer's websocket URL for local/remote detection
                     if (self->api_) {
-                        spdlog::debug(
-                            "[{}] Connection established, checking for helix_print plugin",
-                            self->get_name());
-
-                        // Update installer's websocket URL for local/remote detection
                         self->plugin_installer_.set_websocket_url(
                             self->api_->get_client().get_last_url());
-
-                        self->api_->check_helix_plugin(
-                            [self](bool available) {
-                                // Update subject for UI binding
-                                self->printer_state_.set_helix_plugin_installed(available);
-
-                                if (available) {
-                                    spdlog::info("[PrintSelectPanel] helix_print plugin available");
-                                } else {
-                                    spdlog::debug(
-                                        "[PrintSelectPanel] helix_print plugin not available");
-
-                                    // Prompt to install if user hasn't declined
-                                    if (self->plugin_installer_.should_prompt_install()) {
-                                        spdlog::info(
-                                            "[PrintSelectPanel] Showing plugin install prompt");
-
-                                        // Schedule modal display on main thread
-                                        ui_async_call(
-                                            [](void* user_data) {
-                                                auto* panel =
-                                                    static_cast<PrintSelectPanel*>(user_data);
-                                                panel->plugin_install_modal_.set_installer(
-                                                    &panel->plugin_installer_);
-                                                panel->plugin_install_modal_.show(
-                                                    lv_screen_active());
-                                            },
-                                            self);
-                                    }
-                                }
-                            },
-                            [](const MoonrakerError&) {
-                                // Silently ignore errors - plugin not available
-                            });
                     }
+                    // Note: Plugin detection now happens automatically in discovery flow
+                    // (application.cpp). Install prompt is triggered by helix_plugin_observer_.
                 }
             },
             this);
@@ -571,6 +534,30 @@ void PrintSelectPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
             },
             this);
         spdlog::debug("[{}] Registered observer on print job state for print button", get_name());
+    }
+
+    // Register observer on helix_plugin_installed to show install prompt when plugin not available
+    // This fires after discovery completes and plugin status is known
+    lv_subject_t* plugin_subject = printer_state_.get_helix_plugin_installed_subject();
+    if (plugin_subject) {
+        helix_plugin_observer_ = ObserverGuard(
+            plugin_subject,
+            [](lv_observer_t* observer, lv_subject_t* subject) {
+                auto* self = static_cast<PrintSelectPanel*>(lv_observer_get_user_data(observer));
+                if (!self)
+                    return;
+
+                bool plugin_available = lv_subject_get_int(subject) != 0;
+                if (!plugin_available && self->plugin_installer_.should_prompt_install()) {
+                    spdlog::info("[PrintSelectPanel] helix_print plugin not available, showing "
+                                 "install prompt");
+                    self->plugin_install_modal_.set_installer(&self->plugin_installer_);
+                    self->plugin_install_modal_.show(lv_screen_active());
+                }
+            },
+            this);
+        spdlog::debug("[{}] Registered observer on helix_plugin_installed for install prompt",
+                      get_name());
     }
 
     spdlog::debug("[{}] Setup complete", get_name());

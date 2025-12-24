@@ -72,7 +72,8 @@ static bool g_mock_usb_symlink_active = false;
 
 void mock_set_usb_symlink_active(bool active) {
     g_mock_usb_symlink_active = active;
-    spdlog::debug("[MoonrakerClientMock] USB symlink simulation: {}", active ? "active" : "inactive");
+    spdlog::debug("[MoonrakerClientMock] USB symlink simulation: {}",
+                  active ? "active" : "inactive");
 }
 
 static json build_mock_file_list_response(const std::string& path = "") {

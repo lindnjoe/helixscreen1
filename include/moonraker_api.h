@@ -203,11 +203,17 @@ class MoonrakerAPI {
     /**
      * @brief Check if helix_print plugin is available (cached)
      *
+     * @deprecated Use PrinterState::service_has_helix_plugin() instead.
+     * Plugin detection now happens during discovery flow, and state is stored
+     * in PrinterState as the single source of truth. This cached value may be
+     * stale if check_helix_plugin() hasn't been called recently.
+     *
      * Returns cached result from previous check_helix_plugin() call.
      * Returns false if check hasn't been performed yet.
      *
      * @return true if plugin is available and detected
      */
+    [[deprecated("Use PrinterState::service_has_helix_plugin() instead")]]
     bool has_helix_plugin() const {
         return helix_plugin_available_;
     }

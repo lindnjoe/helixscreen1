@@ -845,26 +845,42 @@ bool Application::connect_moonraker() {
                 caps, {api, client}));
     });
 
-    client->set_on_discovery_complete([client](const PrinterCapabilities& caps) {
+    client->set_on_discovery_complete([api, client](const PrinterCapabilities& caps) {
         ui_async_call(
             [](void* user_data) {
-                auto* ctx =
-                    static_cast<std::pair<PrinterCapabilities, MoonrakerClient*>*>(user_data);
+                auto* ctx = static_cast<
+                    std::pair<PrinterCapabilities, std::pair<MoonrakerAPI*, MoonrakerClient*>>*>(
+                    user_data);
+                auto* api_ptr = ctx->second.first;
+                auto* client_ptr = ctx->second.second;
+
                 get_printer_state().set_printer_capabilities(ctx->first);
-                get_printer_state().init_fans(ctx->second->get_fans());
-                get_printer_state().set_klipper_version(ctx->second->get_software_version());
-                get_printer_state().set_moonraker_version(ctx->second->get_moonraker_version());
+                get_printer_state().init_fans(client_ptr->get_fans());
+                get_printer_state().set_klipper_version(client_ptr->get_software_version());
+                get_printer_state().set_moonraker_version(client_ptr->get_moonraker_version());
 
                 // Auto-configure LED if not explicitly set but LEDs were discovered
                 if (ctx->first.has_led()) {
-                    get_global_home_panel().auto_configure_led_if_needed(ctx->second->get_leds());
+                    get_global_home_panel().auto_configure_led_if_needed(client_ptr->get_leds());
                     get_global_print_status_panel().auto_configure_led_if_needed(
-                        ctx->second->get_leds());
+                        client_ptr->get_leds());
                 }
+
+                // Detect helix_print plugin during discovery (not UI-initiated)
+                // This ensures plugin status is known early for UI gating
+                api_ptr->check_helix_plugin(
+                    [](bool available) {
+                        get_printer_state().set_helix_plugin_installed(available);
+                    },
+                    [](const MoonrakerError&) {
+                        // Silently treat errors as "plugin not installed"
+                        get_printer_state().set_helix_plugin_installed(false);
+                    });
 
                 delete ctx;
             },
-            new std::pair<PrinterCapabilities, MoonrakerClient*>(caps, client));
+            new std::pair<PrinterCapabilities, std::pair<MoonrakerAPI*, MoonrakerClient*>>(
+                caps, {api, client}));
     });
 
     // Set HTTP base URL for API

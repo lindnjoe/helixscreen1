@@ -398,7 +398,7 @@ ModificationCapability PrintPreparationManager::check_modification_capability() 
     ModificationCapability result;
 
     // Priority 1: If helix_print plugin is available, always safe (server-side modification)
-    if (api_ && api_->has_helix_plugin()) {
+    if (printer_state_ && printer_state_->service_has_helix_plugin()) {
         result.can_modify = true;
         result.has_plugin = true;
         result.has_disk_space = true; // N/A when using plugin
@@ -745,7 +745,7 @@ void PrintPreparationManager::modify_and_print(
 
     // Check if helix_print plugin is available FIRST (before downloading)
     // Plugin path uses server-side modification, so memory isn't a concern
-    if (api_->has_helix_plugin()) {
+    if (printer_state_ && printer_state_->service_has_helix_plugin()) {
         spdlog::info("[PrintPreparationManager] Using helix_print plugin for modified print");
         modify_and_print_via_plugin(file_path, display_filename, ops_to_disable, macro_skip_params,
                                     mod_names, on_navigate_to_status);

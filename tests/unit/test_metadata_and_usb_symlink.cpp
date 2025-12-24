@@ -82,15 +82,13 @@ class MetadataAPITestFixture {
 // Metadata API Tests
 // ============================================================================
 
-TEST_CASE_METHOD(MetadataAPITestFixture,
-                 "get_file_metadata calls success callback with valid file",
+TEST_CASE_METHOD(MetadataAPITestFixture, "get_file_metadata calls success callback with valid file",
                  "[metadata][api]") {
     bool success_called = false;
     bool error_called = false;
 
     api->get_file_metadata(
-        "test_file.gcode",
-        [&](const FileMetadata&) { success_called = true; },
+        "test_file.gcode", [&](const FileMetadata&) { success_called = true; },
         [&](const MoonrakerError&) { error_called = true; });
 
     // Mock is synchronous - callback already fired
@@ -98,8 +96,7 @@ TEST_CASE_METHOD(MetadataAPITestFixture,
     REQUIRE_FALSE(error_called);
 }
 
-TEST_CASE_METHOD(MetadataAPITestFixture,
-                 "get_file_metadata with silent flag compiles correctly",
+TEST_CASE_METHOD(MetadataAPITestFixture, "get_file_metadata with silent flag compiles correctly",
                  "[metadata][api][silent]") {
     // This test verifies that silent=true parameter is accepted
     // In real usage, this prevents toast spam when files aren't indexed
@@ -107,8 +104,7 @@ TEST_CASE_METHOD(MetadataAPITestFixture,
 
     // Call with silent=true (4th parameter)
     api->get_file_metadata(
-        "test_file.gcode",
-        [&](const FileMetadata&) { success_called = true; },
+        "test_file.gcode", [&](const FileMetadata&) { success_called = true; },
         [&](const MoonrakerError&) {}, true // silent
     );
 
@@ -122,8 +118,7 @@ TEST_CASE_METHOD(MetadataAPITestFixture, "metascan_file calls success callback w
     bool error_called = false;
 
     api->metascan_file(
-        "test_file.gcode",
-        [&](const FileMetadata&) { success_called = true; },
+        "test_file.gcode", [&](const FileMetadata&) { success_called = true; },
         [&](const MoonrakerError&) { error_called = true; });
 
     // Mock is synchronous - callback already fired
@@ -147,8 +142,7 @@ TEST_CASE_METHOD(MetadataAPITestFixture, "metascan_file is silent by default",
 // USB Source Symlink Detection Tests
 // ============================================================================
 
-TEST_CASE("PrintSelectUsbSource initial state has Moonraker access false",
-          "[usb][symlink]") {
+TEST_CASE("PrintSelectUsbSource initial state has Moonraker access false", "[usb][symlink]") {
     helix::ui::PrintSelectUsbSource usb_source;
 
     REQUIRE_FALSE(usb_source.moonraker_has_usb_access());
@@ -165,8 +159,7 @@ TEST_CASE("PrintSelectUsbSource::set_moonraker_has_usb_access sets flag correctl
     REQUIRE_FALSE(usb_source.moonraker_has_usb_access());
 }
 
-TEST_CASE("PrintSelectUsbSource with symlink access stays on PRINTER source",
-          "[usb][symlink]") {
+TEST_CASE("PrintSelectUsbSource with symlink access stays on PRINTER source", "[usb][symlink]") {
     helix::ui::PrintSelectUsbSource usb_source;
 
     // Set symlink access
@@ -215,8 +208,7 @@ TEST_CASE("PrintSelectUsbSource switches from USB to PRINTER when symlink detect
 // Integration-style Tests
 // ============================================================================
 
-TEST_CASE_METHOD(MetadataAPITestFixture,
-                 "list_files for usb path returns empty when no symlink",
+TEST_CASE_METHOD(MetadataAPITestFixture, "list_files for usb path returns empty when no symlink",
                  "[usb][symlink][integration]") {
     // Ensure symlink simulation is off
     mock_set_usb_symlink_active(false);

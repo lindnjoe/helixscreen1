@@ -86,15 +86,7 @@ void AdvancedPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
 
 void AdvancedPanel::on_activate() {
     spdlog::debug("[{}] Activated", get_name());
-
-    // Check HelixPrint plugin status and update subject for conditional visibility
-    if (api_) {
-        api_->check_helix_plugin(
-            [this](bool available) { printer_state_.set_helix_plugin_installed(available); },
-            [](const MoonrakerError&) {
-                // Silently ignore errors - assume not installed
-            });
-    }
+    // Note: Plugin detection now happens automatically in discovery flow (application.cpp)
 }
 
 // ============================================================================
@@ -208,9 +200,8 @@ void AdvancedPanel::handle_helix_plugin_install_clicked() {
     spdlog::debug("[{}] HelixPrint Plugin Install clicked", get_name());
 
     // Double-check plugin isn't already installed (defensive)
-    if (api_ && api_->has_helix_plugin()) {
-        spdlog::info("[{}] Plugin already installed, refreshing UI", get_name());
-        printer_state_.set_helix_plugin_installed(true);
+    if (printer_state_.service_has_helix_plugin()) {
+        spdlog::info("[{}] Plugin already installed", get_name());
         ui_toast_show(ToastSeverity::INFO, "Plugin already installed", 2000);
         return;
     }
