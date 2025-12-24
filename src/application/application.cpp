@@ -59,6 +59,7 @@
 #include "gcode_file_modifier.h"
 #include "logging_init.h"
 #include "lvgl/src/xml/lv_xml.h"
+#include "memory_monitor.h"
 #include "memory_profiling.h"
 #include "memory_utils.h"
 #include "moonraker_api.h"
@@ -196,7 +197,10 @@ int Application::run(int argc, char** argv) {
         spdlog::warn("[Application] Running without printer connection");
     }
 
-    // Phase 15: Main loop
+    // Phase 15: Start memory monitoring (logs at TRACE level, -vvv)
+    helix::MemoryMonitor::instance().start(5000);
+
+    // Phase 16: Main loop
     int result = main_loop();
 
     // Phase 16: Shutdown
@@ -1033,6 +1037,9 @@ void Application::shutdown() {
         return;
     }
     m_shutdown_complete = true;
+
+    // Stop memory monitor first (uses spdlog, must stop before spdlog::shutdown)
+    helix::MemoryMonitor::instance().stop();
 
     spdlog::info("[Application] Shutting down...");
 
