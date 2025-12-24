@@ -262,33 +262,60 @@ echo "   Latest Commit:  ${GREEN}$LAST_COMMIT_DATE${NC}"
 echo "   Duration:       ${YELLOW}$PROJECT_DAYS days${NC} (${PROJECT_WEEKS} weeks)"
 echo ""
 
-# Core metrics table (always full width - too wide for columns)
-echo "${CYAN}${BOLD}🔢 Core Metrics${NC}"
-echo "   ┌────────────────────────┬───────────────┬────────────────────────────┐"
-echo "   │ Metric                 │ Value         │ Notes                      │"
-echo "   ├────────────────────────┼───────────────┼────────────────────────────┤"
-printf "   │ %-22s │ %13s │ %-26s │\n" "Total Commits" "$TOTAL_COMMITS" "$COMMITS_PER_DAY commits/active day"
-printf "   │ %-22s │ %13s │ %-26s │\n" "Active Coding Days" "$ACTIVE_DAYS" "${PCT_ACTIVE}% of calendar days"
-printf "   │ %-22s │ %13s │ %-26s │\n" "Commits/Week" "$COMMITS_PER_WEEK" "Avg weekly velocity"
-printf "   │ %-22s │ %13s │ %-26s │\n" "Longest Streak" "$LONGEST_STREAK days" "Consecutive days"
-printf "   │ %-22s │ %13s │ %-26s │\n" "Work Sessions" "$sessions" ">2hr gap = new session"
-printf "   │ %-22s │ %13s │ %-26s │\n" "Avg Session Length" "${avg_min} min" "~${AVG_HRS} hours"
-echo "   └────────────────────────┴───────────────┴────────────────────────────┘"
-echo ""
+# Core Metrics and Codebase Composition - side by side if room
+if $USE_TWO_COLS && [[ $TOTAL_LOC -gt 0 ]]; then
+    # Build left column: Core Metrics (compact format)
+    {
+        echo "${CYAN}${BOLD}🔢 Core Metrics${NC}"
+        printf "   %-20s %s\n" "Total Commits:" "${YELLOW}$TOTAL_COMMITS${NC} ($COMMITS_PER_DAY/day)"
+        printf "   %-20s %s\n" "Active Days:" "${GREEN}$ACTIVE_DAYS${NC} (${PCT_ACTIVE}% of calendar)"
+        printf "   %-20s %s\n" "Commits/Week:" "$COMMITS_PER_WEEK"
+        printf "   %-20s %s\n" "Longest Streak:" "${GREEN}$LONGEST_STREAK days${NC}"
+        printf "   %-20s %s\n" "Work Sessions:" "$sessions (>2hr gap)"
+        printf "   %-20s %s\n" "Avg Session:" "${avg_min} min (~${AVG_HRS} hrs)"
+    } > "$TMP_DIR/left_col.txt"
 
-# Codebase composition (always full width - table format)
-if [[ $TOTAL_LOC -gt 0 ]]; then
-    echo "${CYAN}${BOLD}📁 Codebase Composition${NC}"
-    echo "   ┌────────────────────────┬───────────────┬───────────────┐"
-    echo "   │ File Type              │ Count         │ Lines         │"
-    echo "   ├────────────────────────┼───────────────┼───────────────┤"
-    [[ $CPP_LOC -gt 0 ]] && printf "   │ %-22s │ %13s │ %13s │\n" "C++ Source (.cpp)" "$CPP_COUNT" "$CPP_LOC"
-    [[ $H_LOC -gt 0 ]] && printf "   │ %-22s │ %13s │ %13s │\n" "C++ Headers (.h)" "$H_COUNT" "$H_LOC"
-    [[ $XML_LOC -gt 0 ]] && printf "   │ %-22s │ %13s │ %13s │\n" "XML Layouts (.xml)" "$XML_COUNT" "$XML_LOC"
-    echo "   ├────────────────────────┼───────────────┼───────────────┤"
-    printf "   │ ${BOLD}%-22s${NC} │ ${BOLD}%13s${NC} │ ${BOLD}%13s${NC} │\n" "TOTAL" "$TOTAL_FILES" "$TOTAL_LOC"
-    echo "   └────────────────────────┴───────────────┴───────────────┘"
+    # Build right column: Codebase Composition (compact format)
+    {
+        echo "${CYAN}${BOLD}📁 Codebase Composition${NC}"
+        [[ $CPP_LOC -gt 0 ]] && printf "   %-16s %4d files  %6d lines\n" "C++ Source:" "$CPP_COUNT" "$CPP_LOC"
+        [[ $H_LOC -gt 0 ]] && printf "   %-16s %4d files  %6d lines\n" "C++ Headers:" "$H_COUNT" "$H_LOC"
+        [[ $XML_LOC -gt 0 ]] && printf "   %-16s %4d files  %6d lines\n" "XML Layouts:" "$XML_COUNT" "$XML_LOC"
+        echo "   ────────────────────────────────────"
+        printf "   ${BOLD}%-16s %4d files  %6d lines${NC}\n" "TOTAL:" "$TOTAL_FILES" "$TOTAL_LOC"
+    } > "$TMP_DIR/right_col.txt"
+
+    print_two_columns_files "$TMP_DIR/left_col.txt" "$TMP_DIR/right_col.txt"
     echo ""
+else
+    # Single column: Core Metrics table
+    echo "${CYAN}${BOLD}🔢 Core Metrics${NC}"
+    echo "   ┌────────────────────────┬───────────────┬────────────────────────────┐"
+    echo "   │ Metric                 │ Value         │ Notes                      │"
+    echo "   ├────────────────────────┼───────────────┼────────────────────────────┤"
+    printf "   │ %-22s │ %13s │ %-26s │\n" "Total Commits" "$TOTAL_COMMITS" "$COMMITS_PER_DAY commits/active day"
+    printf "   │ %-22s │ %13s │ %-26s │\n" "Active Coding Days" "$ACTIVE_DAYS" "${PCT_ACTIVE}% of calendar days"
+    printf "   │ %-22s │ %13s │ %-26s │\n" "Commits/Week" "$COMMITS_PER_WEEK" "Avg weekly velocity"
+    printf "   │ %-22s │ %13s │ %-26s │\n" "Longest Streak" "$LONGEST_STREAK days" "Consecutive days"
+    printf "   │ %-22s │ %13s │ %-26s │\n" "Work Sessions" "$sessions" ">2hr gap = new session"
+    printf "   │ %-22s │ %13s │ %-26s │\n" "Avg Session Length" "${avg_min} min" "~${AVG_HRS} hours"
+    echo "   └────────────────────────┴───────────────┴────────────────────────────┘"
+    echo ""
+
+    # Single column: Codebase composition table
+    if [[ $TOTAL_LOC -gt 0 ]]; then
+        echo "${CYAN}${BOLD}📁 Codebase Composition${NC}"
+        echo "   ┌────────────────────────┬───────────────┬───────────────┐"
+        echo "   │ File Type              │ Count         │ Lines         │"
+        echo "   ├────────────────────────┼───────────────┼───────────────┤"
+        [[ $CPP_LOC -gt 0 ]] && printf "   │ %-22s │ %13s │ %13s │\n" "C++ Source (.cpp)" "$CPP_COUNT" "$CPP_LOC"
+        [[ $H_LOC -gt 0 ]] && printf "   │ %-22s │ %13s │ %13s │\n" "C++ Headers (.h)" "$H_COUNT" "$H_LOC"
+        [[ $XML_LOC -gt 0 ]] && printf "   │ %-22s │ %13s │ %13s │\n" "XML Layouts (.xml)" "$XML_COUNT" "$XML_LOC"
+        echo "   ├────────────────────────┼───────────────┼───────────────┤"
+        printf "   │ ${BOLD}%-22s${NC} │ ${BOLD}%13s${NC} │ ${BOLD}%13s${NC} │\n" "TOTAL" "$TOTAL_FILES" "$TOTAL_LOC"
+        echo "   └────────────────────────┴───────────────┴───────────────┘"
+        echo ""
+    fi
 fi
 
 # Time investment (always single column - important info)
@@ -426,5 +453,279 @@ echo "   Commits/Week:          $COMMITS_PER_WEEK"
 echo "   Commits/Session:       $COMMITS_PER_SESSION"
 [[ $TOTAL_LOC -gt 0 ]] && echo "   Source LOC:            $TOTAL_LOC"
 echo ""
+
+# ============================================================================
+# ACTIVITY TIMELINE CHARTS
+# ============================================================================
+
+# Generate VERTICAL activity chart for a time period
+# $1 = period name (for display)
+# $2 = git --since argument
+# $3 = max height (default 8)
+# $4 = grouping: "month" | "week" (default "week")
+# $5 = expected_items (for centering) - optional
+generate_vertical_chart() {
+    local period_name=$1
+    local since_date=$2
+    local max_height=${3:-8}
+    local grouping=${4:-"week"}
+    local expected_items=${5:-0}  # 0 = no centering
+    local bar_char="█"
+
+    local data=""
+    local labels=()
+    local counts=()
+    local max_count=0
+
+    if [[ "$grouping" == "month" ]]; then
+        # Group by month, label as "Oct", "Nov", etc.
+        data=$(git log --format="%cd" --date=format:'%Y-%m' --since="$since_date" --no-merges 2>/dev/null | \
+            sort | uniq -c | sort -k2)
+
+        if [[ -z "$data" ]]; then
+            echo "   (no commits in period)"
+            return
+        fi
+
+        while read count ym; do
+            local month_num="${ym#*-}"
+            local month_name=""
+            case "$month_num" in
+                01) month_name="Jan" ;; 02) month_name="Feb" ;; 03) month_name="Mar" ;;
+                04) month_name="Apr" ;; 05) month_name="May" ;; 06) month_name="Jun" ;;
+                07) month_name="Jul" ;; 08) month_name="Aug" ;; 09) month_name="Sep" ;;
+                10) month_name="Oct" ;; 11) month_name="Nov" ;; 12) month_name="Dec" ;;
+            esac
+            labels+=("$month_name")
+            counts+=("$count")
+            [[ $count -gt $max_count ]] && max_count=$count
+        done <<< "$data"
+    else
+        # Group by week, label as "Mon D" (week start date)
+        # Get commits with their week-start Monday date
+        data=$(git log --format="%cd" --date=format:'%Y-%m-%d' --since="$since_date" --no-merges 2>/dev/null | \
+            python3 -c "
+import sys
+from datetime import datetime, timedelta
+from collections import Counter
+
+dates = []
+for line in sys.stdin:
+    line = line.strip()
+    if line:
+        dates.append(line)
+
+# Group by week (Monday start)
+week_counts = Counter()
+week_mondays = {}
+for d in dates:
+    dt = datetime.strptime(d, '%Y-%m-%d')
+    monday = dt - timedelta(days=dt.weekday())
+    week_key = monday.strftime('%Y-%m-%d')
+    week_counts[week_key] += 1
+    week_mondays[week_key] = monday
+
+for week_key in sorted(week_counts.keys()):
+    monday = week_mondays[week_key]
+    label = monday.strftime('%b %-d')  # 'Dec 2', 'Dec 9', etc.
+    print(f'{week_counts[week_key]} {label}')
+" 2>/dev/null)
+
+        if [[ -z "$data" ]]; then
+            echo "   (no commits in period)"
+            return
+        fi
+
+        while read count label_rest; do
+            labels+=("$label_rest")
+            counts+=("$count")
+            [[ $count -gt $max_count ]] && max_count=$count
+        done <<< "$data"
+    fi
+
+    [[ $max_count -eq 0 ]] && max_count=1
+    local num_items=${#labels[@]}
+
+    # Calculate left padding for centering if expected_items specified
+    local left_pad=""
+    if [[ $expected_items -gt 0 ]] && [[ $num_items -lt $expected_items ]]; then
+        local missing=$((expected_items - num_items))
+        local pad_cols=$((missing / 2))
+        # Each column is 3 chars (bar + 2 spaces)
+        left_pad=$(printf '%*s' "$((pad_cols * 3))" '')
+    fi
+
+    # Build the chart row by row (top to bottom)
+    for ((row=max_height; row>=1; row--)); do
+        printf "   %s" "$left_pad"
+        for ((col=0; col<num_items; col++)); do
+            local val=${counts[$col]}
+            local bar_height=$(( (val * max_height + max_count - 1) / max_count ))  # Ceiling
+            [[ $val -eq 0 ]] && bar_height=0
+            if [[ $bar_height -ge $row ]]; then
+                printf "%s  " "$bar_char"
+            else
+                printf "   "
+            fi
+        done
+        # Show scale on right edge for top and middle rows
+        if [[ $row -eq $max_height ]]; then
+            printf " ${DIM}%d${NC}" "$max_count"
+        elif [[ $row -eq $((max_height / 2)) ]]; then
+            printf " ${DIM}%d${NC}" "$((max_count / 2))"
+        fi
+        echo ""
+    done
+
+    # Vertical labels at bottom - each row is one character of the label
+    # Build label strings first
+    local formatted_labels=()
+    if [[ "$grouping" == "month" ]]; then
+        # Month labels: "Oct", "Nov", "Dec"
+        for ((col=0; col<num_items; col++)); do
+            formatted_labels+=("${labels[$col]}")
+        done
+    else
+        # Week labels: show month initial only on first col and when month changes
+        local prev_month=""
+        for ((col=0; col<num_items; col++)); do
+            local lbl="${labels[$col]}"
+            local month_part="${lbl%% *}"   # "Dec" from "Dec 2"
+            local day_part="${lbl#* }"      # "2" from "Dec 2"
+            local month_initial="${month_part:0:1}"
+
+            # Show month initial only when month changes
+            if [[ "$month_part" != "$prev_month" ]]; then
+                formatted_labels+=("${month_initial}${day_part}")
+            else
+                formatted_labels+=("${day_part}")
+            fi
+            prev_month="$month_part"
+        done
+    fi
+
+    # Find max label length
+    local max_label_len=0
+    for lbl in "${formatted_labels[@]}"; do
+        [[ ${#lbl} -gt $max_label_len ]] && max_label_len=${#lbl}
+    done
+
+    # Print vertical labels (one row per character position)
+    for ((char_pos=0; char_pos<max_label_len; char_pos++)); do
+        printf "   %s" "$left_pad"
+        for ((col=0; col<num_items; col++)); do
+            local lbl="${formatted_labels[$col]}"
+            if [[ $char_pos -lt ${#lbl} ]]; then
+                printf "%s  " "${lbl:$char_pos:1}"
+            else
+                printf "   "
+            fi
+        done
+        echo ""
+    done
+}
+
+# For three charts, we need more width
+THREE_COL_MIN_WIDTH=140
+USE_THREE_COLS=false
+if [[ $TERM_WIDTH -ge $THREE_COL_MIN_WIDTH ]]; then
+    USE_THREE_COLS=true
+fi
+
+echo "${CYAN}${BOLD}📊 Commit Activity Timeline${NC}"
+
+# Chart height based on terminal - taller for wider terminals
+CHART_HEIGHT=8
+[[ $TERM_WIDTH -ge 120 ]] && CHART_HEIGHT=10
+[[ $TERM_WIDTH -lt 80 ]] && CHART_HEIGHT=6
+
+if $USE_THREE_COLS; then
+    # Three columns side by side
+    CHART_COL_WIDTH=$(( (TERM_WIDTH - 12) / 3 ))
+
+    # Build year chart (grouped by month) - expect 12 months
+    {
+        echo "${PURPLE}  📅 1 Year (by month)${NC}"
+        generate_vertical_chart "1 year" "12 months ago" $CHART_HEIGHT "month" 12
+    } > "$TMP_DIR/chart_year.txt"
+
+    # Build quarter chart (grouped by week) - expect ~13 weeks
+    {
+        echo "${PURPLE}  📅 3 Months (by week)${NC}"
+        generate_vertical_chart "3 months" "3 months ago" $CHART_HEIGHT "week" 13
+    } > "$TMP_DIR/chart_quarter.txt"
+
+    # Build month chart (grouped by week) - expect ~5 weeks
+    {
+        echo "${PURPLE}  📅 1 Month (by week)${NC}"
+        generate_vertical_chart "1 month" "1 month ago" $CHART_HEIGHT "week" 5
+    } > "$TMP_DIR/chart_month.txt"
+
+    # Print three columns
+    year_lines=()
+    quarter_lines=()
+    month_lines=()
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        year_lines+=("$line")
+    done < "$TMP_DIR/chart_year.txt"
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        quarter_lines+=("$line")
+    done < "$TMP_DIR/chart_quarter.txt"
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        month_lines+=("$line")
+    done < "$TMP_DIR/chart_month.txt"
+
+    max_lines=${#year_lines[@]}
+    [[ ${#quarter_lines[@]} -gt $max_lines ]] && max_lines=${#quarter_lines[@]}
+    [[ ${#month_lines[@]} -gt $max_lines ]] && max_lines=${#month_lines[@]}
+
+    for ((i=0; i<max_lines; i++)); do
+        left="${year_lines[$i]:-}"
+        mid="${quarter_lines[$i]:-}"
+        right="${month_lines[$i]:-}"
+
+        left_plain=$(echo "$left" | sed 's/\x1b\[[0-9;]*m//g')
+        mid_plain=$(echo "$mid" | sed 's/\x1b\[[0-9;]*m//g')
+
+        pad_left=$((CHART_COL_WIDTH - ${#left_plain}))
+        pad_mid=$((CHART_COL_WIDTH - ${#mid_plain}))
+        [[ $pad_left -lt 0 ]] && pad_left=0
+        [[ $pad_mid -lt 0 ]] && pad_mid=0
+
+        printf "%b%*s  %b%*s  %b\n" "$left" "$pad_left" "" "$mid" "$pad_mid" "" "$right"
+    done
+    echo ""
+
+elif $USE_TWO_COLS; then
+    # Two columns: year on left, quarter+month stacked on right
+    {
+        echo "${PURPLE}  📅 1 Year (by month)${NC}"
+        generate_vertical_chart "1 year" "12 months ago" $CHART_HEIGHT "month" 12
+    } > "$TMP_DIR/chart_year.txt"
+
+    {
+        echo "${PURPLE}  📅 3 Months (by week)${NC}"
+        generate_vertical_chart "3 months" "3 months ago" $((CHART_HEIGHT - 2)) "week" 13
+        echo ""
+        echo "${PURPLE}  📅 1 Month (by week)${NC}"
+        generate_vertical_chart "1 month" "1 month ago" $((CHART_HEIGHT - 2)) "week" 5
+    } > "$TMP_DIR/chart_recent.txt"
+
+    print_two_columns_files "$TMP_DIR/chart_year.txt" "$TMP_DIR/chart_recent.txt"
+    echo ""
+else
+    # Single column: stack all three vertically
+    echo "${PURPLE}  📅 1 Year (by month)${NC}"
+    generate_vertical_chart "1 year" "12 months ago" $CHART_HEIGHT "month" 12
+    echo ""
+
+    echo "${PURPLE}  📅 3 Months (by week)${NC}"
+    generate_vertical_chart "3 months" "3 months ago" $CHART_HEIGHT "week" 13
+    echo ""
+
+    echo "${PURPLE}  📅 1 Month (by week)${NC}"
+    generate_vertical_chart "1 month" "1 month ago" $CHART_HEIGHT "week" 5
+    echo ""
+fi
 
 echo "${DIM}Generated by git-stats.sh on $(date '+%Y-%m-%d %H:%M:%S')${NC}"
