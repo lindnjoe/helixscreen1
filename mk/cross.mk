@@ -497,11 +497,45 @@ AD5M_DEPLOY_DIR ?= $(shell ssh -o ConnectTimeout=5 $(AD5M_SSH_TARGET) \
 
 .PHONY: deploy-ad5m deploy-ad5m-fg deploy-ad5m-bin ad5m-ssh ad5m-test
 
-# Deploy full application to AD5M and restart
-# Uses tar over SSH since scp doesn't support exclusions and AD5M has limited storage
-# Excludes test_gcodes/ and gcode/ (~170MB of dev files)
-# Includes pre-rendered .bin assets from build/ if they exist (for splash performance)
+# Deploy full application to AD5M using rsync (fast incremental sync)
+# Only transfers changed files, much faster than tar/scp for iterative development
 deploy-ad5m:
+	@test -f build/ad5m/bin/helix-screen || { echo "$(RED)Error: build/ad5m/bin/helix-screen not found. Run 'make remote-ad5m' first.$(RESET)"; exit 1; }
+	@test -f build/ad5m/bin/helix-splash || { echo "$(RED)Error: build/ad5m/bin/helix-splash not found. Run 'make remote-ad5m' first.$(RESET)"; exit 1; }
+	@# Generate pre-rendered images if missing (requires Python/PIL)
+	@if [ ! -f build/assets/images/prerendered/splash-logo-small.bin ]; then \
+		echo "$(CYAN)Generating pre-rendered splash images for AD5M...$(RESET)"; \
+		$(MAKE) gen-images-ad5m; \
+	fi
+	@if [ ! -d build/assets/images/printers/prerendered ]; then \
+		echo "$(CYAN)Generating pre-rendered printer images...$(RESET)"; \
+		$(MAKE) gen-printer-images; \
+	fi
+	@echo "$(CYAN)Deploying HelixScreen to $(AD5M_SSH_TARGET):$(AD5M_DEPLOY_DIR) (rsync)...$(RESET)"
+	ssh $(AD5M_SSH_TARGET) "killall helix-watchdog helix-screen helix-splash 2>/dev/null || true; mkdir -p $(AD5M_DEPLOY_DIR)"
+	@# Clean up stale XML files from root (should be in ui_xml/)
+	ssh $(AD5M_SSH_TARGET) "rm -f $(AD5M_DEPLOY_DIR)/*.xml 2>/dev/null || true"
+	@# Sync binaries
+	rsync -avz --progress build/ad5m/bin/helix-screen build/ad5m/bin/helix-splash $(AD5M_SSH_TARGET):$(AD5M_DEPLOY_DIR)/
+	@if [ -f build/ad5m/bin/helix-watchdog ]; then rsync -avz build/ad5m/bin/helix-watchdog $(AD5M_SSH_TARGET):$(AD5M_DEPLOY_DIR)/; fi
+	@# Sync assets (excluding test files and macOS junk)
+	rsync -avz --exclude='test_gcodes' --exclude='gcode' --exclude='.DS_Store' --exclude='*.pyc' \
+		ui_xml/ assets/ config/ $(AD5M_SSH_TARGET):$(AD5M_DEPLOY_DIR)/
+	@# Sync pre-rendered images if they exist
+	@if [ -d build/assets/images/prerendered ]; then \
+		rsync -avz build/assets/images/prerendered/ $(AD5M_SSH_TARGET):$(AD5M_DEPLOY_DIR)/assets/images/prerendered/; \
+	fi
+	@if [ -d build/assets/images/printers/prerendered ]; then \
+		rsync -avz build/assets/images/printers/prerendered/ $(AD5M_SSH_TARGET):$(AD5M_DEPLOY_DIR)/assets/images/printers/prerendered/; \
+	fi
+	@echo "$(GREEN)✓ Deployed to $(AD5M_HOST):$(AD5M_DEPLOY_DIR)$(RESET)"
+	@echo "$(CYAN)Restarting helix-screen on $(AD5M_HOST)...$(RESET)"
+	ssh $(AD5M_SSH_TARGET) "killall helix-watchdog helix-screen helix-splash 2>/dev/null || true; sleep 1; cd $(AD5M_DEPLOY_DIR) && ./config/helix-launcher.sh > /tmp/helix.log 2>&1 &"
+	@echo "$(GREEN)✓ helix-screen restarted in background$(RESET)"
+	@echo "$(DIM)Logs: ssh $(AD5M_SSH_TARGET) 'tail -f /tmp/helix.log'$(RESET)"
+
+# Legacy deploy using tar/scp (for systems without rsync)
+deploy-ad5m-legacy:
 	@test -f build/ad5m/bin/helix-screen || { echo "$(RED)Error: build/ad5m/bin/helix-screen not found. Run 'make remote-ad5m' first.$(RESET)"; exit 1; }
 	@test -f build/ad5m/bin/helix-splash || { echo "$(RED)Error: build/ad5m/bin/helix-splash not found. Run 'make remote-ad5m' first.$(RESET)"; exit 1; }
 	@# Generate pre-rendered images if missing (requires Python/PIL)
