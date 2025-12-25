@@ -1615,10 +1615,14 @@ void PrintSelectPanel::start_print() {
 }
 
 void PrintSelectPanel::execute_print_start() {
+    // OPTIMISTIC UI: Disable button immediately to prevent double-clicks
+    lv_subject_set_int(&can_print_subject_, 0);
+
     auto* prep_manager = detail_view_ ? detail_view_->get_prep_manager() : nullptr;
     if (!prep_manager) {
         spdlog::error("[{}] Cannot start print - prep manager not initialized", get_name());
         NOTIFY_ERROR("Cannot start print: internal error");
+        update_print_button_state(); // Re-enable button on early failure
         return;
     }
 
@@ -1676,6 +1680,8 @@ void PrintSelectPanel::execute_print_start() {
                 NOTIFY_ERROR("Pre-print failed: {}", error);
                 LOG_ERROR_INTERNAL("[{}] Pre-print sequence failed: {}", self->get_name(), error);
                 status_panel.end_preparing(false);
+                // Re-enable button on failure (will be checked against printer state)
+                self->update_print_button_state();
             }
         });
 }
