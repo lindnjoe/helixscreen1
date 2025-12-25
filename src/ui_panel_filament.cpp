@@ -75,6 +75,63 @@ FilamentPanel::FilamentPanel(PrinterState& printer_state, MoonrakerAPI* api)
     lv_xml_register_event_cb(nullptr, "on_filament_purge_5mm", on_purge_5mm_clicked);
     lv_xml_register_event_cb(nullptr, "on_filament_purge_10mm", on_purge_10mm_clicked);
     lv_xml_register_event_cb(nullptr, "on_filament_purge_25mm", on_purge_25mm_clicked);
+
+    // Subscribe to PrinterState temperatures to show actual printer state
+    extruder_temp_observer_ = ObserverGuard(
+        printer_state_.get_extruder_temp_subject(),
+        [](lv_observer_t* observer, lv_subject_t* subject) {
+            auto* self = static_cast<FilamentPanel*>(lv_observer_get_user_data(observer));
+            if (self) {
+                int temp = lv_subject_get_int(subject);
+                self->nozzle_current_ = temp;
+                self->update_left_card_temps();
+                self->update_temp_display();
+                self->update_warning_text();
+                self->update_safety_state();
+            }
+        },
+        this);
+
+    extruder_target_observer_ = ObserverGuard(
+        printer_state_.get_extruder_target_subject(),
+        [](lv_observer_t* observer, lv_subject_t* subject) {
+            auto* self = static_cast<FilamentPanel*>(lv_observer_get_user_data(observer));
+            if (self) {
+                int target = lv_subject_get_int(subject);
+                // Update internal state and refresh display
+                self->nozzle_target_ = target;
+                self->update_left_card_temps();
+                self->update_material_temp_display();
+                self->update_warning_text();
+            }
+        },
+        this);
+
+    bed_temp_observer_ = ObserverGuard(
+        printer_state_.get_bed_temp_subject(),
+        [](lv_observer_t* observer, lv_subject_t* subject) {
+            auto* self = static_cast<FilamentPanel*>(lv_observer_get_user_data(observer));
+            if (self) {
+                int temp = lv_subject_get_int(subject);
+                self->bed_current_ = temp;
+                self->update_left_card_temps();
+            }
+        },
+        this);
+
+    bed_target_observer_ = ObserverGuard(
+        printer_state_.get_bed_target_subject(),
+        [](lv_observer_t* observer, lv_subject_t* subject) {
+            auto* self = static_cast<FilamentPanel*>(lv_observer_get_user_data(observer));
+            if (self) {
+                int target = lv_subject_get_int(subject);
+                // Update internal state and refresh display
+                self->bed_target_ = target;
+                self->update_left_card_temps();
+                self->update_material_temp_display();
+            }
+        },
+        this);
 }
 
 FilamentPanel::~FilamentPanel() {

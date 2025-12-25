@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "ui_observer_guard.h"
 #include "ui_panel_base.h"
 
 // Forward declarations
@@ -219,6 +220,12 @@ class FilamentPanel : public PanelBase {
 
     // Temperature graph (managed by TempControlPanel)
     TempControlPanel* temp_control_panel_ = nullptr;
+
+    // Observers for printer state temperature updates
+    ObserverGuard extruder_temp_observer_;
+    ObserverGuard extruder_target_observer_;
+    ObserverGuard bed_temp_observer_;
+    ObserverGuard bed_target_observer_;
 
     //
     // === Private Helpers ===
