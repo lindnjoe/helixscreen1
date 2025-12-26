@@ -394,15 +394,16 @@ deploy-pi:
 		assets \
 		config \
 		$(PI_SSH_TARGET):$(PI_DEPLOY_DIR)/
+	@# Use --checksum for pre-rendered images (regenerated with new timestamps but same content)
 	@if [ -d build/assets/images/prerendered ]; then \
 		echo "$(DIM)Transferring pre-rendered splash images...$(RESET)"; \
 		ssh $(PI_SSH_TARGET) "mkdir -p $(PI_DEPLOY_DIR)/assets/images/prerendered"; \
-		rsync -avz build/assets/images/prerendered/ $(PI_SSH_TARGET):$(PI_DEPLOY_DIR)/assets/images/prerendered/; \
+		rsync -avz --checksum build/assets/images/prerendered/ $(PI_SSH_TARGET):$(PI_DEPLOY_DIR)/assets/images/prerendered/; \
 	fi
 	@if [ -d build/assets/images/printers/prerendered ]; then \
 		echo "$(DIM)Transferring pre-rendered printer images...$(RESET)"; \
 		ssh $(PI_SSH_TARGET) "mkdir -p $(PI_DEPLOY_DIR)/assets/images/printers/prerendered"; \
-		rsync -avz build/assets/images/printers/prerendered/ $(PI_SSH_TARGET):$(PI_DEPLOY_DIR)/assets/images/printers/prerendered/; \
+		rsync -avz --checksum build/assets/images/printers/prerendered/ $(PI_SSH_TARGET):$(PI_DEPLOY_DIR)/assets/images/printers/prerendered/; \
 	fi
 	@echo "$(GREEN)✓ Deployed to $(PI_HOST):$(PI_DEPLOY_DIR)$(RESET)"
 	@echo "$(CYAN)Restarting helix-screen on $(PI_HOST)...$(RESET)"
@@ -512,14 +513,15 @@ deploy-ad5m:
 	rsync -avz --progress build/ad5m/bin/helix-screen build/ad5m/bin/helix-splash $(AD5M_SSH_TARGET):$(AD5M_DEPLOY_DIR)/
 	@if [ -f build/ad5m/bin/helix-watchdog ]; then rsync -avz build/ad5m/bin/helix-watchdog $(AD5M_SSH_TARGET):$(AD5M_DEPLOY_DIR)/; fi
 	@# Sync assets (excluding test files and macOS junk)
-	rsync -avz --exclude='test_gcodes' --exclude='gcode' --exclude='.DS_Store' --exclude='*.pyc' \
+	@# Use --checksum to skip files with same content (avoids re-transferring regenerated assets)
+	rsync -avz --checksum --exclude='test_gcodes' --exclude='gcode' --exclude='.DS_Store' --exclude='*.pyc' \
 		ui_xml/ assets/ config/ $(AD5M_SSH_TARGET):$(AD5M_DEPLOY_DIR)/
 	@# Sync pre-rendered images if they exist
 	@if [ -d build/assets/images/prerendered ]; then \
-		rsync -avz build/assets/images/prerendered/ $(AD5M_SSH_TARGET):$(AD5M_DEPLOY_DIR)/assets/images/prerendered/; \
+		rsync -avz --checksum build/assets/images/prerendered/ $(AD5M_SSH_TARGET):$(AD5M_DEPLOY_DIR)/assets/images/prerendered/; \
 	fi
 	@if [ -d build/assets/images/printers/prerendered ]; then \
-		rsync -avz build/assets/images/printers/prerendered/ $(AD5M_SSH_TARGET):$(AD5M_DEPLOY_DIR)/assets/images/printers/prerendered/; \
+		rsync -avz --checksum build/assets/images/printers/prerendered/ $(AD5M_SSH_TARGET):$(AD5M_DEPLOY_DIR)/assets/images/printers/prerendered/; \
 	fi
 	@echo "$(GREEN)✓ Deployed to $(AD5M_HOST):$(AD5M_DEPLOY_DIR)$(RESET)"
 	@echo "$(CYAN)Restarting helix-screen on $(AD5M_HOST)...$(RESET)"
