@@ -1663,18 +1663,22 @@ void PrintSelectPanel::execute_print_start() {
             });
     }
 
+    // Navigate to print status panel IMMEDIATELY (optimistic navigation)
+    // The busy overlay will show on top during download/upload operations.
+    // On failure, we'll navigate back to the detail overlay.
+    if (print_status_panel_widget_) {
+        spdlog::info("[{}] Navigating to print status panel (preparing...)", get_name());
+        hide_detail_view();
+        ui_nav_push_overlay(print_status_panel_widget_);
+    }
+
     // Delegate to PrintPreparationManager
     prep_manager->start_print(
         filename_to_print, current_path_,
-        // Navigation callback - navigate to print status panel
-        [self]() {
-            spdlog::info("[{}] Print started - navigating to print status panel", self->get_name());
-            if (self->print_status_panel_widget_) {
-                self->hide_detail_view();
-                ui_nav_push_overlay(self->print_status_panel_widget_);
-            } else {
-                spdlog::error("[{}] Print status panel not set", self->get_name());
-            }
+        // Navigation callback - no longer needed for main navigation,
+        // but kept for thumbnail source setup which happens after print starts
+        [self, filename_to_print]() {
+            spdlog::debug("[{}] Print start confirmed, thumbnail source set", self->get_name());
         },
         // Preparing callback - update status panel preparing state
         [](const std::string& op_name, int step, int total) {
@@ -1694,10 +1698,19 @@ void PrintSelectPanel::execute_print_start() {
                 spdlog::info("[{}] Print started successfully", self->get_name());
                 status_panel.end_preparing(true);
             } else if (!error.empty()) {
-                NOTIFY_ERROR("Pre-print failed: {}", error);
-                LOG_ERROR_INTERNAL("[{}] Pre-print sequence failed: {}", self->get_name(), error);
+                NOTIFY_ERROR("Print preparation failed: {}", error);
+                LOG_ERROR_INTERNAL("[{}] Print preparation failed: {}", self->get_name(), error);
                 status_panel.end_preparing(false);
-                // Re-enable button on failure (will be checked against printer state)
+
+                // Navigate back to print detail overlay on failure
+                spdlog::info("[{}] Navigating back to print select after failure",
+                             self->get_name());
+                ui_nav_go_back(); // Pop print status overlay
+
+                // Re-show the detail view so user can retry
+                self->show_detail_view();
+
+                // Re-enable button on failure
                 self->update_print_button_state();
             }
         });

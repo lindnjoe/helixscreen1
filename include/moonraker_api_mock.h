@@ -145,10 +145,12 @@ class MoonrakerAPIMock : public MoonrakerAPI {
      * @param dest_path Local filesystem path to write to
      * @param on_success Callback with dest_path on success
      * @param on_error Error callback (FILE_NOT_FOUND if source doesn't exist)
+     * @param on_progress Optional progress callback (ignored in mock)
      */
     void download_file_to_path(const std::string& root, const std::string& path,
                                const std::string& dest_path, StringCallback on_success,
-                               ErrorCallback on_error) override;
+                               ErrorCallback on_error,
+                               ProgressCallback on_progress = nullptr) override;
 
     /**
      * @brief Mock file upload (logs but doesn't write)

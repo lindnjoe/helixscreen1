@@ -45,6 +45,17 @@ class MoonrakerAPI {
     using JsonCallback = std::function<void(const json&)>;
 
     /**
+     * @brief Progress callback for file transfer operations
+     *
+     * Called periodically during download/upload with bytes transferred and total.
+     * NOTE: Called from background HTTP thread - use ui_async_call() for UI updates.
+     *
+     * @param current Bytes transferred so far
+     * @param total Total bytes to transfer
+     */
+    using ProgressCallback = std::function<void(size_t current, size_t total)>;
+
+    /**
      * @brief Constructor
      *
      * @param client MoonrakerClient instance (must remain valid during API lifetime)
@@ -579,10 +590,12 @@ class MoonrakerAPI {
      * @param dest_path Local filesystem path to write to
      * @param on_success Callback with dest_path on success
      * @param on_error Error callback
+     * @param on_progress Optional callback for progress updates (called from HTTP thread)
      */
     virtual void download_file_to_path(const std::string& root, const std::string& path,
                                        const std::string& dest_path, StringCallback on_success,
-                                       ErrorCallback on_error);
+                                       ErrorCallback on_error,
+                                       ProgressCallback on_progress = nullptr);
 
     /**
      * @brief Download a thumbnail image and cache it locally
@@ -639,11 +652,11 @@ class MoonrakerAPI {
                                        SuccessCallback on_success, ErrorCallback on_error);
 
     /**
-     * @brief Upload file from local filesystem path
+     * @brief Upload file from local filesystem path (streaming, low memory)
      *
-     * Reads file from disk and uploads to Moonraker. More memory-efficient than
-     * upload_file_with_name when combined with streaming download/modification,
-     * as only the upload phase needs to hold the file in memory.
+     * Streams file from disk to Moonraker in chunks, never loading the entire
+     * file into memory. Essential for large G-code files on memory-constrained
+     * devices like AD5M.
      *
      * Virtual to allow mocking in tests.
      *
@@ -652,10 +665,12 @@ class MoonrakerAPI {
      * @param local_path Local filesystem path to read from
      * @param on_success Success callback
      * @param on_error Error callback
+     * @param on_progress Optional callback for progress updates (called from HTTP thread)
      */
     virtual void upload_file_from_path(const std::string& root, const std::string& dest_path,
                                        const std::string& local_path, SuccessCallback on_success,
-                                       ErrorCallback on_error);
+                                       ErrorCallback on_error,
+                                       ProgressCallback on_progress = nullptr);
 
     /**
      * @brief Set the HTTP base URL for file transfers

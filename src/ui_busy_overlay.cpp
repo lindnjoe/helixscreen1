@@ -1,0 +1,216 @@
+// Copyright 2025 HelixScreen
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+#include "ui_busy_overlay.h"
+
+#include "ui_theme.h"
+
+#include "lvgl/lvgl.h"
+#include "lvgl/src/xml/lv_xml.h"
+
+#include <spdlog/spdlog.h>
+
+#include <cstdio>
+
+namespace helix {
+
+// ============================================================================
+// STATIC STATE (namespace-level for internal use)
+// ============================================================================
+namespace {
+
+lv_obj_t* g_overlay = nullptr;       // Full-screen backdrop
+lv_obj_t* g_spinner = nullptr;       // Centered spinner
+lv_obj_t* g_label = nullptr;         // Progress text below spinner
+lv_timer_t* g_grace_timer = nullptr; // Delayed show timer
+bool g_pending_show = false;         // Show requested but grace period not elapsed
+std::string g_pending_text;          // Text to show when overlay appears
+
+// Backdrop opacity matches modal system (~70%)
+constexpr uint8_t OVERLAY_BACKDROP_OPACITY = 180;
+
+// Spacing between spinner and label
+constexpr lv_coord_t SPINNER_LABEL_GAP = 16;
+
+// Forward declarations
+void create_overlay_internal();
+void destroy_overlay_internal();
+
+// ============================================================================
+// INTERNAL HELPERS (namespace-level)
+// ============================================================================
+
+void create_overlay_internal() {
+    if (g_overlay) {
+        spdlog::warn("[BusyOverlay] Overlay already exists - skipping creation");
+        return;
+    }
+
+    // Double-check pending flag (guards against race with hide())
+    if (!g_pending_show) {
+        spdlog::debug("[BusyOverlay] Pending show cancelled before creation");
+        return;
+    }
+
+    // Use top layer instead of active screen - survives screen changes
+    // This prevents dangling pointer if user navigates while overlay is visible
+    lv_obj_t* parent = lv_layer_top();
+
+    // Create full-screen backdrop
+    g_overlay = lv_obj_create(parent);
+    lv_obj_set_size(g_overlay, LV_PCT(100), LV_PCT(100));
+    lv_obj_align(g_overlay, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_style_bg_color(g_overlay, lv_color_black(), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(g_overlay, OVERLAY_BACKDROP_OPACITY, LV_PART_MAIN);
+    lv_obj_set_style_border_width(g_overlay, 0, LV_PART_MAIN);
+    lv_obj_set_style_radius(g_overlay, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(g_overlay, 0, LV_PART_MAIN);
+
+    // Block input - this is the key difference from modal (we don't want dismissal)
+    lv_obj_add_flag(g_overlay, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_remove_flag(g_overlay, LV_OBJ_FLAG_SCROLLABLE);
+
+    // Create container for centered content (spinner + label)
+    lv_obj_t* container = lv_obj_create(g_overlay);
+    lv_obj_set_size(container, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_align(container, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_style_bg_opa(container, LV_OPA_TRANSP, LV_PART_MAIN);
+    lv_obj_set_style_border_width(container, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(container, 0, LV_PART_MAIN);
+    lv_obj_set_flex_flow(container, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(container, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
+                          LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_row(container, SPINNER_LABEL_GAP, LV_PART_MAIN);
+    lv_obj_remove_flag(container, LV_OBJ_FLAG_SCROLLABLE);
+
+    // Create spinner using XML widget (with fallback to raw LVGL)
+    g_spinner = static_cast<lv_obj_t*>(lv_xml_create(container, "spinner", nullptr));
+    if (!g_spinner) {
+        // Fallback: create spinner using raw LVGL API
+        g_spinner = lv_spinner_create(container);
+        if (g_spinner) {
+            lv_spinner_set_anim_params(g_spinner, 1000, 200); // 1s rotation, 200deg arc
+            lv_obj_set_size(g_spinner, 48, 48);
+            spdlog::debug("[BusyOverlay] Using fallback spinner (XML not available)");
+        } else {
+            spdlog::error("[BusyOverlay] Failed to create spinner widget");
+        }
+    }
+
+    // Create progress label
+    g_label = lv_label_create(container);
+    lv_obj_set_style_text_color(g_label, lv_color_white(), LV_PART_MAIN);
+    lv_obj_set_style_text_font(g_label, UI_FONT_SMALL, LV_PART_MAIN);
+    lv_label_set_text(g_label, g_pending_text.c_str());
+
+    // Bring to foreground
+    lv_obj_move_foreground(g_overlay);
+
+    g_pending_show = false;
+    spdlog::debug("[BusyOverlay] Created overlay with text: '{}'", g_pending_text);
+}
+
+void destroy_overlay_internal() {
+    if (g_overlay) {
+        lv_obj_delete(g_overlay);
+        g_overlay = nullptr;
+        g_spinner = nullptr;
+        g_label = nullptr;
+        spdlog::debug("[BusyOverlay] Destroyed overlay");
+    }
+}
+
+// Timer callback (must be after create_overlay_internal definition)
+void grace_timer_cb(lv_timer_t* timer) {
+    (void)timer;
+
+    // Clear the timer reference - LVGL auto-deletes one-shot timers after callback
+    // We only clear the reference here; do NOT call lv_timer_delete on one-shot timers
+    g_grace_timer = nullptr;
+
+    // Only create if still pending (hide() not called during grace period)
+    if (g_pending_show) {
+        create_overlay_internal();
+    }
+}
+
+} // namespace
+
+// ============================================================================
+// PUBLIC API
+// ============================================================================
+
+void BusyOverlay::show(const std::string& initial_text, uint32_t grace_period_ms) {
+    // Store text for when overlay actually appears
+    g_pending_text = initial_text;
+
+    // If already visible, just update text
+    if (g_overlay) {
+        if (g_label) {
+            lv_label_set_text(g_label, initial_text.c_str());
+        }
+        spdlog::debug("[BusyOverlay] Already visible - updated text to: '{}'", initial_text);
+        return;
+    }
+
+    // If already pending, update text but don't restart timer
+    if (g_pending_show) {
+        spdlog::debug("[BusyOverlay] Already pending - updated text to: '{}'", initial_text);
+        return;
+    }
+
+    // Mark as pending and start grace timer
+    g_pending_show = true;
+
+    if (grace_period_ms == 0) {
+        // No grace period - show immediately
+        create_overlay_internal();
+    } else {
+        // Start grace timer
+        g_grace_timer = lv_timer_create(grace_timer_cb, grace_period_ms, nullptr);
+        lv_timer_set_repeat_count(g_grace_timer, 1); // One-shot
+        spdlog::debug("[BusyOverlay] Started grace timer ({}ms) for: '{}'", grace_period_ms,
+                      initial_text);
+    }
+}
+
+void BusyOverlay::set_progress(const std::string& operation, float percent) {
+    // Format: "Operation... XX%"
+    char buf[128];
+    snprintf(buf, sizeof(buf), "%s... %.0f%%", operation.c_str(), percent);
+
+    // Update pending text (in case overlay not yet visible)
+    g_pending_text = buf;
+
+    // Update label if visible
+    if (g_overlay && g_label) {
+        lv_label_set_text(g_label, buf);
+    }
+}
+
+void BusyOverlay::hide() {
+    // Cancel grace timer if pending
+    if (g_grace_timer) {
+        lv_timer_delete(g_grace_timer);
+        g_grace_timer = nullptr;
+        spdlog::debug("[BusyOverlay] Cancelled grace timer");
+    }
+
+    g_pending_show = false;
+    g_pending_text.clear();
+
+    // Destroy overlay if visible
+    if (g_overlay) {
+        destroy_overlay_internal();
+    }
+}
+
+bool BusyOverlay::is_visible() {
+    return g_overlay != nullptr;
+}
+
+bool BusyOverlay::is_pending() {
+    return g_pending_show && !g_overlay;
+}
+
+} // namespace helix

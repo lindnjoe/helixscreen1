@@ -106,7 +106,9 @@ void MoonrakerAPIMock::download_file(const std::string& root, const std::string&
 
 void MoonrakerAPIMock::download_file_to_path(const std::string& root, const std::string& path,
                                              const std::string& dest_path,
-                                             StringCallback on_success, ErrorCallback on_error) {
+                                             StringCallback on_success, ErrorCallback on_error,
+                                             ProgressCallback on_progress) {
+    (void)on_progress; // Progress callback ignored in mock
     // Extract just the filename from the path
     std::string filename = path;
     size_t last_slash = path.find_last_of('/');

@@ -3,6 +3,7 @@
 
 #include "ui_print_preparation_manager.h"
 
+#include "ui_busy_overlay.h"
 #include "ui_error_reporting.h"
 #include "ui_panel_print_status.h"
 #include "ui_update_queue.h"
@@ -846,6 +847,22 @@ void PrintPreparationManager::modify_and_print_streaming(
     spdlog::info("[PrintPreparationManager] Streaming modification: downloading to {}",
                  local_download_path);
 
+    // Show busy overlay (will appear after 300ms grace period if operation takes that long)
+    BusyOverlay::show("Preparing print...");
+
+    // Progress callback for download - NOTE: called from HTTP thread
+    auto download_progress = [](size_t received, size_t total) {
+        float pct = (total > 0)
+                        ? (100.0f * static_cast<float>(received) / static_cast<float>(total))
+                        : 0.0f;
+        ui_async_call(
+            [](void* data) {
+                auto pct_val = static_cast<float>(reinterpret_cast<uintptr_t>(data)) / 100.0f;
+                BusyOverlay::set_progress("Downloading", pct_val);
+            },
+            reinterpret_cast<void*>(static_cast<uintptr_t>(pct * 100.0f)));
+    };
+
     // Step 1: Download file to disk (streaming, not memory)
     api_->download_file_to_path(
         "gcodes", file_path, local_download_path,
@@ -954,6 +971,8 @@ void PrintPreparationManager::modify_and_print_streaming(
                             std::make_unique<PrintStartedData>(
                                 PrintStartedData{display_filename, on_navigate_to_status}),
                             [](PrintStartedData* d) {
+                                // Hide overlay now that print is starting
+                                BusyOverlay::hide();
                                 get_global_print_status_panel().set_thumbnail_source(d->filename);
                                 if (d->navigate_cb) {
                                     d->navigate_cb();
@@ -963,6 +982,9 @@ void PrintPreparationManager::modify_and_print_streaming(
 
                     auto on_print_error = [self, alive,
                                            remote_temp_path](const MoonrakerError& error) {
+                        // Hide overlay on error (defer to main thread)
+                        ui_async_call([](void*) { BusyOverlay::hide(); }, nullptr);
+
                         NOTIFY_ERROR("Failed to start print: {}", error.message);
                         LOG_ERROR_INTERNAL(
                             "[PrintPreparationManager] Print start failed for {}: {}",
@@ -1017,6 +1039,9 @@ void PrintPreparationManager::modify_and_print_streaming(
                 },
                 // Upload error - clean up local file
                 [self, modified_path](const MoonrakerError& error) {
+                    // Hide overlay on error (defer to main thread)
+                    ui_async_call([](void*) { BusyOverlay::hide(); }, nullptr);
+
                     // Clean up local file even on error (safe - filesystem op)
                     std::error_code ec;
                     std::filesystem::remove(modified_path, ec);
@@ -1026,10 +1051,27 @@ void PrintPreparationManager::modify_and_print_streaming(
                                        error.message);
                     if (self->printer_state_)
                         self->printer_state_->set_print_in_progress(false);
+                },
+                // Upload progress callback
+                [](size_t sent, size_t total) {
+                    float pct =
+                        (total > 0)
+                            ? (100.0f * static_cast<float>(sent) / static_cast<float>(total))
+                            : 0.0f;
+                    ui_async_call(
+                        [](void* data) {
+                            auto pct_val =
+                                static_cast<float>(reinterpret_cast<uintptr_t>(data)) / 100.0f;
+                            BusyOverlay::set_progress("Uploading", pct_val);
+                        },
+                        reinterpret_cast<void*>(static_cast<uintptr_t>(pct * 100.0f)));
                 });
         },
         // Download error - clean up partial download
         [self, file_path, local_download_path](const MoonrakerError& error) {
+            // Hide overlay on error (defer to main thread)
+            ui_async_call([](void*) { BusyOverlay::hide(); }, nullptr);
+
             // Clean up partial download if any (safe - filesystem op)
             std::error_code ec;
             std::filesystem::remove(local_download_path, ec);
@@ -1039,7 +1081,9 @@ void PrintPreparationManager::modify_and_print_streaming(
                                error.message);
             if (self->printer_state_)
                 self->printer_state_->set_print_in_progress(false);
-        });
+        },
+        // Download progress callback
+        download_progress);
 }
 
 void PrintPreparationManager::execute_pre_print_sequence(
