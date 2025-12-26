@@ -553,6 +553,21 @@ void PrinterState::update_from_status(const json& state) {
             int active_val = is_active ? 1 : 0;
             if (lv_subject_get_int(&print_active_) != active_val) {
                 lv_subject_set_int(&print_active_, active_val);
+
+                // Safety: When print becomes inactive, ensure print_start_phase is IDLE
+                // This prevents "Preparing Print" from showing when print is finished
+                if (!is_active) {
+                    int phase = lv_subject_get_int(&print_start_phase_);
+                    if (phase != static_cast<int>(PrintStartPhase::IDLE)) {
+                        spdlog::warn("[PrinterState] Safety reset: print inactive but phase={}, "
+                                     "resetting to IDLE",
+                                     phase);
+                        lv_subject_set_int(&print_start_phase_,
+                                           static_cast<int>(PrintStartPhase::IDLE));
+                        lv_subject_copy_string(&print_start_message_, "");
+                        lv_subject_set_int(&print_start_progress_, 0);
+                    }
+                }
             }
 
             // Update combined subject for home panel progress card visibility
