@@ -42,7 +42,7 @@
 > After adding icon to codepoints.h: add to regen_mdi_fonts.sh, run make regen-fonts, then rebuild. Forgetting any step = missing icon
 
 ### [L010] [*****/*****] No spdlog in destructors
-- **Uses**: 29 | **Learned**: 2025-12-14 | **Last**: 2025-12-25 | **Category**: gotcha
+- **Uses**: 32 | **Learned**: 2025-12-14 | **Last**: 2025-12-26 | **Category**: gotcha
 > Never call spdlog::info/warn/error in destructors. Logger may be destroyed before your object during static destruction, causing crash on exit
 
 ### [L011] [*****/-----] No mutex in destructors
@@ -118,7 +118,7 @@
 > LVGL observer callbacks use C-style function signatures (lv_observer_t*, lv_subject_t*) - NOT lambdas. Must pass user_data via lv_observer_get_user_data(observer). Also: lv_subject_set_*() from non-main threads must use ui_async_call() to avoid render-phase assertions.
 
 
-### [L030] [*+---/-----] Local vs remote UI design
-- **Uses**: 3 | **Learned**: 2025-12-25 | **Last**: 2025-12-25 | **Category**: pattern
+### [L030] [**+--/-----] Local vs remote UI design
+- **Uses**: 5 | **Learned**: 2025-12-25 | **Last**: 2025-12-26 | **Category**: pattern
 > Touchscreen UIs are for physically present users - prioritize tactile controls, at-a-glance info, and real-time tuning. Don't copy features from remote web UIs (cameras, system stats, multi-device views) that assume users aren't standing at the machine.
 

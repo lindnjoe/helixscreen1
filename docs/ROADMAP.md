@@ -72,12 +72,19 @@ All TIER 1 features are now implemented:
 | **Timelapse Settings** | ✅ Complete | Enable/disable, mode selection, framerate, auto-render |
 | **Temperature Presets** | ✅ Complete | Off/PLA/PETG/ABS presets in temp panels |
 | **Layer Display** | ✅ Complete | Current/total layers on print status |
-| **Camera/Webcam** | 🚧 Stub | Coming Soon overlay (awaiting MJPEG implementation) |
+| **Camera/Webcam** | ⏸️ Low Priority | Local touchscreen users can see the printer directly |
 | **Input Shaper** | 🚧 Stub | Coming Soon overlay |
 
-### Remaining Stubs (Lower Priority)
-- **Camera Panel** - MJPEG viewer, multi-camera, PiP
+### Remaining Stubs
 - **Input Shaper Panel** - Resonance calibration UI
+
+### Design Philosophy Note
+HelixScreen is a **local touchscreen** UI - users are physically present at the printer. This means:
+- **Camera** is low priority (you can see the printer with your eyes)
+- **Job Queue** is not useful (you need to manually remove prints between jobs)
+- **Remote monitoring features** (from Mainsail/Fluidd) don't apply to this form factor
+
+Focus is on **tactile controls** and **at-a-glance information** for the user standing at the machine.
 
 ---
 
@@ -87,8 +94,8 @@ All TIER 1 features are now implemented:
 |---------|--------|-------|
 | **Firmware Retraction** | ✅ | Full settings panel with reactive subjects |
 | **Spoolman Integration** | ✅ | Complete - 6 API methods, panel, picker, AMS integration |
-| **Job Queue** | ⬜ | Batch printing queue |
-| **Update Manager** | ⬜ | Software updates via Moonraker |
+| **Job Queue** | ⏸️ Not Planned | Requires manual print removal between jobs on target printers |
+| **Update Manager** | ⏸️ Deferred | Low priority for on-printer touchscreen use case |
 
 ---
 
