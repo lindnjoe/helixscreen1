@@ -214,6 +214,9 @@ void PrintSelectPanel::init_subjects() {
     // Initialize selected file subjects
     UI_SUBJECT_INIT_AND_REGISTER_STRING(selected_filename_subject_, selected_filename_buffer_, "",
                                         "selected_filename");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(selected_display_filename_subject_,
+                                        selected_display_filename_buffer_, "",
+                                        "selected_display_filename");
 
     // Thumbnail uses POINTER subject (required by lv_image_bind_src)
     // Use get_default_thumbnail() for pre-rendered .bin support
@@ -237,15 +240,14 @@ void PrintSelectPanel::init_subjects() {
                                         "selected_filament_weight");
     UI_SUBJECT_INIT_AND_REGISTER_STRING(selected_layer_count_subject_, selected_layer_count_buffer_,
                                         "", "selected_layer_count");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(selected_file_ops_subject_, selected_file_ops_buffer_, "",
-                                        "selected_file_ops");
-    UI_SUBJECT_INIT_AND_REGISTER_INT(selected_file_ops_visible_subject_, 0,
-                                     "selected_file_ops_visible");
-
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(selected_macro_ops_subject_, selected_macro_ops_buffer_, "",
-                                        "selected_macro_ops");
-    UI_SUBJECT_INIT_AND_REGISTER_INT(selected_macro_ops_visible_subject_, 0,
-                                     "selected_macro_ops_visible");
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(selected_print_height_subject_,
+                                        selected_print_height_buffer_, "", "selected_print_height");
+    // Unified preprint steps (merged file + macro, bulleted list)
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(selected_preprint_steps_subject_,
+                                        selected_preprint_steps_buffer_, "",
+                                        "selected_preprint_steps");
+    UI_SUBJECT_INIT_AND_REGISTER_INT(selected_preprint_steps_visible_subject_, 0,
+                                     "selected_preprint_steps_visible");
 
     // Initialize detail view visibility subject (0 = hidden, 1 = visible)
     UI_SUBJECT_INIT_AND_REGISTER_INT(detail_view_visible_subject_, 0, "detail_view_visible");
@@ -362,13 +364,23 @@ void PrintSelectPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     file_provider_->set_api(api_);
     file_provider_->set_on_files_ready([self](std::vector<PrintFileData>&& files,
                                               std::vector<bool>&& fetched) {
-        self->file_list_ = std::move(files);
-        self->metadata_fetched_ = std::move(fetched);
+        // CRITICAL: Defer ALL work to main thread [L012]
+        // This callback runs on WebSocket thread - LVGL operations must be on main thread
+        struct FilesReadyContext {
+            PrintSelectPanel* panel;
+            std::vector<PrintFileData> files;
+            std::vector<bool> fetched;
+        };
+        auto* ctx = new FilesReadyContext{self, std::move(files), std::move(fetched)};
 
-        // Dispatch UI updates to main thread
         ui_async_call(
             [](void* user_data) {
-                auto* panel = static_cast<PrintSelectPanel*>(user_data);
+                auto* c = static_cast<FilesReadyContext*>(user_data);
+                auto* panel = c->panel;
+
+                // Move data into panel (now safe - on main thread)
+                panel->file_list_ = std::move(c->files);
+                panel->metadata_fetched_ = std::move(c->fetched);
 
                 panel->apply_sort();
                 panel->update_sort_indicators();
@@ -407,47 +419,69 @@ void PrintSelectPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
                 }
                 panel->fetch_metadata_range(static_cast<size_t>(visible_start),
                                             static_cast<size_t>(visible_end));
+
+                delete c;
             },
-            self);
+            ctx);
     });
     file_provider_->set_on_metadata_updated([self](size_t index, const PrintFileData& updated) {
-        // Update file in list
-        if (index < self->file_list_.size() &&
-            self->file_list_[index].filename == updated.filename) {
-            // Merge updated fields
-            if (updated.print_time_minutes > 0) {
-                self->file_list_[index].print_time_minutes = updated.print_time_minutes;
-                self->file_list_[index].print_time_str = updated.print_time_str;
-            }
-            if (updated.filament_grams > 0) {
-                self->file_list_[index].filament_grams = updated.filament_grams;
-                self->file_list_[index].filament_str = updated.filament_str;
-            }
-            if (!updated.filament_type.empty()) {
-                self->file_list_[index].filament_type = updated.filament_type;
-            }
-            if (updated.layer_count > 0) {
-                self->file_list_[index].layer_count = updated.layer_count;
-                self->file_list_[index].layer_count_str = updated.layer_count_str;
-            }
-            if (!updated.thumbnail_path.empty() &&
-                !helix::ui::PrintSelectCardView::is_placeholder_thumbnail(updated.thumbnail_path)) {
-                self->file_list_[index].thumbnail_path = updated.thumbnail_path;
-            }
+        // CRITICAL: Defer all work to main thread [L012]
+        // This callback runs on WebSocket thread - LVGL operations must be on main thread
+        struct MetadataUpdateContext {
+            PrintSelectPanel* panel;
+            size_t index;
+            PrintFileData updated; // Copy the data
+        };
+        auto* ctx = new MetadataUpdateContext{self, index, updated};
+        ui_async_call(
+            [](void* user_data) {
+                auto* c = static_cast<MetadataUpdateContext*>(user_data);
+                auto* panel = c->panel;
+                size_t idx = c->index;
+                const auto& upd = c->updated;
 
-            // Schedule debounced view refresh
-            self->schedule_view_refresh();
+                // Update file in list
+                if (idx < panel->file_list_.size() &&
+                    panel->file_list_[idx].filename == upd.filename) {
+                    // Merge updated fields
+                    if (upd.print_time_minutes > 0) {
+                        panel->file_list_[idx].print_time_minutes = upd.print_time_minutes;
+                        panel->file_list_[idx].print_time_str = upd.print_time_str;
+                    }
+                    if (upd.filament_grams > 0) {
+                        panel->file_list_[idx].filament_grams = upd.filament_grams;
+                        panel->file_list_[idx].filament_str = upd.filament_str;
+                    }
+                    if (!upd.filament_type.empty()) {
+                        panel->file_list_[idx].filament_type = upd.filament_type;
+                    }
+                    if (upd.layer_count > 0) {
+                        panel->file_list_[idx].layer_count = upd.layer_count;
+                        panel->file_list_[idx].layer_count_str = upd.layer_count_str;
+                    }
+                    if (!upd.thumbnail_path.empty() &&
+                        !helix::ui::PrintSelectCardView::is_placeholder_thumbnail(
+                            upd.thumbnail_path)) {
+                        panel->file_list_[idx].thumbnail_path = upd.thumbnail_path;
+                    }
 
-            // Update detail view if this file is selected
-            if (strcmp(self->selected_filename_buffer_, updated.filename.c_str()) == 0) {
-                self->set_selected_file(updated.filename.c_str(),
-                                        self->file_list_[index].thumbnail_path.c_str(),
-                                        self->file_list_[index].original_thumbnail_url.c_str(),
-                                        self->file_list_[index].print_time_str.c_str(),
-                                        self->file_list_[index].filament_str.c_str(),
-                                        self->file_list_[index].layer_count_str.c_str());
-            }
-        }
+                    // Schedule debounced view refresh
+                    panel->schedule_view_refresh();
+
+                    // Update detail view if this file is selected
+                    if (strcmp(panel->selected_filename_buffer_, upd.filename.c_str()) == 0) {
+                        panel->set_selected_file(
+                            upd.filename.c_str(), panel->file_list_[idx].thumbnail_path.c_str(),
+                            panel->file_list_[idx].original_thumbnail_url.c_str(),
+                            panel->file_list_[idx].print_time_str.c_str(),
+                            panel->file_list_[idx].filament_str.c_str(),
+                            panel->file_list_[idx].layer_count_str.c_str(),
+                            panel->file_list_[idx].print_height_str.c_str());
+                    }
+                }
+                delete c;
+            },
+            ctx);
     });
     file_provider_->set_on_error([self](const std::string& error) {
         NOTIFY_ERROR("Failed to refresh file list");
@@ -738,6 +772,7 @@ void PrintSelectPanel::fetch_metadata_range(size_t start, size_t end) {
                 float filament_grams = static_cast<float>(metadata.filament_weight_total);
                 std::string filament_type = metadata.filament_type;
                 uint32_t layer_count = metadata.layer_count;
+                double object_height = metadata.object_height;
 
                 // Smart thumbnail selection: pick smallest that meets display requirements
                 // This reduces download size while ensuring adequate resolution
@@ -749,7 +784,8 @@ void PrintSelectPanel::fetch_metadata_range(size_t start, size_t end) {
                 // Format strings on background thread (uses standalone helper functions)
                 std::string print_time_str = format_print_time(print_time_minutes);
                 std::string filament_str = format_filament_weight(filament_grams);
-                std::string layer_count_str = layer_count > 0 ? std::to_string(layer_count) : "--";
+                std::string layer_count_str = format_layer_count(layer_count);
+                std::string print_height_str = format_print_height(object_height) + " tall";
 
                 // Check if thumbnail is a local file (background thread - filesystem OK)
                 bool thumb_is_local = !thumb_path.empty() && std::filesystem::exists(thumb_path);
@@ -767,16 +803,18 @@ void PrintSelectPanel::fetch_metadata_range(size_t start, size_t end) {
                     std::string filament_str;
                     uint32_t layer_count;
                     std::string layer_count_str;
+                    double object_height;
+                    std::string print_height_str;
                     std::string thumb_path;
                     bool thumb_is_local;
                     helix::ThumbnailTarget thumb_target; // Target size for pre-scaling
                 };
 
                 ui_queue_update<MetadataUpdate>(
-                    std::make_unique<MetadataUpdate>(
-                        MetadataUpdate{self, i, filename, print_time_minutes, filament_grams,
-                                       filament_type, print_time_str, filament_str, layer_count,
-                                       layer_count_str, thumb_path, thumb_is_local, target}),
+                    std::make_unique<MetadataUpdate>(MetadataUpdate{
+                        self, i, filename, print_time_minutes, filament_grams, filament_type,
+                        print_time_str, filament_str, layer_count, layer_count_str, object_height,
+                        print_height_str, thumb_path, thumb_is_local, target}),
                     [](MetadataUpdate* d) {
                         auto* self = d->panel;
 
@@ -796,6 +834,8 @@ void PrintSelectPanel::fetch_metadata_range(size_t start, size_t end) {
                         self->file_list_[d->index].filament_str = d->filament_str;
                         self->file_list_[d->index].layer_count = d->layer_count;
                         self->file_list_[d->index].layer_count_str = d->layer_count_str;
+                        self->file_list_[d->index].object_height = d->object_height;
+                        self->file_list_[d->index].print_height_str = d->print_height_str;
 
                         spdlog::trace("[{}] Updated metadata for {}: {}min, {}g, {} layers",
                                       self->get_name(), d->filename, d->print_time_minutes,
@@ -869,7 +909,7 @@ void PrintSelectPanel::fetch_metadata_range(size_t start, size_t end) {
                                 self->file_list_[d->index].thumbnail_path.c_str(),
                                 self->file_list_[d->index].original_thumbnail_url.c_str(),
                                 d->print_time_str.c_str(), d->filament_str.c_str(),
-                                d->layer_count_str.c_str());
+                                d->layer_count_str.c_str(), d->print_height_str.c_str());
                         }
                     });
             },
@@ -1050,8 +1090,13 @@ void PrintSelectPanel::navigate_up() {
 
 void PrintSelectPanel::set_selected_file(const char* filename, const char* thumbnail_src,
                                          const char* original_url, const char* print_time,
-                                         const char* filament_weight, const char* layer_count) {
+                                         const char* filament_weight, const char* layer_count,
+                                         const char* print_height) {
     lv_subject_copy_string(&selected_filename_subject_, filename);
+
+    // Display filename strips .gcode extension for cleaner UI
+    std::string display_name = strip_gcode_extension(filename);
+    lv_subject_copy_string(&selected_display_filename_subject_, display_name.c_str());
 
     // Card thumbnail uses POINTER subject - copy to buffer then update pointer
     // This is the pre-scaled .bin for fast card rendering
@@ -1088,6 +1133,7 @@ void PrintSelectPanel::set_selected_file(const char* filename, const char* thumb
     lv_subject_copy_string(&selected_print_time_subject_, print_time);
     lv_subject_copy_string(&selected_filament_weight_subject_, filament_weight);
     lv_subject_copy_string(&selected_layer_count_subject_, layer_count);
+    lv_subject_copy_string(&selected_print_height_subject_, print_height);
 
     spdlog::info("[{}] Selected file: {}", get_name(), filename);
 }
@@ -1383,6 +1429,27 @@ void PrintSelectPanel::update_print_button_state() {
     }
 }
 
+void PrintSelectPanel::update_preprint_steps_subject() {
+    if (!detail_view_) {
+        return;
+    }
+
+    auto* prep_mgr = detail_view_->get_prep_manager();
+    if (!prep_mgr) {
+        return;
+    }
+
+    // Get unified preprint steps (merges file + macro, deduplicates)
+    std::string steps = prep_mgr->format_preprint_steps();
+
+    // Update subject and visibility
+    lv_subject_copy_string(&selected_preprint_steps_subject_, steps.c_str());
+    lv_subject_set_int(&selected_preprint_steps_visible_subject_, steps.empty() ? 0 : 1);
+
+    spdlog::debug("[{}] Updated preprint steps (visible: {}): {}", get_name(), !steps.empty(),
+                  steps.empty() ? "(empty)" : steps);
+}
+
 void PrintSelectPanel::update_sort_indicators() {
     const char* header_names[] = {"header_filename", "header_size", "header_modified",
                                   "header_print_time"};
@@ -1497,30 +1564,18 @@ void PrintSelectPanel::create_detail_view() {
     detail_view_->set_visible_subject(&detail_view_visible_subject_);
     detail_view_->set_on_delete_confirmed([this]() { delete_file(); });
 
-    // Set callback to update detected operations display when scan completes
+    // Set callbacks to update unified preprint steps when scan/macro analysis completes
     if (auto* prep_mgr = detail_view_->get_prep_manager()) {
-        prep_mgr->set_scan_complete_callback([this](const std::string& formatted_ops) {
-            lv_subject_copy_string(&selected_file_ops_subject_, formatted_ops.c_str());
-            // Update visibility: 1 = show (has content), 0 = hide (empty)
-            lv_subject_set_int(&selected_file_ops_visible_subject_, formatted_ops.empty() ? 0 : 1);
-            spdlog::debug("[{}] Updated file ops: '{}' (visible: {})", get_name(), formatted_ops,
-                          !formatted_ops.empty());
+        prep_mgr->set_scan_complete_callback([this](const std::string& /*formatted_ops*/) {
+            // Update unified preprint steps (merges file + macro ops)
+            update_preprint_steps_subject();
         });
 
-        // Set callback to update PRINT_START macro operations display
-        prep_mgr->set_macro_analysis_callback([this](
-                                                  const helix::PrintStartAnalysis& /*analysis*/) {
-            // Note: detail_view_ guaranteed valid here - callback stored in prep_manager owned by
-            // detail_view_
-            if (auto* prep_mgr = detail_view_->get_prep_manager()) {
-                std::string formatted = prep_mgr->format_macro_operations();
-                lv_subject_copy_string(&selected_macro_ops_subject_, formatted.c_str());
-                // Update visibility: 1 = show (has content), 0 = hide (empty)
-                lv_subject_set_int(&selected_macro_ops_visible_subject_, formatted.empty() ? 0 : 1);
-                spdlog::debug("[{}] Updated macro ops: '{}' (visible: {})", get_name(), formatted,
-                              !formatted.empty());
-            }
-        });
+        prep_mgr->set_macro_analysis_callback(
+            [this](const helix::PrintStartAnalysis& /*analysis*/) {
+                // Update unified preprint steps (merges file + macro ops)
+                update_preprint_steps_subject();
+            });
     }
 
     spdlog::debug("[{}] Detail view module initialized", get_name());
@@ -1578,7 +1633,8 @@ void PrintSelectPanel::handle_file_click(size_t file_index) {
         // File clicked - show detail view
         set_selected_file(file.filename.c_str(), file.thumbnail_path.c_str(),
                           file.original_thumbnail_url.c_str(), file.print_time_str.c_str(),
-                          file.filament_str.c_str(), file.layer_count_str.c_str());
+                          file.filament_str.c_str(), file.layer_count_str.c_str(),
+                          file.print_height_str.c_str());
         selected_filament_type_ = file.filament_type;
         selected_filament_colors_ = file.filament_colors;
         selected_file_size_bytes_ = file.file_size_bytes;

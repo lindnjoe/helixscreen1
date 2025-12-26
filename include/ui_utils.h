@@ -82,12 +82,34 @@ std::string format_print_time(int minutes);
  * @brief Format filament weight from grams to human-readable string
  *
  * Converts weight to compact format with appropriate precision.
- * Examples: "2.5g", "45g", "120g"
+ * Examples: "2.5 g", "45 g", "120 g"
  *
  * @param grams Filament weight in grams
  * @return Formatted weight string
  */
 std::string format_filament_weight(float grams);
+
+/**
+ * @brief Format layer count with "layers" suffix
+ *
+ * Converts layer count to readable format.
+ * Examples: "234 layers", "1 layer", "--" (if zero/unknown)
+ *
+ * @param layer_count Total layer count
+ * @return Formatted layer string
+ */
+std::string format_layer_count(uint32_t layer_count);
+
+/**
+ * @brief Format print height in millimeters
+ *
+ * Formats object height with appropriate precision.
+ * Examples: "42.5 mm", "0.2 mm", "--" (if zero/unknown)
+ *
+ * @param height_mm Object height in millimeters
+ * @return Formatted height string
+ */
+std::string format_print_height(double height_mm);
 
 /**
  * @brief Format file size from bytes to human-readable string

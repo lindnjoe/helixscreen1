@@ -31,43 +31,54 @@
                   width="100%" height="100%" bind_src="selected_detail_thumbnail" style_bg_opa="0" align="center"
                   inner_align="contain" style_translate_y="#preview_offset_y"/>
         <!-- Metadata clip container - clips top rounded corners of inner overlay -->
+        <!-- Height sized for 2x2 metadata grid (filename + 2 rows of metadata) -->
         <lv_obj name="detail_metadata_clip"
-                width="100%" height="90" style_bg_opa="0" style_border_width="0" style_radius="0" style_pad_all="0"
+                width="100%" height="100" style_bg_opa="0" style_border_width="0" style_radius="0" style_pad_all="0"
                 align="bottom_mid" scrollable="false">
-          <!-- Inner overlay with rounded corners - taller to hide top radius -->
+          <!-- Inner overlay with rounded corners - slightly taller to hide top radius -->
           <lv_obj name="detail_metadata_overlay"
-                  width="100%" height="98" style_bg_opa="160" style_border_width="0" style_radius="#border_radius"
+                  width="100%" height="108" style_bg_opa="160" style_border_width="0" style_radius="#border_radius"
                   style_pad_left="#space_sm" style_pad_right="#space_sm" style_pad_top="#space_lg"
-                  style_pad_bottom="#space_sm" align="bottom_mid" flex_flow="column" scrollable="false">
-            <!-- Filename with reactive binding, specified height so that text will purposely get truncated and not wrap -->
+                  style_pad_bottom="#space_sm" style_pad_gap="#space_md" align="bottom_mid" flex_flow="column"
+                  scrollable="false">
+            <!-- Filename with reactive binding - compact height for more metadata space -->
+            <!-- Uses selected_display_filename (without .gcode extension) for cleaner UI -->
             <text_body name="detail_filename_label"
-                       width="100%" height="#space_2xl" bind_text="selected_filename" long_mode="dots"/>
-            <!-- Metadata row -->
-            <lv_obj name="detail_metadata_row"
-                    width="100%" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_top="#space_xs"
-                    flex_flow="row" style_pad_gap="#space_xs" flex_grow="1">
-              <!-- Print time -->
-              <lv_obj height="100%"
-                      flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                      style_pad_gap="#space_xxs" style_flex_cross_place="center">
-                <icon src="clock" size="xs" variant="accent"/>
-                <text_small name="detail_time_label" bind_text="selected_print_time" flex_grow="1" style_min_width="35"/>
+                       width="100%" height="content" bind_text="selected_display_filename" long_mode="dots"
+                       style_pad_bottom="0" style_border_width="0"/>
+            <!-- Metadata 2x2 grid - minimal gap from filename -->
+            <lv_obj name="detail_metadata_grid"
+                    width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                    flex_flow="column" style_pad_gap="#space_xxs">
+              <!-- Row 1: Print time + Filament weight -->
+              <lv_obj name="metadata_row_1"
+                      width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                      flex_flow="row" style_pad_gap="#space_xs">
+                <lv_obj height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+                        style_pad_gap="#space_xxs" style_flex_cross_place="center" style_flex_track_place="center">
+                  <icon src="clock" size="xs" variant="accent"/>
+                  <text_small name="detail_time_label" bind_text="selected_print_time"/>
+                </lv_obj>
+                <lv_obj height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+                        style_pad_gap="#space_xxs" style_flex_cross_place="center" style_flex_track_place="center">
+                  <icon src="weight" size="xs" variant="accent"/>
+                  <text_small name="detail_filament_label" bind_text="selected_filament_weight"/>
+                </lv_obj>
               </lv_obj>
-              <!-- Filament weight (uses weight icon) -->
-              <lv_obj height="100%"
-                      flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                      style_pad_gap="#space_xxs" style_flex_cross_place="center">
-                <icon src="weight" size="xs" variant="accent"/>
-                <text_small name="detail_filament_label"
-                            bind_text="selected_filament_weight" flex_grow="1" style_min_width="35"/>
-              </lv_obj>
-              <!-- Layer count -->
-              <lv_obj height="100%"
-                      flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                      style_pad_gap="#space_xxs" style_flex_cross_place="center">
-                <icon src="layers" size="xs" variant="accent"/>
-                <text_small name="detail_layers_label"
-                            bind_text="selected_layer_count" flex_grow="1" style_min_width="35"/>
+              <!-- Row 2: Print height + Layer count -->
+              <lv_obj name="metadata_row_2"
+                      width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                      flex_flow="row" style_pad_gap="#space_xs">
+                <lv_obj height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+                        style_pad_gap="#space_xxs" style_flex_cross_place="center" style_flex_track_place="center">
+                  <icon src="ruler" size="xs" variant="accent"/>
+                  <text_small name="detail_height_label" bind_text="selected_print_height"/>
+                </lv_obj>
+                <lv_obj height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+                        style_pad_gap="#space_xxs" style_flex_cross_place="center" style_flex_track_place="center">
+                  <icon src="layers" size="xs" variant="accent"/>
+                  <text_small name="detail_layers_label" bind_text="selected_layer_count"/>
+                </lv_obj>
               </lv_obj>
             </lv_obj>
           </lv_obj>
@@ -79,21 +90,14 @@
       <lv_obj name="options_section"
               height="100%" flex_grow="4" style_bg_opa="0" style_border_width="0" style_pad_all="#space_sm"
               style_pad_gap="#space_lg" flex_flow="column" scrollable="false">
-        <!-- Detected G-code file operations (hidden if empty via reactive binding) -->
-        <lv_obj name="detected_ops_row"
-                width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                style_pad_gap="#space_xs" style_flex_cross_place="center">
-          <lv_obj-bind_flag_if_eq subject="selected_file_ops_visible" flag="hidden" ref_value="0"/>
-          <icon src="code_tags" size="xs" variant="secondary"/>
-          <text_small name="detail_ops_label" bind_text="selected_file_ops" style_text_color="#text_secondary"/>
-        </lv_obj>
-        <!-- PRINT_START macro operations (hidden if empty via reactive binding) -->
-        <lv_obj name="macro_ops_row"
-                width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                style_pad_gap="#space_xs" style_flex_cross_place="center">
-          <lv_obj-bind_flag_if_eq subject="selected_macro_ops_visible" flag="hidden" ref_value="0"/>
-          <icon src="code_braces" size="xs" variant="secondary"/>
-          <text_small name="macro_ops_label" bind_text="selected_macro_ops" style_text_color="#text_secondary"/>
+        <!-- Unified pre-print steps section (hidden if empty via reactive binding) -->
+        <lv_obj name="preprint_steps_section"
+                width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                flex_flow="column" style_pad_gap="#space_xs">
+          <lv_obj-bind_flag_if_eq subject="selected_preprint_steps_visible" flag="hidden" ref_value="0"/>
+          <text_small text="PRE-PRINT STEPS" style_text_color="#text_secondary"/>
+          <text_body name="preprint_steps_label" bind_text="selected_preprint_steps" long_mode="wrap"
+                     style_text_color="#text_primary"/>
         </lv_obj>
         <!-- Color requirements card (hidden by default, shown for multi-color prints) -->
         <ui_card name="color_requirements_card"
@@ -161,10 +165,10 @@
             <event_cb trigger="clicked" callback="on_print_select_delete_button"/>
             <text_body text="Delete" align="center"/>
           </lv_button>
-          <!-- Print button (disabled when print in progress) -->
-          <lv_button name="print_button" height="#button_height" flex_grow="1">
+          <!-- Print button - primary action styling (disabled when print in progress) -->
+          <lv_button name="print_button" height="#button_height" flex_grow="1" style_bg_color="#primary_color">
             <event_cb trigger="clicked" callback="on_print_select_print_button"/>
-            <text_body text="Print" align="center"/>
+            <text_body text="Print" align="center" style_text_color="#FFFFFF"/>
             <lv_obj-bind_flag_if_eq subject="print_select_can_print" flag="disabled" ref_value="0"/>
           </lv_button>
         </lv_obj>

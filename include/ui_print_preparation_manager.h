@@ -251,6 +251,17 @@ class PrintPreparationManager {
      */
     [[nodiscard]] std::string format_detected_operations() const;
 
+    /**
+     * @brief Format unified pre-print steps from both file scan and macro analysis
+     *
+     * Merges operations detected in the G-code file with operations found in the
+     * PRINT_START macro, deduplicates them, and formats as a user-friendly list.
+     *
+     * @return Bulleted list like "• Bed leveling\n• Nozzle cleaning (can be skipped)"
+     *         or empty string if no operations detected
+     */
+    [[nodiscard]] std::string format_preprint_steps() const;
+
     // === Resource Safety ===
 
     /**

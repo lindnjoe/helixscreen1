@@ -85,6 +85,7 @@ struct PrintFileData {
     float filament_grams;               ///< Filament weight in grams
     std::string filament_type;          ///< Filament type (e.g., "PLA", "PETG", "ABS")
     uint32_t layer_count = 0;           ///< Total layer count from slicer
+    double object_height = 0.0;         ///< Object height in mm
     bool is_dir = false;                ///< True if this is a directory
     std::vector<std::string>
         filament_colors; ///< Hex colors per tool (e.g., ["#ED1C24", "#00C1AE"])
@@ -94,7 +95,8 @@ struct PrintFileData {
     std::string modified_str;
     std::string print_time_str;
     std::string filament_str;
-    std::string layer_count_str; ///< Formatted layer count string
+    std::string layer_count_str;  ///< Formatted layer count string
+    std::string print_height_str; ///< Formatted print height string
 };
 
 /**
@@ -272,10 +274,12 @@ class PrintSelectPanel : public PanelBase {
      * @param print_time Formatted print time
      * @param filament_weight Formatted filament weight
      * @param layer_count Formatted layer count (or "--" if unknown)
+     * @param print_height Formatted print height (or "--" if unknown)
      */
     void set_selected_file(const char* filename, const char* thumbnail_src,
                            const char* original_url, const char* print_time,
-                           const char* filament_weight, const char* layer_count);
+                           const char* filament_weight, const char* layer_count,
+                           const char* print_height);
 
     /**
      * @brief Show detail view overlay for selected file
@@ -389,8 +393,11 @@ class PrintSelectPanel : public PanelBase {
     // === Subject Buffers ===
     //
 
-    lv_subject_t selected_filename_subject_;
+    lv_subject_t selected_filename_subject_; ///< Raw filename (for API/lookups)
     char selected_filename_buffer_[128];
+
+    lv_subject_t selected_display_filename_subject_; ///< Display name (no .gcode extension)
+    char selected_display_filename_buffer_[128];
 
     lv_subject_t selected_thumbnail_subject_;
     char selected_thumbnail_buffer_[256];
@@ -407,16 +414,13 @@ class PrintSelectPanel : public PanelBase {
     lv_subject_t selected_layer_count_subject_;
     char selected_layer_count_buffer_[32];
 
-    lv_subject_t selected_file_ops_subject_; ///< Detected G-code operations (e.g., "Contains: ...")
-    char selected_file_ops_buffer_[128];
-    lv_subject_t
-        selected_file_ops_visible_subject_; ///< 1 if file ops row should be visible, 0 if empty
+    lv_subject_t selected_print_height_subject_;
+    char selected_print_height_buffer_[32];
 
-    lv_subject_t selected_macro_ops_subject_; ///< PRINT_START macro operations (e.g., "PRINT_START
-                                              ///< contains: ...")
-    char selected_macro_ops_buffer_[128];
-    lv_subject_t
-        selected_macro_ops_visible_subject_; ///< 1 if macro ops row should be visible, 0 if empty
+    /// Unified pre-print steps (merged file + macro ops, bulleted list)
+    lv_subject_t selected_preprint_steps_subject_;
+    char selected_preprint_steps_buffer_[256]; ///< Larger buffer for multi-line bulleted list
+    lv_subject_t selected_preprint_steps_visible_subject_; ///< 1 if section should be visible
 
     lv_subject_t detail_view_visible_subject_;
 
@@ -548,6 +552,14 @@ class PrintSelectPanel : public PanelBase {
      * Disables the print button when a print is in progress to prevent concurrent prints.
      */
     void update_print_button_state();
+
+    /**
+     * @brief Update the unified preprint steps subject
+     *
+     * Called when either scan_complete or macro_analysis_complete fires to refresh
+     * the unified preprint steps display with merged and deduplicated operations.
+     */
+    void update_preprint_steps_subject();
 
     /**
      * @brief Update sort indicator icons on column headers

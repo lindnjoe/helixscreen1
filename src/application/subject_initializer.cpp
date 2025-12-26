@@ -92,6 +92,7 @@ void SubjectInitializer::inject_api(MoonrakerAPI* api) {
 
     spdlog::debug("[SubjectInitializer] Injecting MoonrakerAPI into panels");
 
+    // Panels with member pointer references
     if (m_print_select_panel) {
         m_print_select_panel->set_api(api);
     }
@@ -111,8 +112,15 @@ void SubjectInitializer::inject_api(MoonrakerAPI* api) {
         m_temp_control_panel->set_api(api);
     }
 
-    // FilamentPanel uses global accessor pattern
+    // Panels using global accessor pattern
+    get_global_home_panel().set_api(api);
+    get_global_controls_panel().set_api(api);
     get_global_filament_panel().set_api(api);
+    get_global_advanced_panel().set_api(api);
+    get_global_spoolman_panel().set_api(api);
+    get_global_history_dashboard_panel().set_api(api);
+    get_global_history_list_panel().set_api(api);
+    get_global_timelapse_settings().set_api(api);
 }
 
 void SubjectInitializer::init_core_subjects() {

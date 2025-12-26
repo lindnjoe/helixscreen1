@@ -16,6 +16,7 @@
 
 #include <cstdlib>
 #include <filesystem>
+#include <map>
 #include <set>
 
 // Forward declaration for global print status panel (declared in ui_panel_print_status.h)
@@ -283,8 +284,14 @@ void PrintPreparationManager::scan_file_for_operations(const std::string& filena
 
     auto* self = this;
     auto alive = alive_guard_; // Capture shared_ptr to detect destruction
-    api_->download_file(
-        "gcodes", file_path,
+
+    // Use partial download - only first 200KB is needed for preamble scanning
+    // (thumbnails + slicer metadata + START_PRINT call + any early G-code ops)
+    // This avoids downloading multi-MB files just to scan the first few hundred lines
+    constexpr size_t SCAN_DOWNLOAD_LIMIT = 200 * 1024; // 200KB
+
+    api_->download_file_partial(
+        "gcodes", file_path, SCAN_DOWNLOAD_LIMIT,
         // Success: parse content and cache result
         // NOTE: This callback runs on a background HTTP thread, so we must defer
         // shared state updates and LVGL calls to the main thread via lv_async_call
@@ -385,6 +392,150 @@ std::string PrintPreparationManager::format_detected_operations() const {
             result += ", ";
         }
         result += op_names[i];
+    }
+
+    return result;
+}
+
+std::string PrintPreparationManager::format_preprint_steps() const {
+    // Unified operation categories with friendly names and skip status
+    struct UnifiedOp {
+        std::string friendly_name;
+        bool can_skip = false;
+    };
+
+    // Use a map to deduplicate by category key
+    std::map<std::string, UnifiedOp> ops;
+
+    // Friendly name mapping for macro operations
+    auto get_macro_friendly_name = [](helix::PrintStartOpCategory cat) -> std::string {
+        switch (cat) {
+        case helix::PrintStartOpCategory::BED_LEVELING:
+            return "Bed leveling";
+        case helix::PrintStartOpCategory::QGL:
+            return "Quad gantry leveling";
+        case helix::PrintStartOpCategory::Z_TILT:
+            return "Z-tilt adjustment";
+        case helix::PrintStartOpCategory::NOZZLE_CLEAN:
+            return "Nozzle cleaning";
+        case helix::PrintStartOpCategory::CHAMBER_SOAK:
+            return "Chamber heat soak";
+        default:
+            return "";
+        }
+    };
+
+    // Category key for deduplication
+    auto get_category_key = [](helix::PrintStartOpCategory cat) -> std::string {
+        switch (cat) {
+        case helix::PrintStartOpCategory::BED_LEVELING:
+            return "bed_leveling";
+        case helix::PrintStartOpCategory::QGL:
+            return "qgl";
+        case helix::PrintStartOpCategory::Z_TILT:
+            return "z_tilt";
+        case helix::PrintStartOpCategory::NOZZLE_CLEAN:
+            return "nozzle_clean";
+        case helix::PrintStartOpCategory::CHAMBER_SOAK:
+            return "chamber_soak";
+        default:
+            return "";
+        }
+    };
+
+    // 1. Add operations from PRINT_START macro analysis
+    if (macro_analysis_.has_value() && macro_analysis_->found) {
+        for (const auto& op : macro_analysis_->operations) {
+            // Skip homing (always happens, not interesting)
+            if (op.category == helix::PrintStartOpCategory::HOMING) {
+                continue;
+            }
+
+            std::string key = get_category_key(op.category);
+            if (key.empty()) {
+                continue;
+            }
+
+            std::string name = get_macro_friendly_name(op.category);
+            if (name.empty()) {
+                name = op.name; // Fallback to raw name
+            }
+
+            spdlog::debug("[PrintPreparationManager] From MACRO: {} (key={}, skip={})", name, key,
+                          op.has_skip_param);
+
+            // If already in map, update skip status (macro can add skip capability)
+            if (ops.find(key) != ops.end()) {
+                if (op.has_skip_param) {
+                    ops[key].can_skip = true;
+                }
+            } else {
+                ops[key] = UnifiedOp{name, op.has_skip_param};
+            }
+        }
+    }
+
+    // 2. Add operations from G-code file scan (these are already in the file)
+    if (cached_scan_result_.has_value()) {
+        for (const auto& op : cached_scan_result_->operations) {
+            // Map file operation types to category keys
+            std::string key;
+            std::string name;
+
+            switch (op.type) {
+            case gcode::OperationType::BED_LEVELING:
+                key = "bed_leveling";
+                name = "Bed leveling";
+                break;
+            case gcode::OperationType::QGL:
+                key = "qgl";
+                name = "Quad gantry leveling";
+                break;
+            case gcode::OperationType::Z_TILT:
+                key = "z_tilt";
+                name = "Z-tilt adjustment";
+                break;
+            case gcode::OperationType::NOZZLE_CLEAN:
+                key = "nozzle_clean";
+                name = "Nozzle cleaning";
+                break;
+            case gcode::OperationType::CHAMBER_SOAK:
+                key = "chamber_soak";
+                name = "Chamber heat soak";
+                break;
+            case gcode::OperationType::PURGE_LINE:
+                key = "purge_line";
+                name = "Purge line";
+                break;
+            default:
+                continue; // Skip homing, start_print, etc.
+            }
+
+            spdlog::debug("[PrintPreparationManager] From FILE: {} (key={}, raw={})", name, key,
+                          op.display_name());
+
+            // File operations are embedded in G-code, not skippable via macro
+            // Only add if not already present from macro
+            if (ops.find(key) == ops.end()) {
+                ops[key] = UnifiedOp{name, false};
+            }
+        }
+    }
+
+    // 3. Format as bulleted list
+    if (ops.empty()) {
+        return "";
+    }
+
+    std::string result;
+    for (const auto& [key, op] : ops) {
+        if (!result.empty()) {
+            result += "\n";
+        }
+        result += "• " + op.friendly_name;
+        if (op.can_skip) {
+            result += " (can be skipped)";
+        }
     }
 
     return result;

@@ -231,11 +231,13 @@ void PrintSelectFileProvider::fetch_metadata_range(std::vector<PrintFileData>& f
             std::vector<std::string> filament_colors = metadata.filament_colors;
             std::string thumb_path = metadata.get_largest_thumbnail();
             uint32_t layer_count = metadata.layer_count;
+            double object_height = metadata.object_height;
 
             // Format strings on background thread
             std::string print_time_str = format_print_time(print_time_minutes);
             std::string filament_str = format_filament_weight(filament_grams);
-            std::string layer_count_str = layer_count > 0 ? std::to_string(layer_count) : "--";
+            std::string layer_count_str = format_layer_count(layer_count);
+            std::string print_height_str = format_print_height(object_height) + " tall";
 
             // Check if thumbnail is a local file
             bool thumb_is_local = !thumb_path.empty() && std::filesystem::exists(thumb_path);
@@ -264,16 +266,19 @@ void PrintSelectFileProvider::fetch_metadata_range(std::vector<PrintFileData>& f
                 std::string filament_str;
                 uint32_t layer_count;
                 std::string layer_count_str;
+                double object_height;
+                std::string print_height_str;
                 std::string thumb_path;
                 std::string cache_file;
                 bool thumb_is_local;
             };
 
             ui_queue_update<MetadataUpdate>(
-                std::make_unique<MetadataUpdate>(MetadataUpdate{
-                    self->api_, on_updated, i, filename, print_time_minutes, filament_grams,
-                    filament_type, filament_colors, print_time_str, filament_str, layer_count,
-                    layer_count_str, thumb_path, cache_file, thumb_is_local}),
+                std::make_unique<MetadataUpdate>(
+                    MetadataUpdate{self->api_, on_updated, i, filename, print_time_minutes,
+                                   filament_grams, filament_type, filament_colors, print_time_str,
+                                   filament_str, layer_count, layer_count_str, object_height,
+                                   print_height_str, thumb_path, cache_file, thumb_is_local}),
                 [](MetadataUpdate* d) {
                     // Create updated file data
                     PrintFileData updated;
@@ -286,6 +291,8 @@ void PrintSelectFileProvider::fetch_metadata_range(std::vector<PrintFileData>& f
                     updated.filament_str = d->filament_str;
                     updated.layer_count = d->layer_count;
                     updated.layer_count_str = d->layer_count_str;
+                    updated.object_height = d->object_height;
+                    updated.print_height_str = d->print_height_str;
 
                     // Handle thumbnail
                     if (!d->thumb_path.empty()) {
