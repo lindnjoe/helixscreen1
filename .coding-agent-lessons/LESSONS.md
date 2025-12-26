@@ -17,8 +17,8 @@
 - **Uses**: 7 | **Learned**: 2025-12-14 | **Last**: 2025-12-25 | **Category**: pattern
 > Always add name='component_name' on XML component tags. Internal view names don't propagate, causing lv_obj_find_by_name to return NULL
 
-### [L004] [***--/-----] Subject init before create
-- **Uses**: 6 | **Learned**: 2025-12-14 | **Last**: 2025-12-26 | **Category**: pattern
+### [L004] [****+/-----] Subject init before create
+- **Uses**: 9 | **Learned**: 2025-12-14 | **Last**: 2025-12-26 | **Category**: pattern
 > Initialize and register subjects BEFORE lv_xml_create(). Order: fonts, images, components, init subjects, register subjects, create UI
 
 ### [L005] [**+--/-----] Static buffers for subjects
@@ -49,8 +49,8 @@
 - **Uses**: 10 | **Learned**: 2025-12-14 | **Last**: 2025-12-25 | **Category**: gotcha
 > Avoid mutex locks in destructors during static destruction phase. Other objects may already be destroyed, causing deadlock or crash on exit
 
-### [L012] [*****/***--] Guard async callbacks
-- **Uses**: 16 | **Learned**: 2025-12-14 | **Last**: 2025-12-26 | **Category**: gotcha
+### [L012] [*****/*****] Guard async callbacks
+- **Uses**: 21 | **Learned**: 2025-12-14 | **Last**: 2025-12-26 | **Category**: gotcha
 > Async WebSocket callbacks can fire after object destruction. Use weak_ptr or flag checks to guard against stale this pointers in async handlers
 
 ### [L013] [****-/-----] Callbacks before XML creation
@@ -81,8 +81,8 @@
 - **Uses**: 5 | **Learned**: 2025-12-14 | **Last**: 2025-12-25 | **Category**: gotcha
 > In <styles> blocks use bare names (bg_color). On widgets use style_ prefix (style_bg_color). Mixing them up silently fails
 
-### [L020] [*****/*----] ObserverGuard for cleanup
-- **Uses**: 12 | **Learned**: 2025-12-14 | **Last**: 2025-12-26 | **Category**: gotcha
+### [L020] [*****/**+--] ObserverGuard for cleanup
+- **Uses**: 15 | **Learned**: 2025-12-14 | **Last**: 2025-12-26 | **Category**: gotcha
 > Use ObserverGuard RAII wrapper for lv_subject observers. Manual observer cleanup is error-prone and causes use-after-free on panel destruction
 
 ### [L021] [***+-/-----] Centidegrees for temps
