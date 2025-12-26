@@ -1,5 +1,7 @@
 # Add uploadLargeFormFile() for memory-efficient multipart uploads
 
+> **Upstream PR:** https://github.com/ithewei/libhv/pull/795 (submitted 2025-12-26)
+
 ## The problem
 
 `uploadFormFile()` loads the whole file into memory before sending. That's fine for small files, but when you're uploading 50-100MB files on an embedded device with 512MB RAM... yeah, not great.
