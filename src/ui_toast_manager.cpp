@@ -4,10 +4,14 @@
 
 #include "ui_notification_history.h"
 #include "ui_status_bar.h"
+#include "ui_update_queue.h"
 
 #include "settings_manager.h"
 
 #include <spdlog/spdlog.h>
+
+#include <cstring>
+#include <string>
 
 // ============================================================================
 // ANIMATION CONSTANTS
@@ -358,19 +362,61 @@ void ui_toast_init() {
     ToastManager::instance().init();
 }
 
+// Thread-safe toast showing - can be called from any thread
+// Uses ui_async_call to defer to main thread if needed
 void ui_toast_show(ToastSeverity severity, const char* message, uint32_t duration_ms) {
-    ToastManager::instance().show(severity, message, duration_ms);
+    // Capture parameters by value (copy strings to heap)
+    struct ToastParams {
+        ToastSeverity severity;
+        std::string message;
+        uint32_t duration_ms;
+    };
+
+    auto* params = new ToastParams{severity, message ? message : "", duration_ms};
+
+    ui_async_call(
+        [](void* user_data) {
+            auto* p = static_cast<ToastParams*>(user_data);
+            ToastManager::instance().show(p->severity, p->message.c_str(), p->duration_ms);
+            delete p;
+        },
+        params);
 }
 
 void ui_toast_show_with_action(ToastSeverity severity, const char* message, const char* action_text,
                                toast_action_callback_t action_callback, void* user_data,
                                uint32_t duration_ms) {
-    ToastManager::instance().show_with_action(severity, message, action_text, action_callback,
-                                              user_data, duration_ms);
+    // Capture parameters by value (copy strings to heap)
+    struct ToastActionParams {
+        ToastSeverity severity;
+        std::string message;
+        std::string action_text;
+        toast_action_callback_t action_callback;
+        void* user_data;
+        uint32_t duration_ms;
+    };
+
+    auto* params = new ToastActionParams{severity,
+                                         message ? message : "",
+                                         action_text ? action_text : "",
+                                         action_callback,
+                                         user_data,
+                                         duration_ms};
+
+    ui_async_call(
+        [](void* data) {
+            auto* p = static_cast<ToastActionParams*>(data);
+            ToastManager::instance().show_with_action(p->severity, p->message.c_str(),
+                                                      p->action_text.c_str(), p->action_callback,
+                                                      p->user_data, p->duration_ms);
+            delete p;
+        },
+        params);
 }
 
 void ui_toast_hide() {
-    ToastManager::instance().hide();
+    ui_async_call(
+        [](void*) { ToastManager::instance().hide(); }, nullptr);
 }
 
 bool ui_toast_is_visible() {
