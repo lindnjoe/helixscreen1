@@ -114,7 +114,7 @@ static const IconMapping ICON_MAP[] = {
     {"hourglass",          "\xF3\xB0\x8F\x94"},  // F03D4 hourglass (approx, need exact)
 
     // Info/Image
-    {"image_broken_variant", "\xF3\xB1\xA3\x86"}, // F18C6 image-broken-variant (fallback)
+    {"image_broken_variant", "\xF3\xB0\x8B\xAE"}, // F02EE image-broken-variant (fallback)
     {"info",               "\xF3\xB0\x8B\xBC"},  // F02FC information
     {"info_outline",       "\xF3\xB0\x8B\xBD"},  // F02FD information-outline
     {"inputshaper",        "\xF3\xB0\xA5\x9B"},  // F095B sine-wave
