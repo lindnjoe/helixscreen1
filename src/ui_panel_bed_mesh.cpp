@@ -10,6 +10,7 @@
 #include "ui_panel_common.h"
 #include "ui_subject_registry.h"
 #include "ui_toast.h"
+#include "ui_update_queue.h"
 
 #include "app_globals.h"
 #include "moonraker_api.h"
@@ -386,17 +387,35 @@ void BedMeshPanel::setup_moonraker_subscription() {
 
     MoonrakerAPI* api = api_;
     api_->get_client().register_notify_update([this, api](nlohmann::json notification) {
-        if (notification.contains("params") && notification["params"].is_array() &&
-            !notification["params"].empty()) {
-            const nlohmann::json& params = notification["params"][0];
-            if (params.contains("bed_mesh") && params["bed_mesh"].is_object()) {
-                const BedMeshProfile* mesh = api->get_active_bed_mesh();
-                if (mesh) {
-                    on_mesh_update_internal(*mesh);
-                }
-                update_profile_list_subjects();
-            }
+        // Check if this notification contains bed_mesh data BEFORE deferring to main thread
+        // This avoids unnecessary context switches for unrelated notifications
+        if (!notification.contains("params") || !notification["params"].is_array() ||
+            notification["params"].empty()) {
+            return;
         }
+        const nlohmann::json& params = notification["params"][0];
+        if (!params.contains("bed_mesh") || !params["bed_mesh"].is_object()) {
+            return;
+        }
+
+        // CRITICAL: Defer LVGL modifications to main thread via ui_async_call [L012]
+        // WebSocket callbacks run on libhv thread - direct lv_subject_* calls cause crashes
+        struct Ctx {
+            BedMeshPanel* panel;
+            MoonrakerAPI* api;
+        };
+        auto* ctx = new Ctx{this, api};
+        ui_async_call(
+            [](void* user_data) {
+                auto* c = static_cast<Ctx*>(user_data);
+                const BedMeshProfile* mesh = c->api->get_active_bed_mesh();
+                if (mesh) {
+                    c->panel->on_mesh_update_internal(*mesh);
+                }
+                c->panel->update_profile_list_subjects();
+                delete c;
+            },
+            ctx);
     });
     spdlog::debug("[{}] Registered Moonraker callback for mesh updates", get_name());
 }
