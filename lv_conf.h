@@ -575,6 +575,7 @@
 #define LV_SYMBOL_UP        "\xF3\xB0\x85\x83"  /* MDI chevron-up (F0143) */
 #define LV_SYMBOL_LEFT      "\xF3\xB0\x85\x81"  /* MDI chevron-left (F0141) */
 #define LV_SYMBOL_RIGHT     "\xF3\xB0\x85\x82"  /* MDI chevron-right (F0142) */
+#define LV_SYMBOL_OK        "\xF3\xB0\x84\xAC"  /* MDI check (F012C) - checkbox checkmark */
 
 /*=================
  *  TEXT SETTINGS
