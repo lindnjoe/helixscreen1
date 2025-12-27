@@ -206,9 +206,6 @@ void PrintStatusPanel::init_subjects() {
     // Viewer mode subject (0=thumbnail, 1=3D gcode viewer, 2=2D gcode viewer)
     UI_SUBJECT_INIT_AND_REGISTER_INT(gcode_viewer_mode_subject_, 0, "gcode_viewer_mode");
 
-    // Print complete overlay visibility (0=hidden, 1=visible)
-    UI_SUBJECT_INIT_AND_REGISTER_INT(print_complete_visible_subject_, 0, "print_complete_visible");
-
     // Tuning panel subjects (for tune panel sliders)
     UI_SUBJECT_INIT_AND_REGISTER_STRING(tune_speed_subject_, tune_speed_buf_, "100%",
                                         "tune_speed_display");
@@ -1241,17 +1238,6 @@ void PrintStatusPanel::on_print_state_changed(PrintJobState job_state) {
     if (new_state != current_state_) {
         PrintState old_state = current_state_;
 
-        // Clear complete overlay when entering any active print state
-        // This handles all transition paths: Complete→Standby→Preparing→Printing
-        // (not just the rare direct Complete→Printing transition)
-        if (new_state == PrintState::Preparing || new_state == PrintState::Printing) {
-            if (lv_subject_get_int(&print_complete_visible_subject_) != 0) {
-                lv_subject_set_int(&print_complete_visible_subject_, 0);
-                spdlog::debug("[{}] Clearing complete overlay (entering active print state)",
-                              get_name());
-            }
-        }
-
         // Clear thumbnail and G-code tracking when print ends (Complete/Cancelled/Error/Idle)
         // This ensures they're available during the entire print but cleared for the next one
         bool print_ended =
@@ -1312,7 +1298,6 @@ void PrintStatusPanel::on_print_state_changed(PrintJobState job_state) {
                 std::snprintf(progress_text_buf_, sizeof(progress_text_buf_), "100%%");
                 lv_subject_copy_string(&progress_text_subject_, progress_text_buf_);
             }
-            lv_subject_set_int(&print_complete_visible_subject_, 1);
 
             // Trigger celebratory animation on the success badge
             animate_print_complete();

@@ -377,9 +377,6 @@ class PrintStatusPanel : public PanelBase {
     // Viewer mode subject (0=thumbnail mode, 1=gcode viewer mode)
     lv_subject_t gcode_viewer_mode_subject_;
 
-    // Print complete overlay visibility (0=hidden, 1=visible)
-    lv_subject_t print_complete_visible_subject_;
-
     // Subject storage buffers
     char progress_text_buf_[32] = "0%";
     char layer_text_buf_[64] = "Layer 0 / 0";

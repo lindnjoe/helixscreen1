@@ -72,7 +72,7 @@
                   style_pad_all="#space_lg" flex_flow="column" style_flex_main_place="center"
                   style_flex_cross_place="center" style_flex_track_place="center" style_pad_gap="#space_sm"
                   scrollable="false">
-            <lv_obj-bind_flag_if_eq subject="print_complete_visible" flag="hidden" ref_value="0"/>
+            <lv_obj-bind_flag_if_eq subject="print_complete" flag="hidden" ref_value="0"/>
             <!-- Green success badge with checkmark (animated on appearance) -->
             <lv_obj name="success_badge"
                     width="content" height="content" style_bg_color="#success_color" style_bg_opa="255"

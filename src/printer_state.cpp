@@ -211,6 +211,7 @@ void PrinterState::reset_for_testing() {
     lv_subject_deinit(&print_state_);
     lv_subject_deinit(&print_state_enum_);
     lv_subject_deinit(&print_active_);
+    lv_subject_deinit(&print_complete_);
     lv_subject_deinit(&print_show_progress_);
     lv_subject_deinit(&print_display_filename_);
     lv_subject_deinit(&print_thumbnail_path_);
@@ -288,6 +289,7 @@ void PrinterState::init_subjects(bool register_xml) {
                            "standby");
     lv_subject_init_int(&print_state_enum_, static_cast<int>(PrintJobState::STANDBY));
     lv_subject_init_int(&print_active_, 0);        // 0 when idle, 1 when PRINTING/PAUSED
+    lv_subject_init_int(&print_complete_, 0);      // 1 when COMPLETE, 0 on new print
     lv_subject_init_int(&print_show_progress_, 0); // 1 when active AND not in start phase
     lv_subject_init_string(&print_display_filename_, print_display_filename_buf_, nullptr,
                            sizeof(print_display_filename_buf_), "");
@@ -395,6 +397,7 @@ void PrinterState::init_subjects(bool register_xml) {
         lv_xml_register_subject(NULL, "print_state", &print_state_);
         lv_xml_register_subject(NULL, "print_state_enum", &print_state_enum_);
         lv_xml_register_subject(NULL, "print_active", &print_active_);
+        lv_xml_register_subject(NULL, "print_complete", &print_complete_);
         lv_xml_register_subject(NULL, "print_show_progress", &print_show_progress_);
         lv_xml_register_subject(NULL, "print_display_filename", &print_display_filename_);
         lv_xml_register_subject(NULL, "print_layer_current", &print_layer_current_);
@@ -567,6 +570,22 @@ void PrinterState::update_from_status(const json& state) {
                         lv_subject_copy_string(&print_start_message_, "");
                         lv_subject_set_int(&print_start_progress_, 0);
                     }
+                }
+            }
+
+            // Update print_complete (1 when COMPLETE, 0 when starting new print)
+            // Preserves "1" during Complete→Standby transition to keep overlay visible
+            int current_complete = lv_subject_get_int(&print_complete_);
+            if (new_state == PrintJobState::COMPLETE) {
+                if (current_complete != 1) {
+                    lv_subject_set_int(&print_complete_, 1);
+                    spdlog::debug("[PrinterState] Print complete overlay shown");
+                }
+            } else if (new_state == PrintJobState::PRINTING) {
+                // Clear when new print starts (not during Complete→Standby)
+                if (current_complete != 0) {
+                    lv_subject_set_int(&print_complete_, 0);
+                    spdlog::debug("[PrinterState] Print complete overlay cleared (new print)");
                 }
             }
 
