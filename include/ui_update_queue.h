@@ -58,11 +58,12 @@ using UpdateCallback = std::function<void()>;
  * @brief Thread-safe UI update queue
  *
  * Singleton that manages pending UI updates. Call init() once at startup
- * to install a display event handler that processes updates BEFORE rendering.
+ * to install a high-priority timer that processes updates every lv_timer_handler() cycle.
  *
- * Key insight: Using a timer doesn't work because LVGL doesn't guarantee
- * timer order relative to display refresh. Instead, we use LV_EVENT_REFR_START
- * which fires RIGHT BEFORE rendering begins - the perfect safe point.
+ * Key insight: Using LV_EVENT_REFR_START doesn't work because it only fires when
+ * LVGL decides to render. If nothing invalidates the display, the queue never drains.
+ * Instead, we use a highest-priority timer that fires every lv_timer_handler() call,
+ * ensuring callbacks execute promptly regardless of render state.
  */
 class UpdateQueue {
   public:
@@ -77,26 +78,24 @@ class UpdateQueue {
     /**
      * @brief Initialize the update queue (call once at startup)
      *
-     * Registers an event handler on the default display that processes
-     * pending updates at the START of each refresh cycle, BEFORE rendering.
+     * Creates a highest-priority timer that processes pending updates
+     * every lv_timer_handler() cycle, BEFORE the render timer runs.
      */
     void init() {
         if (initialized_)
             return;
 
-        lv_display_t* disp = lv_display_get_default();
-        if (!disp) {
-            spdlog::warn("[UpdateQueue] init - no default display!");
+        // Create a timer that fires every lv_timer_handler() cycle
+        // Period of 1ms ensures it runs frequently (LVGL processes all ready timers)
+        // Created early at init, so it's near the head of the timer list
+        timer_ = lv_timer_create(timer_cb, 1, this);
+        if (!timer_) {
+            spdlog::error("[UpdateQueue] Failed to create timer!");
             return;
         }
 
-        // Register event handler for LV_EVENT_REFR_START
-        // This fires RIGHT BEFORE rendering begins - the perfect safe point
-        lv_display_add_event_cb(disp, refr_start_cb, LV_EVENT_REFR_START, this);
-        display_ = disp;
         initialized_ = true;
-        spdlog::info("[UpdateQueue] Initialized - REFR_START handler registered on display {:p}",
-                     static_cast<void*>(disp));
+        spdlog::info("[UpdateQueue] Initialized - timer created for queue drain");
     }
 
     /**
@@ -116,10 +115,11 @@ class UpdateQueue {
      * @brief Shutdown and cleanup
      */
     void shutdown() {
-        // Note: We don't remove the event callback because the display
-        // may already be destroyed during lv_deinit(). Just mark as shutdown.
+        if (timer_) {
+            lv_timer_delete(timer_);
+            timer_ = nullptr;
+        }
         initialized_ = false;
-        display_ = nullptr;
     }
 
   private:
@@ -133,13 +133,13 @@ class UpdateQueue {
     UpdateQueue& operator=(const UpdateQueue&) = delete;
 
     /**
-     * @brief Process all pending updates before rendering starts
+     * @brief Timer callback - processes all pending updates
      *
-     * Called by LVGL via LV_EVENT_REFR_START, guaranteed to run
-     * BEFORE rendering_in_progress is set to true.
+     * Called by LVGL on every lv_timer_handler() cycle due to highest priority.
+     * Runs BEFORE the render timer, ensuring updates are applied before drawing.
      */
-    static void refr_start_cb(lv_event_t* e) {
-        auto* self = static_cast<UpdateQueue*>(lv_event_get_user_data(e));
+    static void timer_cb(lv_timer_t* timer) {
+        auto* self = static_cast<UpdateQueue*>(lv_timer_get_user_data(timer));
         if (self && self->initialized_) {
             self->process_pending();
         }
@@ -163,7 +163,7 @@ class UpdateQueue {
 
     std::mutex mutex_;
     std::queue<UpdateCallback> pending_;
-    lv_display_t* display_ = nullptr;
+    lv_timer_t* timer_ = nullptr;
     bool initialized_ = false;
 };
 
