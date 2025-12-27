@@ -32,6 +32,7 @@
 #include "ui_timelapse_settings.h"
 #include "ui_wizard.h"
 
+#include "active_print_media_manager.h"
 #include "ams_state.h"
 #include "app_globals.h"
 #include "filament_sensor_manager.h"
@@ -121,6 +122,9 @@ void SubjectInitializer::inject_api(MoonrakerAPI* api) {
     get_global_history_dashboard_panel().set_api(api);
     get_global_history_list_panel().set_api(api);
     get_global_timelapse_settings().set_api(api);
+
+    // ActivePrintMediaManager needs API for thumbnail loading
+    helix::get_active_print_media_manager().set_api(api);
 }
 
 void SubjectInitializer::init_core_subjects() {
@@ -135,6 +139,10 @@ void SubjectInitializer::init_printer_state_subjects() {
     // PrinterState must be initialized BEFORE panels that observe its subjects
     // (e.g., HomePanel observes led_state_, extruder_temp_, connection_state_)
     get_printer_state().init_subjects();
+
+    // ActivePrintMediaManager observes print_filename_ and updates print_display_filename_
+    // and print_thumbnail_path_. Must be initialized after PrinterState, before panels.
+    helix::init_active_print_media_manager();
 }
 
 void SubjectInitializer::init_ams_subjects() {

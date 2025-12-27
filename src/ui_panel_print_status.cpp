@@ -164,10 +164,7 @@ void PrintStatusPanel::init_subjects() {
     }
 
     // Initialize all subjects with default values
-    // Note: Using "print_filename_display" to avoid collision with PrinterState's "print_filename"
-    // This subject contains the formatted display name (path stripped, extension removed)
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(filename_subject_, filename_buf_, "No print active",
-                                        "print_filename_display");
+    // Note: Display filename is now handled by ActivePrintMediaManager via print_display_filename
     UI_SUBJECT_INIT_AND_REGISTER_STRING(progress_text_subject_, progress_text_buf_, "0%",
                                         "print_progress_text");
     UI_SUBJECT_INIT_AND_REGISTER_STRING(layer_text_subject_, layer_text_buf_, "Layer 0 / 0",
@@ -1244,9 +1241,8 @@ void PrintStatusPanel::on_print_state_changed(PrintJobState job_state) {
                 gcode_loaded_ = false;
                 cleanup_temp_gcode();
 
-                // Clear shared paths so HomePanel reverts to idle state
-                get_printer_state().set_print_thumbnail_path("");
-                get_printer_state().set_print_display_filename("");
+                // Note: Shared subjects (print_thumbnail_path, print_display_filename)
+                // are cleared by ActivePrintMediaManager when print_filename_ becomes empty
             }
         }
 
@@ -1329,17 +1325,9 @@ void PrintStatusPanel::on_print_filename_changed(const char* filename) {
             set_thumbnail_source(resolved);
         }
 
-        // Compute effective filename for comparison (respects thumbnail_source override)
-        // This ensures we compare apples-to-apples: the effective display name
-        std::string effective_filename =
-            thumbnail_source_filename_.empty() ? raw_filename : thumbnail_source_filename_;
-        std::string display_name = get_display_filename(effective_filename);
-
-        // Only update if display would actually change
-        if (display_name != filename_buf_) {
-            set_filename(filename);
-            spdlog::debug("[{}] Filename updated: {}", get_name(), display_name);
-        }
+        // Call set_filename() which is idempotent (won't reload if effective filename unchanged)
+        set_filename(filename);
+        spdlog::debug("[{}] Filename observer fired: {}", get_name(), raw_filename);
     }
 }
 
@@ -1929,14 +1917,7 @@ void PrintStatusPanel::load_thumbnail_for_file(const std::string& filename) {
                 return;
             }
 
-            // Set total layer count from file metadata (more reliable than WebSocket updates)
-            // Moonraker's print_stats.info.total_layer only updates when G-code runs
-            // SET_PRINT_STATS_INFO TOTAL_LAYER=X, which some slicers don't include
-            if (metadata.layer_count > 0) {
-                get_printer_state().set_print_layer_total(static_cast<int>(metadata.layer_count));
-                spdlog::debug("[{}] Set total layers from metadata: {}", get_name(),
-                              metadata.layer_count);
-            }
+            // Note: Layer count from metadata is now set by ActivePrintMediaManager
 
             // Get the largest thumbnail available
             std::string thumbnail_rel_path = metadata.get_largest_thumbnail();
@@ -2133,13 +2114,8 @@ void PrintStatusPanel::set_filename(const char* filename) {
     std::string effective_filename =
         thumbnail_source_filename_.empty() ? current_print_filename_ : thumbnail_source_filename_;
 
-    // Strip path and .gcode extension for clean display
-    std::string display_name = get_display_filename(effective_filename);
-    std::snprintf(filename_buf_, sizeof(filename_buf_), "%s", display_name.c_str());
-    lv_subject_copy_string(&filename_subject_, filename_buf_);
-
-    // Share display filename via PrinterState for other panels (e.g., HomePanel)
-    get_printer_state().set_print_display_filename(display_name);
+    // Note: Display filename is now handled by ActivePrintMediaManager
+    // PrintStatusPanel only needs to load local resources (gcode viewer, local thumbnail)
 
     // Load thumbnail and G-code ONLY if effective filename changed (makes this function idempotent)
     // This prevents redundant loads when observer fires repeatedly with same filename

@@ -24,6 +24,9 @@ namespace helix {
 // Track previous state to detect transitions to terminal states
 static PrintJobState prev_print_state = PrintJobState::STANDBY;
 
+// Guard against false completion on startup - first update may have stale initial state
+static bool has_received_first_update = false;
+
 // Helper to cleanup .helix_temp modified G-code files after print ends
 static void cleanup_helix_temp_file(const std::string& filename) {
     // Check if this is a .helix_temp modified file
@@ -165,6 +168,16 @@ static void on_print_state_changed_for_notification(lv_observer_t* observer,
     (void)observer;
     auto current = static_cast<PrintJobState>(lv_subject_get_int(subject));
 
+    // Skip first callback - state may be stale on startup
+    // (Observer initializes prev_print_state before Moonraker updates arrive)
+    if (!has_received_first_update) {
+        has_received_first_update = true;
+        prev_print_state = current; // Initialize to ACTUAL state from Moonraker
+        spdlog::debug("[PrintComplete] First update received (state={}), armed for notifications",
+                      static_cast<int>(current));
+        return;
+    }
+
     spdlog::debug("[PrintComplete] State change: {} -> {}", static_cast<int>(prev_print_state),
                   static_cast<int>(current));
 
@@ -247,11 +260,12 @@ static void on_print_state_changed_for_notification(lv_observer_t* observer,
 }
 
 ObserverGuard init_print_completion_observer() {
-    // Initialize prev_print_state to current state to prevent false trigger on startup
-    prev_print_state = static_cast<PrintJobState>(
-        lv_subject_get_int(get_printer_state().get_print_state_enum_subject()));
-    spdlog::debug("[PrintComplete] Observer registered (initial state={})",
-                  static_cast<int>(prev_print_state));
+    // Reset state tracking on (re)initialization
+    // prev_print_state will be set to actual state on first callback
+    has_received_first_update = false;
+    prev_print_state = PrintJobState::STANDBY;
+
+    spdlog::debug("[PrintComplete] Observer registered, awaiting first Moonraker update");
     return ObserverGuard(get_printer_state().get_print_state_enum_subject(),
                          on_print_state_changed_for_notification, nullptr);
 }

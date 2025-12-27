@@ -8,6 +8,7 @@
 #include "ui_panel_print_status.h"
 #include "ui_update_queue.h"
 
+#include "active_print_media_manager.h"
 #include "app_globals.h"
 #include "config.h"
 #include "memory_utils.h"
@@ -1105,7 +1106,14 @@ void PrintPreparationManager::modify_and_print_streaming(
                             [](PrintStartedData* d) {
                                 // Hide overlay now that print is starting
                                 BusyOverlay::hide();
+
+                                // Set thumbnail source override for modified temp files
+                                // - Panel: local gcode viewer and thumbnail display
+                                // - Manager: shared subjects for HomePanel
                                 get_global_print_status_panel().set_thumbnail_source(d->filename);
+                                helix::get_active_print_media_manager().set_thumbnail_source(
+                                    d->filename);
+
                                 if (d->navigate_cb) {
                                     d->navigate_cb();
                                 }

@@ -101,9 +101,9 @@
             <text_small name="layer_progress_label"
                         width="100%" text="Layer 0 / 0" bind_text="print_layer_text" style_text_color="#text_secondary"
                         style_text_align="left"/>
-            <!-- File Name -->
+            <!-- File Name (shared subject from ActivePrintMediaManager) -->
             <text_body name="file_name"
-                       width="100%" text="benchy.gcode" bind_text="print_filename_display" style_text_align="left"/>
+                       width="100%" text="benchy.gcode" bind_text="print_display_filename" style_text_align="left"/>
             <!-- Status Row: Time/Progress -->
             <lv_obj width="100%"
                     height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"

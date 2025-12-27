@@ -352,9 +352,10 @@ class PrintStatusPanel : public PanelBase {
   private:
     //
     // === Subjects (owned by this panel) ===
+    // Note: Display filename uses shared print_display_filename from PrinterState
+    //       (populated by ActivePrintMediaManager)
     //
 
-    lv_subject_t filename_subject_;
     lv_subject_t progress_text_subject_;
     lv_subject_t layer_text_subject_;
     lv_subject_t elapsed_subject_;
@@ -380,7 +381,6 @@ class PrintStatusPanel : public PanelBase {
     lv_subject_t print_complete_visible_subject_;
 
     // Subject storage buffers
-    char filename_buf_[128] = "No print active";
     char progress_text_buf_[32] = "0%";
     char layer_text_buf_[64] = "Layer 0 / 0";
     char preparing_operation_buf_[64] = "Preparing...";
