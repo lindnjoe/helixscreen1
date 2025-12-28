@@ -43,19 +43,15 @@
 
 ## 🤖 Agent Delegation
 
-**Use agents for complex/multi-step work. Handle simple single-file ops directly.**
+**See global CLAUDE.md for full policy. TL;DR: Always delegate unless trivially simple.**
 
-| Task Type | Agent | When |
-|-----------|-------|------|
-| UI/XML | `widget-maker` | XML/LVGL changes beyond trivial edits |
-| UI Review | `ui-reviewer` | XML audits, LVGL pattern validation |
-| Moonraker | `moonraker-agent` | WebSocket, API, printer commands, state |
-| Testing | `test-harness-agent` | Unit tests, mocking, CI/CD |
-| Build issues | `cross-platform-build-agent` | Makefile, compilation, linking |
-| G-code/Files | `gcode-preview-agent` | G-code handling, thumbnails, file browser |
-| Codebase exploration | `Explore` (quick/medium/thorough) | "How does X work?", "Where is Y?" |
-| Multi-file refactor | `general-purpose` | Changes across 3+ files |
-| Security review | `critical-reviewer` | Paranoid code review |
+| Situation | Agent |
+|-----------|-------|
+| Finding code, understanding patterns | `Explore` (quick/medium/thorough) |
+| Implementation, fixes, refactoring | `general-purpose` |
+| Code review after changes | `general-purpose` |
+
+**Work directly ONLY if**: single file, exact location known, <10 lines, no searching needed.
 
 ---
 
