@@ -704,6 +704,14 @@ static int run_watchdog(const WatchdogArgs& args) {
             continue;
         }
 
+        // Graceful shutdown signals (SIGTERM, SIGINT) - exit watchdog, don't treat as crash
+        // These are intentional termination requests (systemctl stop, kill, Ctrl+C)
+        if (crash.was_signaled && (crash.signal_num == SIGTERM || crash.signal_num == SIGINT)) {
+            spdlog::info("[Watchdog] Child received {} ({}), shutting down gracefully",
+                         crash.signal_num, crash.signal_name);
+            break;
+        }
+
         // Crash detected - show recovery dialog (no splash during dialog)
         spdlog::warn("[Watchdog] Crash detected, showing recovery dialog");
 
