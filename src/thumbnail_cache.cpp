@@ -13,11 +13,6 @@
 #include <functional>
 #include <vector>
 
-#ifndef _WIN32
-#include <pwd.h>
-#include <unistd.h>
-#endif
-
 // Global singleton using Meyer's Singleton pattern (thread-safe, no leak)
 ThumbnailCache& get_thumbnail_cache() {
     static ThumbnailCache instance;
@@ -135,25 +130,7 @@ std::string ThumbnailCache::determine_cache_dir() {
         spdlog::warn("[ThumbnailCache] Cannot use ~/.cache");
     }
 
-#ifndef _WIN32
-    // 4. Try getpwuid_r() as fallback (thread-safe, more reliable than env vars)
-    {
-        struct passwd pwd_buf;
-        struct passwd* pwd_result = nullptr;
-        char buf[1024];
-        if (getpwuid_r(getuid(), &pwd_buf, buf, sizeof(buf), &pwd_result) == 0 && pwd_result &&
-            pwd_result->pw_dir && pwd_result->pw_dir[0] != '\0') {
-            std::string cache_base =
-                std::string(pwd_result->pw_dir) + "/.cache/helix/" + CACHE_SUBDIR;
-            if (try_create_cache_dir(cache_base)) {
-                spdlog::info("[ThumbnailCache] Using passwd home: {}", cache_base);
-                return cache_base;
-            }
-        }
-    }
-#endif
-
-    // 5. Check standard temp directory environment variables
+    // 4. Check standard temp directory environment variables
     // These are checked in order of preference
     const char* temp_env_vars[] = {"TMPDIR", "TMP", "TEMP", nullptr};
     for (const char** var = temp_env_vars; *var != nullptr; ++var) {
@@ -167,7 +144,7 @@ std::string ThumbnailCache::determine_cache_dir() {
         }
     }
 
-    // 6. Try /var/tmp (persistent across reboots, often larger than /tmp on embedded)
+    // 5. Try /var/tmp (persistent across reboots, often larger than /tmp on embedded)
     if (is_usable_temp_dir("/var/tmp", 20)) {
         std::string var_tmp_path = std::string("/var/tmp/helix/") + CACHE_SUBDIR;
         if (try_create_cache_dir(var_tmp_path)) {
@@ -176,14 +153,14 @@ std::string ThumbnailCache::determine_cache_dir() {
         }
     }
 
-    // 7. Last resort: /tmp (works everywhere, but may be small tmpfs)
+    // 6. Last resort: /tmp (works everywhere, but may be small tmpfs)
     std::string fallback = std::string("/tmp/helix/") + CACHE_SUBDIR;
     if (try_create_cache_dir(fallback)) {
         spdlog::warn("[ThumbnailCache] Falling back to /tmp: {}", fallback);
         return fallback;
     }
 
-    // 8. Absolute last resort - current directory (shouldn't happen)
+    // 7. Absolute last resort - current directory (shouldn't happen)
     try {
         std::string cwd_fallback =
             (std::filesystem::current_path() / "helix" / CACHE_SUBDIR).string();
