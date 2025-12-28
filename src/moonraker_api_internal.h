@@ -242,16 +242,20 @@ inline bool reject_invalid_identifier(const std::string& id, const char* method,
  * @param param_name Parameter name for error message (e.g., "temperature")
  * @param method Method name for error context
  * @param on_error Error callback (may be nullptr)
+ * @param silent If true, skip error logging (default: false)
  * @return true if value is OUT OF RANGE (caller should return), false if valid
  */
 inline bool reject_out_of_range(double value, double min, double max, const char* param_name,
-                                const char* method, const MoonrakerAPI::ErrorCallback& on_error) {
+                                const char* method, const MoonrakerAPI::ErrorCallback& on_error,
+                                bool silent = false) {
     if (value >= min && value <= max) {
         return false; // Valid, continue
     }
 
-    spdlog::error("[Moonraker API] {}: {} {} out of range [{}, {}]", method, param_name, value, min,
-                  max);
+    if (!silent) {
+        spdlog::error("[Moonraker API] {}: {} {} out of range [{}, {}]", method, param_name, value,
+                      min, max);
+    }
 
     if (on_error) {
         MoonrakerError err;

@@ -30,6 +30,11 @@ PrintFileData PrintFileData::from_moonraker_file(const FileInfo& file,
     data.print_time_str = format_print_time(data.print_time_minutes);
     data.filament_str = format_filament_weight(data.filament_grams);
 
+    // Metadata fields not available until fetch - use consistent placeholder
+    data.layer_count_str = "";
+    data.print_height_str = "";
+    data.original_thumbnail_url = "";
+
     return data;
 }
 
@@ -55,6 +60,8 @@ PrintFileData PrintFileData::from_usb_file(const UsbGcodeFile& file,
     data.print_time_str = "--";
     data.filament_str = "--";
     data.layer_count_str = "--";
+    data.print_height_str = "--";
+    data.original_thumbnail_url = "";
 
     return data;
 }
