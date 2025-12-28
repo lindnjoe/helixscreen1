@@ -1,7 +1,7 @@
 # Testing Infrastructure
 
 **Status:** Active
-**Last Updated:** 2025-11-20
+**Last Updated:** 2025-12-27
 
 ---
 
@@ -15,10 +15,13 @@ HelixScreen uses a multi-layered testing strategy with Catch2 v3 as the primary 
 # Build tests (does not run)
 make test
 
-# Run all unit tests
+# Run unit tests in parallel (default, ~4-8x faster)
 make test-run
 
-# Run fast tests only (skip slow tests)
+# Run unit tests sequentially (for debugging)
+make test-serial
+
+# Run fast tests in parallel (skip slow tests)
 make test-fast
 
 # Run integration tests (with mocks)
@@ -27,6 +30,49 @@ make test-integration
 # Build specific test binary
 cd experimental && make test_multicolor_gcode
 ```
+
+## Parallel Test Execution
+
+Tests run in **parallel by default** using Catch2's sharding feature. Each shard runs in a separate process with its own LVGL instance, avoiding thread-safety issues entirely.
+
+### Test Targets
+
+| Target | Behavior |
+|--------|----------|
+| `make test-run` | **Parallel (default)** - uses 2x CPU cores as shards for ~4-8x speedup |
+| `make test-serial` | Sequential - for debugging or when you need clean output |
+| `make test-all` | Parallel - runs ALL tests including slow ones |
+| `make test-verbose` | Sequential with timing - shows per-test duration |
+
+### When to Use Serial Execution
+
+Use `make test-serial` when:
+- **Debugging test failures** - output is interleaved in parallel mode
+- **Reproducing race conditions** - sequential execution is deterministic
+- **CI environments** - some CI runners may have limited parallelism
+- **Reading test output** - parallel output can be hard to follow
+
+### How It Works
+
+The parallel infrastructure uses Catch2's `--shard-count N --shard-index M` flags to split tests across multiple processes:
+
+```bash
+# What make test-run does internally (simplified):
+for i in $(seq 0 $((NPROCS-1))); do
+    ./build/bin/run_tests "~[.] ~[slow]" --shard-count $NPROCS --shard-index $i &
+done
+wait
+```
+
+Each shard gets a deterministic subset of tests. Per Catch2 best practices, we use 2x the number of CPU cores to avoid long-tailed execution from uneven test distribution.
+
+### Expected Speedup
+
+| Machine | Serial Time | Parallel Time | Speedup |
+|---------|-------------|---------------|---------|
+| 4 cores | ~100s | ~30s | ~3.5x |
+| 8 cores | ~100s | ~18s | ~6x |
+| 14 cores | ~100s | ~12s | ~9x |
 
 ### Running Tests by Tag (Direct Binary)
 

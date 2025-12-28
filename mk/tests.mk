@@ -5,6 +5,41 @@
 # Handles all test compilation and execution targets
 
 # ============================================================================
+# Parallel Test Execution Infrastructure
+# ============================================================================
+# Uses Catch2 sharding (--shard-count N --shard-index M) to split tests across
+# multiple processes. Each shard runs in its own process with its own LVGL
+# instance, avoiding thread-safety issues entirely.
+#
+# Per Catch2 best practices, use more shards than cores to avoid long-tailed
+# execution from uneven test distribution.
+
+# Detect CPU count for parallel sharding (2x cores recommended by Catch2)
+# Supports: Linux (nproc), macOS (sysctl), fallback to 4 cores
+NPROCS := $(shell echo $$(( $$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4) * 2 )))
+
+# Run tests in parallel using Catch2 sharding
+# Args: $(1) = test filter (e.g., "~[.] ~[slow]")
+# Collects PIDs and waits for all, failing if any shard fails
+# Output is prefixed with [shard N] for clarity
+define run_tests_parallel
+	echo "$(CYAN)Running $(NPROCS) test shards in parallel...$(RESET)"; \
+	pids=""; \
+	for i in $$(seq 0 $$(($(NPROCS)-1))); do \
+		$(TEST_BIN) $(1) --shard-count $(NPROCS) --shard-index $$i 2>&1 | sed "s/^/[shard $$i] /" & \
+		pids="$$pids $$!"; \
+	done; \
+	failed=0; \
+	for pid in $$pids; do \
+		wait $$pid || failed=1; \
+	done; \
+	if [ $$failed -eq 1 ]; then \
+		echo "$(RED)$(BOLD)✗ One or more test shards failed!$(RESET)"; \
+		exit 1; \
+	fi
+endef
+
+# ============================================================================
 # Test Dependency System - AUTOMATIC DISCOVERY
 # ============================================================================
 # Instead of manually listing every .o file (error-prone, causes CI failures),
@@ -108,21 +143,33 @@ test: $(TEST_BIN)
 	$(ECHO) "$(GREEN)✓ Test binary ready: $(TEST_BIN)$(RESET)"
 	$(ECHO) "$(CYAN)Run tests with: make test-run$(RESET)"
 
-# Run unit tests (excludes hidden and slow tests for fast iteration)
+# Run unit tests in PARALLEL (excludes hidden and slow tests for fast iteration)
+# Uses Catch2 sharding across multiple processes for ~4-8x speedup
+# Use 'make test-serial' for sequential execution (debugging, clean output)
 # Use 'make test-all' to run everything including slow tests
 test-run: $(TEST_BIN)
-	$(ECHO) "$(CYAN)$(BOLD)Running unit tests (excluding slow)...$(RESET)"
+	$(ECHO) "$(CYAN)$(BOLD)Running unit tests in parallel (excluding slow)...$(RESET)"
+	@START_TIME=$$(date +%s); \
+	$(call run_tests_parallel,"~[.] ~[slow]"); \
+	END_TIME=$$(date +%s); \
+	DURATION=$$((END_TIME - START_TIME)); \
+	echo "$(GREEN)$(BOLD)✓ Tests passed in $${DURATION}s$(RESET)"
+
+# Run unit tests SEQUENTIALLY (for debugging or clean output)
+# Slower but useful when you need to see exact test ordering or debug failures
+test-serial: $(TEST_BIN)
+	$(ECHO) "$(CYAN)$(BOLD)Running unit tests sequentially (excluding slow)...$(RESET)"
 	@START_TIME=$$(date +%s); \
 	$(TEST_BIN) "~[.] ~[slow]" && \
 	END_TIME=$$(date +%s); \
 	DURATION=$$((END_TIME - START_TIME)); \
 	echo "$(GREEN)$(BOLD)✓ Tests passed in $${DURATION}s$(RESET)"
 
-# Run ALL tests including slow ones (for thorough validation)
+# Run ALL tests including slow ones in PARALLEL (for thorough validation)
 test-all: $(TEST_BIN)
-	$(ECHO) "$(CYAN)$(BOLD)Running ALL tests (including slow)...$(RESET)"
+	$(ECHO) "$(CYAN)$(BOLD)Running ALL tests in parallel (including slow)...$(RESET)"
 	@START_TIME=$$(date +%s); \
-	$(TEST_BIN) "~[.]" && \
+	$(call run_tests_parallel,"~[.]"); \
 	END_TIME=$$(date +%s); \
 	DURATION=$$((END_TIME - START_TIME)); \
 	echo "$(GREEN)$(BOLD)✓ All tests passed in $${DURATION}s$(RESET)"
@@ -207,12 +254,12 @@ test-timing: $(TEST_BIN)
 	$(ECHO) "$(CYAN)$(BOLD)Slowest tests (top 20):$(RESET)"
 	@$(TEST_BIN) "~[.]" --durations yes 2>&1 | grep -E "^[0-9]+\.[0-9]+ s:" | sort -rn | head -20
 
-# Run only fast tests (skip hidden and slow tests) - for quick iteration
-# Target: <30s total runtime for rapid development feedback
+# Run only fast tests in PARALLEL (skip hidden and slow tests) - for quick iteration
+# Target: <15s total runtime for rapid development feedback with parallelism
 test-fast: $(TEST_BIN)
-	$(ECHO) "$(CYAN)$(BOLD)Running fast tests only (skipping [slow] and hidden)...$(RESET)"
+	$(ECHO) "$(CYAN)$(BOLD)Running fast tests in parallel (skipping [slow] and hidden)...$(RESET)"
 	@START_TIME=$$(date +%s); \
-	$(TEST_BIN) "~[.] ~[slow]" && \
+	$(call run_tests_parallel,"~[.] ~[slow]"); \
 	END_TIME=$$(date +%s); \
 	DURATION=$$((END_TIME - START_TIME)); \
 	echo "$(GREEN)$(BOLD)✓ Fast tests passed in $${DURATION}s$(RESET)"
@@ -766,7 +813,7 @@ clean-sanitizers:
 # Test Help
 # ============================================================================
 
-.PHONY: help-test test-asan test-tsan test-asan-one test-tsan-one clean-sanitizers
+.PHONY: help-test test-serial test-asan test-tsan test-asan-one test-tsan-one clean-sanitizers
 help-test:
 	@if [ -t 1 ] && [ -n "$(TERM)" ] && [ "$(TERM)" != "dumb" ]; then \
 		B='$(BOLD)'; G='$(GREEN)'; Y='$(YELLOW)'; C='$(CYAN)'; X='$(RESET)'; \
@@ -777,11 +824,12 @@ help-test:
 	echo ""; \
 	echo "$${C}Main Test Targets:$${X}"; \
 	echo "  $${G}test$${X}                 - Build tests (does not run)"; \
+	echo "  $${G}test-run$${X}             - Run tests in PARALLEL (default, ~4-8x faster)"; \
+	echo "  $${G}test-serial$${X}          - Run tests sequentially (for debugging)"; \
 	echo "  $${G}test-smoke$${X}           - Quick smoke test (~30s) for rapid iteration"; \
-	echo "  $${G}test-run$${X}             - Run unit tests (excludes hidden/slow)"; \
-	echo "  $${G}test-all$${X}             - Run ALL tests including slow ones"; \
+	echo "  $${G}test-all$${X}             - Run ALL tests in parallel (including slow)"; \
 	echo "  $${G}test-slow$${X}            - Run only [slow] tagged tests"; \
-	echo "  $${G}test-verbose$${X}         - Run with per-test timing"; \
+	echo "  $${G}test-verbose$${X}         - Run with per-test timing (sequential)"; \
 	echo ""; \
 	echo "$${C}Component Tests:$${X}"; \
 	echo "  $${G}test-gcode$${X}           - G-code parsing and geometry tests"; \
