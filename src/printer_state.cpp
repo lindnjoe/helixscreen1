@@ -531,7 +531,19 @@ void PrinterState::update_from_status(const json& state) {
         if (sdcard.contains("progress")) {
             double progress = sdcard["progress"].get<double>();
             int progress_pct = static_cast<int>(progress * 100.0);
-            lv_subject_set_int(&print_progress_, progress_pct);
+
+            // Guard: Don't reset progress to 0 in terminal print states (Complete/Cancelled/Error)
+            // This preserves the 100% display when a print finishes successfully
+            auto current_state = static_cast<PrintJobState>(lv_subject_get_int(&print_state_enum_));
+            bool is_terminal_state = (current_state == PrintJobState::COMPLETE ||
+                                      current_state == PrintJobState::CANCELLED ||
+                                      current_state == PrintJobState::ERROR);
+
+            // Allow updates except: progress going backward in terminal state
+            int current_progress = lv_subject_get_int(&print_progress_);
+            if (!is_terminal_state || progress_pct >= current_progress) {
+                lv_subject_set_int(&print_progress_, progress_pct);
+            }
         }
     }
 
@@ -547,8 +559,8 @@ void PrinterState::update_from_status(const json& state) {
             PrintJobState new_state = parse_print_job_state(state_str.c_str());
             int current_state = lv_subject_get_int(&print_state_enum_);
             if (static_cast<int>(new_state) != current_state) {
-                spdlog::info("[PrinterState] print_stats.state: '{}' -> enum {} (was {})", state_str,
-                             static_cast<int>(new_state), current_state);
+                spdlog::info("[PrinterState] print_stats.state: '{}' -> enum {} (was {})",
+                             state_str, static_cast<int>(new_state), current_state);
             }
             lv_subject_set_int(&print_state_enum_, static_cast<int>(new_state));
 
