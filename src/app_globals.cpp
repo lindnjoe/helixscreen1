@@ -39,6 +39,7 @@
 static MoonrakerClient* g_moonraker_client = nullptr;
 static MoonrakerAPI* g_moonraker_api = nullptr;
 static MoonrakerManager* g_moonraker_manager = nullptr;
+static PrintHistoryManager* g_print_history_manager = nullptr;
 
 // Global reactive subjects
 static lv_subject_t g_notification_subject;
@@ -72,6 +73,14 @@ MoonrakerManager* get_moonraker_manager() {
 
 void set_moonraker_manager(MoonrakerManager* manager) {
     g_moonraker_manager = manager;
+}
+
+PrintHistoryManager* get_print_history_manager() {
+    return g_print_history_manager;
+}
+
+void set_print_history_manager(PrintHistoryManager* manager) {
+    g_print_history_manager = manager;
 }
 
 PrinterState& get_printer_state() {

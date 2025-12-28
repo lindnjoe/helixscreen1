@@ -13,6 +13,7 @@
 #include "ui_print_select_usb_source.h"
 
 #include "helix_plugin_installer.h"
+#include "print_file_data.h"
 #include "usb_backend.h"
 
 #include <ctime>
@@ -72,35 +73,7 @@ enum class PrintSelectSortDirection { ASCENDING, DESCENDING };
 
 // FileSource enum is defined in ui_print_select_usb_source.h
 
-/**
- * @brief File data structure for print files and directories
- */
-struct PrintFileData {
-    std::string filename;
-    std::string thumbnail_path;         ///< Pre-scaled .bin path for cards (fast rendering)
-    std::string original_thumbnail_url; ///< Moonraker relative URL (for detail view PNG lookup)
-    size_t file_size_bytes;             ///< File size in bytes
-    time_t modified_timestamp;          ///< Last modified timestamp
-    int print_time_minutes;             ///< Print time in minutes
-    float filament_grams;               ///< Filament weight in grams
-    std::string filament_type;          ///< Filament type (e.g., "PLA", "PETG", "ABS")
-    uint32_t layer_count = 0;           ///< Total layer count from slicer
-    double object_height = 0.0;         ///< Object height in mm
-    bool is_dir = false;                ///< True if this is a directory
-    std::vector<std::string>
-        filament_colors; ///< Hex colors per tool (e.g., ["#ED1C24", "#00C1AE"])
-
-    // Formatted strings (cached for performance)
-    std::string size_str;
-    std::string modified_str;
-    std::string print_time_str;
-    std::string filament_str;
-    std::string layer_count_str;  ///< Formatted layer count string
-    std::string print_height_str; ///< Formatted print height string
-
-    // Metadata loading state (travels with file during sorting)
-    bool metadata_fetched = false; ///< True if metadata has been loaded
-};
+// FileHistoryStatus and PrintFileData are now in print_file_data.h
 
 /**
  * @brief Card layout dimensions calculated from container size
@@ -443,6 +416,9 @@ class PrintSelectPanel : public PanelBase {
     std::string selected_filament_type_; ///< Filament type of selected file (for dropdown default)
     std::vector<std::string> selected_filament_colors_; ///< Tool colors of selected file
     size_t selected_file_size_bytes_ = 0; ///< File size of selected file (for safety checks)
+    FileHistoryStatus selected_history_status_ =
+        FileHistoryStatus::NEVER_PRINTED; ///< History status of selected file
+    int selected_success_count_ = 0;      ///< Success count of selected file
     std::string
         pending_file_selection_; ///< File to auto-select when list is populated (--select-file)
     PrintSelectViewMode current_view_mode_ = PrintSelectViewMode::CARD;
@@ -636,6 +612,15 @@ class PrintSelectPanel : public PanelBase {
      * Called directly when no warning needed, or after user confirms warning dialog.
      */
     void execute_print_start();
+
+    /**
+     * @brief Merge print history status into file list
+     *
+     * Uses PrintHistoryManager to populate FileHistoryStatus and success_count
+     * for each file. Also detects "currently printing" by comparing with
+     * PrinterState's print_filename.
+     */
+    void merge_history_into_file_list();
 
     //
     // === Static Callbacks (trampolines) ===

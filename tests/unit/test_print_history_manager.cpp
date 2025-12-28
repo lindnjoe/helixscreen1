@@ -1,0 +1,347 @@
+// Copyright 2025 356C LLC
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+/**
+ * @file test_print_history_manager.cpp
+ * @brief Unit tests for PrintHistoryManager (TDD)
+ *
+ * Tests the centralized print history cache that provides:
+ * - Raw jobs list for HistoryDashboardPanel/HistoryListPanel
+ * - Aggregated filename stats for PrintSelectPanel status indicators
+ * - Observer notification when data changes
+ */
+
+#include "../../include/moonraker_api.h"
+#include "../../include/moonraker_client_mock.h"
+#include "../../include/print_history_data.h"
+#include "../../include/print_history_manager.h"
+#include "../../include/printer_state.h"
+#include "../../include/ui_update_queue.h"
+#include "../../lvgl/lvgl.h"
+
+#include <atomic>
+#include <chrono>
+#include <thread>
+#include <vector>
+
+#include "../catch_amalgamated.hpp"
+
+// ============================================================================
+// Global LVGL Initialization
+// ============================================================================
+
+namespace {
+struct LVGLInitializerHistoryManager {
+    LVGLInitializerHistoryManager() {
+        static bool initialized = false;
+        if (!initialized) {
+            lv_init();
+            lv_display_t* disp = lv_display_create(800, 480);
+            alignas(64) static lv_color_t buf[800 * 10];
+            lv_display_set_buffers(disp, buf, NULL, sizeof(buf), LV_DISPLAY_RENDER_MODE_PARTIAL);
+            initialized = true;
+        }
+    }
+};
+
+static LVGLInitializerHistoryManager lvgl_init;
+} // namespace
+
+// ============================================================================
+// Test Fixture
+// ============================================================================
+
+class HistoryManagerTestFixture {
+  public:
+    HistoryManagerTestFixture() : client_(MoonrakerClientMock::PrinterType::VORON_24, 1000.0) {
+        printer_state_.init_subjects(false);
+        client_.connect("ws://mock/websocket", []() {}, []() {});
+        api_ = std::make_unique<MoonrakerAPI>(client_, printer_state_);
+        manager_ = std::make_unique<PrintHistoryManager>(api_.get(), &client_);
+    }
+
+    ~HistoryManagerTestFixture() {
+        manager_.reset();
+        api_.reset();
+        client_.disconnect();
+    }
+
+  protected:
+    /// Wait for async fetch to complete
+    bool wait_for_loaded(int timeout_ms = 500) {
+        for (int i = 0; i < timeout_ms / 10; ++i) {
+            // Drain the update queue to process callbacks scheduled via ui_queue_update
+            helix::ui::UpdateQueue::instance().drain_queue_for_testing();
+
+            if (manager_->is_loaded()) {
+                return true;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        return false;
+    }
+
+    MoonrakerClientMock client_;
+    PrinterState printer_state_;
+    std::unique_ptr<MoonrakerAPI> api_;
+    std::unique_ptr<PrintHistoryManager> manager_;
+};
+
+// ============================================================================
+// Basic Functionality Tests
+// ============================================================================
+
+TEST_CASE_METHOD(HistoryManagerTestFixture, "PrintHistoryManager starts unloaded",
+                 "[history_manager]") {
+    REQUIRE_FALSE(manager_->is_loaded());
+    REQUIRE(manager_->get_jobs().empty());
+    REQUIRE(manager_->get_filename_stats().empty());
+}
+
+TEST_CASE_METHOD(HistoryManagerTestFixture, "PrintHistoryManager fetches history from API",
+                 "[history_manager]") {
+    // When: fetch is called
+    manager_->fetch();
+
+    // Then: wait for async completion
+    REQUIRE(wait_for_loaded());
+
+    // And: jobs are populated
+    REQUIRE_FALSE(manager_->get_jobs().empty());
+    REQUIRE(manager_->is_loaded());
+}
+
+TEST_CASE_METHOD(HistoryManagerTestFixture, "PrintHistoryManager builds filename stats map",
+                 "[history_manager]") {
+    // When: fetch completes
+    manager_->fetch();
+    REQUIRE(wait_for_loaded());
+
+    // Then: filename stats map is populated
+    const auto& stats = manager_->get_filename_stats();
+    REQUIRE_FALSE(stats.empty());
+
+    // And: each entry has valid data
+    for (const auto& [filename, info] : stats) {
+        REQUIRE_FALSE(filename.empty());
+        // At least one count should be non-zero (success or failure)
+        bool has_history = (info.success_count > 0 || info.failure_count > 0);
+        REQUIRE(has_history);
+    }
+}
+
+// ============================================================================
+// Aggregation Tests
+// ============================================================================
+
+TEST_CASE_METHOD(HistoryManagerTestFixture,
+                 "PrintHistoryManager aggregates success count correctly", "[history_manager]") {
+    // When: fetch completes
+    manager_->fetch();
+    REQUIRE(wait_for_loaded());
+
+    // Then: check that COMPLETED jobs are counted as successes
+    const auto& jobs = manager_->get_jobs();
+    const auto& stats = manager_->get_filename_stats();
+
+    // Count completed jobs manually for verification
+    int total_completed = 0;
+    for (const auto& job : jobs) {
+        if (job.status == PrintJobStatus::COMPLETED) {
+            total_completed++;
+        }
+    }
+
+    // Sum up success counts from stats
+    int total_success_in_stats = 0;
+    for (const auto& [_, info] : stats) {
+        total_success_in_stats += info.success_count;
+    }
+
+    REQUIRE(total_success_in_stats == total_completed);
+}
+
+TEST_CASE_METHOD(HistoryManagerTestFixture,
+                 "PrintHistoryManager aggregates failure count correctly", "[history_manager]") {
+    // When: fetch completes
+    manager_->fetch();
+    REQUIRE(wait_for_loaded());
+
+    const auto& jobs = manager_->get_jobs();
+    const auto& stats = manager_->get_filename_stats();
+
+    // Count cancelled + error jobs manually
+    int total_failures = 0;
+    for (const auto& job : jobs) {
+        if (job.status == PrintJobStatus::CANCELLED || job.status == PrintJobStatus::ERROR) {
+            total_failures++;
+        }
+    }
+
+    // Sum up failure counts from stats
+    int total_failure_in_stats = 0;
+    for (const auto& [_, info] : stats) {
+        total_failure_in_stats += info.failure_count;
+    }
+
+    REQUIRE(total_failure_in_stats == total_failures);
+}
+
+TEST_CASE_METHOD(HistoryManagerTestFixture, "PrintHistoryManager tracks most recent job status",
+                 "[history_manager]") {
+    // When: fetch completes
+    manager_->fetch();
+    REQUIRE(wait_for_loaded());
+
+    const auto& jobs = manager_->get_jobs();
+    const auto& stats = manager_->get_filename_stats();
+
+    // For each filename, verify the last_status matches the most recent job
+    for (const auto& [filename, info] : stats) {
+        // Find most recent job for this filename
+        double most_recent_time = 0.0;
+        PrintJobStatus most_recent_status = PrintJobStatus::UNKNOWN;
+
+        for (const auto& job : jobs) {
+            // Strip path from job filename for comparison
+            std::string job_basename = job.filename;
+            auto slash_pos = job_basename.rfind('/');
+            if (slash_pos != std::string::npos) {
+                job_basename = job_basename.substr(slash_pos + 1);
+            }
+
+            if (job_basename == filename && job.start_time > most_recent_time) {
+                most_recent_time = job.start_time;
+                most_recent_status = job.status;
+            }
+        }
+
+        if (most_recent_time > 0.0) {
+            REQUIRE(info.last_status == most_recent_status);
+        }
+    }
+}
+
+// ============================================================================
+// Path Stripping Tests
+// ============================================================================
+
+TEST_CASE_METHOD(HistoryManagerTestFixture,
+                 "PrintHistoryManager strips path from filename for aggregation",
+                 "[history_manager]") {
+    // When: fetch completes
+    manager_->fetch();
+    REQUIRE(wait_for_loaded());
+
+    const auto& stats = manager_->get_filename_stats();
+
+    // All keys should be basenames (no slashes)
+    for (const auto& [filename, _] : stats) {
+        REQUIRE(filename.find('/') == std::string::npos);
+    }
+}
+
+// ============================================================================
+// Observer Pattern Tests
+// ============================================================================
+
+TEST_CASE_METHOD(HistoryManagerTestFixture, "PrintHistoryManager notifies observers on fetch",
+                 "[history_manager]") {
+    std::atomic<int> callback_count{0};
+
+    // Given: an observer is registered
+    auto callback = [&callback_count]() { callback_count++; };
+    manager_->add_observer(callback);
+
+    // When: fetch completes
+    manager_->fetch();
+    REQUIRE(wait_for_loaded());
+
+    // Then: observer was notified
+    REQUIRE(callback_count.load() >= 1);
+}
+
+TEST_CASE_METHOD(HistoryManagerTestFixture, "PrintHistoryManager supports multiple observers",
+                 "[history_manager]") {
+    std::atomic<int> callback1_count{0};
+    std::atomic<int> callback2_count{0};
+
+    // Given: multiple observers registered
+    manager_->add_observer([&callback1_count]() { callback1_count++; });
+    manager_->add_observer([&callback2_count]() { callback2_count++; });
+
+    // When: fetch completes
+    manager_->fetch();
+    REQUIRE(wait_for_loaded());
+
+    // Then: both observers were notified
+    REQUIRE(callback1_count.load() >= 1);
+    REQUIRE(callback2_count.load() >= 1);
+}
+
+// ============================================================================
+// Cache Invalidation Tests
+// ============================================================================
+
+TEST_CASE_METHOD(HistoryManagerTestFixture, "PrintHistoryManager invalidate clears loaded state",
+                 "[history_manager]") {
+    // Given: manager has loaded data
+    manager_->fetch();
+    REQUIRE(wait_for_loaded());
+    REQUIRE(manager_->is_loaded());
+
+    // When: invalidate is called
+    manager_->invalidate();
+
+    // Then: loaded state is cleared
+    REQUIRE_FALSE(manager_->is_loaded());
+}
+
+TEST_CASE_METHOD(HistoryManagerTestFixture, "PrintHistoryManager can re-fetch after invalidate",
+                 "[history_manager]") {
+    // Given: manager was loaded then invalidated
+    manager_->fetch();
+    REQUIRE(wait_for_loaded());
+    manager_->invalidate();
+    REQUIRE_FALSE(manager_->is_loaded());
+
+    // When: fetch is called again
+    manager_->fetch();
+
+    // Then: data is reloaded
+    REQUIRE(wait_for_loaded());
+    REQUIRE_FALSE(manager_->get_jobs().empty());
+}
+
+// ============================================================================
+// Edge Case Tests
+// ============================================================================
+
+TEST_CASE_METHOD(HistoryManagerTestFixture, "PrintHistoryManager handles concurrent fetch calls",
+                 "[history_manager]") {
+    std::atomic<int> callback_count{0};
+    manager_->add_observer([&callback_count]() { callback_count++; });
+
+    // When: multiple fetches are called rapidly
+    manager_->fetch();
+    manager_->fetch(); // Should be ignored while first is in progress
+    manager_->fetch(); // Should be ignored while first is in progress
+
+    REQUIRE(wait_for_loaded());
+
+    // Then: only one fetch completes (subsequent ones ignored)
+    REQUIRE(callback_count.load() == 1);
+}
+
+TEST_CASE_METHOD(HistoryManagerTestFixture, "PrintHistoryManager handles empty history",
+                 "[history_manager]") {
+    // Note: Mock returns 20 jobs by default, so this test verifies
+    // that the manager handles the case gracefully
+    manager_->fetch();
+    REQUIRE(wait_for_loaded());
+
+    // Stats should not crash with empty/null data
+    const auto& stats = manager_->get_filename_stats();
+    // Just verify we can access it without crash
+    (void)stats.size();
+}

@@ -189,6 +189,12 @@ void PrintSelectListView::init_pool() {
                 data->time_observer = lv_label_bind_text(time_label, &data->time_subject, "%s");
             }
 
+            // Find status display widgets (controlled programmatically, no subject binding)
+            data->status_printing_icon = lv_obj_find_by_name(row, "status_printing");
+            data->status_success_container = lv_obj_find_by_name(row, "status_success_container");
+            data->status_success_count = lv_obj_find_by_name(row, "status_success_count");
+            data->status_failed_icon = lv_obj_find_by_name(row, "status_failed");
+
             list_pool_.push_back(row);
             list_data_pool_.push_back(std::move(data));
         }
@@ -243,6 +249,50 @@ void PrintSelectListView::configure_row(lv_obj_t* row, size_t pool_index, size_t
     lv_subject_copy_string(&data->size_subject, file.size_str.c_str());
     lv_subject_copy_string(&data->modified_subject, file.modified_str.c_str());
     lv_subject_copy_string(&data->time_subject, file.print_time_str.c_str());
+
+    // Update status display based on history_status
+    // Hide all status indicators first
+    if (data->status_printing_icon) {
+        lv_obj_add_flag(data->status_printing_icon, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (data->status_success_container) {
+        lv_obj_add_flag(data->status_success_container, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (data->status_failed_icon) {
+        lv_obj_add_flag(data->status_failed_icon, LV_OBJ_FLAG_HIDDEN);
+    }
+
+    // Show appropriate status indicator (directories have no history)
+    if (!file.is_dir) {
+        switch (file.history_status) {
+        case FileHistoryStatus::CURRENTLY_PRINTING:
+            if (data->status_printing_icon) {
+                lv_obj_remove_flag(data->status_printing_icon, LV_OBJ_FLAG_HIDDEN);
+            }
+            break;
+
+        case FileHistoryStatus::COMPLETED:
+            if (data->status_success_container && data->status_success_count) {
+                // Format count (e.g., "3" for 3 successful prints)
+                char count_buf[8];
+                snprintf(count_buf, sizeof(count_buf), "%d", file.success_count);
+                lv_label_set_text(data->status_success_count, count_buf);
+                lv_obj_remove_flag(data->status_success_container, LV_OBJ_FLAG_HIDDEN);
+            }
+            break;
+
+        case FileHistoryStatus::FAILED:
+            if (data->status_failed_icon) {
+                lv_obj_remove_flag(data->status_failed_icon, LV_OBJ_FLAG_HIDDEN);
+            }
+            break;
+
+        case FileHistoryStatus::NEVER_PRINTED:
+        default:
+            // All indicators already hidden
+            break;
+        }
+    }
 
     // Store file index for click handler
     lv_obj_set_user_data(row, reinterpret_cast<void*>(file_index));

@@ -5,6 +5,8 @@
 
 #include "ui_print_preparation_manager.h"
 
+#include "print_file_data.h" // For FileHistoryStatus
+
 #include <functional>
 #include <lvgl.h>
 #include <string>
@@ -201,6 +203,14 @@ class PrintSelectDetailView {
      */
     void handle_resize(lv_obj_t* parent_screen);
 
+    /**
+     * @brief Update the print history status display
+     *
+     * @param status The history status (NEVER_PRINTED, CURRENTLY_PRINTING, COMPLETED, FAILED)
+     * @param success_count Number of successful prints (used when status is COMPLETED)
+     */
+    void update_history_status(FileHistoryStatus status, int success_count);
+
   private:
     // === Dependencies ===
     MoonrakerAPI* api_ = nullptr;
@@ -223,6 +233,11 @@ class PrintSelectDetailView {
     // Color requirements display
     lv_obj_t* color_requirements_card_ = nullptr;
     lv_obj_t* color_swatches_row_ = nullptr;
+
+    // History status display
+    lv_obj_t* history_status_row_ = nullptr;
+    lv_obj_t* history_status_icon_ = nullptr;
+    lv_obj_t* history_status_label_ = nullptr;
 
     // Pre-print option subjects (1 = checked/enabled, 0 = unchecked/disabled)
     // Enable switches default ON, add-on switches default OFF

@@ -12,6 +12,7 @@ class MoonrakerClient;
 class MoonrakerAPI;
 class MoonrakerManager;
 class PrinterState;
+class PrintHistoryManager;
 
 /**
  * @brief Get global MoonrakerClient instance
@@ -48,6 +49,22 @@ MoonrakerManager* get_moonraker_manager();
  * @param manager Pointer to MoonrakerManager instance
  */
 void set_moonraker_manager(MoonrakerManager* manager);
+
+/**
+ * @brief Get global PrintHistoryManager instance
+ *
+ * Provides centralized print history cache for status indicators.
+ * Used by PrintSelectPanel for file status and History panels for job lists.
+ *
+ * @return Pointer to global PrintHistoryManager (may be nullptr if not initialized)
+ */
+PrintHistoryManager* get_print_history_manager();
+
+/**
+ * @brief Set global PrintHistoryManager instance (called by Application during init)
+ * @param manager Pointer to PrintHistoryManager instance
+ */
+void set_print_history_manager(PrintHistoryManager* manager);
 
 /**
  * @brief Get global PrinterState singleton instance

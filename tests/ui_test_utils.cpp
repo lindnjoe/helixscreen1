@@ -458,6 +458,12 @@ MoonrakerManager* get_moonraker_manager() {
     return nullptr;
 }
 
+// Stub for get_print_history_manager (tests don't have manager)
+class PrintHistoryManager;
+PrintHistoryManager* get_print_history_manager() {
+    return nullptr;
+}
+
 // Stub for MoonrakerManager::macro_analysis (never called since get_moonraker_manager returns null)
 #include "moonraker_manager.h"
 namespace helix {

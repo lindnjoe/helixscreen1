@@ -49,6 +49,12 @@ struct ListRowWidgetData {
     lv_observer_t* size_observer = nullptr;
     lv_observer_t* modified_observer = nullptr;
     lv_observer_t* time_observer = nullptr;
+
+    // Status display refs (no subject binding - controlled programmatically)
+    lv_obj_t* status_printing_icon = nullptr;
+    lv_obj_t* status_success_container = nullptr;
+    lv_obj_t* status_success_count = nullptr;
+    lv_obj_t* status_failed_icon = nullptr;
 };
 
 /**

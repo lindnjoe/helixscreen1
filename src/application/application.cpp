@@ -10,6 +10,7 @@
 #include "display_manager.h"
 #include "moonraker_manager.h"
 #include "panel_factory.h"
+#include "print_history_manager.h"
 #include "streaming_policy.h"
 #include "subject_initializer.h"
 
@@ -635,6 +636,12 @@ bool Application::init_moonraker() {
     // Register MoonrakerManager globally (for Advanced panel access to MacroModificationManager)
     set_moonraker_manager(m_moonraker.get());
 
+    // Create print history manager (shared cache for history panels and file status indicators)
+    m_history_manager =
+        std::make_unique<PrintHistoryManager>(m_moonraker->api(), get_moonraker_client());
+    set_print_history_manager(m_history_manager.get());
+    spdlog::debug("[Application] PrintHistoryManager created");
+
     // Initialize macro modification manager (for PRINT_START wizard)
     m_moonraker->init_macro_analysis(m_config);
 
@@ -1091,8 +1098,12 @@ void Application::shutdown() {
     set_moonraker_manager(nullptr);
     set_moonraker_api(nullptr);
     set_moonraker_client(nullptr);
+    set_print_history_manager(nullptr);
 
     // Reset managers in reverse order (MoonrakerManager handles print_start_collector cleanup)
+    // History manager MUST be reset before moonraker (uses client for unregistration)
+    // and before spdlog::shutdown() (unregistration calls spdlog) [L010]
+    m_history_manager.reset();
     m_moonraker.reset();
     m_panels.reset();
     m_subjects.reset();

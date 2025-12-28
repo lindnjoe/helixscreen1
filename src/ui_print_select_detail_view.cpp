@@ -4,6 +4,7 @@
 #include "ui_print_select_detail_view.h"
 
 #include "ui_error_reporting.h"
+#include "ui_icon.h"
 #include "ui_modal.h"
 #include "ui_nav.h"
 #include "ui_print_preparation_manager.h"
@@ -127,6 +128,11 @@ bool PrintSelectDetailView::create(lv_obj_t* parent_screen) {
     // Look up color requirements display
     color_requirements_card_ = lv_obj_find_by_name(detail_view_widget_, "color_requirements_card");
     color_swatches_row_ = lv_obj_find_by_name(detail_view_widget_, "color_swatches_row");
+
+    // Look up history status display
+    history_status_row_ = lv_obj_find_by_name(detail_view_widget_, "history_status_row");
+    history_status_icon_ = lv_obj_find_by_name(detail_view_widget_, "history_status_icon");
+    history_status_label_ = lv_obj_find_by_name(detail_view_widget_, "history_status_label");
 
     // Initialize print preparation manager
     prep_manager_ = std::make_unique<PrintPreparationManager>();
@@ -363,6 +369,45 @@ void PrintSelectDetailView::update_color_swatches(const std::vector<std::string>
     lv_obj_remove_flag(color_requirements_card_, LV_OBJ_FLAG_HIDDEN);
 
     spdlog::debug("[DetailView] Updated color swatches: {} colors", colors.size());
+}
+
+void PrintSelectDetailView::update_history_status(FileHistoryStatus status, int success_count) {
+    if (!history_status_row_ || !history_status_icon_ || !history_status_label_) {
+        return;
+    }
+
+    switch (status) {
+    case FileHistoryStatus::NEVER_PRINTED:
+        // Hide the row entirely for files with no history
+        lv_obj_add_flag(history_status_row_, LV_OBJ_FLAG_HIDDEN);
+        break;
+
+    case FileHistoryStatus::CURRENTLY_PRINTING:
+        lv_obj_remove_flag(history_status_row_, LV_OBJ_FLAG_HIDDEN);
+        ui_icon_set_source(history_status_icon_, "clock");
+        ui_icon_set_variant(history_status_icon_, "accent");
+        lv_label_set_text(history_status_label_, "Currently printing");
+        break;
+
+    case FileHistoryStatus::COMPLETED: {
+        lv_obj_remove_flag(history_status_row_, LV_OBJ_FLAG_HIDDEN);
+        ui_icon_set_source(history_status_icon_, "check");
+        ui_icon_set_variant(history_status_icon_, "success");
+        // Format: "Printed N time(s)"
+        char buf[64];
+        snprintf(buf, sizeof(buf), "Printed %d time%s", success_count,
+                 success_count == 1 ? "" : "s");
+        lv_label_set_text(history_status_label_, buf);
+        break;
+    }
+
+    case FileHistoryStatus::FAILED:
+        lv_obj_remove_flag(history_status_row_, LV_OBJ_FLAG_HIDDEN);
+        ui_icon_set_source(history_status_icon_, "alert");
+        ui_icon_set_variant(history_status_icon_, "warning");
+        lv_label_set_text(history_status_label_, "Last print failed");
+        break;
+    }
 }
 
 } // namespace helix::ui

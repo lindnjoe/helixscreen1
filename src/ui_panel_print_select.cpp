@@ -22,6 +22,7 @@
 #include "lvgl/src/xml/lv_xml.h"
 #include "moonraker_api.h"
 #include "moonraker_client.h" // For ConnectionState enum
+#include "print_history_manager.h"
 #include "print_start_analyzer.h"
 #include "printer_state.h"
 #include "runtime_config.h"
@@ -383,6 +384,7 @@ void PrintSelectPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
                 panel->file_list_ = std::move(c->files);
 
                 panel->apply_sort();
+                panel->merge_history_into_file_list(); // Populate history status for each file
                 panel->update_sort_indicators();
                 panel->populate_card_view();
                 panel->populate_list_view();
@@ -629,6 +631,20 @@ void PrintSelectPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
             },
             this);
         spdlog::debug("[{}] Registered observer on helix_plugin_installed for install prompt",
+                      get_name());
+    }
+
+    // Register observer on PrintHistoryManager to update file status when history changes
+    // (e.g., when a print completes). PrintHistoryManager uses callback-based observer pattern.
+    auto* history_manager = get_print_history_manager();
+    if (history_manager) {
+        history_manager->add_observer([this]() {
+            // This runs on main thread (PrintHistoryManager uses ui_queue_update)
+            spdlog::debug("[{}] History changed, merging status into file list", get_name());
+            merge_history_into_file_list();
+            schedule_view_refresh(); // Debounced refresh
+        });
+        spdlog::debug("[{}] Registered observer on PrintHistoryManager for history updates",
                       get_name());
     }
 
@@ -1132,6 +1148,8 @@ void PrintSelectPanel::show_detail_view() {
         std::string filename(selected_filename_buffer_);
         detail_view_->show(filename, current_path_, selected_filament_type_,
                            selected_filament_colors_, selected_file_size_bytes_);
+        // Update history status display in detail view
+        detail_view_->update_history_status(selected_history_status_, selected_success_count_);
     }
 }
 
@@ -1379,6 +1397,91 @@ void PrintSelectPanel::apply_sort() {
 
                   return result;
               });
+}
+
+void PrintSelectPanel::merge_history_into_file_list() {
+    auto* history_manager = get_print_history_manager();
+    if (!history_manager) {
+        spdlog::debug("[{}] No PrintHistoryManager available, skipping history merge", get_name());
+        return;
+    }
+
+    // Get currently printing filename (if any)
+    std::string current_print_filename;
+    auto print_state = printer_state_.get_print_job_state();
+    if (print_state == PrintJobState::PRINTING || print_state == PrintJobState::PAUSED) {
+        lv_subject_t* filename_subject = printer_state_.get_print_filename_subject();
+        if (filename_subject) {
+            const char* filename = lv_subject_get_string(filename_subject);
+            if (filename && filename[0] != '\0') {
+                current_print_filename = filename;
+                // Strip path if present
+                auto slash_pos = current_print_filename.rfind('/');
+                if (slash_pos != std::string::npos) {
+                    current_print_filename = current_print_filename.substr(slash_pos + 1);
+                }
+            }
+        }
+    }
+
+    // If history not loaded yet, trigger fetch (will call back when ready)
+    if (!history_manager->is_loaded()) {
+        spdlog::debug("[{}] History not loaded, triggering fetch", get_name());
+        history_manager->fetch();
+        // For now, files will show as NEVER_PRINTED until history loads
+    }
+
+    const auto& stats_map = history_manager->get_filename_stats();
+
+    for (auto& file : file_list_) {
+        if (file.is_dir) {
+            continue; // Directories don't have history
+        }
+
+        // Strip path from filename for lookup
+        std::string basename = file.filename;
+        auto slash_pos = basename.rfind('/');
+        if (slash_pos != std::string::npos) {
+            basename = basename.substr(slash_pos + 1);
+        }
+
+        // Check if currently printing
+        if (!current_print_filename.empty() && basename == current_print_filename) {
+            file.history_status = FileHistoryStatus::CURRENTLY_PRINTING;
+            file.success_count = 0; // Not shown when currently printing
+            continue;
+        }
+
+        // Look up history stats
+        auto it = stats_map.find(basename);
+        if (it == stats_map.end()) {
+            file.history_status = FileHistoryStatus::NEVER_PRINTED;
+            file.success_count = 0;
+            continue;
+        }
+
+        const auto& stats = it->second;
+        file.success_count = stats.success_count;
+
+        // Determine status based on most recent print
+        switch (stats.last_status) {
+        case PrintJobStatus::COMPLETED:
+            file.history_status = FileHistoryStatus::COMPLETED;
+            break;
+        case PrintJobStatus::CANCELLED:
+        case PrintJobStatus::ERROR:
+            file.history_status = FileHistoryStatus::FAILED;
+            break;
+        case PrintJobStatus::IN_PROGRESS:
+            file.history_status = FileHistoryStatus::CURRENTLY_PRINTING;
+            break;
+        default:
+            file.history_status = FileHistoryStatus::NEVER_PRINTED;
+            break;
+        }
+    }
+
+    spdlog::debug("[{}] Merged history status for {} files", get_name(), file_list_.size());
 }
 
 void PrintSelectPanel::update_empty_state() {
@@ -1630,6 +1733,8 @@ void PrintSelectPanel::handle_file_click(size_t file_index) {
         selected_filament_type_ = file.filament_type;
         selected_filament_colors_ = file.filament_colors;
         selected_file_size_bytes_ = file.file_size_bytes;
+        selected_history_status_ = file.history_status;
+        selected_success_count_ = file.success_count;
         show_detail_view();
     }
 }
