@@ -113,9 +113,18 @@ class MockKlippy:
 
     def __init__(self):
         self.commands_sent = []
+        self.macros = {}  # Can be populated with test macros
 
     async def run_gcode(self, gcode: str):
         self.commands_sent.append(gcode)
+
+    async def request(self, endpoint: str, params: dict = None):
+        """Mock Klipper request method for API calls."""
+        if endpoint == "gcode_macro_variable":
+            macro_name = params.get("macro", "")
+            if macro_name in self.macros:
+                return {"gcode": self.macros[macro_name]}
+        raise Exception(f"Mock: {endpoint} not found")
 
 
 class MockHistory:
@@ -307,11 +316,11 @@ class TestStatusAPI:
 
 
 # ============================================================================
-# Print Modified API Tests
+# Print Modified API Tests (v2.0 path-based API)
 # ============================================================================
 
 class TestPrintModifiedAPI:
-    """Tests for the /server/helix/print_modified endpoint."""
+    """Tests for the /server/helix/print_modified endpoint (path-based API)."""
 
     @pytest.mark.asyncio
     async def test_rejects_missing_original(self, helix_print_component, mock_server,
@@ -320,10 +329,16 @@ class TestPrintModifiedAPI:
         # Initialize component
         await helix_print_component.component_init()
 
+        # Create temp file (simulating client upload)
+        temp_dir = Path(temp_gcodes_dir) / ".helix_temp"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        temp_file = temp_dir / "mod_benchy.gcode"
+        temp_file.write_text("G28\n")
+
         handler = mock_server.endpoints["/server/helix/print_modified"]
         request = MockWebRequest({
             "original_filename": "nonexistent.gcode",
-            "modified_content": "G28\n",
+            "temp_file_path": ".helix_temp/mod_benchy.gcode",
             "modifications": [],
         })
 
@@ -333,12 +348,18 @@ class TestPrintModifiedAPI:
         assert "not found" in str(exc_info.value).lower()
 
     @pytest.mark.asyncio
-    async def test_creates_temp_file(self, helix_print_component, mock_server,
-                                     temp_gcodes_dir):
-        """Test API creates temp file with modified content."""
+    async def test_uses_uploaded_temp_file(self, helix_print_component, mock_server,
+                                           temp_gcodes_dir):
+        """Test API uses the pre-uploaded temp file."""
         # Create original file
         original = Path(temp_gcodes_dir) / "benchy.gcode"
         original.write_text("G28\nBED_MESH_CALIBRATE\nG1 X0 Y0\n")
+
+        # Create temp file with modified content (simulating client upload)
+        temp_dir = Path(temp_gcodes_dir) / ".helix_temp"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        temp_file = temp_dir / "mod_benchy.gcode"
+        temp_file.write_text("G28\n; BED_MESH_CALIBRATE disabled\nG1 X0 Y0\n")
 
         # Initialize component
         await helix_print_component.component_init()
@@ -346,7 +367,7 @@ class TestPrintModifiedAPI:
         handler = mock_server.endpoints["/server/helix/print_modified"]
         request = MockWebRequest({
             "original_filename": "benchy.gcode",
-            "modified_content": "G28\n; BED_MESH_CALIBRATE disabled\nG1 X0 Y0\n",
+            "temp_file_path": ".helix_temp/mod_benchy.gcode",
             "modifications": ["bed_leveling_disabled"],
         })
 
@@ -354,12 +375,7 @@ class TestPrintModifiedAPI:
 
         assert result["original_filename"] == "benchy.gcode"
         assert result["status"] == "printing"
-        assert ".helix_temp" in result["temp_filename"]
-
-        # Verify temp file was created
-        temp_path = Path(temp_gcodes_dir) / result["temp_filename"]
-        assert temp_path.exists()
-        assert "BED_MESH_CALIBRATE disabled" in temp_path.read_text()
+        assert result["temp_filename"] == ".helix_temp/mod_benchy.gcode"
 
     @pytest.mark.asyncio
     async def test_creates_symlink(self, helix_print_component, mock_server,
@@ -369,13 +385,19 @@ class TestPrintModifiedAPI:
         original = Path(temp_gcodes_dir) / "benchy.gcode"
         original.write_text("G28\n")
 
+        # Create temp file (simulating client upload)
+        temp_dir = Path(temp_gcodes_dir) / ".helix_temp"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        temp_file = temp_dir / "mod_benchy.gcode"
+        temp_file.write_text("G28\n")
+
         # Initialize component
         await helix_print_component.component_init()
 
         handler = mock_server.endpoints["/server/helix/print_modified"]
         request = MockWebRequest({
             "original_filename": "benchy.gcode",
-            "modified_content": "G28\n",
+            "temp_file_path": ".helix_temp/mod_benchy.gcode",
             "modifications": [],
         })
 
@@ -393,13 +415,19 @@ class TestPrintModifiedAPI:
         original = Path(temp_gcodes_dir) / "benchy.gcode"
         original.write_text("G28\n")
 
+        # Create temp file (simulating client upload)
+        temp_dir = Path(temp_gcodes_dir) / ".helix_temp"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        temp_file = temp_dir / "mod_benchy.gcode"
+        temp_file.write_text("G28\n")
+
         # Initialize component
         await helix_print_component.component_init()
 
         handler = mock_server.endpoints["/server/helix/print_modified"]
         request = MockWebRequest({
             "original_filename": "benchy.gcode",
-            "modified_content": "G28\n",
+            "temp_file_path": ".helix_temp/mod_benchy.gcode",
             "modifications": [],
         })
 
@@ -419,10 +447,16 @@ class TestPrintModifiedAPI:
         config = MockConfigHelper(mock_server, {"enabled": False})
         component = load_component(config)
 
+        # Create temp file
+        temp_dir = Path(temp_gcodes_dir) / ".helix_temp"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        temp_file = temp_dir / "mod_test.gcode"
+        temp_file.write_text("G28\n")
+
         handler = mock_server.endpoints["/server/helix/print_modified"]
         request = MockWebRequest({
             "original_filename": "test.gcode",
-            "modified_content": "G28\n",
+            "temp_file_path": ".helix_temp/mod_test.gcode",
         })
 
         with pytest.raises(Exception) as exc_info:
@@ -446,6 +480,12 @@ class TestSymlinkConflicts:
         original = Path(temp_gcodes_dir) / "benchy.gcode"
         original.write_text("G28\n")
 
+        # Create temp file (simulating client upload)
+        temp_dir = Path(temp_gcodes_dir) / ".helix_temp"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        temp_file = temp_dir / "mod_benchy.gcode"
+        temp_file.write_text("G28\n")
+
         # Create existing symlink
         symlink_dir = Path(temp_gcodes_dir) / ".helix_print"
         symlink_dir.mkdir(parents=True, exist_ok=True)
@@ -458,7 +498,7 @@ class TestSymlinkConflicts:
         handler = mock_server.endpoints["/server/helix/print_modified"]
         request = MockWebRequest({
             "original_filename": "benchy.gcode",
-            "modified_content": "G28\n",
+            "temp_file_path": ".helix_temp/mod_benchy.gcode",
             "modifications": [],
         })
 
@@ -482,13 +522,19 @@ class TestActivePrintTracking:
         original = Path(temp_gcodes_dir) / "benchy.gcode"
         original.write_text("G28\n")
 
+        # Create temp file (simulating client upload)
+        temp_dir = Path(temp_gcodes_dir) / ".helix_temp"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        temp_file = temp_dir / "mod_benchy.gcode"
+        temp_file.write_text("G28\n")
+
         # Initialize component
         await helix_print_component.component_init()
 
         handler = mock_server.endpoints["/server/helix/print_modified"]
         request = MockWebRequest({
             "original_filename": "benchy.gcode",
-            "modified_content": "G28\n",
+            "temp_file_path": ".helix_temp/mod_benchy.gcode",
             "modifications": ["test_mod"],
         })
 
@@ -518,18 +564,342 @@ class TestPathValidation:
         original = subdir / "benchy.gcode"
         original.write_text("G28\n")
 
+        # Create temp file (simulating client upload)
+        temp_dir = Path(temp_gcodes_dir) / ".helix_temp"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        temp_file = temp_dir / "mod_benchy.gcode"
+        temp_file.write_text("G28\n")
+
         # Initialize component
         await helix_print_component.component_init()
 
         handler = mock_server.endpoints["/server/helix/print_modified"]
         request = MockWebRequest({
             "original_filename": "prints/2024/benchy.gcode",
-            "modified_content": "G28\n",
+            "temp_file_path": ".helix_temp/mod_benchy.gcode",
             "modifications": [],
         })
 
         result = await handler(request)
         assert result["status"] == "printing"
+
+
+# ============================================================================
+# Phase Tracking Instrumentation Tests
+# ============================================================================
+
+class TestInstrumentGcode:
+    """Tests for the _instrument_gcode method."""
+
+    @pytest.fixture
+    def helix(self, mock_server):
+        """Create a HelixPrint instance for testing instrumentation."""
+        config = MockConfigHelper(mock_server)
+        return load_component(config)
+
+    def test_adds_starting_marker_at_beginning(self, helix):
+        """Test that STARTING phase is added at the beginning."""
+        gcode = "G28\nG0 X0 Y0\n"
+        result = helix._instrument_gcode(gcode)
+
+        # Should start with the STARTING marker
+        lines = result.split("\n")
+        assert lines[0] == helix.TRACKING_MARKER_BEGIN
+        assert 'VARIABLE=phase VALUE=\'"STARTING"\'' in lines[1]
+        assert lines[2] == helix.TRACKING_MARKER_END
+
+    def test_adds_complete_marker_at_end(self, helix):
+        """Test that COMPLETE phase is added at the end."""
+        gcode = "G28\nG0 X0 Y0\n"
+        result = helix._instrument_gcode(gcode)
+
+        # Should end with the COMPLETE marker
+        lines = result.split("\n")
+        assert lines[-3] == helix.TRACKING_MARKER_BEGIN
+        assert 'VARIABLE=phase VALUE=\'"COMPLETE"\'' in lines[-2]
+        assert lines[-1] == helix.TRACKING_MARKER_END
+
+    def test_detects_g28_homing(self, helix):
+        """Test G28 is detected as HOMING phase."""
+        gcode = "G28\n"
+        result = helix._instrument_gcode(gcode)
+
+        assert 'VALUE=\'"HOMING"\'' in result
+
+    def test_detects_quad_gantry_level(self, helix):
+        """Test QUAD_GANTRY_LEVEL is detected as QGL phase."""
+        gcode = "QUAD_GANTRY_LEVEL\n"
+        result = helix._instrument_gcode(gcode)
+
+        assert 'VALUE=\'"QGL"\'' in result
+
+    def test_detects_z_tilt_adjust(self, helix):
+        """Test Z_TILT_ADJUST is detected as Z_TILT phase."""
+        gcode = "Z_TILT_ADJUST\n"
+        result = helix._instrument_gcode(gcode)
+
+        assert 'VALUE=\'"Z_TILT"\'' in result
+
+    def test_detects_bed_mesh_calibrate(self, helix):
+        """Test BED_MESH_CALIBRATE is detected as BED_MESH phase."""
+        gcode = "BED_MESH_CALIBRATE ADAPTIVE=1\n"
+        result = helix._instrument_gcode(gcode)
+
+        assert 'VALUE=\'"BED_MESH"\'' in result
+
+    def test_detects_clean_nozzle(self, helix):
+        """Test CLEAN_NOZZLE variants are detected as CLEANING phase."""
+        for cmd in ["CLEAN_NOZZLE", "WIPE_NOZZLE"]:
+            gcode = f"{cmd}\n"
+            result = helix._instrument_gcode(gcode)
+            assert 'VALUE=\'"CLEANING"\'' in result, f"Failed for {cmd}"
+
+    def test_detects_purge_macros(self, helix):
+        """Test purge-related macros are detected as PURGING phase."""
+        for cmd in ["PURGE", "PURGE_LINE", "LINE_PURGE", "VORON_PURGE"]:
+            gcode = f"{cmd}\n"
+            result = helix._instrument_gcode(gcode)
+            assert 'VALUE=\'"PURGING"\'' in result, f"Failed for {cmd}"
+
+    def test_detects_m109_heating(self, helix):
+        """Test M109 is detected as HEATING_NOZZLE phase."""
+        gcode = "M109 S220\n"
+        result = helix._instrument_gcode(gcode)
+
+        assert 'VALUE=\'"HEATING_NOZZLE"\'' in result
+
+    def test_detects_m190_heating(self, helix):
+        """Test M190 is detected as HEATING_BED phase."""
+        gcode = "M190 S60\n"
+        result = helix._instrument_gcode(gcode)
+
+        assert 'VALUE=\'"HEATING_BED"\'' in result
+
+    def test_ignores_comments(self, helix):
+        """Test that comment lines are ignored."""
+        gcode = "# G28 - this is just a comment\nG0 X0\n"
+        result = helix._instrument_gcode(gcode)
+
+        # Should NOT contain HOMING because G28 is in a comment
+        assert 'VALUE=\'"HOMING"\'' not in result
+
+    def test_preserves_original_gcode(self, helix):
+        """Test that original gcode lines are preserved."""
+        gcode = "G28\nG0 X150 Y150\nM104 S220\n"
+        result = helix._instrument_gcode(gcode)
+
+        assert "G28" in result
+        assert "G0 X150 Y150" in result
+        assert "M104 S220" in result
+
+    def test_multiple_phases_in_sequence(self, helix):
+        """Test a realistic PRINT_START macro with multiple phases."""
+        gcode = """G28
+QUAD_GANTRY_LEVEL
+BED_MESH_CALIBRATE
+M109 S220
+LINE_PURGE
+"""
+        result = helix._instrument_gcode(gcode)
+
+        # Check all phases are detected in order
+        assert 'VALUE=\'"STARTING"\'' in result
+        assert 'VALUE=\'"HOMING"\'' in result
+        assert 'VALUE=\'"QGL"\'' in result
+        assert 'VALUE=\'"BED_MESH"\'' in result
+        assert 'VALUE=\'"HEATING_NOZZLE"\'' in result
+        assert 'VALUE=\'"PURGING"\'' in result
+        assert 'VALUE=\'"COMPLETE"\'' in result
+
+    def test_only_one_marker_per_line(self, helix):
+        """Test that only one phase marker is added per line."""
+        # This line matches both HOMING (G28) pattern, but should only get one marker
+        gcode = "G28\n"
+        result = helix._instrument_gcode(gcode)
+
+        # Count HOMING occurrences - should be exactly 1
+        homing_count = result.count('VALUE=\'"HOMING"\'')
+        assert homing_count == 1
+
+
+class TestStripInstrumentation:
+    """Tests for the _strip_instrumentation method."""
+
+    @pytest.fixture
+    def helix(self, mock_server):
+        """Create a HelixPrint instance for testing."""
+        config = MockConfigHelper(mock_server)
+        return load_component(config)
+
+    def test_removes_tracking_blocks(self, helix):
+        """Test that tracking blocks are removed."""
+        gcode = f"""G28
+{helix.TRACKING_MARKER_BEGIN}
+SET_GCODE_VARIABLE MACRO=_HELIX_PHASE_STATE VARIABLE=phase VALUE='"HOMING"'
+{helix.TRACKING_MARKER_END}
+G0 X0 Y0
+"""
+        result = helix._strip_instrumentation(gcode)
+
+        assert helix.TRACKING_MARKER_BEGIN not in result
+        assert helix.TRACKING_MARKER_END not in result
+        assert "HELIX_PHASE_STATE" not in result
+        assert "G28" in result
+        assert "G0 X0 Y0" in result
+
+    def test_handles_multiple_blocks(self, helix):
+        """Test that multiple tracking blocks are removed."""
+        gcode = f"""{helix.TRACKING_MARKER_BEGIN}
+SET_GCODE_VARIABLE MACRO=_HELIX_PHASE_STATE VARIABLE=phase VALUE='"STARTING"'
+{helix.TRACKING_MARKER_END}
+G28
+{helix.TRACKING_MARKER_BEGIN}
+SET_GCODE_VARIABLE MACRO=_HELIX_PHASE_STATE VARIABLE=phase VALUE='"HOMING"'
+{helix.TRACKING_MARKER_END}
+BED_MESH_CALIBRATE
+{helix.TRACKING_MARKER_BEGIN}
+SET_GCODE_VARIABLE MACRO=_HELIX_PHASE_STATE VARIABLE=phase VALUE='"BED_MESH"'
+{helix.TRACKING_MARKER_END}
+{helix.TRACKING_MARKER_BEGIN}
+SET_GCODE_VARIABLE MACRO=_HELIX_PHASE_STATE VARIABLE=phase VALUE='"COMPLETE"'
+{helix.TRACKING_MARKER_END}
+"""
+        result = helix._strip_instrumentation(gcode)
+
+        # All markers should be gone
+        assert result.count(helix.TRACKING_MARKER_BEGIN) == 0
+        assert result.count(helix.TRACKING_MARKER_END) == 0
+
+        # Original gcode preserved
+        assert "G28" in result
+        assert "BED_MESH_CALIBRATE" in result
+
+    def test_preserves_non_tracking_content(self, helix):
+        """Test that non-tracking content is preserved."""
+        gcode = "G28\nQUAD_GANTRY_LEVEL\nBED_MESH_CALIBRATE\n"
+        result = helix._strip_instrumentation(gcode)
+
+        # Should be unchanged since no tracking markers
+        assert result == gcode
+
+    def test_roundtrip_instrument_then_strip(self, helix):
+        """Test that stripping instrumented gcode returns to original."""
+        original = "G28\nQUAD_GANTRY_LEVEL\nM109 S220\nLINE_PURGE\n"
+
+        instrumented = helix._instrument_gcode(original)
+        stripped = helix._strip_instrumentation(instrumented)
+
+        # Should return to original (allowing for some whitespace variation)
+        assert "G28" in stripped
+        assert "QUAD_GANTRY_LEVEL" in stripped
+        assert "M109 S220" in stripped
+        assert "LINE_PURGE" in stripped
+
+        # No tracking code should remain
+        assert "HELIX_PHASE_STATE" not in stripped
+        assert helix.TRACKING_MARKER_BEGIN not in stripped
+
+
+class TestPhaseTrackingEndpoints:
+    """Tests for the phase tracking API endpoints."""
+
+    @pytest.fixture
+    def helix_with_klippy(self, mock_server, temp_gcodes_dir):
+        """Create a HelixPrint instance with a mock klippy connection."""
+        mock_server.components["file_manager"] = MockFileManager(temp_gcodes_dir)
+        mock_server.components["database"] = MockDatabase()
+        mock_server.components["klippy_connection"] = MockKlippy()
+        mock_server.components["history"] = MockHistory()
+
+        config = MockConfigHelper(mock_server, {
+            "temp_dir": ".helix_temp",
+            "symlink_dir": ".helix_print",
+            "cleanup_delay": 3600,
+            "enabled": True,
+        })
+
+        return load_component(config)
+
+    @pytest.mark.asyncio
+    async def test_status_not_instrumented(self, helix_with_klippy, mock_server):
+        """Test status endpoint when not instrumented."""
+        # Initialize component to set up klippy reference
+        await helix_with_klippy.component_init()
+
+        handler = mock_server.endpoints["/server/helix/phase_tracking/status"]
+        request = MockWebRequest({})
+
+        result = await handler(request)
+
+        # Should report not enabled (klippy mock doesn't provide macros)
+        assert result["enabled"] is False
+
+    @pytest.mark.asyncio
+    async def test_enable_endpoint_registered(self, helix_with_klippy, mock_server):
+        """Test that the enable endpoint is registered."""
+        assert "/server/helix/phase_tracking/enable" in mock_server.endpoints
+
+    @pytest.mark.asyncio
+    async def test_disable_endpoint_registered(self, helix_with_klippy, mock_server):
+        """Test that the disable endpoint is registered."""
+        assert "/server/helix/phase_tracking/disable" in mock_server.endpoints
+
+    @pytest.mark.asyncio
+    async def test_status_endpoint_registered(self, helix_with_klippy, mock_server):
+        """Test that the status endpoint is registered."""
+        assert "/server/helix/phase_tracking/status" in mock_server.endpoints
+
+
+class TestPhasePatterns:
+    """Tests for the PHASE_PATTERNS regex patterns."""
+
+    @pytest.fixture
+    def helix(self, mock_server):
+        """Create a HelixPrint instance."""
+        config = MockConfigHelper(mock_server)
+        return load_component(config)
+
+    def test_pattern_count(self, helix):
+        """Test expected number of phase patterns."""
+        assert len(helix.PHASE_PATTERNS) == 8
+
+    def test_all_patterns_have_tuple_format(self, helix):
+        """Test all patterns are (regex, phase_name) tuples."""
+        for pattern in helix.PHASE_PATTERNS:
+            assert isinstance(pattern, tuple)
+            assert len(pattern) == 2
+            assert isinstance(pattern[0], str)  # regex
+            assert isinstance(pattern[1], str)  # phase name
+
+    def test_pattern_phases_are_uppercase(self, helix):
+        """Test all phase names are uppercase."""
+        for _, phase in helix.PHASE_PATTERNS:
+            assert phase == phase.upper()
+
+
+class TestMarkerConstants:
+    """Tests for the tracking marker constants."""
+
+    @pytest.fixture
+    def helix(self, mock_server):
+        """Create a HelixPrint instance."""
+        config = MockConfigHelper(mock_server)
+        return load_component(config)
+
+    def test_marker_begin_contains_version(self, helix):
+        """Test that the begin marker contains version info."""
+        assert "v1" in helix.TRACKING_MARKER_BEGIN
+
+    def test_marker_end_matches_begin(self, helix):
+        """Test that end marker is the closing version of begin marker."""
+        assert "HELIX_TRACKING" in helix.TRACKING_MARKER_BEGIN
+        assert "HELIX_TRACKING" in helix.TRACKING_MARKER_END
+        assert "/" in helix.TRACKING_MARKER_END  # closing marker
+
+    def test_markers_are_comments(self, helix):
+        """Test that markers are G-code comments (start with #)."""
+        assert helix.TRACKING_MARKER_BEGIN.startswith("#")
+        assert helix.TRACKING_MARKER_END.startswith("#")
 
 
 if __name__ == "__main__":
