@@ -32,7 +32,7 @@ class PluginInstallModal : public Modal {
   public:
     using InstallCompleteCallback = std::function<void(bool success)>;
 
-    PluginInstallModal() = default;
+    PluginInstallModal();
     ~PluginInstallModal() override {
         // Signal destruction to prevent async callbacks from accessing destroyed object
         is_destroying_.store(true);
@@ -97,4 +97,8 @@ class PluginInstallModal : public Modal {
     // Static event handlers for XML callbacks
     static void install_clicked_cb(lv_event_t* e);
     static void copy_clicked_cb(lv_event_t* e);
+
+    // Register XML event callbacks (called once in constructor)
+    static void register_callbacks();
+    static bool callbacks_registered_;
 };

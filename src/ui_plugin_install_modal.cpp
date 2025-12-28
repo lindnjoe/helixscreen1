@@ -26,15 +26,37 @@ void PluginInstallModal::set_on_install_complete(InstallCompleteCallback cb) {
     on_install_complete_cb_ = std::move(cb);
 }
 
+// Static member initialization
+bool PluginInstallModal::callbacks_registered_ = false;
+
+// ============================================================================
+// Constructor
+// ============================================================================
+
+PluginInstallModal::PluginInstallModal() {
+    // Register callbacks once before any modal is shown
+    register_callbacks();
+}
+
+// ============================================================================
+// Static Callback Registration
+// ============================================================================
+
+void PluginInstallModal::register_callbacks() {
+    if (callbacks_registered_) {
+        return;
+    }
+    lv_xml_register_event_cb(nullptr, "on_plugin_install_clicked", install_clicked_cb);
+    lv_xml_register_event_cb(nullptr, "on_plugin_copy_clicked", copy_clicked_cb);
+    callbacks_registered_ = true;
+    spdlog::debug("[PluginInstallModal] Event callbacks registered");
+}
+
 // ============================================================================
 // Lifecycle Hooks
 // ============================================================================
 
 void PluginInstallModal::on_show() {
-    // Register custom event callbacks
-    lv_xml_register_event_cb(nullptr, "on_plugin_install_clicked", install_clicked_cb);
-    lv_xml_register_event_cb(nullptr, "on_plugin_copy_clicked", copy_clicked_cb);
-
     // Find widgets
     local_description_ = find_widget("local_description");
     remote_description_ = find_widget("remote_description");
