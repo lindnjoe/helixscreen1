@@ -1,0 +1,78 @@
+<?xml version="1.0"?>
+<!-- Copyright 2025 356C LLC -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- Macro Buttons Settings Overlay Panel -->
+<!-- Configures quick-action buttons and standard macro slot assignments -->
+<!-- Quick buttons map to macro slots; standard macros map to printer macros -->
+<component>
+  <view name="macro_buttons_overlay"
+        extends="overlay_panel" width="#overlay_panel_width_full" title="Macro Buttons" bg_color="#app_bg_color">
+    <!-- Content Area - scrollable column of settings -->
+    <lv_obj name="overlay_content"
+            width="100%" flex_grow="1" style_bg_opa="0" style_pad_all="0" scrollable="true" scroll_dir="ver"
+            style_border_width="0" flex_flow="column">
+      <!-- ================================================================== -->
+      <!-- QUICK BUTTONS SECTION -->
+      <!-- ================================================================== -->
+      <setting_section_header title="QUICK BUTTONS" icon="tune"/>
+      <!-- Quick Button 1 - assign a macro slot -->
+      <setting_dropdown_row name="row_quick_button_1"
+                            label="Quick Button 1" icon="play_circle" description="Select macro for first button"
+                            callback="on_quick_button_1_changed"/>
+      <!-- Quick Button 2 - assign a macro slot -->
+      <setting_dropdown_row name="row_quick_button_2"
+                            label="Quick Button 2" icon="play_circle" description="Select macro for second button"
+                            callback="on_quick_button_2_changed"/>
+      <!-- ================================================================== -->
+      <!-- STANDARD MACROS SECTION -->
+      <!-- ================================================================== -->
+      <setting_section_header title="STANDARD MACROS" icon="code_braces"/>
+      <!-- Load Filament -->
+      <setting_dropdown_row name="row_load_filament"
+                            label="Load Filament" icon="arrow_down" description="Macro to load filament into extruder"
+                            callback="on_load_filament_changed"/>
+      <!-- Unload Filament -->
+      <setting_dropdown_row name="row_unload_filament"
+                            label="Unload Filament" icon="tray_arrow_up"
+                            description="Macro to unload filament from extruder" callback="on_unload_filament_changed"/>
+      <!-- Purge -->
+      <setting_dropdown_row name="row_purge"
+                            label="Purge" icon="water" description="Macro to purge/prime the nozzle"
+                            callback="on_purge_changed"/>
+      <!-- Pause -->
+      <setting_dropdown_row name="row_pause"
+                            label="Pause" icon="pause" description="Macro to pause an active print"
+                            callback="on_pause_changed"/>
+      <!-- Resume -->
+      <setting_dropdown_row name="row_resume"
+                            label="Resume" icon="play" description="Macro to resume a paused print"
+                            callback="on_resume_changed"/>
+      <!-- Cancel -->
+      <setting_dropdown_row name="row_cancel"
+                            label="Cancel" icon="cancel" description="Macro to cancel an active print"
+                            callback="on_cancel_changed"/>
+      <!-- Bed Level -->
+      <setting_dropdown_row name="row_bed_level"
+                            label="Bed Level" icon="grid_large" description="Macro for bed mesh calibration"
+                            callback="on_bed_level_changed"/>
+      <!-- Clean Nozzle -->
+      <setting_dropdown_row name="row_clean_nozzle"
+                            label="Clean Nozzle" icon="refresh" description="Macro to clean/wipe the nozzle"
+                            callback="on_clean_nozzle_changed"/>
+      <!-- Heat Soak -->
+      <setting_dropdown_row name="row_heat_soak"
+                            label="Heat Soak" icon="radiator" description="Macro for chamber/bed heat soak"
+                            callback="on_heat_soak_changed"/>
+      <!-- ================================================================== -->
+      <!-- INFO NOTE -->
+      <!-- ================================================================== -->
+      <lv_obj width="100%"
+              height="content" style_bg_opa="0" style_border_width="0" scrollable="false" style_pad_left="#space_lg"
+              style_pad_right="#space_lg" style_pad_top="#space_md" style_pad_bottom="#space_lg" flex_flow="row"
+              style_flex_cross_place="center" style_pad_gap="#space_sm">
+        <icon src="info" size="xs" variant="secondary"/>
+        <text_small text="Empty slots disable the associated functionality" style_text_color="#text_secondary"/>
+      </lv_obj>
+    </lv_obj>
+  </view>
+</component>

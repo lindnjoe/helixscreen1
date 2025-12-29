@@ -911,16 +911,82 @@ void MoonrakerAPI::save_config(SuccessCallback /*on_success*/, ErrorCallback on_
     }
 }
 
-void MoonrakerAPI::execute_macro(const std::string& /*name*/,
-                                 const std::map<std::string, std::string>& /*params*/,
-                                 SuccessCallback /*on_success*/, ErrorCallback on_error) {
-    spdlog::warn("[Moonraker API] execute_macro() not yet implemented");
-    if (on_error) {
-        MoonrakerError err;
-        err.type = MoonrakerErrorType::UNKNOWN;
-        err.message = "Macro execution not yet implemented";
-        on_error(err);
+void MoonrakerAPI::execute_macro(const std::string& name,
+                                 const std::map<std::string, std::string>& params,
+                                 SuccessCallback on_success, ErrorCallback on_error) {
+    // Validate macro name - only allow alphanumeric, underscore (standard Klipper macro names)
+    if (name.empty()) {
+        spdlog::error("[Moonraker API] execute_macro() called with empty name");
+        if (on_error) {
+            MoonrakerError err;
+            err.type = MoonrakerErrorType::VALIDATION_ERROR;
+            err.message = "Macro name cannot be empty";
+            err.method = "execute_macro";
+            on_error(err);
+        }
+        return;
     }
+
+    for (char c : name) {
+        if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_') {
+            spdlog::error("[Moonraker API] Invalid macro name '{}' contains illegal character '{}'",
+                          name, c);
+            if (on_error) {
+                MoonrakerError err;
+                err.type = MoonrakerErrorType::VALIDATION_ERROR;
+                err.message = "Macro name contains illegal characters";
+                err.method = "execute_macro";
+                on_error(err);
+            }
+            return;
+        }
+    }
+
+    // Build G-code: MACRO_NAME KEY1=value1 KEY2=value2
+    std::ostringstream gcode;
+    gcode << name;
+
+    for (const auto& [key, value] : params) {
+        // Validate param key - only alphanumeric and underscore
+        bool key_valid = !key.empty();
+        for (char c : key) {
+            if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_') {
+                key_valid = false;
+                break;
+            }
+        }
+        if (!key_valid) {
+            spdlog::warn("[Moonraker API] Skipping invalid param key '{}'", key);
+            continue;
+        }
+
+        // Validate param value - reject dangerous characters that could enable G-code injection
+        // Allow: alphanumeric, underscore, hyphen, dot, space (for human-readable values)
+        bool value_valid = true;
+        for (char c : value) {
+            if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_' && c != '-' && c != '.' &&
+                c != ' ') {
+                value_valid = false;
+                break;
+            }
+        }
+        if (!value_valid) {
+            spdlog::warn("[Moonraker API] Skipping param with unsafe value: {}={}", key, value);
+            continue;
+        }
+
+        // Safe to include - quote if it has spaces
+        if (value.find(' ') != std::string::npos) {
+            gcode << " " << key << "=\"" << value << "\"";
+        } else {
+            gcode << " " << key << "=" << value;
+        }
+    }
+
+    std::string gcode_str = gcode.str();
+    spdlog::debug("[Moonraker API] Executing macro: {}", gcode_str);
+
+    execute_gcode(gcode_str, std::move(on_success), std::move(on_error));
 }
 
 std::vector<MacroInfo> MoonrakerAPI::get_user_macros(bool /*include_system*/) const {

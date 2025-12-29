@@ -7,6 +7,9 @@
 #include "ui_panel_base.h"
 
 #include "config.h"
+#include "standard_macros.h"
+
+#include <optional>
 
 // Forward declaration
 class TempControlPanel;
@@ -102,11 +105,23 @@ class ControlsPanel : public PanelBase {
     TempControlPanel* temp_control_panel_ = nullptr;
 
     //
-    // === Configurable Macro Buttons ===
+    // === Configurable Macro Buttons (StandardMacros integration) ===
     //
 
-    std::string macro_1_gcode_; ///< G-code command for macro button 1
-    std::string macro_2_gcode_; ///< G-code command for macro button 2
+    std::optional<StandardMacroSlot> macro_1_slot_; ///< Slot for macro button 1
+    std::optional<StandardMacroSlot> macro_2_slot_; ///< Slot for macro button 2
+    lv_obj_t* macro_1_btn_ = nullptr;               ///< Button widget for macro 1
+    lv_obj_t* macro_2_btn_ = nullptr;               ///< Button widget for macro 2
+    lv_obj_t* macro_1_label_ = nullptr;             ///< Label widget for macro 1
+    lv_obj_t* macro_2_label_ = nullptr;             ///< Label widget for macro 2
+
+    /**
+     * @brief Refresh macro button labels and visibility
+     *
+     * Called after StandardMacros config changes to update button text
+     * and hide buttons for empty slots.
+     */
+    void refresh_macro_buttons();
 
     //
     // === V2 Dashboard Subjects (for XML bind_text/bind_value) ===

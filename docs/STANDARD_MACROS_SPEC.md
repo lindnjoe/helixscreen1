@@ -1,0 +1,240 @@
+# Standard Macros System - Technical Specification
+
+## Overview
+
+The Standard Macros system provides a unified registry that maps semantic operations (Load Filament, Pause, Clean Nozzle, etc.) to printer-specific G-code macros. It supports auto-detection from Moonraker, fallback to HELIX_* helper macros, and user configuration via the Settings UI.
+
+## Goals
+
+1. **Consistent macro handling** - All panels use the same macro resolution logic
+2. **Auto-detection** - Automatically find common macros by naming patterns
+3. **Fallback support** - Use HELIX_* macros when printer doesn't have its own
+4. **Graceful degradation** - Empty slots disable functionality cleanly
+5. **User configurability** - Override any slot via Settings overlay
+
+---
+
+## Standard Macro Slots
+
+| Slot | Purpose | Auto-Detect Patterns | HELIX Fallback |
+|------|---------|---------------------|----------------|
+| `load_filament` | Load filament | LOAD_FILAMENT, M701 | — |
+| `unload_filament` | Unload filament | UNLOAD_FILAMENT, M702 | — |
+| `purge` | Purge/prime | PURGE, PURGE_LINE, PRIME_LINE | — |
+| `pause` | Pause print | PAUSE, M601 | — |
+| `resume` | Resume print | RESUME, M602 | — |
+| `cancel` | Cancel print | CANCEL_PRINT | — |
+| `bed_level` | Bed mesh calibration | BED_MESH_CALIBRATE, Z_TILT_ADJUST, QGL | HELIX_BED_LEVEL_IF_NEEDED |
+| `clean_nozzle` | Nozzle cleaning | CLEAN_NOZZLE, NOZZLE_WIPE, WIPE_NOZZLE | HELIX_CLEAN_NOZZLE |
+| `heat_soak` | Chamber/bed soak | HEAT_SOAK, CHAMBER_SOAK, SOAK | — |
+
+### Slot States
+
+Each slot can be in one of four states:
+- **Configured**: User explicitly selected a macro via Settings
+- **Auto-detected**: System found a matching macro on the printer
+- **Fallback**: Using HELIX_* macro (installed by HelixScreen)
+- **Empty**: No macro available; functionality is disabled
+
+---
+
+## Architecture
+
+### Core Class: `StandardMacros`
+
+```cpp
+// include/standard_macros.h
+
+enum class StandardMacroSlot {
+    LoadFilament, UnloadFilament, Purge,
+    Pause, Resume, Cancel,
+    BedLevel, CleanNozzle, HeatSoak
+};
+
+struct StandardMacroInfo {
+    std::string slot_name;        // "load_filament"
+    std::string display_name;     // "Load Filament"
+    std::string configured_macro; // User override (or empty)
+    std::string detected_macro;   // Auto-detected (or empty)
+    std::string fallback_macro;   // HELIX_* fallback (or empty)
+
+    bool is_empty() const;        // No macro available
+    std::string get_macro() const; // Returns first non-empty: configured > detected > fallback
+};
+
+class StandardMacros {
+public:
+    static StandardMacros& instance();
+
+    // Initialize with printer capabilities (call after discovery)
+    void init(const PrinterCapabilities& caps);
+
+    // Get info for a slot
+    const StandardMacroInfo& get(StandardMacroSlot slot) const;
+
+    // Get all slots (for UI listing)
+    const std::vector<StandardMacroInfo>& all() const;
+
+    // Configure a slot (user override)
+    void set_macro(StandardMacroSlot slot, const std::string& macro);
+
+    // Execute macro for slot (with empty check)
+    bool execute(StandardMacroSlot slot, MoonrakerAPI* api,
+                 std::function<void()> on_success,
+                 std::function<void(const MoonrakerError&)> on_error);
+
+    // Load/save from config
+    void load_from_config();
+    void save_to_config();
+
+private:
+    std::vector<StandardMacroInfo> slots_;
+    void auto_detect(const PrinterCapabilities& caps);
+};
+```
+
+### Resolution Order
+
+When executing a macro, the system checks in order:
+1. **User configured** - Explicit selection in Settings
+2. **Auto-detected** - Found on printer via pattern matching
+3. **HELIX fallback** - HelixScreen's helper macro (if available)
+4. **Empty** - No macro; `execute()` returns false, caller should disable UI
+
+---
+
+## Configuration
+
+### Config Schema
+
+```json
+{
+  "standard_macros": {
+    "quick_button_1": "clean_nozzle",
+    "quick_button_2": "bed_level",
+    "load_filament": "",
+    "unload_filament": "",
+    "purge": "",
+    "pause": "",
+    "resume": "",
+    "cancel": "",
+    "bed_level": "",
+    "clean_nozzle": "",
+    "heat_soak": ""
+  }
+}
+```
+
+- **Empty string** (`""`) = Use auto-detection (or disabled if nothing found)
+- **Macro name** = Explicit override
+
+### Quick Buttons
+
+The Controls Panel has 2 quick-action macro buttons. These are configured as:
+- `quick_button_1`: References a slot name (e.g., `"clean_nozzle"`)
+- `quick_button_2`: References a slot name (e.g., `"bed_level"`)
+
+---
+
+## UI Integration
+
+### Settings Overlay
+
+Path: Settings → "Macro Buttons" → Opens overlay panel
+
+Layout:
+```
+┌─────────────────────────────────────┐
+│ ← Macro Buttons                     │
+├─────────────────────────────────────┤
+│                                     │
+│ Quick Button 1     [Dropdown ▼]     │
+│ Select macro for first button       │
+│                                     │
+│ Quick Button 2     [Dropdown ▼]     │
+│ Select macro for second button      │
+│                                     │
+│ ─────────────────────────────────── │
+│                                     │
+│ Standard Macros                     │
+│ Configure macros for operations     │
+│                                     │
+│ Load Filament      [Dropdown ▼]     │
+│ Unload Filament    [Dropdown ▼]     │
+│ Purge              [Dropdown ▼]     │
+│ ... etc ...                         │
+│                                     │
+│ ℹ️ Empty slots disable functionality │
+└─────────────────────────────────────┘
+```
+
+### Dropdown Options
+
+Each standard macro dropdown shows:
+1. `(Auto: DETECTED_NAME)` - if auto-detected, shows what was found
+2. `(Empty)` - explicitly disable functionality
+3. All discovered printer macros (alphabetically sorted)
+
+---
+
+## Panel Integration
+
+### FilamentPanel
+```cpp
+void FilamentPanel::execute_load() {
+    if (!StandardMacros::instance().execute(
+            StandardMacroSlot::LoadFilament, api_,
+            []() { NOTIFY_SUCCESS("Loading filament..."); },
+            [](auto& err) { NOTIFY_ERROR("Load failed: {}", err.user_message()); })) {
+        NOTIFY_WARNING("Load filament macro not configured");
+    }
+}
+```
+
+### ControlsPanel
+- Quick buttons execute the configured slot
+- If slot is empty, button is hidden
+- `refresh_macro_buttons()` updates labels after config change
+
+### PrintStatusPanel
+- Pause/Resume/Cancel use StandardMacros
+- Buttons disabled (greyed) if slot is empty
+
+---
+
+## Implementation Stages
+
+| Stage | Scope | Files | Deliverable |
+|-------|-------|-------|-------------|
+| 1 | Core class | `standard_macros.h/cpp` | Compiles, unit tests pass |
+| 2 | Discovery integration | `moonraker_manager.cpp` | Auto-detection logs on connect |
+| 3 | Overlay UI | `macro_buttons_overlay.xml`, `xml_registration.cpp` | UI renders, dropdowns populate |
+| 4 | Settings handler | `ui_panel_settings.cpp/h` | Overlay opens, saves to config |
+| 5 | Controls integration | `ui_panel_controls.cpp/h` | Quick buttons use StandardMacros |
+| 6 | Filament integration | `ui_panel_filament.cpp` | Load/Unload use StandardMacros |
+| 7 | Print status integration | `ui_panel_print_status.cpp` | Pause/Resume/Cancel use StandardMacros |
+| 8 | Testing & polish | — | Feature complete, all tests pass |
+
+---
+
+## Related Files
+
+### Existing Infrastructure
+- `include/printer_capabilities.h` - Macro discovery (`has_macro()`, `macros()`)
+- `src/helix_macro_manager.cpp` - HELIX_* macro definitions
+- `include/config.h` - `MacroConfig` struct, `get_macro()` method
+- `ui_xml/display_settings_overlay.xml` - Reference overlay pattern
+
+### Files to Create
+- `include/standard_macros.h`
+- `src/standard_macros.cpp`
+- `ui_xml/macro_buttons_overlay.xml`
+
+### Files to Modify
+- `src/ui_panel_settings.cpp/h` - Add overlay handler
+- `ui_xml/settings_panel.xml` - Add action row
+- `src/xml_registration.cpp` - Register new component
+- `src/moonraker_manager.cpp` - Init after discovery
+- `src/ui_panel_controls.cpp/h` - Use StandardMacros
+- `src/ui_panel_filament.cpp` - Use StandardMacros
+- `src/ui_panel_print_status.cpp` - Use StandardMacros

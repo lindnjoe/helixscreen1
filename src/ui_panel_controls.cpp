@@ -20,6 +20,7 @@
 #include "app_globals.h"
 #include "moonraker_api.h"
 #include "printer_state.h"
+#include "standard_macros.h"
 
 #include <spdlog/spdlog.h>
 
@@ -187,31 +188,34 @@ void ControlsPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
         return;
     }
 
-    // Load configurable macro buttons from config
+    // Cache macro button widgets for later updates
+    macro_1_btn_ = lv_obj_find_by_name(panel_, "macro_1_btn");
+    macro_2_btn_ = lv_obj_find_by_name(panel_, "macro_2_btn");
+    macro_1_label_ = lv_obj_find_by_name(panel_, "macro_1_label");
+    macro_2_label_ = lv_obj_find_by_name(panel_, "macro_2_label");
+
+    // Load quick button slot assignments from config
+    // Config stores slot names like "clean_nozzle", "bed_level"
     if (Config* config = Config::get_instance()) {
-        MacroConfig macro1 = config->get_macro("macro_1", {"Clean Nozzle", "HELIX_CLEAN_NOZZLE"});
-        MacroConfig macro2 =
-            config->get_macro("macro_2", {"Level Bed", "HELIX_BED_LEVEL_IF_NEEDED"});
+        std::string slot1_name =
+            config->get<std::string>("/standard_macros/quick_button_1", "clean_nozzle");
+        std::string slot2_name =
+            config->get<std::string>("/standard_macros/quick_button_2", "bed_level");
 
-        macro_1_gcode_ = macro1.gcode;
-        macro_2_gcode_ = macro2.gcode;
+        macro_1_slot_ = StandardMacros::slot_from_name(slot1_name);
+        macro_2_slot_ = StandardMacros::slot_from_name(slot2_name);
 
-        // Update button labels from config
-        if (lv_obj_t* label1 = lv_obj_find_by_name(panel_, "macro_1_label")) {
-            lv_label_set_text(label1, macro1.label.c_str());
-        }
-        if (lv_obj_t* label2 = lv_obj_find_by_name(panel_, "macro_2_label")) {
-            lv_label_set_text(label2, macro2.label.c_str());
-        }
-
-        spdlog::debug("[{}] Macro buttons configured: '{}' → {}, '{}' → {}", get_name(),
-                      macro1.label, macro1.gcode, macro2.label, macro2.gcode);
+        spdlog::debug("[{}] Quick buttons configured: slot1='{}', slot2='{}'", get_name(),
+                      slot1_name, slot2_name);
     } else {
-        // Fallback if config not available
-        macro_1_gcode_ = "HELIX_CLEAN_NOZZLE";
-        macro_2_gcode_ = "HELIX_BED_LEVEL_IF_NEEDED";
-        spdlog::warn("[{}] Config not available, using default macros", get_name());
+        // Fallback: use CleanNozzle and BedLevel slots
+        macro_1_slot_ = StandardMacroSlot::CleanNozzle;
+        macro_2_slot_ = StandardMacroSlot::BedLevel;
+        spdlog::warn("[{}] Config not available, using default macro slots", get_name());
     }
+
+    // Refresh button labels and visibility based on current StandardMacros state
+    refresh_macro_buttons();
 
     // Cache dynamic container for secondary fans
     secondary_fans_list_ = lv_obj_find_by_name(panel_, "secondary_fans_list");
@@ -238,7 +242,12 @@ void ControlsPanel::on_activate() {
     // 2. User switched from one printer connection to another
     // 3. Observer callback was missed due to timing
     populate_secondary_fans();
-    spdlog::debug("[{}] Panel activated, refreshed secondary fans", get_name());
+
+    // Refresh macro buttons in case StandardMacros was initialized after setup()
+    // This ensures button labels reflect auto-detected macros, not just fallbacks
+    refresh_macro_buttons();
+
+    spdlog::debug("[{}] Panel activated, refreshed fans and macro buttons", get_name());
 }
 
 // ============================================================================
@@ -375,6 +384,66 @@ void ControlsPanel::update_fan_display() {
     }
     lv_subject_copy_string(&fan_speed_subject_, fan_speed_buf_);
     lv_subject_set_int(&fan_pct_subject_, fan_pct);
+}
+
+void ControlsPanel::refresh_macro_buttons() {
+    auto& macros = StandardMacros::instance();
+
+    // Update macro button 1
+    if (macro_1_slot_) {
+        const auto& info = macros.get(*macro_1_slot_);
+        if (info.is_empty()) {
+            // Slot has no macro - hide the button
+            if (macro_1_btn_) {
+                lv_obj_add_flag(macro_1_btn_, LV_OBJ_FLAG_HIDDEN);
+            }
+            spdlog::debug("[{}] Macro 1 slot '{}' is empty, hiding button", get_name(),
+                          info.slot_name);
+        } else {
+            // Show button with display name
+            if (macro_1_btn_) {
+                lv_obj_remove_flag(macro_1_btn_, LV_OBJ_FLAG_HIDDEN);
+            }
+            if (macro_1_label_) {
+                lv_label_set_text(macro_1_label_, info.display_name.c_str());
+            }
+            spdlog::debug("[{}] Macro 1: '{}' → {}", get_name(), info.display_name,
+                          info.get_macro());
+        }
+    } else {
+        // No slot configured - hide the button
+        if (macro_1_btn_) {
+            lv_obj_add_flag(macro_1_btn_, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+
+    // Update macro button 2
+    if (macro_2_slot_) {
+        const auto& info = macros.get(*macro_2_slot_);
+        if (info.is_empty()) {
+            // Slot has no macro - hide the button
+            if (macro_2_btn_) {
+                lv_obj_add_flag(macro_2_btn_, LV_OBJ_FLAG_HIDDEN);
+            }
+            spdlog::debug("[{}] Macro 2 slot '{}' is empty, hiding button", get_name(),
+                          info.slot_name);
+        } else {
+            // Show button with display name
+            if (macro_2_btn_) {
+                lv_obj_remove_flag(macro_2_btn_, LV_OBJ_FLAG_HIDDEN);
+            }
+            if (macro_2_label_) {
+                lv_label_set_text(macro_2_label_, info.display_name.c_str());
+            }
+            spdlog::debug("[{}] Macro 2: '{}' → {}", get_name(), info.display_name,
+                          info.get_macro());
+        }
+    } else {
+        // No slot configured - hide the button
+        if (macro_2_btn_) {
+            lv_obj_add_flag(macro_2_btn_, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
 }
 
 void ControlsPanel::populate_secondary_fans() {
@@ -664,24 +733,40 @@ void ControlsPanel::handle_home_z() {
 }
 
 void ControlsPanel::handle_macro_1() {
-    spdlog::debug("[{}] Macro 1 clicked, executing: {}", get_name(), macro_1_gcode_);
-    if (api_ && !macro_1_gcode_.empty()) {
-        api_->execute_gcode(
-            macro_1_gcode_, []() { NOTIFY_SUCCESS("Macro started"); },
+    if (!macro_1_slot_) {
+        spdlog::debug("[{}] Macro 1 clicked but no slot configured", get_name());
+        return;
+    }
+
+    const auto& info = StandardMacros::instance().get(*macro_1_slot_);
+    spdlog::debug("[{}] Macro 1 clicked, executing slot '{}' → {}", get_name(), info.slot_name,
+                  info.get_macro());
+
+    if (!StandardMacros::instance().execute(
+            *macro_1_slot_, api_, []() { NOTIFY_SUCCESS("Macro started"); },
             [](const MoonrakerError& err) {
                 NOTIFY_ERROR("Macro failed: {}", err.user_message());
-            });
+            })) {
+        NOTIFY_WARNING("{} macro not configured", info.display_name);
     }
 }
 
 void ControlsPanel::handle_macro_2() {
-    spdlog::debug("[{}] Macro 2 clicked, executing: {}", get_name(), macro_2_gcode_);
-    if (api_ && !macro_2_gcode_.empty()) {
-        api_->execute_gcode(
-            macro_2_gcode_, []() { NOTIFY_SUCCESS("Macro started"); },
+    if (!macro_2_slot_) {
+        spdlog::debug("[{}] Macro 2 clicked but no slot configured", get_name());
+        return;
+    }
+
+    const auto& info = StandardMacros::instance().get(*macro_2_slot_);
+    spdlog::debug("[{}] Macro 2 clicked, executing slot '{}' → {}", get_name(), info.slot_name,
+                  info.get_macro());
+
+    if (!StandardMacros::instance().execute(
+            *macro_2_slot_, api_, []() { NOTIFY_SUCCESS("Macro started"); },
             [](const MoonrakerError& err) {
                 NOTIFY_ERROR("Macro failed: {}", err.user_message());
-            });
+            })) {
+        NOTIFY_WARNING("{} macro not configured", info.display_name);
     }
 }
 

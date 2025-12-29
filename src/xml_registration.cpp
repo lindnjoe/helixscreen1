@@ -231,6 +231,7 @@ void register_xml_components() {
     // Settings overlay panels
     lv_xml_register_component_from_file("A:ui_xml/display_settings_overlay.xml");
     lv_xml_register_component_from_file("A:ui_xml/filament_sensors_overlay.xml");
+    lv_xml_register_component_from_file("A:ui_xml/macro_buttons_overlay.xml");
     lv_xml_register_component_from_file("A:ui_xml/network_settings_overlay.xml");
     lv_xml_register_component_from_file("A:ui_xml/retraction_settings_overlay.xml");
     lv_xml_register_component_from_file("A:ui_xml/timelapse_settings_overlay.xml");
