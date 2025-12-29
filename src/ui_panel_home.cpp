@@ -6,6 +6,7 @@
 #include "ui_ams_mini_status.h"
 #include "ui_error_reporting.h"
 #include "ui_event_safety.h"
+#include "ui_icon.h"
 #include "ui_modal.h"
 #include "ui_nav.h"
 #include "ui_nav_manager.h"
@@ -32,6 +33,7 @@
 
 #include <spdlog/spdlog.h>
 
+#include <algorithm>
 #include <cstdlib>
 #include <cstring>
 #include <memory>
@@ -80,6 +82,10 @@ HomePanel::HomePanel(PrinterState& printer_state, MoonrakerAPI* api)
             // Subscribe to LED state changes from PrinterState
             led_state_observer_ =
                 ObserverGuard(printer_state_.get_led_state_subject(), led_state_observer_cb, this);
+
+            // Subscribe to LED brightness changes for dynamic icon updates
+            led_brightness_observer_ = ObserverGuard(printer_state_.get_led_brightness_subject(),
+                                                     led_brightness_observer_cb, this);
 
             spdlog::info("[{}] Configured LED: {} (observing state)", get_name(), configured_led_);
         } else {
@@ -182,6 +188,13 @@ void HomePanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
         cached_extruder_target_ = lv_subject_get_int(printer_state_.get_extruder_target_subject());
         temp_icon_animator_.update(cached_extruder_temp_, cached_extruder_target_);
         spdlog::debug("[{}] Heating icon animator attached", get_name());
+    }
+
+    // Find light icon for dynamic brightness/color updates
+    light_icon_ = lv_obj_find_by_name(panel_, "light_icon");
+    if (light_icon_) {
+        spdlog::debug("[{}] Found light_icon for dynamic brightness/color", get_name());
+        update_light_icon(); // Initialize with current state
     }
 
     // Create AMS mini status indicator (hidden until AMS data is available)
@@ -626,6 +639,57 @@ void HomePanel::on_led_state_changed(int state) {
 
     spdlog::debug("[{}] LED state changed: {} (from PrinterState)", get_name(),
                   light_on_ ? "ON" : "OFF");
+
+    // Update light icon when state changes
+    update_light_icon();
+}
+
+void HomePanel::update_light_icon() {
+    if (!light_icon_) {
+        return;
+    }
+
+    // Get current brightness
+    int brightness = lv_subject_get_int(printer_state_.get_led_brightness_subject());
+
+    // Set icon based on brightness level
+    const char* icon_name = ui_brightness_to_lightbulb_icon(brightness);
+    ui_icon_set_source(light_icon_, icon_name);
+
+    // Calculate icon color from LED RGBW values
+    if (brightness == 0) {
+        // OFF state - use muted gray
+        ui_icon_set_color(light_icon_, lv_color_hex(0x808080), LV_OPA_COVER);
+    } else {
+        // Get RGB values from PrinterState
+        int r = lv_subject_get_int(printer_state_.get_led_r_subject());
+        int g = lv_subject_get_int(printer_state_.get_led_g_subject());
+        int b = lv_subject_get_int(printer_state_.get_led_b_subject());
+        int w = lv_subject_get_int(printer_state_.get_led_w_subject());
+
+        lv_color_t icon_color;
+        // If white channel dominant or RGB near white, use gold
+        if (w > std::max({r, g, b}) || (r > 200 && g > 200 && b > 200)) {
+            icon_color = lv_color_hex(0xFFD700); // Gold
+        } else {
+            // Use actual LED color, boost if too dark for visibility
+            int max_val = std::max({r, g, b});
+            if (max_val < 128 && max_val > 0) {
+                float scale = 128.0f / static_cast<float>(max_val);
+                icon_color =
+                    lv_color_make(static_cast<uint8_t>(std::min(255, static_cast<int>(r * scale))),
+                                  static_cast<uint8_t>(std::min(255, static_cast<int>(g * scale))),
+                                  static_cast<uint8_t>(std::min(255, static_cast<int>(b * scale))));
+            } else {
+                icon_color = lv_color_make(static_cast<uint8_t>(r), static_cast<uint8_t>(g),
+                                           static_cast<uint8_t>(b));
+            }
+        }
+
+        ui_icon_set_color(light_icon_, icon_color, LV_OPA_COVER);
+    }
+
+    spdlog::trace("[{}] Light icon: {} at {}%", get_name(), icon_name, brightness);
 }
 
 void HomePanel::on_extruder_temp_changed(int temp_centi) {
@@ -674,6 +738,12 @@ void HomePanel::reload_from_config() {
             if (!led_state_observer_) {
                 led_state_observer_ = ObserverGuard(printer_state_.get_led_state_subject(),
                                                     led_state_observer_cb, this);
+            }
+
+            // Subscribe to LED brightness changes if not already subscribed
+            if (!led_brightness_observer_) {
+                led_brightness_observer_ = ObserverGuard(
+                    printer_state_.get_led_brightness_subject(), led_brightness_observer_cb, this);
             }
 
             spdlog::info("[{}] Reloaded LED config: {}", get_name(), configured_led_);
@@ -774,6 +844,12 @@ void HomePanel::auto_configure_led_if_needed(const std::vector<std::string>& led
             ObserverGuard(printer_state_.get_led_state_subject(), led_state_observer_cb, this);
     }
 
+    // Subscribe to LED brightness changes if not already subscribed
+    if (!led_brightness_observer_) {
+        led_brightness_observer_ = ObserverGuard(printer_state_.get_led_brightness_subject(),
+                                                 led_brightness_observer_cb, this);
+    }
+
     spdlog::info("[{}] Auto-configured LED: {} (from {} discovered)", get_name(), configured_led_,
                  leds.size());
 }
@@ -848,6 +924,14 @@ void HomePanel::led_state_observer_cb(lv_observer_t* observer, lv_subject_t* sub
     auto* self = static_cast<HomePanel*>(lv_observer_get_user_data(observer));
     if (self) {
         self->on_led_state_changed(lv_subject_get_int(subject));
+    }
+}
+
+void HomePanel::led_brightness_observer_cb(lv_observer_t* observer, lv_subject_t* subject) {
+    (void)subject;
+    auto* self = static_cast<HomePanel*>(lv_observer_get_user_data(observer));
+    if (self) {
+        self->update_light_icon();
     }
 }
 

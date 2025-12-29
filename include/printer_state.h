@@ -614,6 +614,23 @@ class PrinterState {
         return &led_state_;
     } // 0=off, 1=on (derived from LED color data)
 
+    // LED RGBW channel subjects (0-255 integer range)
+    lv_subject_t* get_led_r_subject() {
+        return &led_r_;
+    }
+    lv_subject_t* get_led_g_subject() {
+        return &led_g_;
+    }
+    lv_subject_t* get_led_b_subject() {
+        return &led_b_;
+    }
+    lv_subject_t* get_led_w_subject() {
+        return &led_w_;
+    }
+    lv_subject_t* get_led_brightness_subject() {
+        return &led_brightness_;
+    } // 0-100 (max of RGBW channels)
+
     /**
      * @brief Get excluded objects version subject
      *
@@ -979,6 +996,13 @@ class PrinterState {
 
     // LED state subject
     lv_subject_t led_state_; // Integer: 0=off, 1=on
+
+    // LED RGBW channel subjects (for color picker / brightness slider)
+    lv_subject_t led_r_;          // LED red channel 0-255
+    lv_subject_t led_g_;          // LED green channel 0-255
+    lv_subject_t led_b_;          // LED blue channel 0-255
+    lv_subject_t led_w_;          // LED white channel 0-255
+    lv_subject_t led_brightness_; // LED brightness 0-100 (max of RGBW channels)
 
     // Exclude object subjects
     lv_subject_t excluded_objects_version_;            // Integer: incremented on change

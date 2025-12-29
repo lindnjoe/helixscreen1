@@ -249,6 +249,20 @@ MDI_ICONS+=",0xF0D4C"    # axis-x-arrow
 MDI_ICONS+=",0xF0D51"    # axis-y-arrow
 MDI_ICONS+=",0xF0D55"    # axis-z-arrow
 MDI_ICONS+=",0xF0E4F"    # lightbulb-off
+
+# Graduated lightbulb icons (brightness levels)
+MDI_ICONS+=",0xF0336"    # lightbulb-outline (OFF state)
+MDI_ICONS+=",0xF1A4E"    # lightbulb-on-10
+MDI_ICONS+=",0xF1A4F"    # lightbulb-on-20
+MDI_ICONS+=",0xF1A50"    # lightbulb-on-30
+MDI_ICONS+=",0xF1A51"    # lightbulb-on-40
+MDI_ICONS+=",0xF1A52"    # lightbulb-on-50
+MDI_ICONS+=",0xF1A53"    # lightbulb-on-60
+MDI_ICONS+=",0xF1A54"    # lightbulb-on-70
+MDI_ICONS+=",0xF1A55"    # lightbulb-on-80
+MDI_ICONS+=",0xF1A56"    # lightbulb-on-90
+MDI_ICONS+=",0xF06E8"    # lightbulb-on (100%)
+
 MDI_ICONS+=",0xF0E5B"    # printer-3d-nozzle (extruder)
 MDI_ICONS+=",0xF0EC7"    # rotate-3d (orbit/3D view rotation)
 MDI_ICONS+=",0xF0F85"    # speedometer-medium (speed-up)

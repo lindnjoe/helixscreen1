@@ -121,6 +121,9 @@ class HomePanel : public PanelBase {
     std::shared_ptr<WiFiManager> wifi_manager_;         // For signal strength queries
     std::unique_ptr<EthernetManager> ethernet_manager_; // For Ethernet status queries
 
+    // Light icon for dynamic brightness/color updates
+    lv_obj_t* light_icon_ = nullptr;
+
     // Lazily-created overlay panels (owned by LVGL parent, not us)
     lv_obj_t* nozzle_temp_panel_ = nullptr;
 
@@ -147,6 +150,7 @@ class HomePanel : public PanelBase {
     void on_extruder_target_changed(int target);
     void on_led_state_changed(int state);
     void update_temp_icon_animation();
+    void update_light_icon();
 
     static void light_toggle_cb(lv_event_t* e);
     static void print_card_clicked_cb(lv_event_t* e);
@@ -159,11 +163,13 @@ class HomePanel : public PanelBase {
     static void extruder_temp_observer_cb(lv_observer_t* observer, lv_subject_t* subject);
     static void extruder_target_observer_cb(lv_observer_t* observer, lv_subject_t* subject);
     static void led_state_observer_cb(lv_observer_t* observer, lv_subject_t* subject);
+    static void led_brightness_observer_cb(lv_observer_t* observer, lv_subject_t* subject);
     static void ams_slot_count_observer_cb(lv_observer_t* observer, lv_subject_t* subject);
 
     ObserverGuard extruder_temp_observer_;
     ObserverGuard extruder_target_observer_;
     ObserverGuard led_state_observer_;
+    ObserverGuard led_brightness_observer_;
     ObserverGuard ams_slot_count_observer_;
 
     // Print card observers (for showing progress during active print)

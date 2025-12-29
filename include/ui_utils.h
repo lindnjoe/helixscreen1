@@ -166,6 +166,22 @@ const char* get_time_format_string();
 lv_coord_t ui_get_header_content_padding(lv_coord_t screen_height);
 
 // ============================================================================
+// LED Icon Utilities
+// ============================================================================
+
+/**
+ * @brief Get lightbulb icon name for LED brightness level
+ *
+ * Maps brightness percentage (0-100) to appropriate graduated lightbulb icon.
+ * Returns icons from lightbulb_outline (off) through lightbulb_on_10..90 to
+ * lightbulb_on (100%).
+ *
+ * @param brightness LED brightness 0-100%
+ * @return Icon name string for ui_icon_set_source()
+ */
+const char* ui_brightness_to_lightbulb_icon(int brightness);
+
+// ============================================================================
 // Color Utilities
 // ============================================================================
 

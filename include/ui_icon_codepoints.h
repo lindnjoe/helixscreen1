@@ -126,6 +126,17 @@ static const IconMapping ICON_MAP[] = {
     {"leaf",               "\xF3\xB0\x90\xB6"},  // F0436 leaf
     {"light",              "\xF3\xB0\x8C\xB5"},  // F0335 lightbulb
     {"light_off",          "\xF3\xB0\xB9\x8F"},  // F0E4F lightbulb-off
+    {"lightbulb_on",       "\xF3\xB0\x9B\xA8"},  // F06E8 lightbulb-on (100%)
+    {"lightbulb_on_10",    "\xF3\xB1\xA9\x8E"},  // F1A4E lightbulb-on-10
+    {"lightbulb_on_20",    "\xF3\xB1\xA9\x8F"},  // F1A4F lightbulb-on-20
+    {"lightbulb_on_30",    "\xF3\xB1\xA9\x90"},  // F1A50 lightbulb-on-30
+    {"lightbulb_on_40",    "\xF3\xB1\xA9\x91"},  // F1A51 lightbulb-on-40
+    {"lightbulb_on_50",    "\xF3\xB1\xA9\x92"},  // F1A52 lightbulb-on-50
+    {"lightbulb_on_60",    "\xF3\xB1\xA9\x93"},  // F1A53 lightbulb-on-60
+    {"lightbulb_on_70",    "\xF3\xB1\xA9\x94"},  // F1A54 lightbulb-on-70
+    {"lightbulb_on_80",    "\xF3\xB1\xA9\x95"},  // F1A55 lightbulb-on-80
+    {"lightbulb_on_90",    "\xF3\xB1\xA9\x96"},  // F1A56 lightbulb-on-90
+    {"lightbulb_outline",  "\xF3\xB0\x8C\xB6"},  // F0336 lightbulb-outline (OFF)
     {"limit",              "\xF3\xB0\xB9\x8F"},  // Use same as light_off or find better
     {"list",               "\xF3\xB0\x89\xB9"},  // F0279 format-list-bulleted
     {"lock",               "\xF3\xB0\x8C\xBE"},  // F033E lock

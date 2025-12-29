@@ -249,6 +249,45 @@ lv_coord_t ui_get_responsive_header_height(lv_coord_t screen_height) {
 }
 
 // ============================================================================
+// LED Icon Utilities
+// ============================================================================
+
+const char* ui_brightness_to_lightbulb_icon(int brightness) {
+    // Clamp to valid range
+    if (brightness <= 0) {
+        return "lightbulb_outline"; // OFF state
+    }
+    if (brightness < 15) {
+        return "lightbulb_on_10";
+    }
+    if (brightness < 25) {
+        return "lightbulb_on_20";
+    }
+    if (brightness < 35) {
+        return "lightbulb_on_30";
+    }
+    if (brightness < 45) {
+        return "lightbulb_on_40";
+    }
+    if (brightness < 55) {
+        return "lightbulb_on_50";
+    }
+    if (brightness < 65) {
+        return "lightbulb_on_60";
+    }
+    if (brightness < 75) {
+        return "lightbulb_on_70";
+    }
+    if (brightness < 85) {
+        return "lightbulb_on_80";
+    }
+    if (brightness < 95) {
+        return "lightbulb_on_90";
+    }
+    return "lightbulb_on"; // 100%
+}
+
+// ============================================================================
 // Color Utilities
 // ============================================================================
 

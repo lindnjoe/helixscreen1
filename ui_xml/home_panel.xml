@@ -335,21 +335,14 @@
                   style_pad_all="0">
             <lv_obj-bind_flag_if_eq subject="printer_has_led" flag="hidden" ref_value="0"/>
           </lv_obj>
-          <!-- Light control button - uses two icons with conditional visibility for reactive on/off state -->
-          <!-- Hidden if printer doesn't have LED capability, disabled when not connected -->
+          <!-- Light control button - single icon with dynamic brightness/color -->
           <lv_button name="light_button"
                      height="100%" flex_grow="1" style_bg_opa="0%" style_border_width="0" style_pad_all="0"
                      style_shadow_width="0">
             <lv_obj-bind_flag_if_eq subject="printer_has_led" flag="hidden" ref_value="0"/>
             <lv_obj-bind_state_if_not_eq subject="printer_connection_state" state="disabled" ref_value="2"/>
-            <!-- OFF state icon (gray) - visible when led_state == 0 -->
-            <icon name="light_icon_off" src="light" size="#icon_size_card" align="center" color="#light_icon_off">
-              <lv_obj-bind_flag_if_not_eq subject="led_state" flag="hidden" ref_value="0"/>
-            </icon>
-            <!-- ON state icon (gold) - visible when led_state == 1 -->
-            <icon name="light_icon_on" src="light" size="#icon_size_card" align="center" color="#light_icon_on">
-              <lv_obj-bind_flag_if_eq subject="led_state" flag="hidden" ref_value="0"/>
-            </icon>
+            <!-- Dynamic icon - source and color set by C++ based on LED brightness/color -->
+            <icon name="light_icon" src="lightbulb_outline" size="#icon_size_card" align="center" color="#light_icon_off"/>
             <event_cb trigger="clicked" callback="light_toggle_cb"/>
           </lv_button>
           <!-- Vertical divider for filament sensor (hidden if no sensors) -->

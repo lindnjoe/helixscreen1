@@ -147,6 +147,11 @@ void PrinterState::reset_for_testing() {
     lv_subject_deinit(&network_status_);
     lv_subject_deinit(&klippy_state_);
     lv_subject_deinit(&led_state_);
+    lv_subject_deinit(&led_r_);
+    lv_subject_deinit(&led_g_);
+    lv_subject_deinit(&led_b_);
+    lv_subject_deinit(&led_w_);
+    lv_subject_deinit(&led_brightness_);
     lv_subject_deinit(&excluded_objects_version_);
     lv_subject_deinit(&printer_has_qgl_);
     lv_subject_deinit(&printer_has_z_tilt_);
@@ -254,6 +259,13 @@ void PrinterState::init_subjects(bool register_xml) {
     // LED state subject (0=off, 1=on, derived from LED color data)
     lv_subject_init_int(&led_state_, 0);
 
+    // LED RGBW channel subjects (0-255 range)
+    lv_subject_init_int(&led_r_, 0);
+    lv_subject_init_int(&led_g_, 0);
+    lv_subject_init_int(&led_b_, 0);
+    lv_subject_init_int(&led_w_, 0);
+    lv_subject_init_int(&led_brightness_, 0);
+
     // Excluded objects version subject (incremented when excluded_objects_ changes)
     lv_subject_init_int(&excluded_objects_version_, 0);
 
@@ -333,6 +345,11 @@ void PrinterState::init_subjects(bool register_xml) {
         lv_xml_register_subject(NULL, "network_status", &network_status_);
         lv_xml_register_subject(NULL, "klippy_state", &klippy_state_);
         lv_xml_register_subject(NULL, "led_state", &led_state_);
+        lv_xml_register_subject(NULL, "led_r", &led_r_);
+        lv_xml_register_subject(NULL, "led_g", &led_g_);
+        lv_xml_register_subject(NULL, "led_b", &led_b_);
+        lv_xml_register_subject(NULL, "led_w", &led_w_);
+        lv_xml_register_subject(NULL, "led_brightness", &led_brightness_);
         lv_xml_register_subject(NULL, "excluded_objects_version", &excluded_objects_version_);
         lv_xml_register_subject(NULL, "printer_has_qgl", &printer_has_qgl_);
         lv_xml_register_subject(NULL, "printer_has_z_tilt", &printer_has_z_tilt_);
@@ -641,16 +658,34 @@ void PrinterState::update_from_status(const json& state) {
                                ? first_led[3].get<double>()
                                : 0.0;
 
-                // LED is "on" if any color component is non-zero
-                bool is_on = (r > 0.001 || g > 0.001 || b > 0.001 || w > 0.001);
+                // Convert 0.0-1.0 range to 0-255 integer range (clamp for safety)
+                int r_int = std::clamp(static_cast<int>(r * 255.0 + 0.5), 0, 255);
+                int g_int = std::clamp(static_cast<int>(g * 255.0 + 0.5), 0, 255);
+                int b_int = std::clamp(static_cast<int>(b * 255.0 + 0.5), 0, 255);
+                int w_int = std::clamp(static_cast<int>(w * 255.0 + 0.5), 0, 255);
+
+                // Compute brightness as max of RGBW channels (0-100%)
+                int max_channel = std::max({r_int, g_int, b_int, w_int});
+                int brightness = (max_channel * 100) / 255;
+
+                // Update RGBW subjects
+                lv_subject_set_int(&led_r_, r_int);
+                lv_subject_set_int(&led_g_, g_int);
+                lv_subject_set_int(&led_b_, b_int);
+                lv_subject_set_int(&led_w_, w_int);
+                lv_subject_set_int(&led_brightness_, brightness);
+
+                // LED is "on" if any channel is non-zero
+                bool is_on = (max_channel > 0);
                 int new_state = is_on ? 1 : 0;
 
                 int old_state = lv_subject_get_int(&led_state_);
                 if (new_state != old_state) {
                     lv_subject_set_int(&led_state_, new_state);
                     spdlog::debug(
-                        "[PrinterState] LED {} state: {} (R={:.2f} G={:.2f} B={:.2f} W={:.2f})",
-                        tracked_led_name_, is_on ? "ON" : "OFF", r, g, b, w);
+                        "[PrinterState] LED {} state: {} (R={} G={} B={} W={} brightness={}%)",
+                        tracked_led_name_, is_on ? "ON" : "OFF", r_int, g_int, b_int, w_int,
+                        brightness);
                 }
             }
         }

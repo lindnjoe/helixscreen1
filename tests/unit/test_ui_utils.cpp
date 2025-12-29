@@ -6,6 +6,8 @@
 
 #include "../ui_test_utils.h"
 
+#include <cstring>
+
 #include "../catch_amalgamated.hpp"
 
 using Catch::Approx;
@@ -273,3 +275,42 @@ TEST_CASE("UI Utils: ui_image_scale_to_contain - null widget", "[ui_utils][image
 // Note: Testing actual image scaling requires creating LVGL image widgets
 // with valid image data, which is more complex. The basic error handling
 // is tested above. Full integration tests would go in a separate test file.
+
+// ============================================================================
+// ui_brightness_to_lightbulb_icon() Tests
+// ============================================================================
+
+TEST_CASE("UI Utils: ui_brightness_to_lightbulb_icon - off state", "[ui_utils][led]") {
+    REQUIRE(strcmp(ui_brightness_to_lightbulb_icon(0), "lightbulb_outline") == 0);
+    REQUIRE(strcmp(ui_brightness_to_lightbulb_icon(-10), "lightbulb_outline") == 0);
+    REQUIRE(strcmp(ui_brightness_to_lightbulb_icon(-100), "lightbulb_outline") == 0);
+}
+
+TEST_CASE("UI Utils: ui_brightness_to_lightbulb_icon - graduated levels", "[ui_utils][led]") {
+    // Test each brightness band
+    REQUIRE(strcmp(ui_brightness_to_lightbulb_icon(1), "lightbulb_on_10") == 0);
+    REQUIRE(strcmp(ui_brightness_to_lightbulb_icon(14), "lightbulb_on_10") == 0);
+    REQUIRE(strcmp(ui_brightness_to_lightbulb_icon(15), "lightbulb_on_20") == 0);
+    REQUIRE(strcmp(ui_brightness_to_lightbulb_icon(24), "lightbulb_on_20") == 0);
+    REQUIRE(strcmp(ui_brightness_to_lightbulb_icon(25), "lightbulb_on_30") == 0);
+    REQUIRE(strcmp(ui_brightness_to_lightbulb_icon(34), "lightbulb_on_30") == 0);
+    REQUIRE(strcmp(ui_brightness_to_lightbulb_icon(35), "lightbulb_on_40") == 0);
+    REQUIRE(strcmp(ui_brightness_to_lightbulb_icon(44), "lightbulb_on_40") == 0);
+    REQUIRE(strcmp(ui_brightness_to_lightbulb_icon(45), "lightbulb_on_50") == 0);
+    REQUIRE(strcmp(ui_brightness_to_lightbulb_icon(54), "lightbulb_on_50") == 0);
+    REQUIRE(strcmp(ui_brightness_to_lightbulb_icon(55), "lightbulb_on_60") == 0);
+    REQUIRE(strcmp(ui_brightness_to_lightbulb_icon(64), "lightbulb_on_60") == 0);
+    REQUIRE(strcmp(ui_brightness_to_lightbulb_icon(65), "lightbulb_on_70") == 0);
+    REQUIRE(strcmp(ui_brightness_to_lightbulb_icon(74), "lightbulb_on_70") == 0);
+    REQUIRE(strcmp(ui_brightness_to_lightbulb_icon(75), "lightbulb_on_80") == 0);
+    REQUIRE(strcmp(ui_brightness_to_lightbulb_icon(84), "lightbulb_on_80") == 0);
+    REQUIRE(strcmp(ui_brightness_to_lightbulb_icon(85), "lightbulb_on_90") == 0);
+    REQUIRE(strcmp(ui_brightness_to_lightbulb_icon(94), "lightbulb_on_90") == 0);
+}
+
+TEST_CASE("UI Utils: ui_brightness_to_lightbulb_icon - full brightness", "[ui_utils][led]") {
+    REQUIRE(strcmp(ui_brightness_to_lightbulb_icon(95), "lightbulb_on") == 0);
+    REQUIRE(strcmp(ui_brightness_to_lightbulb_icon(100), "lightbulb_on") == 0);
+    REQUIRE(strcmp(ui_brightness_to_lightbulb_icon(150), "lightbulb_on") == 0);
+    REQUIRE(strcmp(ui_brightness_to_lightbulb_icon(255), "lightbulb_on") == 0);
+}
