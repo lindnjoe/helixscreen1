@@ -53,6 +53,13 @@
 
 **Work directly ONLY if**: single file, exact location known, <10 lines, no searching needed.
 
+### Multi-Phase Work (Implementation Plans, Refactors)
+**When working through a planning document with phases:**
+- **EVERY phase** = delegate to agent (investigation, implementation, review, docs)
+- Main session: read plan → spawn agent → evaluate result → commit
+- NEVER implement phases directly - that defeats the entire purpose of planning
+- If you catch yourself reading code or editing files during a multi-phase task, STOP and delegate
+
 ---
 
 ## ⚠️ CRITICAL RULES
