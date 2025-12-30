@@ -26,6 +26,7 @@
 #include "printer_state.h"
 #include "runtime_config.h"
 #include "settings_manager.h"
+#include "standard_macros.h"
 #include "thumbnail_cache.h"
 #include "thumbnail_processor.h"
 #include "wizard_config_paths.h"
@@ -840,10 +841,21 @@ void PrintStatusPanel::handle_pause_button() {
     if (current_state_ == PrintState::Printing) {
         spdlog::info("[{}] Pausing print...", get_name());
 
+        // Check if pause slot is available
+        const auto& pause_info = StandardMacros::instance().get(StandardMacroSlot::Pause);
+        if (pause_info.is_empty()) {
+            spdlog::warn("[{}] Pause macro slot is empty", get_name());
+            NOTIFY_WARNING("Pause macro not configured");
+            return;
+        }
+
         if (api_) {
-            api_->pause_print(
-                [this]() {
-                    spdlog::info("[{}] Pause command sent successfully", get_name());
+            spdlog::info("[{}] Using StandardMacros pause: {}", get_name(), pause_info.get_macro());
+            // Stateless callbacks to avoid use-after-free if panel destroyed [L012]
+            StandardMacros::instance().execute(
+                StandardMacroSlot::Pause, api_,
+                []() {
+                    spdlog::info("[Print Status] Pause command sent successfully");
                     // State will update via PrinterState observer when Moonraker confirms
                 },
                 [](const MoonrakerError& err) {
@@ -858,10 +870,22 @@ void PrintStatusPanel::handle_pause_button() {
     } else if (current_state_ == PrintState::Paused) {
         spdlog::info("[{}] Resuming print...", get_name());
 
+        // Check if resume slot is available
+        const auto& resume_info = StandardMacros::instance().get(StandardMacroSlot::Resume);
+        if (resume_info.is_empty()) {
+            spdlog::warn("[{}] Resume macro slot is empty", get_name());
+            NOTIFY_WARNING("Resume macro not configured");
+            return;
+        }
+
         if (api_) {
-            api_->resume_print(
-                [this]() {
-                    spdlog::info("[{}] Resume command sent successfully", get_name());
+            spdlog::info("[{}] Using StandardMacros resume: {}", get_name(),
+                         resume_info.get_macro());
+            // Stateless callbacks to avoid use-after-free if panel destroyed [L012]
+            StandardMacros::instance().execute(
+                StandardMacroSlot::Resume, api_,
+                []() {
+                    spdlog::info("[Print Status] Resume command sent successfully");
                     // State will update via PrinterState observer when Moonraker confirms
                 },
                 [](const MoonrakerError& err) {
@@ -920,6 +944,14 @@ void PrintStatusPanel::handle_tune_button() {
 void PrintStatusPanel::handle_cancel_button() {
     spdlog::info("[{}] Cancel button clicked - showing confirmation dialog", get_name());
 
+    // Check if cancel slot is available before showing dialog
+    const auto& cancel_info = StandardMacros::instance().get(StandardMacroSlot::Cancel);
+    if (cancel_info.is_empty()) {
+        spdlog::warn("[{}] Cancel macro slot is empty", get_name());
+        NOTIFY_WARNING("Cancel macro not configured");
+        return;
+    }
+
     // Set up the confirm callback to execute the actual cancel
     cancel_modal_.set_on_confirm([this]() {
         spdlog::info("[{}] Cancel confirmed - executing cancel_print", get_name());
@@ -930,17 +962,24 @@ void PrintStatusPanel::handle_cancel_button() {
             lv_obj_set_style_opa(btn_cancel_, LV_OPA_50, LV_PART_MAIN);
         }
 
+        const auto& info = StandardMacros::instance().get(StandardMacroSlot::Cancel);
         if (api_) {
-            api_->cancel_print(
-                [this]() {
-                    spdlog::info("[{}] Cancel command sent successfully", get_name());
+            spdlog::info("[{}] Using StandardMacros cancel: {}", get_name(), info.get_macro());
+            // Capture m_alive to guard against use-after-free in async callback [L012]
+            auto alive = m_alive;
+            StandardMacros::instance().execute(
+                StandardMacroSlot::Cancel, api_,
+                []() {
+                    spdlog::info("[Print Status] Cancel command sent successfully");
                     // State will update via PrinterState observer when Moonraker confirms
                     // Button state managed by update_button_states() based on print state
                 },
-                [this](const MoonrakerError& err) {
+                [this, alive](const MoonrakerError& err) {
                     spdlog::error("[Print Status] Failed to cancel print: {}", err.message);
                     NOTIFY_ERROR("Failed to cancel print: {}", err.user_message());
-                    // Re-enable button on failure
+                    // Re-enable button on failure (with lifetime guard)
+                    if (!alive->load())
+                        return; // Panel destroyed, skip UI update
                     if (btn_cancel_) {
                         lv_obj_remove_state(btn_cancel_, LV_STATE_DISABLED);
                         lv_obj_set_style_opa(btn_cancel_, LV_OPA_COVER, LV_PART_MAIN);
@@ -1229,6 +1268,9 @@ void PrintStatusPanel::on_print_progress_changed(int progress) {
 }
 
 void PrintStatusPanel::on_print_state_changed(PrintJobState job_state) {
+    spdlog::debug("[{}] on_print_state_changed() job_state={} current_state_={}", get_name(),
+                  static_cast<int>(job_state), static_cast<int>(current_state_));
+
     // Map PrintJobState (from PrinterState) to PrintState (UI-specific)
     // Note: PrintState has a Preparing state that doesn't exist in PrintJobState -
     // that's managed locally via end_preparing()
@@ -1384,8 +1426,11 @@ void PrintStatusPanel::on_print_filename_changed(const char* filename) {
         }
 
         // Call set_filename() which is idempotent (won't reload if effective filename unchanged)
+        // Only log when filename actually changes to avoid log spam
+        if (raw_filename != current_print_filename_) {
+            spdlog::debug("[{}] Filename changed: {}", get_name(), raw_filename);
+        }
         set_filename(filename);
-        spdlog::debug("[{}] Filename observer fired: {}", get_name(), raw_filename);
     }
 }
 
@@ -1683,13 +1728,36 @@ void PrintStatusPanel::update_button_states() {
         }
     };
 
+    // Timelapse and tune buttons don't depend on StandardMacros
     set_button_enabled(btn_timelapse_, buttons_enabled);
-    set_button_enabled(btn_pause_, buttons_enabled);
     set_button_enabled(btn_tune_, buttons_enabled);
-    set_button_enabled(btn_cancel_, buttons_enabled);
 
-    spdlog::debug("[{}] Button states updated: {} (state={})", get_name(),
-                  buttons_enabled ? "enabled" : "disabled", static_cast<int>(current_state_));
+    // Pause/Resume button: check slot availability based on current state
+    // In Printing state: need Pause slot; in Paused state: need Resume slot
+    bool pause_button_enabled = buttons_enabled;
+    if (buttons_enabled) {
+        if (current_state_ == PrintState::Printing) {
+            const auto& pause_info = StandardMacros::instance().get(StandardMacroSlot::Pause);
+            pause_button_enabled = !pause_info.is_empty();
+        } else if (current_state_ == PrintState::Paused) {
+            const auto& resume_info = StandardMacros::instance().get(StandardMacroSlot::Resume);
+            pause_button_enabled = !resume_info.is_empty();
+        }
+    }
+    set_button_enabled(btn_pause_, pause_button_enabled);
+
+    // Cancel button: check if Cancel slot is available
+    bool cancel_button_enabled = buttons_enabled;
+    if (buttons_enabled) {
+        const auto& cancel_info = StandardMacros::instance().get(StandardMacroSlot::Cancel);
+        cancel_button_enabled = !cancel_info.is_empty();
+    }
+    set_button_enabled(btn_cancel_, cancel_button_enabled);
+
+    spdlog::debug("[{}] Button states updated: base={}, pause={}, cancel={} (state={})", get_name(),
+                  buttons_enabled ? "enabled" : "disabled",
+                  pause_button_enabled ? "enabled" : "disabled",
+                  cancel_button_enabled ? "enabled" : "disabled", static_cast<int>(current_state_));
 }
 
 void PrintStatusPanel::animate_print_complete() {
@@ -2244,16 +2312,15 @@ void PrintStatusPanel::set_filename(const char* filename) {
         spdlog::debug("[{}] Loading thumbnail for: {}", get_name(), effective_filename);
         load_thumbnail_for_file(effective_filename);
 
-        // G-code loading: load immediately if panel is active, otherwise defer
-        // This handles the case where user is already viewing print status when print starts
+        // G-code loading: immediate if panel active, deferred otherwise
         if (is_active_) {
-            spdlog::info("[{}] Panel active - loading G-code immediately: {}", get_name(),
+            // Panel is already visible - load immediately instead of deferring
+            spdlog::info("[{}] Panel active, loading G-code immediately: {}", get_name(),
                          effective_filename);
             load_gcode_for_viewing(effective_filename);
             pending_gcode_filename_.clear();
         } else {
-            // Deferred until panel is actually visible (on_activate)
-            // This avoids downloading large files if user never navigates to print status
+            // Panel not visible - defer to on_activate()
             pending_gcode_filename_ = effective_filename;
         }
         loaded_thumbnail_filename_ = effective_filename;
@@ -2571,11 +2638,22 @@ void PrintStatusPanel::show_runout_guidance_modal() {
             return; // Modal stays open - user needs to load filament first
         }
 
+        // Check if resume slot is available
+        const auto& resume_info = StandardMacros::instance().get(StandardMacroSlot::Resume);
+        if (resume_info.is_empty()) {
+            spdlog::warn("[{}] Resume macro slot is empty", get_name());
+            NOTIFY_WARNING("Resume macro not configured");
+            return;
+        }
+
         spdlog::info("[{}] User chose to resume print after runout", get_name());
 
-        // Resume the print
+        // Resume the print via StandardMacros
         if (api_) {
-            api_->resume_print(
+            spdlog::info("[{}] Using StandardMacros resume: {}", get_name(),
+                         resume_info.get_macro());
+            StandardMacros::instance().execute(
+                StandardMacroSlot::Resume, api_,
                 []() { spdlog::info("[PrintStatusPanel] Print resumed after runout"); },
                 [](const MoonrakerError& err) {
                     spdlog::error("[PrintStatusPanel] Failed to resume print: {}", err.message);
@@ -2587,9 +2665,20 @@ void PrintStatusPanel::show_runout_guidance_modal() {
     runout_modal_.set_on_cancel_print([this]() {
         spdlog::info("[{}] User chose to cancel print after runout", get_name());
 
-        // Cancel the print
+        // Check if cancel slot is available
+        const auto& cancel_info = StandardMacros::instance().get(StandardMacroSlot::Cancel);
+        if (cancel_info.is_empty()) {
+            spdlog::warn("[{}] Cancel macro slot is empty", get_name());
+            NOTIFY_WARNING("Cancel macro not configured");
+            return;
+        }
+
+        // Cancel the print via StandardMacros
         if (api_) {
-            api_->cancel_print(
+            spdlog::info("[{}] Using StandardMacros cancel: {}", get_name(),
+                         cancel_info.get_macro());
+            StandardMacros::instance().execute(
+                StandardMacroSlot::Cancel, api_,
                 []() { spdlog::info("[PrintStatusPanel] Print cancelled after runout"); },
                 [](const MoonrakerError& err) {
                     spdlog::error("[PrintStatusPanel] Failed to cancel print: {}", err.message);
