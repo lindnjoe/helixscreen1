@@ -6,11 +6,14 @@
 #include "ui_error_reporting.h"
 #include "ui_event_safety.h"
 #include "ui_nav.h"
+#include "ui_nav_manager.h"
 #include "ui_panel_common.h"
 #include "ui_subject_registry.h"
 
 #include "app_globals.h"
+#include "moonraker_api.h"
 #include "moonraker_client.h"
+#include "printer_state.h"
 
 #include <spdlog/spdlog.h>
 
@@ -33,16 +36,39 @@ const std::unordered_set<std::string> DANGEROUS_MACROS = {
 
 } // namespace
 
-MacrosPanel::MacrosPanel(PrinterState& printer_state, MoonrakerAPI* api)
-    : PanelBase(printer_state, api) {
-    std::snprintf(status_buf_, sizeof(status_buf_), "Loading macros...");
+// ============================================================================
+// Global Instance
+// ============================================================================
+
+static std::unique_ptr<MacrosPanel> g_macros_panel;
+
+MacrosPanel& get_global_macros_panel() {
+    if (!g_macros_panel) {
+        g_macros_panel = std::make_unique<MacrosPanel>();
+    }
+    return *g_macros_panel;
 }
+
+// ============================================================================
+// Constructor
+// ============================================================================
+
+MacrosPanel::MacrosPanel() {
+    std::snprintf(status_buf_, sizeof(status_buf_), "Loading macros...");
+    spdlog::debug("[MacrosPanel] Instance created");
+}
+
+// ============================================================================
+// Subject Initialization
+// ============================================================================
 
 void MacrosPanel::init_subjects() {
     if (subjects_initialized_) {
-        spdlog::warn("[{}] init_subjects() called twice - ignoring", get_name());
+        spdlog::debug("[{}] Subjects already initialized", get_name());
         return;
     }
+
+    spdlog::debug("[{}] Initializing subjects", get_name());
 
     // Initialize status subject for reactive binding
     UI_SUBJECT_INIT_AND_REGISTER_STRING(status_subject_, status_buf_, status_buf_, "macros_status");
@@ -51,29 +77,56 @@ void MacrosPanel::init_subjects() {
     spdlog::debug("[{}] Subjects initialized: macros_status", get_name());
 }
 
-void MacrosPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
-    // Call base class to store panel_ and parent_screen_
-    PanelBase::setup(panel, parent_screen);
+// ============================================================================
+// Callback Registration
+// ============================================================================
 
-    if (!panel_) {
-        spdlog::error("[{}] NULL panel", get_name());
+void MacrosPanel::register_callbacks() {
+    if (callbacks_registered_) {
+        spdlog::debug("[{}] Callbacks already registered", get_name());
         return;
     }
 
-    spdlog::info("[{}] Setting up event handlers...", get_name());
+    spdlog::debug("[{}] Registering event callbacks", get_name());
 
-    // Register XML event callback (once)
-    static bool callbacks_registered = false;
-    if (!callbacks_registered) {
-        lv_xml_register_event_cb(nullptr, "on_macro_card_clicked", on_macro_card_clicked);
-        callbacks_registered = true;
+    // Register XML event callback
+    lv_xml_register_event_cb(nullptr, "on_macro_card_clicked", on_macro_card_clicked);
+
+    callbacks_registered_ = true;
+    spdlog::debug("[{}] Event callbacks registered", get_name());
+}
+
+// ============================================================================
+// Create
+// ============================================================================
+
+lv_obj_t* MacrosPanel::create(lv_obj_t* parent) {
+    if (!parent) {
+        spdlog::error("[{}] Cannot create: null parent", get_name());
+        return nullptr;
+    }
+
+    spdlog::debug("[{}] Creating overlay from XML", get_name());
+
+    parent_screen_ = parent;
+
+    // Reset cleanup flag when (re)creating
+    cleanup_called_ = false;
+
+    // Create overlay from XML
+    overlay_root_ = static_cast<lv_obj_t*>(lv_xml_create(parent, "macro_panel", nullptr));
+
+    if (!overlay_root_) {
+        spdlog::error("[{}] Failed to create from XML", get_name());
+        return nullptr;
     }
 
     // Use standard overlay panel setup (wires header, back button, handles responsive padding)
-    ui_overlay_panel_setup_standard(panel_, parent_screen_, "overlay_header", "overlay_content");
+    ui_overlay_panel_setup_standard(overlay_root_, parent_screen_, "overlay_header",
+                                    "overlay_content");
 
     // Find widget references
-    lv_obj_t* overlay_content = lv_obj_find_by_name(panel_, "overlay_content");
+    lv_obj_t* overlay_content = lv_obj_find_by_name(overlay_root_, "overlay_content");
     if (overlay_content) {
         macro_list_container_ = lv_obj_find_by_name(overlay_content, "macro_list");
         empty_state_container_ = lv_obj_find_by_name(overlay_content, "empty_state");
@@ -83,14 +136,43 @@ void MacrosPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
 
     if (!macro_list_container_) {
         spdlog::error("[{}] macro_list container not found!", get_name());
-        return;
+        return nullptr;
     }
 
     // Populate macros from capabilities
     populate_macro_list();
 
-    spdlog::info("[{}] Setup complete!", get_name());
+    // Initially hidden
+    lv_obj_add_flag(overlay_root_, LV_OBJ_FLAG_HIDDEN);
+
+    spdlog::info("[{}] Overlay created successfully", get_name());
+    return overlay_root_;
 }
+
+// ============================================================================
+// Lifecycle Hooks
+// ============================================================================
+
+void MacrosPanel::on_activate() {
+    // Call base class first
+    OverlayBase::on_activate();
+
+    spdlog::debug("[{}] on_activate()", get_name());
+
+    // Refresh macro list when panel becomes visible
+    populate_macro_list();
+}
+
+void MacrosPanel::on_deactivate() {
+    spdlog::debug("[{}] on_deactivate()", get_name());
+
+    // Call base class
+    OverlayBase::on_deactivate();
+}
+
+// ============================================================================
+// Macro List Management
+// ============================================================================
 
 void MacrosPanel::clear_macro_list() {
     for (auto& entry : macro_entries_) {
@@ -251,7 +333,8 @@ bool MacrosPanel::is_dangerous_macro(const std::string& name) {
 }
 
 void MacrosPanel::execute_macro(const std::string& macro_name) {
-    if (!api_) {
+    MoonrakerAPI* api = get_moonraker_api();
+    if (!api) {
         spdlog::warn("[{}] No MoonrakerAPI available - cannot execute macro", get_name());
         return;
     }
@@ -259,7 +342,7 @@ void MacrosPanel::execute_macro(const std::string& macro_name) {
     spdlog::info("[{}] Executing macro: {}", get_name(), macro_name);
 
     // Execute via G-code (macros are just G-code commands)
-    api_->execute_gcode(
+    api->execute_gcode(
         macro_name,
         [this, macro_name]() {
             spdlog::info("[{}] Macro '{}' executed successfully", get_name(), macro_name);
@@ -279,6 +362,10 @@ void MacrosPanel::set_show_system_macros(bool show_system) {
         populate_macro_list(); // Refresh list
     }
 }
+
+// ============================================================================
+// Static Callbacks
+// ============================================================================
 
 void MacrosPanel::on_macro_card_clicked(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[MacrosPanel] on_macro_card_clicked");
@@ -311,14 +398,4 @@ void MacrosPanel::on_macro_card_clicked(lv_event_t* e) {
     }
 
     LVGL_SAFE_EVENT_CB_END();
-}
-
-// Global instance accessor
-static std::unique_ptr<MacrosPanel> g_macros_panel;
-
-MacrosPanel& get_global_macros_panel() {
-    if (!g_macros_panel) {
-        g_macros_panel = std::make_unique<MacrosPanel>(get_printer_state(), get_moonraker_api());
-    }
-    return *g_macros_panel;
 }

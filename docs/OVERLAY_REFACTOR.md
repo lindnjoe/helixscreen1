@@ -32,7 +32,7 @@
 | Phase 1: IPanelLifecycle Interface | ✅ COMPLETE | Interface created, both bases inherit |
 | Phase 2a: MotionOverlay | ✅ COMPLETE | Converted to OverlayBase pattern |
 | Phase 2b: FanOverlay | ✅ COMPLETE | Converted to OverlayBase pattern |
-| Phase 2c: MacrosOverlay | ⬜ NOT STARTED | Simple |
+| Phase 2c: MacrosOverlay | ✅ COMPLETE | Converted to OverlayBase pattern |
 | Phase 2d: SpoolmanOverlay | ⬜ NOT STARTED | Medium |
 | Phase 2e: ConsoleOverlay | ⬜ NOT STARTED | Medium, has lifecycle |
 | Phase 2f: HistoryListOverlay | ⬜ NOT STARTED | Has lifecycle |
@@ -242,12 +242,12 @@ class MotionOverlay : public OverlayBase {
 
 ## Phase 2c: MacrosOverlay
 
-### Status: ⬜ NOT STARTED
+### Status: ✅ COMPLETE
 
 ### Files
-- [ ] Rename `include/ui_panel_macros.h` → `include/macros_overlay.h`
-- [ ] Rename `src/ui/ui_panel_macros.cpp` → `src/ui/macros_overlay.cpp`
-- [ ] Update caller in `ui_panel_advanced.cpp`
+- [x] Modified `include/ui_panel_macros.h` - converted to OverlayBase
+- [x] Modified `src/ui/ui_panel_macros.cpp` - new pattern
+- [x] Updated caller in `ui_panel_advanced.cpp`
 
 ### Current State
 - Constructor: `MacrosPanel(PrinterState&, MoonrakerAPI*)`
@@ -256,12 +256,20 @@ class MotionOverlay : public OverlayBase {
 - Singleton: `get_global_macros_panel()`
 
 ### Acceptance Criteria
-- [ ] Opens from Advanced panel without warning
-- [ ] Macro list populates
-- [ ] Macro execution works
+- [x] Opens from Advanced panel without warning
+- [x] Macro list populates
+- [x] Macro execution works
 
 ### Review Notes
-<!-- Code review agent findings go here -->
+**Completed 2024-12-30:**
+- Successfully converted from PanelBase to OverlayBase inheritance
+- Simplest panel so far: 1 subject (macro_list_changed), no observer cleanup complexity
+- Uses global accessors (get_moonraker_api, get_printer_state) instead of member references
+- NavigationManager registration added before push (eliminates warning)
+- on_activate() refreshes macro list from MoonrakerAPI
+- No manual observer management needed (subject-only approach)
+- Build passes with no errors
+- Review approved - ready for commit
 
 ---
 

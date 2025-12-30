@@ -3,11 +3,8 @@
 
 #pragma once
 
-#include "ui_panel_base.h"
-
 #include "lvgl.h"
-#include "moonraker_api.h"
-#include "printer_state.h"
+#include "overlay_base.h"
 
 #include <string>
 #include <unordered_set>
@@ -30,24 +27,27 @@
  * Panel is accessed via navigation from controls or settings panel.
  * Uses `macro_card.xml` component for each macro entry.
  */
-class MacrosPanel : public PanelBase {
+class MacrosPanel : public OverlayBase {
   public:
-    /**
-     * @brief Construct MacrosPanel
-     * @param printer_state Reference to global printer state
-     * @param api Pointer to MoonrakerAPI (may be nullptr in test mode)
-     */
-    MacrosPanel(PrinterState& printer_state, MoonrakerAPI* api);
+    MacrosPanel();
+    ~MacrosPanel() override = default;
 
-    // PanelBase interface
-    void setup(lv_obj_t* panel, lv_obj_t* parent_screen) override;
-    [[nodiscard]] const char* get_name() const override {
+    // === OverlayBase interface ===
+    void init_subjects() override;
+    void register_callbacks() override;
+    lv_obj_t* create(lv_obj_t* parent) override;
+    const char* get_name() const override {
         return "Macros";
     }
-    [[nodiscard]] const char* get_xml_component_name() const override {
-        return "macro_panel";
+
+    // === Lifecycle hooks ===
+    void on_activate() override;
+    void on_deactivate() override;
+
+    // === Public API ===
+    lv_obj_t* get_panel() const {
+        return overlay_root_;
     }
-    void init_subjects() override;
 
     /**
      * @brief Static callback for macro card clicks
@@ -120,12 +120,15 @@ class MacrosPanel : public PanelBase {
     lv_obj_t* status_label_ = nullptr;          ///< Status message label
     lv_obj_t* system_toggle_ = nullptr;         ///< Toggle for showing system macros
 
+    // Parent screen reference
+    lv_obj_t* parent_screen_ = nullptr;
+    bool callbacks_registered_ = false;
+
     // Data
     std::vector<MacroEntry> macro_entries_; ///< All displayed macro cards
     bool show_system_macros_ = false;       ///< Whether to show _* macros
 
     // Subjects
-    bool subjects_initialized_ = false;
     char status_buf_[64] = {};
     lv_subject_t status_subject_{};
 };

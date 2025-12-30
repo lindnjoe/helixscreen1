@@ -4,6 +4,7 @@
 #include "ui_panel_advanced.h"
 
 #include "ui_nav.h"
+#include "ui_nav_manager.h"
 #include "ui_panel_macros.h"
 #include "ui_panel_spoolman.h"
 #include "ui_timelapse_settings.h"
@@ -154,26 +155,25 @@ void AdvancedPanel::handle_macros_clicked() {
 
     // Create Macros panel on first access (lazy initialization)
     if (!macros_panel_ && parent_screen_) {
-        spdlog::debug("[{}] Creating Macros panel...", get_name());
+        auto& macros = get_global_macros_panel();
 
-        // Initialize subjects before creating XML (per project patterns)
-        get_global_macros_panel().init_subjects();
+        // Initialize subjects and callbacks if not already done
+        if (!macros.are_subjects_initialized()) {
+            macros.init_subjects();
+        }
+        macros.register_callbacks();
 
-        // Create from XML
-        macros_panel_ =
-            static_cast<lv_obj_t*>(lv_xml_create(parent_screen_, "macro_panel", nullptr));
-        if (macros_panel_) {
-            // Setup event handlers and populate macro list
-            get_global_macros_panel().setup(macros_panel_, parent_screen_);
-
-            // Initially hidden
-            lv_obj_add_flag(macros_panel_, LV_OBJ_FLAG_HIDDEN);
-            spdlog::info("[{}] Macros panel created", get_name());
-        } else {
+        // Create overlay UI
+        macros_panel_ = macros.create(parent_screen_);
+        if (!macros_panel_) {
             spdlog::error("[{}] Failed to create Macros panel from XML", get_name());
             ui_toast_show(ToastSeverity::ERROR, "Failed to open Macros", 2000);
             return;
         }
+
+        // Register with NavigationManager for lifecycle callbacks
+        NavigationManager::instance().register_overlay_instance(macros_panel_, &macros);
+        spdlog::info("[{}] Macros panel created", get_name());
     }
 
     // Push Macros panel onto navigation history and show it
