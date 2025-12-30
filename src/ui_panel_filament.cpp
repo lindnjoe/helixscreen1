@@ -635,11 +635,9 @@ void FilamentPanel::handle_purge_button() {
         return;
     }
 
-    set_operation_in_progress(true);
     spdlog::info("[{}] Purging {}mm", get_name(), purge_amount_);
 
     if (!api_) {
-        set_operation_in_progress(false);
         return;
     }
 
@@ -649,31 +647,20 @@ void FilamentPanel::handle_purge_button() {
         spdlog::info("[{}] Using StandardMacros purge: {}", get_name(), info.get_macro());
         NOTIFY_INFO("Purging...");
 
+        // Stateless callbacks match load/unload pattern and avoid use-after-free [L012]
         StandardMacros::instance().execute(
-            StandardMacroSlot::Purge, api_,
-            [this]() {
-                ui_async_call(
-                    [](void* ud) {
-                        auto* self = static_cast<FilamentPanel*>(ud);
-                        self->set_operation_in_progress(false);
-                    },
-                    this);
-                NOTIFY_SUCCESS("Purge complete");
-            },
-            [this](const MoonrakerError& error) {
-                ui_async_call(
-                    [](void* ud) {
-                        auto* self = static_cast<FilamentPanel*>(ud);
-                        self->set_operation_in_progress(false);
-                    },
-                    this);
+            StandardMacroSlot::Purge, api_, []() { NOTIFY_SUCCESS("Purge complete"); },
+            [](const MoonrakerError& error) {
                 NOTIFY_ERROR("Purge failed: {}", error.user_message());
             });
         return;
     }
 
     // Fallback: inline G-code (M83 = relative extrusion, G1 E{amount} F300)
-    spdlog::info("[{}] No purge macro configured, using inline G-code", get_name());
+    // Note: FilamentPanel is a global singleton, so `this` capture is safe [L012]
+    set_operation_in_progress(true);
+    spdlog::info("[{}] No purge macro configured, using inline G-code ({}mm)", get_name(),
+                 purge_amount_);
     std::string gcode = fmt::format("M83\nG1 E{} F300", purge_amount_);
     NOTIFY_INFO("Purging {}mm...", purge_amount_);
 
@@ -897,29 +884,34 @@ void FilamentPanel::set_limits(int min_temp, int max_temp, int min_extrude_temp)
 
 void FilamentPanel::execute_load() {
     const auto& info = StandardMacros::instance().get(StandardMacroSlot::LoadFilament);
-    spdlog::info("[{}] Loading filament via StandardMacros: {}", get_name(), info.get_macro());
-
-    if (!StandardMacros::instance().execute(
-            StandardMacroSlot::LoadFilament, api_, []() { NOTIFY_SUCCESS("Loading filament..."); },
-            [](const MoonrakerError& error) {
-                NOTIFY_ERROR("Filament load failed: {}", error.user_message());
-            })) {
+    if (info.is_empty()) {
+        spdlog::warn("[{}] Load filament slot is empty", get_name());
         NOTIFY_WARNING("Load filament macro not configured");
+        return;
     }
+
+    spdlog::info("[{}] Loading filament via StandardMacros: {}", get_name(), info.get_macro());
+    StandardMacros::instance().execute(
+        StandardMacroSlot::LoadFilament, api_, []() { NOTIFY_SUCCESS("Loading filament..."); },
+        [](const MoonrakerError& error) {
+            NOTIFY_ERROR("Filament load failed: {}", error.user_message());
+        });
 }
 
 void FilamentPanel::execute_unload() {
     const auto& info = StandardMacros::instance().get(StandardMacroSlot::UnloadFilament);
-    spdlog::info("[{}] Unloading filament via StandardMacros: {}", get_name(), info.get_macro());
-
-    if (!StandardMacros::instance().execute(
-            StandardMacroSlot::UnloadFilament, api_,
-            []() { NOTIFY_SUCCESS("Unloading filament..."); },
-            [](const MoonrakerError& error) {
-                NOTIFY_ERROR("Filament unload failed: {}", error.user_message());
-            })) {
+    if (info.is_empty()) {
+        spdlog::warn("[{}] Unload filament slot is empty", get_name());
         NOTIFY_WARNING("Unload filament macro not configured");
+        return;
     }
+
+    spdlog::info("[{}] Unloading filament via StandardMacros: {}", get_name(), info.get_macro());
+    StandardMacros::instance().execute(
+        StandardMacroSlot::UnloadFilament, api_, []() { NOTIFY_SUCCESS("Unloading filament..."); },
+        [](const MoonrakerError& error) {
+            NOTIFY_ERROR("Filament unload failed: {}", error.user_message());
+        });
 }
 
 void FilamentPanel::show_load_warning() {
