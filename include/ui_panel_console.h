@@ -3,11 +3,8 @@
 
 #pragma once
 
-#include "ui_panel_base.h"
-
 #include "lvgl.h"
-#include "moonraker_api.h"
-#include "printer_state.h"
+#include "overlay_base.h"
 
 #include <deque>
 #include <string>
@@ -39,26 +36,20 @@
  *
  * @see docs/FEATURE_STATUS.md for implementation progress
  */
-class ConsolePanel : public PanelBase {
+class ConsolePanel : public OverlayBase {
   public:
-    /**
-     * @brief Construct ConsolePanel
-     * @param printer_state Reference to global printer state
-     * @param api Pointer to MoonrakerAPI (may be nullptr in test mode)
-     */
-    ConsolePanel(PrinterState& printer_state, MoonrakerAPI* api);
+    ConsolePanel();
+    ~ConsolePanel() override = default;
 
-    // PanelBase interface
-    void setup(lv_obj_t* panel, lv_obj_t* parent_screen) override;
+    // === OverlayBase interface ===
+    void init_subjects() override;
+    void register_callbacks() override;
+    lv_obj_t* create(lv_obj_t* parent) override;
     [[nodiscard]] const char* get_name() const override {
         return "Console";
     }
-    [[nodiscard]] const char* get_xml_component_name() const override {
-        return "console_panel";
-    }
-    void init_subjects() override;
 
-    // Lifecycle hooks
+    // === Lifecycle hooks ===
     void on_activate() override;
     void on_deactivate() override;
 
@@ -220,27 +211,20 @@ class ConsolePanel : public PanelBase {
     bool filter_temps_ = true;       ///< Filter out temperature status messages
 
     // Subjects
-    bool subjects_initialized_ = false;
     char status_buf_[128] = {};
     lv_subject_t status_subject_{};
+
+    // Parent screen reference for overlay setup
+    lv_obj_t* parent_screen_ = nullptr;
+
+    // Callback registration tracking
+    bool callbacks_registered_ = false;
 };
 
 /**
- * @brief Get the global ConsolePanel instance
+ * @brief Get global ConsolePanel instance
+ * @return Reference to the singleton panel
  *
- * Returns reference to singleton. Must call init_global_console_panel() first.
- *
- * @return Reference to singleton ConsolePanel
- * @throws std::runtime_error if not initialized
+ * Creates the instance on first call. Used by static callbacks.
  */
 ConsolePanel& get_global_console_panel();
-
-/**
- * @brief Initialize the global ConsolePanel instance
- *
- * Must be called by main.cpp before accessing get_global_console_panel().
- *
- * @param printer_state Reference to PrinterState
- * @param api Pointer to MoonrakerAPI
- */
-void init_global_console_panel(PrinterState& printer_state, MoonrakerAPI* api);

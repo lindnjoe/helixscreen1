@@ -182,8 +182,7 @@ void SubjectInitializer::init_panel_subjects() {
     init_global_retraction_settings(get_printer_state(), nullptr);
     get_global_retraction_settings().init_subjects();
 
-    init_global_console_panel(get_printer_state(), nullptr);
-    get_global_console_panel().init_subjects();
+    // ConsolePanel is now lazy-initialized by AdvancedPanel (OverlayBase pattern)
 
     // Row handlers for advanced features
     init_screws_tilt_row_handler();

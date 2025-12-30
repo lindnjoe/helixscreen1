@@ -23,51 +23,105 @@
 #include <cstring>
 #include <memory>
 
-// Forward declarations for callbacks (registered in init_subjects)
-static void on_console_row_clicked(lv_event_t* e);
-static void on_console_send_clicked(lv_event_t* e);
-static void on_console_clear_clicked(lv_event_t* e);
+// ============================================================================
+// Global Instance
+// ============================================================================
 
-ConsolePanel::ConsolePanel(PrinterState& printer_state, MoonrakerAPI* api)
-    : PanelBase(printer_state, api) {
-    std::snprintf(status_buf_, sizeof(status_buf_), "Loading history...");
+static std::unique_ptr<ConsolePanel> g_console_panel;
+
+ConsolePanel& get_global_console_panel() {
+    if (!g_console_panel) {
+        g_console_panel = std::make_unique<ConsolePanel>();
+    }
+    return *g_console_panel;
 }
+
+// ============================================================================
+// Constructor
+// ============================================================================
+
+ConsolePanel::ConsolePanel() {
+    spdlog::trace("[{}] Constructor", get_name());
+    std::memset(status_buf_, 0, sizeof(status_buf_));
+}
+
+// ============================================================================
+// Subject Initialization
+// ============================================================================
 
 void ConsolePanel::init_subjects() {
     if (subjects_initialized_) {
-        spdlog::warn("[{}] init_subjects() called twice - ignoring", get_name());
+        spdlog::debug("[{}] Subjects already initialized", get_name());
         return;
     }
+
+    spdlog::debug("[{}] Initializing subjects", get_name());
 
     // Initialize status subject for reactive binding
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(status_subject_, status_buf_, status_buf_,
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(status_subject_, status_buf_, "Loading history...",
                                         "console_status");
 
-    // Register callbacks
-    lv_xml_register_event_cb(nullptr, "on_console_row_clicked", on_console_row_clicked);
-    lv_xml_register_event_cb(nullptr, "on_console_send_clicked", on_console_send_clicked);
-    lv_xml_register_event_cb(nullptr, "on_console_clear_clicked", on_console_clear_clicked);
-
     subjects_initialized_ = true;
-    spdlog::debug("[{}] init_subjects() - registered callbacks", get_name());
+    spdlog::debug("[{}] Subjects initialized: console_status", get_name());
 }
 
-void ConsolePanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
-    // Call base class to store panel_ and parent_screen_
-    PanelBase::setup(panel, parent_screen);
+// ============================================================================
+// Callback Registration
+// ============================================================================
 
-    if (!panel_) {
-        spdlog::error("[{}] NULL panel", get_name());
+void ConsolePanel::register_callbacks() {
+    if (callbacks_registered_) {
+        spdlog::debug("[{}] Callbacks already registered", get_name());
         return;
     }
 
-    spdlog::info("[{}] Setting up...", get_name());
+    spdlog::debug("[{}] Registering event callbacks", get_name());
 
-    // Use standard overlay panel setup (wires header, back button, handles responsive padding)
-    ui_overlay_panel_setup_standard(panel_, parent_screen_, "overlay_header", "overlay_content");
+    // Register XML event callbacks for send and clear buttons
+    lv_xml_register_event_cb(nullptr, "on_console_send_clicked", [](lv_event_t* /*e*/) {
+        spdlog::debug("[Console] Send button clicked");
+        get_global_console_panel().send_gcode_command();
+    });
+    lv_xml_register_event_cb(nullptr, "on_console_clear_clicked", [](lv_event_t* /*e*/) {
+        spdlog::debug("[Console] Clear button clicked");
+        get_global_console_panel().clear_display();
+    });
+
+    callbacks_registered_ = true;
+    spdlog::debug("[{}] Event callbacks registered", get_name());
+}
+
+// ============================================================================
+// Create
+// ============================================================================
+
+lv_obj_t* ConsolePanel::create(lv_obj_t* parent) {
+    if (!parent) {
+        spdlog::error("[{}] Cannot create: null parent", get_name());
+        return nullptr;
+    }
+
+    spdlog::debug("[{}] Creating overlay from XML", get_name());
+
+    parent_screen_ = parent;
+
+    // Reset cleanup flag when (re)creating
+    cleanup_called_ = false;
+
+    // Create overlay from XML
+    overlay_root_ = static_cast<lv_obj_t*>(lv_xml_create(parent, "console_panel", nullptr));
+
+    if (!overlay_root_) {
+        spdlog::error("[{}] Failed to create from XML", get_name());
+        return nullptr;
+    }
+
+    // Standard overlay setup (handles back button and responsive layout)
+    ui_overlay_panel_setup_standard(overlay_root_, parent_screen_, "overlay_header",
+                                    "overlay_content");
 
     // Find widget references
-    lv_obj_t* overlay_content = lv_obj_find_by_name(panel_, "overlay_content");
+    lv_obj_t* overlay_content = lv_obj_find_by_name(overlay_root_, "overlay_content");
     if (overlay_content) {
         console_container_ = lv_obj_find_by_name(overlay_content, "console_container");
         empty_state_ = lv_obj_find_by_name(overlay_content, "empty_state");
@@ -87,21 +141,30 @@ void ConsolePanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
 
     if (!console_container_) {
         spdlog::error("[{}] console_container not found!", get_name());
-        return;
+        return nullptr;
     }
 
     if (!gcode_input_) {
         spdlog::warn("[{}] gcode_input not found - input disabled", get_name());
     }
 
-    // Fetch initial history
-    fetch_history();
+    // Initially hidden
+    lv_obj_add_flag(overlay_root_, LV_OBJ_FLAG_HIDDEN);
 
-    spdlog::info("[{}] Setup complete!", get_name());
+    spdlog::info("[{}] Overlay created successfully", get_name());
+    return overlay_root_;
 }
 
+// ============================================================================
+// Lifecycle Hooks
+// ============================================================================
+
 void ConsolePanel::on_activate() {
-    spdlog::debug("[{}] Panel activated", get_name());
+    // Call base class first
+    OverlayBase::on_activate();
+
+    spdlog::debug("[{}] on_activate()", get_name());
+
     // Refresh history when panel becomes visible
     fetch_history();
     // Subscribe to real-time updates
@@ -111,10 +174,18 @@ void ConsolePanel::on_activate() {
 }
 
 void ConsolePanel::on_deactivate() {
-    spdlog::debug("[{}] Panel deactivated", get_name());
+    spdlog::debug("[{}] on_deactivate()", get_name());
+
     // Unsubscribe from real-time updates
     unsubscribe_from_gcode_responses();
+
+    // Call base class
+    OverlayBase::on_deactivate();
 }
+
+// ============================================================================
+// Data Loading
+// ============================================================================
 
 void ConsolePanel::fetch_history() {
     MoonrakerClient* client = get_moonraker_client();
@@ -462,99 +533,4 @@ void ConsolePanel::clear_display() {
     spdlog::debug("[{}] Clearing console display", get_name());
     clear_entries();
     update_visibility();
-}
-
-// ============================================================================
-// Global Instance and Row Click Handler
-// ============================================================================
-
-static std::unique_ptr<ConsolePanel> g_console_panel;
-static lv_obj_t* g_console_panel_obj = nullptr;
-
-ConsolePanel& get_global_console_panel() {
-    if (!g_console_panel) {
-        spdlog::error("[Console Panel] get_global_console_panel() called before initialization!");
-        throw std::runtime_error("ConsolePanel not initialized");
-    }
-    return *g_console_panel;
-}
-
-void init_global_console_panel(PrinterState& printer_state, MoonrakerAPI* api) {
-    if (g_console_panel) {
-        spdlog::warn("[Console Panel] ConsolePanel already initialized, skipping");
-        return;
-    }
-    g_console_panel = std::make_unique<ConsolePanel>(printer_state, api);
-    spdlog::debug("[Console Panel] ConsolePanel initialized");
-}
-
-/**
- * @brief Row click handler for opening console from Advanced panel
- *
- * Registered via lv_xml_register_event_cb() in init_subjects().
- * Lazy-creates the console panel on first click.
- */
-static void on_console_row_clicked(lv_event_t* e) {
-    (void)e;
-    spdlog::debug("[Console Panel] Console row clicked");
-
-    if (!g_console_panel) {
-        spdlog::error("[Console Panel] Global instance not initialized!");
-        return;
-    }
-
-    // Lazy-create the console panel
-    if (!g_console_panel_obj) {
-        spdlog::debug("[Console Panel] Creating console panel...");
-        g_console_panel_obj = static_cast<lv_obj_t*>(
-            lv_xml_create(lv_display_get_screen_active(NULL), "console_panel", nullptr));
-
-        if (g_console_panel_obj) {
-            g_console_panel->setup(g_console_panel_obj, lv_display_get_screen_active(NULL));
-            lv_obj_add_flag(g_console_panel_obj, LV_OBJ_FLAG_HIDDEN);
-            spdlog::info("[Console Panel] Panel created and setup complete");
-        } else {
-            spdlog::error("[Console Panel] Failed to create console_panel");
-            return;
-        }
-    }
-
-    // Show the overlay
-    ui_nav_push_overlay(g_console_panel_obj);
-}
-
-/**
- * @brief Send button click handler
- *
- * Registered via lv_xml_register_event_cb() in init_subjects().
- * Sends the current G-code command from the input field.
- */
-static void on_console_send_clicked(lv_event_t* e) {
-    (void)e;
-    spdlog::debug("[Console Panel] Send button clicked");
-
-    if (!g_console_panel) {
-        spdlog::error("[Console Panel] Global instance not initialized!");
-        return;
-    }
-
-    g_console_panel->send_gcode_command();
-}
-
-/**
- * @brief Clear button click handler
- *
- * Registered via lv_xml_register_event_cb() in init_subjects().
- * Clears all entries from the console display.
- */
-static void on_console_clear_clicked(lv_event_t* e) {
-    (void)e;
-    spdlog::debug("[Console Panel] Clear button clicked");
-
-    if (!g_console_panel) {
-        spdlog::error("[Console Panel] Global instance not initialized!");
-        return;
-    }
-
-    g_console_panel->clear_display();
 }

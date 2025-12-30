@@ -5,6 +5,7 @@
 
 #include "ui_nav.h"
 #include "ui_nav_manager.h"
+#include "ui_panel_console.h"
 #include "ui_panel_macros.h"
 #include "ui_panel_spoolman.h"
 #include "ui_timelapse_settings.h"
@@ -56,6 +57,7 @@ void AdvancedPanel::init_subjects() {
     lv_xml_register_event_cb(nullptr, "on_advanced_machine_limits", on_machine_limits_clicked);
     lv_xml_register_event_cb(nullptr, "on_advanced_spoolman", on_spoolman_clicked);
     lv_xml_register_event_cb(nullptr, "on_advanced_macros", on_macros_clicked);
+    lv_xml_register_event_cb(nullptr, "on_console_row_clicked", on_console_clicked);
     lv_xml_register_event_cb(nullptr, "on_configure_print_start", on_configure_print_start_clicked);
     lv_xml_register_event_cb(nullptr, "on_helix_plugin_install_clicked",
                              on_helix_plugin_install_clicked);
@@ -184,6 +186,38 @@ void AdvancedPanel::handle_macros_clicked() {
     }
 }
 
+void AdvancedPanel::handle_console_clicked() {
+    spdlog::debug("[{}] Console clicked - opening panel", get_name());
+
+    // Create Console panel on first access (lazy initialization)
+    if (!console_panel_ && parent_screen_) {
+        auto& console = get_global_console_panel();
+
+        // Initialize subjects and callbacks if not already done
+        if (!console.are_subjects_initialized()) {
+            console.init_subjects();
+        }
+        console.register_callbacks();
+
+        // Create overlay UI
+        console_panel_ = console.create(parent_screen_);
+        if (!console_panel_) {
+            spdlog::error("[{}] Failed to create Console panel from XML", get_name());
+            ui_toast_show(ToastSeverity::ERROR, "Failed to open Console", 2000);
+            return;
+        }
+
+        // Register with NavigationManager for lifecycle callbacks
+        NavigationManager::instance().register_overlay_instance(console_panel_, &console);
+        spdlog::info("[{}] Console panel created", get_name());
+    }
+
+    // Push Console panel onto navigation history and show it
+    if (console_panel_) {
+        ui_nav_push_overlay(console_panel_);
+    }
+}
+
 void AdvancedPanel::handle_configure_print_start_clicked() {
     spdlog::debug("[{}] Configure PRINT_START clicked", get_name());
 
@@ -219,6 +253,10 @@ void AdvancedPanel::on_spoolman_clicked(lv_event_t* /*e*/) {
 
 void AdvancedPanel::on_macros_clicked(lv_event_t* /*e*/) {
     get_global_advanced_panel().handle_macros_clicked();
+}
+
+void AdvancedPanel::on_console_clicked(lv_event_t* /*e*/) {
+    get_global_advanced_panel().handle_console_clicked();
 }
 
 void AdvancedPanel::on_configure_print_start_clicked(lv_event_t* /*e*/) {
