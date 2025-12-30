@@ -12,11 +12,8 @@ OverlayBase::~OverlayBase() {
         NavigationManager::instance().unregister_overlay_instance(overlay_root_);
     }
 
-    if (!cleanup_called_) {
-        // Cannot call get_name() here as derived class is already destroyed
-        spdlog::warn("[OverlayBase] Overlay destroyed without cleanup() - may cause issues with "
-                     "async callbacks");
-    }
+    // Note: Do NOT log here - spdlog may already be shut down during static
+    // destruction (violates [L010]: No spdlog in destructors)
 }
 
 void OverlayBase::on_activate() {
