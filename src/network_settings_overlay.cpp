@@ -5,6 +5,7 @@
 
 #include "ui_modal.h"
 #include "ui_nav.h"
+#include "ui_nav_manager.h"
 #include "ui_step_progress.h"
 #include "ui_subject_registry.h"
 #include "ui_update_queue.h"
@@ -304,8 +305,37 @@ void NetworkSettingsOverlay::show() {
 
     spdlog::debug("[NetworkSettingsOverlay] Showing overlay");
 
-    visible_ = true;
+    // Register with NavigationManager for lifecycle callbacks
+    NavigationManager::instance().register_overlay_instance(overlay_root_, this);
+
+    // Push onto navigation stack - on_activate() will be called by NavigationManager
     ui_nav_push_overlay(overlay_root_);
+
+    spdlog::info("[NetworkSettingsOverlay] Overlay shown");
+}
+
+void NetworkSettingsOverlay::hide() {
+    if (!overlay_root_) {
+        return;
+    }
+
+    spdlog::debug("[NetworkSettingsOverlay] Hiding overlay");
+
+    // Pop from navigation stack - on_deactivate() will be called by NavigationManager
+    ui_nav_go_back();
+
+    spdlog::info("[NetworkSettingsOverlay] Overlay hidden");
+}
+
+// ============================================================================
+// Lifecycle Hooks
+// ============================================================================
+
+void NetworkSettingsOverlay::on_activate() {
+    // Call base class first
+    OverlayBase::on_activate();
+
+    spdlog::debug("[NetworkSettingsOverlay] on_activate()");
 
     // Update connection status
     update_wifi_status();
@@ -335,7 +365,7 @@ void NetworkSettingsOverlay::show() {
             }
 
             // Check if cleanup was called
-            if (self->cleanup_called_) {
+            if (self->cleanup_called()) {
                 spdlog::debug(
                     "[NetworkSettingsOverlay] Cleanup called, ignoring stale scan callback");
                 return;
@@ -345,18 +375,10 @@ void NetworkSettingsOverlay::show() {
             self->populate_network_list(networks);
         });
     }
-
-    spdlog::info("[NetworkSettingsOverlay] Overlay shown");
 }
 
-void NetworkSettingsOverlay::hide() {
-    if (!overlay_root_) {
-        return;
-    }
-
-    spdlog::debug("[NetworkSettingsOverlay] Hiding overlay");
-
-    visible_ = false;
+void NetworkSettingsOverlay::on_deactivate() {
+    spdlog::debug("[NetworkSettingsOverlay] on_deactivate()");
 
     // Stop scanning
     if (wifi_manager_) {
@@ -370,9 +392,8 @@ void NetworkSettingsOverlay::hide() {
         lv_subject_set_int(&test_running_, 0);
     }
 
-    lv_obj_add_flag(overlay_root_, LV_OBJ_FLAG_HIDDEN);
-
-    spdlog::info("[NetworkSettingsOverlay] Overlay hidden");
+    // Call base class
+    OverlayBase::on_deactivate();
 }
 
 // ============================================================================
@@ -382,8 +403,13 @@ void NetworkSettingsOverlay::hide() {
 void NetworkSettingsOverlay::cleanup() {
     spdlog::debug("[NetworkSettingsOverlay] Cleaning up");
 
-    // Mark as cleaned up FIRST to invalidate any pending async callbacks
-    cleanup_called_ = true;
+    // Unregister from NavigationManager before cleaning up
+    if (overlay_root_) {
+        NavigationManager::instance().unregister_overlay_instance(overlay_root_);
+    }
+
+    // Call base class to set cleanup_called_ flag
+    OverlayBase::cleanup();
 
     if (wifi_manager_) {
         wifi_manager_->stop_scan();
@@ -399,10 +425,8 @@ void NetworkSettingsOverlay::cleanup() {
     ethernet_manager_.reset();
     network_tester_.reset();
 
-    overlay_root_ = nullptr;
     parent_screen_ = nullptr;
     networks_list_ = nullptr;
-    visible_ = false;
 
     current_ssid_[0] = '\0';
     current_network_is_secured_ = false;
@@ -724,7 +748,7 @@ void NetworkSettingsOverlay::handle_wlan_toggle_changed(lv_event_t* e) {
         NetworkSettingsOverlay* self = this;
 
         wifi_manager_->start_scan([self, weak_mgr](const std::vector<WiFiNetwork>& networks) {
-            if (weak_mgr.expired() || self->cleanup_called_) {
+            if (weak_mgr.expired() || self->cleanup_called()) {
                 return;
             }
 
@@ -850,7 +874,7 @@ void NetworkSettingsOverlay::handle_test_network_clicked() {
         ui_async_call(
             [](void* ctx) {
                 auto* cb_data = static_cast<CallbackData*>(ctx);
-                if (!cb_data->overlay->cleanup_called_) {
+                if (!cb_data->overlay->cleanup_called()) {
                     cb_data->overlay->update_test_state(cb_data->state, cb_data->result);
 
                     // Update step widget based on state (3 steps: Local, Gateway, Internet)
@@ -1034,7 +1058,7 @@ void NetworkSettingsOverlay::handle_network_item_clicked(lv_event_t* e) {
 
         NetworkSettingsOverlay* self = this;
         wifi_manager_->connect(item_data->ssid, "", [self](bool success, const std::string& error) {
-            if (self->cleanup_called_) {
+            if (self->cleanup_called()) {
                 return;
             }
 

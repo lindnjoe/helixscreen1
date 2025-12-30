@@ -12,7 +12,8 @@
 
 #include "app_globals.h"
 #include "moonraker_client.h" // For ConnectionState enum
-#include "printer_state.h"    // For KlippyState enum
+#include "overlay_base.h"
+#include "printer_state.h" // For KlippyState enum
 #include "settings_manager.h"
 
 #include <spdlog/spdlog.h>
@@ -106,6 +107,26 @@ void NavigationManager::overlay_slide_out_complete_cb(lv_anim_t* anim) {
         mgr.overlay_close_callbacks_.erase(it);
         callback(); // Call after erasing to allow re-registration
     }
+
+    // Lifecycle: Activate what's now visible after animation completes
+    // Stack was already modified in go_back(), so check what's now at top
+    if (mgr.panel_stack_.size() == 1) {
+        // Back to main panel - activate it
+        if (mgr.panel_instances_[mgr.active_panel_]) {
+            spdlog::trace("[NavigationManager] Activating main panel {} after overlay closed",
+                          static_cast<int>(mgr.active_panel_));
+            mgr.panel_instances_[mgr.active_panel_]->on_activate();
+        }
+    } else if (mgr.panel_stack_.size() > 1) {
+        // Back to previous overlay - activate it
+        lv_obj_t* now_visible = mgr.panel_stack_.back();
+        auto overlay_it = mgr.overlay_instances_.find(now_visible);
+        if (overlay_it != mgr.overlay_instances_.end() && overlay_it->second) {
+            spdlog::trace("[NavigationManager] Activating previous overlay {}",
+                          overlay_it->second->get_name());
+            overlay_it->second->on_activate();
+        }
+    }
 }
 
 void NavigationManager::overlay_animate_slide_in(lv_obj_t* panel) {
@@ -176,6 +197,23 @@ void NavigationManager::overlay_animate_slide_out(lv_obj_t* panel) {
             auto callback = std::move(it->second);
             mgr.overlay_close_callbacks_.erase(it);
             callback();
+        }
+
+        // Lifecycle: Activate what's now visible (same logic as animation callback)
+        if (mgr.panel_stack_.size() == 1) {
+            if (mgr.panel_instances_[mgr.active_panel_]) {
+                spdlog::trace("[NavigationManager] Activating main panel {} after overlay closed",
+                              static_cast<int>(mgr.active_panel_));
+                mgr.panel_instances_[mgr.active_panel_]->on_activate();
+            }
+        } else if (mgr.panel_stack_.size() > 1) {
+            lv_obj_t* now_visible = mgr.panel_stack_.back();
+            auto overlay_it = mgr.overlay_instances_.find(now_visible);
+            if (overlay_it != mgr.overlay_instances_.end() && overlay_it->second) {
+                spdlog::trace("[NavigationManager] Activating previous overlay {}",
+                              overlay_it->second->get_name());
+                overlay_it->second->on_activate();
+            }
         }
         return;
     }
@@ -677,6 +715,25 @@ void NavigationManager::register_panel_instance(ui_panel_id_t id, PanelBase* pan
     spdlog::debug("[NavigationManager] Registered panel instance for ID {}", static_cast<int>(id));
 }
 
+void NavigationManager::register_overlay_instance(lv_obj_t* widget, OverlayBase* overlay) {
+    if (!widget || !overlay) {
+        spdlog::error("[NavigationManager] Cannot register NULL overlay instance");
+        return;
+    }
+    overlay_instances_[widget] = overlay;
+    spdlog::debug("[NavigationManager] Registered overlay instance {} for widget {}",
+                  overlay->get_name(), (void*)widget);
+}
+
+void NavigationManager::unregister_overlay_instance(lv_obj_t* widget) {
+    auto it = overlay_instances_.find(widget);
+    if (it != overlay_instances_.end()) {
+        spdlog::debug("[NavigationManager] Unregistered overlay instance for widget {}",
+                      (void*)widget);
+        overlay_instances_.erase(it);
+    }
+}
+
 void NavigationManager::push_overlay(lv_obj_t* overlay_panel, bool hide_previous) {
     if (!overlay_panel) {
         spdlog::error("[NavigationManager] Cannot push NULL overlay panel");
@@ -688,6 +745,25 @@ void NavigationManager::push_overlay(lv_obj_t* overlay_panel, bool hide_previous
     ui_queue_update([overlay_panel, hide_previous]() {
         auto& mgr = NavigationManager::instance();
         bool is_first_overlay = (mgr.panel_stack_.size() == 1);
+
+        // Lifecycle: Deactivate what's currently visible before showing new overlay
+        if (is_first_overlay) {
+            // Deactivate main panel when first overlay covers it
+            if (mgr.panel_instances_[mgr.active_panel_]) {
+                spdlog::trace("[NavigationManager] Deactivating main panel {} for overlay",
+                              static_cast<int>(mgr.active_panel_));
+                mgr.panel_instances_[mgr.active_panel_]->on_deactivate();
+            }
+        } else {
+            // Deactivate previous overlay if stacking
+            lv_obj_t* prev_overlay = mgr.panel_stack_.back();
+            auto it = mgr.overlay_instances_.find(prev_overlay);
+            if (it != mgr.overlay_instances_.end() && it->second) {
+                spdlog::trace("[NavigationManager] Deactivating previous overlay {}",
+                              it->second->get_name());
+                it->second->on_deactivate();
+            }
+        }
 
         // Optionally hide current top panel
         if (hide_previous && !mgr.panel_stack_.empty()) {
@@ -719,6 +795,13 @@ void NavigationManager::push_overlay(lv_obj_t* overlay_panel, bool hide_previous
         lv_obj_move_foreground(overlay_panel);
         mgr.panel_stack_.push_back(overlay_panel);
         mgr.overlay_animate_slide_in(overlay_panel);
+
+        // Lifecycle: Activate new overlay
+        auto it = mgr.overlay_instances_.find(overlay_panel);
+        if (it != mgr.overlay_instances_.end() && it->second) {
+            spdlog::trace("[NavigationManager] Activating overlay {}", it->second->get_name());
+            it->second->on_activate();
+        }
 
         spdlog::debug("[NavigationManager] Pushed overlay {} (stack: {})", (void*)overlay_panel,
                       mgr.panel_stack_.size());
@@ -761,6 +844,16 @@ bool NavigationManager::go_back() {
                     is_overlay = false;
                     break;
                 }
+            }
+        }
+
+        // Lifecycle: Deactivate the closing overlay before animation
+        if (is_overlay && current_top) {
+            auto it = mgr.overlay_instances_.find(current_top);
+            if (it != mgr.overlay_instances_.end() && it->second) {
+                spdlog::trace("[NavigationManager] Deactivating closing overlay {}",
+                              it->second->get_name());
+                it->second->on_deactivate();
             }
         }
 

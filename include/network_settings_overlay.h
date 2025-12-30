@@ -55,6 +55,7 @@
 
 #include "lvgl/lvgl.h"
 #include "network_tester.h"
+#include "overlay_base.h"
 
 #include <memory>
 #include <string>
@@ -72,8 +73,10 @@ struct WiFiNetwork;
  * Manages WiFi and Ethernet configuration UI with reactive subject-based architecture.
  * Integrates with WiFiManager for scanning/connection, EthernetManager for status,
  * and NetworkTester for connectivity validation.
+ *
+ * Inherits from OverlayBase for lifecycle management (on_activate/on_deactivate).
  */
-class NetworkSettingsOverlay {
+class NetworkSettingsOverlay : public OverlayBase {
   public:
     NetworkSettingsOverlay();
     ~NetworkSettingsOverlay();
@@ -82,13 +85,17 @@ class NetworkSettingsOverlay {
     NetworkSettingsOverlay(const NetworkSettingsOverlay&) = delete;
     NetworkSettingsOverlay& operator=(const NetworkSettingsOverlay&) = delete;
 
+    //
+    // === OverlayBase Interface ===
+    //
+
     /**
      * @brief Initialize reactive subjects
      *
      * Creates and registers subjects with defaults.
      * MUST be called BEFORE create() to ensure bindings work.
      */
-    void init_subjects();
+    void init_subjects() override;
 
     /**
      * @brief Register event callbacks with lv_xml system
@@ -100,7 +107,7 @@ class NetworkSettingsOverlay {
      * - on_add_other_clicked
      * - on_network_item_clicked
      */
-    void register_callbacks();
+    void register_callbacks() override;
 
     /**
      * @brief Create overlay UI from XML
@@ -108,28 +115,54 @@ class NetworkSettingsOverlay {
      * @param parent_screen Parent screen widget to attach overlay to
      * @return Root object of overlay, or nullptr on failure
      */
-    lv_obj_t* create(lv_obj_t* parent_screen);
+    lv_obj_t* create(lv_obj_t* parent_screen) override;
+
+    /**
+     * @brief Get human-readable overlay name
+     * @return "Network Settings"
+     */
+    const char* get_name() const override {
+        return "Network Settings";
+    }
+
+    /**
+     * @brief Called when overlay becomes visible
+     *
+     * Starts WiFi scanning, updates connection status.
+     */
+    void on_activate() override;
+
+    /**
+     * @brief Called when overlay is being hidden
+     *
+     * Stops WiFi scanning, cancels network tests.
+     */
+    void on_deactivate() override;
+
+    /**
+     * @brief Clean up resources for async-safe destruction
+     */
+    void cleanup() override;
+
+    //
+    // === Public API ===
+    //
 
     /**
      * @brief Show overlay panel
      *
-     * Pushes overlay onto navigation stack, triggers network scan if enabled.
+     * Pushes overlay onto navigation stack and registers with NavigationManager.
+     * on_activate() will be called automatically after animation completes.
      */
     void show();
 
     /**
      * @brief Hide overlay panel
      *
-     * Pops overlay from navigation stack, stops scanning.
+     * Pops overlay from navigation stack via ui_nav_go_back().
+     * on_deactivate() will be called automatically before animation starts.
      */
     void hide();
-
-    /**
-     * @brief Clean up resources
-     *
-     * Stops scanning, destroys managers, resets UI references.
-     */
-    void cleanup();
 
     /**
      * @brief Check if overlay is created
@@ -139,17 +172,11 @@ class NetworkSettingsOverlay {
         return overlay_root_ != nullptr;
     }
 
-    /**
-     * @brief Check if overlay is visible
-     * @return true if overlay is currently shown
-     */
-    bool is_visible() const {
-        return visible_;
-    }
+    // Note: is_visible() inherited from OverlayBase
 
   private:
     // Widget references (minimal - prefer subjects)
-    lv_obj_t* overlay_root_ = nullptr;
+    // Note: overlay_root_ inherited from OverlayBase
     lv_obj_t* parent_screen_ = nullptr;
     lv_obj_t* networks_list_ = nullptr;
 
@@ -188,10 +215,8 @@ class NetworkSettingsOverlay {
     std::shared_ptr<NetworkTester> network_tester_;
 
     // State tracking
-    bool subjects_initialized_ = false;
+    // Note: subjects_initialized_, visible_, cleanup_called_ inherited from OverlayBase
     bool callbacks_registered_ = false;
-    bool visible_ = false;
-    bool cleanup_called_ = false;
 
     // Network test modal
     lv_obj_t* test_modal_ = nullptr;

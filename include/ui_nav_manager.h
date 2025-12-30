@@ -11,8 +11,9 @@
 #include <unordered_map>
 #include <vector>
 
-// Forward declaration for lifecycle dispatch
+// Forward declarations for lifecycle dispatch
 class PanelBase;
+class OverlayBase;
 
 /// Callback type for overlay close notifications
 using OverlayCloseCallback = std::function<void()>;
@@ -135,6 +136,30 @@ class NavigationManager {
     void register_panel_instance(ui_panel_id_t id, PanelBase* panel);
 
     /**
+     * @brief Register C++ overlay instance for lifecycle callbacks
+     *
+     * Associates an OverlayBase-derived instance with its root widget.
+     * When overlays are pushed/popped, the corresponding on_activate() and
+     * on_deactivate() methods will be called automatically.
+     *
+     * Call this after create() returns the overlay's root widget.
+     *
+     * @param widget Root widget of the overlay (from create())
+     * @param overlay Pointer to OverlayBase-derived instance
+     */
+    void register_overlay_instance(lv_obj_t* widget, OverlayBase* overlay);
+
+    /**
+     * @brief Unregister C++ overlay instance
+     *
+     * Removes association between widget and overlay instance.
+     * Call this before destroying an overlay.
+     *
+     * @param widget Root widget of the overlay
+     */
+    void unregister_overlay_instance(lv_obj_t* widget);
+
+    /**
      * @brief Get current active panel
      * @return Currently active panel identifier
      */
@@ -239,6 +264,9 @@ class NavigationManager {
 
     // C++ panel instances for lifecycle dispatch (on_activate/on_deactivate)
     std::array<PanelBase*, UI_PANEL_COUNT> panel_instances_ = {};
+
+    // C++ overlay instances for lifecycle dispatch (on_activate/on_deactivate)
+    std::unordered_map<lv_obj_t*, OverlayBase*> overlay_instances_;
 
     // App layout widget reference
     lv_obj_t* app_layout_widget_ = nullptr;
