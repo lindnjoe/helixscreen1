@@ -83,6 +83,7 @@ class Application {
     // Helper functions
     void ensure_project_root_cwd();
     void auto_configure_mock_state();
+    void signal_splash_exit();
     lv_obj_t* create_overlay_panel(lv_obj_t* screen, const char* component_name,
                                    const char* display_name);
 
@@ -136,4 +137,5 @@ class Application {
     bool m_running = false;
     bool m_wizard_active = false;
     bool m_shutdown_complete = false;
+    bool m_splash_signaled = false;
 };

@@ -265,6 +265,63 @@ void Application::ensure_project_root_cwd() {
     }
 }
 
+void Application::signal_splash_exit() {
+    if (m_splash_signaled) {
+        return; // Already signaled
+    }
+    m_splash_signaled = true;
+
+    RuntimeConfig* runtime_config = get_runtime_config();
+    if (runtime_config->splash_pid <= 0) {
+        return; // No splash to signal
+    }
+
+    spdlog::info("[Application] UI ready, signaling splash process (PID {}) to exit...",
+                 runtime_config->splash_pid);
+
+    if (kill(runtime_config->splash_pid, SIGUSR1) == 0) {
+        // Wait for splash to exit. Note: we check /proc/<pid>/status for zombie
+        // state because kill(pid, 0) returns 0 for zombies. The splash is reaped
+        // by watchdog, so we just need to know it's done (zombie = exited).
+        int wait_attempts = 50;
+        char proc_path[64];
+        snprintf(proc_path, sizeof(proc_path), "/proc/%d/status", runtime_config->splash_pid);
+
+        while (wait_attempts-- > 0) {
+            // First check if process exists at all
+            if (kill(runtime_config->splash_pid, 0) != 0) {
+                break; // Process gone
+            }
+
+            // Check if it's a zombie (exited but not reaped)
+            FILE* f = fopen(proc_path, "r");
+            if (f) {
+                char line[256];
+                bool is_zombie = false;
+                while (fgets(line, sizeof(line), f)) {
+                    if (strncmp(line, "State:", 6) == 0) {
+                        is_zombie = (strchr(line, 'Z') != nullptr);
+                        break;
+                    }
+                }
+                fclose(f);
+                if (is_zombie) {
+                    spdlog::debug("[Application] Splash process exited (zombie, waiting for reap)");
+                    break;
+                }
+            }
+
+            usleep(20000);
+        }
+        if (wait_attempts <= 0) {
+            spdlog::warn("[Application] Splash process did not exit in time");
+        } else {
+            spdlog::info("[Application] Splash process exited");
+        }
+    }
+    runtime_config->splash_pid = 0;
+}
+
 bool Application::parse_args(int argc, char** argv) {
     // Parse CLI args first
     if (!helix::parse_cli_args(argc, argv, m_args, m_screen_width, m_screen_height)) {
@@ -378,55 +435,6 @@ bool Application::init_logging() {
 }
 
 bool Application::init_display() {
-    // Signal external splash process to exit BEFORE creating our display
-    RuntimeConfig* runtime_config = get_runtime_config();
-    if (runtime_config->splash_pid > 0) {
-        spdlog::info("[Application] Signaling splash process (PID {}) to exit...",
-                     runtime_config->splash_pid);
-        if (kill(runtime_config->splash_pid, SIGUSR1) == 0) {
-            // Wait for splash to exit. Note: we check /proc/<pid>/status for zombie
-            // state because kill(pid, 0) returns 0 for zombies. The splash is reaped
-            // by watchdog, so we just need to know it's done (zombie = exited).
-            int wait_attempts = 50;
-            char proc_path[64];
-            snprintf(proc_path, sizeof(proc_path), "/proc/%d/status", runtime_config->splash_pid);
-
-            while (wait_attempts-- > 0) {
-                // First check if process exists at all
-                if (kill(runtime_config->splash_pid, 0) != 0) {
-                    break; // Process gone
-                }
-
-                // Check if it's a zombie (exited but not reaped)
-                FILE* f = fopen(proc_path, "r");
-                if (f) {
-                    char line[256];
-                    bool is_zombie = false;
-                    while (fgets(line, sizeof(line), f)) {
-                        if (strncmp(line, "State:", 6) == 0) {
-                            is_zombie = (strchr(line, 'Z') != nullptr);
-                            break;
-                        }
-                    }
-                    fclose(f);
-                    if (is_zombie) {
-                        spdlog::debug(
-                            "[Application] Splash process exited (zombie, waiting for reap)");
-                        break;
-                    }
-                }
-
-                usleep(20000);
-            }
-            if (wait_attempts <= 0) {
-                spdlog::warn("[Application] Splash process did not exit in time");
-            } else {
-                spdlog::info("[Application] Splash process exited");
-            }
-        }
-        runtime_config->splash_pid = 0;
-    }
-
 #ifdef HELIX_DISPLAY_SDL
     // Set window position environment variables
     if (m_args.display_num >= 0) {
@@ -1083,6 +1091,10 @@ int Application::main_loop() {
         // Run LVGL tasks
         lv_timer_handler();
         fflush(stdout);
+
+        // Signal splash to exit after first frame is rendered
+        // This ensures our UI is visible before splash disappears
+        signal_splash_exit();
 
         // Benchmark mode
         if (m_benchmark_mode) {
