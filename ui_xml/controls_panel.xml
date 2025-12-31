@@ -47,10 +47,10 @@
                style_radius="#border_radius_large" style_pad_all="#space_sm" scrollable="false" clickable="true">
         <event_cb trigger="clicked" callback="on_controls_quick_actions"/>
         <lv_obj height="content"
-                flex_flow="row" style_flex_cross_place="center" style_pad_all="0" style_pad_gap="#space_sm"
-                style_border_width="0">
+                flex_flow="row" style_flex_cross_place="center" style_flex_track_place="center" style_pad_all="0"
+                style_pad_gap="#space_sm" style_border_width="0">
           <icon src="home" size="md" variant="secondary"/>
-          <text_small text="Quick Actions" style_text_color="#text_secondary" style_pad_top="#space_xs"/>
+          <text_small text="Quick Actions" style_text_color="#text_secondary"/>
         </lv_obj>
         <!-- Home buttons row -->
         <lv_obj width="100%"
@@ -106,10 +106,10 @@
                    width="100%" height="#button_height_small" style_radius="#border_radius" style_pad_left="#space_sm"
                    style_pad_right="#space_sm" style_bg_color="#primary_color" style_bg_opa="80" style_border_width="0"
                    style_margin_top="#space_xs" flex_flow="row" style_flex_main_place="center"
-                   style_flex_cross_place="center" style_pad_gap="#space_xs">
+                   style_flex_cross_place="center" style_flex_track_place="center" style_pad_gap="#space_xs">
           <event_cb trigger="clicked" callback="on_controls_quick_actions"/>
           <icon src="cursor_move" size="sm"/>
-          <text_small text="Motion" style_text_color="#text_primary"/>
+          <text_body text="Motion" style_text_color="#text_primary"/>
         </lv_button>
       </ui_card>
       <!-- Card 2: Temperatures (Combined Nozzle + Bed) -->
@@ -118,10 +118,10 @@
                style_radius="#border_radius_large" style_pad_all="#space_sm" scrollable="false" clickable="true">
         <event_cb trigger="clicked" callback="on_controls_temperatures"/>
         <lv_obj height="content"
-                flex_flow="row" style_flex_cross_place="center" style_pad_all="0" style_pad_gap="#space_sm"
-                style_border_width="0">
+                flex_flow="row" style_flex_cross_place="center" style_flex_track_place="center" style_pad_all="0"
+                style_pad_gap="#space_sm" style_border_width="0">
           <icon src="heater" size="md" variant="secondary"/>
-          <text_small text="Temperatures" style_text_color="#text_secondary" style_pad_top="#space_xs"/>
+          <text_small text="Temperatures" style_text_color="#text_secondary"/>
         </lv_obj>
         <!-- Nozzle section (clickable) -->
         <lv_button name="btn_nozzle_temp"
@@ -154,10 +154,10 @@
                style_radius="#border_radius_large" style_pad_all="#space_sm" scrollable="false" clickable="true">
         <event_cb trigger="clicked" callback="on_controls_cooling"/>
         <lv_obj height="content"
-                flex_flow="row" style_flex_cross_place="center" style_pad_all="0" style_pad_gap="#space_sm"
-                style_border_width="0">
+                flex_flow="row" style_flex_cross_place="center" style_flex_track_place="center" style_pad_all="0"
+                style_pad_gap="#space_sm" style_border_width="0">
           <icon name="fan_icon" src="fan" size="md" variant="secondary"/>
-          <text_small text="Cooling" style_text_color="#text_secondary" style_pad_top="#space_xs"/>
+          <text_small text="Cooling" style_text_color="#text_secondary"/>
         </lv_obj>
         <!-- Part cooling hero section -->
         <text_small text="Part Fan" style_text_color="#text_secondary" style_pad_top="#space_sm"/>

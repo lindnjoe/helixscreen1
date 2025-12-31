@@ -183,27 +183,30 @@
                   style_pad_gap="#space_sm">
             <lv_button name="btn_light"
                        height="#button_height_small" flex_grow="1" style_border_width="0" flex_flow="row"
-                       style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_xs">
+                       style_flex_main_place="center" style_flex_cross_place="center" style_flex_track_place="center"
+                       style_pad_gap="#space_xs">
               <event_cb trigger="clicked" callback="on_print_status_light"/>
               <lv_label name="light_icon" bind_text="light_button_icon" style_text_font="mdi_icons_24" align="center"/>
-              <text_small text="Light"/>
+              <text_body text="Light"/>
             </lv_button>
             <!-- Timelapse button: only visible when Moonraker-Timelapse plugin installed -->
             <lv_button name="btn_timelapse"
                        height="#button_height_small" flex_grow="1" style_border_width="0" flex_flow="row"
-                       style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_xs">
+                       style_flex_main_place="center" style_flex_cross_place="center" style_flex_track_place="center"
+                       style_pad_gap="#space_xs">
               <event_cb trigger="clicked" callback="on_print_status_timelapse"/>
               <lv_obj-bind_flag_if_eq subject="printer_has_timelapse" flag="hidden" ref_value="0"/>
               <lv_label name="timelapse_icon"
                         bind_text="timelapse_button_icon" style_text_font="mdi_icons_24" align="center"/>
-              <text_small name="timelapse_label" bind_text="timelapse_button_label"/>
+              <text_body name="timelapse_label" bind_text="timelapse_button_label"/>
             </lv_button>
             <lv_button name="btn_pause"
                        height="#button_height_small" flex_grow="1" style_border_width="0" flex_flow="row"
-                       style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_xs">
+                       style_flex_main_place="center" style_flex_cross_place="center" style_flex_track_place="center"
+                       style_pad_gap="#space_xs">
               <event_cb trigger="clicked" callback="on_print_status_pause"/>
               <lv_label name="pause_icon" bind_text="pause_button_icon" style_text_font="mdi_icons_24" align="center"/>
-              <text_small name="pause_label" bind_text="pause_button_label"/>
+              <text_body name="pause_label" bind_text="pause_button_label"/>
             </lv_button>
           </lv_obj>
           <!-- Row 2: Tune, Cancel -->
@@ -213,18 +216,19 @@
                   style_pad_gap="#space_sm">
             <lv_button name="btn_tune"
                        height="#button_height_small" flex_grow="1" style_border_width="0" flex_flow="row"
-                       style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_xs">
+                       style_flex_main_place="center" style_flex_cross_place="center" style_flex_track_place="center"
+                       style_pad_gap="#space_xs">
               <event_cb trigger="clicked" callback="on_print_status_tune"/>
               <icon src="tune" size="sm"/>
-              <text_small text="Tune"/>
+              <text_body text="Tune"/>
             </lv_button>
             <lv_button name="btn_cancel"
                        height="#button_height_small" flex_grow="1" style_border_width="0" style_bg_color="#error_color"
                        flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center"
-                       style_pad_gap="#space_xs">
+                       style_flex_track_place="center" style_pad_gap="#space_xs">
               <event_cb trigger="clicked" callback="on_print_status_cancel"/>
               <icon src="stop" size="sm" color="#text_primary"/>
-              <text_small text="Cancel" style_text_color="#text_primary"/>
+              <text_body text="Cancel" style_text_color="#text_primary"/>
             </lv_button>
           </lv_obj>
         </lv_obj>
