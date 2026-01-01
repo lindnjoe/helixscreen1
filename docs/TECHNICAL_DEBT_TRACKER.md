@@ -167,20 +167,20 @@ MyClass::~MyClass() {
 
 Based on audit (verify these still apply):
 
-- [ ] `src/ui_panel_home.cpp`
+- [ ] `src/ui/ui_panel_home.cpp`
   - Timer members: `signal_poll_timer_`, `tip_rotation_timer_`
   - Issue: Destructor sets to nullptr without deleting
   - Fix: Add `lv_timer_delete()` calls
 
-- [ ] `src/ui_panel_print_status.cpp` - Check timer cleanup
+- [ ] `src/ui/ui_panel_print_status.cpp` - Check timer cleanup
 
-- [ ] `src/ui_panel_controls.cpp` - Check timer cleanup
+- [ ] `src/ui/ui_panel_controls.cpp` - Check timer cleanup
 
-- [ ] `src/ui_panel_calibration_pid.cpp` - May use one-shot timers (OK if self-deleting)
+- [ ] `src/ui/ui_panel_calibration_pid.cpp` - May use one-shot timers (OK if self-deleting)
 
-- [ ] `src/ui_panel_calibration_zoffset.cpp` - Check timer cleanup
+- [ ] `src/ui/ui_panel_calibration_zoffset.cpp` - Check timer cleanup
 
-- [ ] `src/ui_wizard_*.cpp` - Check all wizard files
+- [ ] `src/ui/ui_wizard_*.cpp` - Check all wizard files
 
 - [ ] Any other files from discovery: _______________
 
@@ -336,7 +336,7 @@ kill $PID 2>/dev/null
 
 ```bash
 echo "=== Manual 'new' in widget files (should use RAII) ==="
-grep -rn "\bnew \w\+\s*(" src/ui_*.cpp | grep -v "make_unique\|placement"
+grep -rn "\bnew \w\+\s*(" src/ui/ui_*.cpp | grep -v "make_unique\|placement"
 
 echo ""
 echo "=== Manual 'delete' (should use RAII wrapper) ==="
@@ -361,9 +361,9 @@ echo "std::unique_ptr: $(grep -r "std::unique_ptr" src/ --include="*.cpp" | wc -
 ### 4.2 Reference: Correct RAII Patterns
 
 **Gold standard files to reference:**
-- `src/ui_jog_pad.cpp` - Simple widget user_data
-- `src/ui_step_progress.cpp` - Complex nested allocations
-- `src/ui_temp_graph.cpp` - Standalone structure pattern
+- `src/ui/ui_jog_pad.cpp` - Simple widget user_data
+- `src/ui/ui_step_progress.cpp` - Complex nested allocations
+- `src/ui/ui_temp_graph.cpp` - Standalone structure pattern
 
 **Pattern 1: Widget user_data with DELETE callback**
 ```cpp
@@ -398,11 +398,11 @@ lvgl_unique_ptr<MyData> data(static_cast<MyData*>(lv_obj_get_user_data(obj)));
 
 ### 4.3 Files to Fix
 
-#### 4.3.1 `src/ui_hsv_picker.cpp`
+#### 4.3.1 `src/ui/ui_hsv_picker.cpp`
 
 - [ ] **Find violations:**
   ```bash
-  grep -n "new \|delete " src/ui_hsv_picker.cpp
+  grep -n "new \|delete " src/ui/ui_hsv_picker.cpp
   ```
 
 - [ ] **Locate allocation** (search `new HsvPickerData`)
@@ -428,30 +428,30 @@ lvgl_unique_ptr<MyData> data(static_cast<MyData*>(lv_obj_get_user_data(obj)));
 
 - [ ] **Test:** HSV picker creates and destroys correctly
 
-#### 4.3.2 `src/ui_bed_mesh.cpp`
+#### 4.3.2 `src/ui/ui_bed_mesh.cpp`
 
 - [ ] **Find violations:**
   ```bash
-  grep -n "new \|delete " src/ui_bed_mesh.cpp
+  grep -n "new \|delete " src/ui/ui_bed_mesh.cpp
   ```
 
 - [ ] **Note:** May already use `make_unique` for allocation but `delete` in cleanup
 - [ ] **Convert cleanup to RAII**
 - [ ] **Test:** Bed mesh panel opens/closes correctly
 
-#### 4.3.3 `src/ui_gradient_canvas.cpp`
+#### 4.3.3 `src/ui/ui_gradient_canvas.cpp`
 
 - [ ] **Find violations**
 - [ ] **Convert to RAII pattern**
 - [ ] **Test:** Gradient widgets render correctly
 
-#### 4.3.4 `src/ui_temp_display.cpp`
+#### 4.3.4 `src/ui/ui_temp_display.cpp`
 
 - [ ] **Find violations**
 - [ ] **Convert to RAII pattern**
 - [ ] **Test:** Temperature displays update correctly
 
-#### 4.3.5 `src/ui_filament_path_canvas.cpp`
+#### 4.3.5 `src/ui/ui_filament_path_canvas.cpp`
 
 - [ ] **Find violations**
 - [ ] **Note:** Uses registry pattern - may need special handling
@@ -469,7 +469,7 @@ Check discovery output for any files not listed above:
 
 ```bash
 # Re-run discovery - should be zero violations
-echo "Manual 'new': $(grep -rn '\bnew \w\+\s*(' src/ui_*.cpp | grep -v 'make_unique\|placement' | wc -l)"
+echo "Manual 'new': $(grep -rn '\bnew \w\+\s*(' src/ui/ui_*.cpp | grep -v 'make_unique\|placement' | wc -l)"
 echo "Manual 'delete': $(grep -rn '^\s*delete ' src/ --include='*.cpp' | grep -v lib/ | wc -l)"
 echo "lv_malloc: $(grep -rn 'lv_malloc' src/ --include='*.cpp' | grep -v lib/ | wc -l)"
 
@@ -655,25 +655,25 @@ grep -rn 'style_pad[^=]*="[1-9]' ui_xml/ --include="*.xml"
 
 ```bash
 echo "=== lv_obj_add_event_cb violations ==="
-grep -rn "lv_obj_add_event_cb" src/ui_*.cpp | wc -l
+grep -rn "lv_obj_add_event_cb" src/ui/ui_*.cpp | wc -l
 
 echo ""
 echo "=== lv_label_set_text violations ==="
-grep -rn "lv_label_set_text" src/ui_*.cpp | wc -l
+grep -rn "lv_label_set_text" src/ui/ui_*.cpp | wc -l
 
 echo ""
 echo "=== Imperative visibility control ==="
-grep -rn "lv_obj_add_flag.*HIDDEN\|lv_obj_clear_flag.*HIDDEN" src/ui_*.cpp | wc -l
+grep -rn "lv_obj_add_flag.*HIDDEN\|lv_obj_clear_flag.*HIDDEN" src/ui/ui_*.cpp | wc -l
 
 echo ""
 echo "=== Inline styling ==="
-grep -rn "lv_obj_set_style_" src/ui_*.cpp | wc -l
+grep -rn "lv_obj_set_style_" src/ui/ui_*.cpp | wc -l
 
 echo ""
 echo "=== Top violating files ==="
 for pattern in "lv_obj_add_event_cb" "lv_label_set_text" "lv_obj_set_style_"; do
   echo "--- $pattern ---"
-  grep -rc "$pattern" src/ui_*.cpp | sort -t: -k2 -rn | head -5
+  grep -rc "$pattern" src/ui/ui_*.cpp | sort -t: -k2 -rn | head -5
 done
 ```
 
@@ -708,11 +708,11 @@ done
 
 ### 6.3 File-by-File Audit
 
-#### 6.3.1 `src/ui_panel_settings.cpp`
+#### 6.3.1 `src/ui/ui_panel_settings.cpp`
 
 ```bash
 # List all event handlers
-grep -n "lv_obj_add_event_cb" src/ui_panel_settings.cpp
+grep -n "lv_obj_add_event_cb" src/ui/ui_panel_settings.cpp
 ```
 
 For each occurrence:
@@ -726,13 +726,13 @@ For each occurrence:
 - [ ] Convert static handlers to XML
 - [ ] Document legitimate uses with comments
 
-#### 6.3.2 `src/ui_panel_print_select.cpp`
+#### 6.3.2 `src/ui/ui_panel_print_select.cpp`
 
 - [ ] Audit handlers (many will be dynamic/legitimate)
 - [ ] Convert eligible handlers
 - [ ] Document patterns
 
-#### 6.3.3 `src/ui_keyboard_manager.cpp`
+#### 6.3.3 `src/ui/ui_keyboard_manager.cpp`
 
 - [ ] Review 29-event loop
 - [ ] If keys static: migrate to XML
@@ -742,12 +742,12 @@ For each occurrence:
 #### 6.3.4 Other Files
 
 Process each file from discovery:
-- [ ] `src/ui_panel_home.cpp`
-- [ ] `src/ui_panel_controls.cpp`
-- [ ] `src/ui_panel_calibration_*.cpp`
-- [ ] `src/ui_panel_bed_mesh.cpp`
-- [ ] `src/ui_panel_ams.cpp`
-- [ ] `src/ui_wizard_*.cpp`
+- [ ] `src/ui/ui_panel_home.cpp`
+- [ ] `src/ui/ui_panel_controls.cpp`
+- [ ] `src/ui/ui_panel_calibration_*.cpp`
+- [ ] `src/ui/ui_panel_bed_mesh.cpp`
+- [ ] `src/ui/ui_panel_ams.cpp`
+- [ ] `src/ui/ui_wizard_*.cpp`
 - [ ] Others from discovery: _____________
 
 ### 6.4 Create Visibility Subjects
@@ -787,18 +787,18 @@ void show_content() { lv_subject_set_int(&is_loading_, 0); }
 ```
 
 Files to apply this pattern:
-- [ ] `src/ui_panel_macros.cpp`
-- [ ] `src/ui_panel_spoolman.cpp`
-- [ ] `src/ui_panel_history_list.cpp`
-- [ ] `src/ui_nav_manager.cpp`
+- [ ] `src/ui/ui_panel_macros.cpp`
+- [ ] `src/ui/ui_panel_spoolman.cpp`
+- [ ] `src/ui/ui_panel_history_list.cpp`
+- [ ] `src/ui/ui_nav_manager.cpp`
 - [ ] Others: _____________
 
 ### 6.5 Verification
 
 ```bash
 # Re-run discovery
-echo "Event handlers: $(grep -rn 'lv_obj_add_event_cb' src/ui_panel_*.cpp | wc -l)"
-echo "Visibility toggles: $(grep -rn 'lv_obj_add_flag.*HIDDEN' src/ui_panel_*.cpp | wc -l)"
+echo "Event handlers: $(grep -rn 'lv_obj_add_event_cb' src/ui/ui_panel_*.cpp | wc -l)"
+echo "Visibility toggles: $(grep -rn 'lv_obj_add_flag.*HIDDEN' src/ui/ui_panel_*.cpp | wc -l)"
 
 # Target reductions:
 # - Event handlers: <50% of original (rest documented)
@@ -839,7 +839,7 @@ wc -l src/*.cpp | sort -rn | head -10
 - Files >2000 lines: _____
 - Files >1500 lines: _____
 
-### 7.2 `src/ui_panel_ams.cpp` Refactoring
+### 7.2 `src/ui/ui_panel_ams.cpp` Refactoring
 
 **Current responsibilities (verify):**
 - AMS state display
@@ -871,7 +871,7 @@ wc -l src/*.cpp | sort -rn | head -10
   };
   ```
 
-- [ ] Create `src/ui_ams_slot_editor.cpp`
+- [ ] Create `src/ui/ui_ams_slot_editor.cpp`
 - [ ] Move slot editing modal logic
 - [ ] Move form validation
 - [ ] Update `ui_panel_ams.cpp` to use new class
@@ -880,7 +880,7 @@ wc -l src/*.cpp | sort -rn | head -10
 #### 7.2.2 Extract `AmsColorPicker`
 
 - [ ] Create `include/ui_ams_color_picker.h`
-- [ ] Create `src/ui_ams_color_picker.cpp`
+- [ ] Create `src/ui/ui_ams_color_picker.cpp`
 - [ ] Move HSV picker integration
 - [ ] Move color preview/selection logic
 - [ ] Test: Color selection works
@@ -888,19 +888,19 @@ wc -l src/*.cpp | sort -rn | head -10
 #### 7.2.3 Extract `AmsAnimationController`
 
 - [ ] Create `include/ui_ams_animation.h`
-- [ ] Create `src/ui_ams_animation.cpp`
+- [ ] Create `src/ui/ui_ams_animation.cpp`
 - [ ] Move filament path animation state machine
 - [ ] Move animation timing logic
 - [ ] Test: Animations display correctly
 
-**Target:** `ui_panel_ams.cpp` < 1500 lines
+**Target:** `src/ui/ui_panel_ams.cpp` < 1500 lines
 
-### 7.3 `src/ui_panel_print_select.cpp` Refactoring
+### 7.3 `src/ui/ui_panel_print_select.cpp` Refactoring
 
 #### 7.3.1 Extract `FileCardRenderer`
 
 - [ ] Create `include/ui_file_card.h`
-- [ ] Create `src/ui_file_card.cpp`
+- [ ] Create `src/ui/ui_file_card.cpp`
 - [ ] Move card view creation logic
 - [ ] Move thumbnail loading
 - [ ] Test: Card view works
@@ -908,7 +908,7 @@ wc -l src/*.cpp | sort -rn | head -10
 #### 7.3.2 Extract `FileListRenderer`
 
 - [ ] Create `include/ui_file_list.h`
-- [ ] Create `src/ui_file_list.cpp`
+- [ ] Create `src/ui/ui_file_list.cpp`
 - [ ] Move list item creation
 - [ ] Move lazy loading logic
 - [ ] Test: List view works
@@ -922,9 +922,9 @@ wc -l src/*.cpp | sort -rn | head -10
 - [ ] Move filament calculation
 - [ ] Test: Metadata displays correctly
 
-**Target:** `ui_panel_print_select.cpp` < 1500 lines
+**Target:** `src/ui/ui_panel_print_select.cpp` < 1500 lines
 
-### 7.4 `src/ui_panel_print_status.cpp` Refactoring
+### 7.4 `src/ui/ui_panel_print_status.cpp` Refactoring
 
 #### 7.4.1 Extract `LayerProgressView`
 
@@ -938,22 +938,22 @@ wc -l src/*.cpp | sort -rn | head -10
 - [ ] Move object highlighting logic
 - [ ] Test: Exclusion feature works
 
-**Target:** `ui_panel_print_status.cpp` < 1500 lines
+**Target:** `src/ui/ui_panel_print_status.cpp` < 1500 lines
 
 ### 7.5 Verification
 
 ```bash
 # Check file sizes after refactoring
 echo "=== Target files ==="
-wc -l src/ui_panel_ams.cpp src/ui_panel_print_select.cpp src/ui_panel_print_status.cpp
+wc -l src/ui/ui_panel_ams.cpp src/ui/ui_panel_print_select.cpp src/ui/ui_panel_print_status.cpp
 
 echo ""
 echo "=== New extracted files ==="
-wc -l src/ui_ams_*.cpp src/ui_file_*.cpp src/print_metadata.cpp 2>/dev/null
+wc -l src/ui/ui_ams_*.cpp src/ui/ui_file_*.cpp src/print_metadata.cpp 2>/dev/null
 
 echo ""
 echo "=== Any files still over 1500? ==="
-wc -l src/ui_*.cpp | awk '$1 > 1500 {print "WARNING:", $0}'
+wc -l src/ui/ui_*.cpp | awk '$1 > 1500 {print "WARNING:", $0}'
 ```
 
 - [ ] All target files < 1500 lines
@@ -1068,7 +1068,7 @@ All `lv_timer_create()` calls MUST have cleanup:
 set -e
 
 # Check for manual new/delete in UI code (excluding make_unique)
-violations=$(git diff --cached --name-only | grep -E 'src/ui_.*\.cpp$' | while read f; do
+violations=$(git diff --cached --name-only | grep -E 'src/ui/ui_.*\.cpp$' | while read f; do
     git diff --cached "$f" | grep -E '^\+.*[^_]new\s+\w+\s*\(' | grep -v make_unique && echo "$f"
     git diff --cached "$f" | grep -E '^\+\s*delete\s+' && echo "$f"
 done || true)
@@ -1117,17 +1117,17 @@ jobs:
 
       - name: Check RAII violations
         run: |
-          count=$(grep -rn "^\s*delete " src/ui_*.cpp | wc -l || echo 0)
+          count=$(grep -rn "^\s*delete " src/ui/ui_*.cpp | wc -l || echo 0)
           threshold=5
           if [ "$count" -gt "$threshold" ]; then
             echo "ERROR: Too many manual delete statements: $count (max: $threshold)"
-            grep -rn "^\s*delete " src/ui_*.cpp
+            grep -rn "^\s*delete " src/ui/ui_*.cpp
             exit 1
           fi
 
       - name: Check file sizes
         run: |
-          large=$(wc -l src/ui_panel_*.cpp | awk '$1 > 2000 {print $2}')
+          large=$(wc -l src/ui/ui_panel_*.cpp | awk '$1 > 2000 {print $2}')
           if [ -n "$large" ]; then
             echo "ERROR: Files exceed 2000 lines:"
             echo "$large"
@@ -1151,13 +1151,13 @@ jobs:
 .PHONY: lint
 lint:
 	@echo "=== Checking RAII violations ==="
-	@count=$$(grep -rn "^\s*delete " src/ui_*.cpp 2>/dev/null | wc -l); \
+	@count=$$(grep -rn "^\s*delete " src/ui/ui_*.cpp 2>/dev/null | wc -l); \
 	if [ "$$count" -gt 5 ]; then \
 		echo "ERROR: $$count manual delete statements found"; \
 		exit 1; \
 	fi
 	@echo "=== Checking file sizes ==="
-	@wc -l src/ui_panel_*.cpp | awk '$$1 > 2000 {print "WARNING: " $$0}'
+	@wc -l src/ui/ui_panel_*.cpp | awk '$$1 > 2000 {print "WARNING: " $$0}'
 	@echo "=== Lint passed ==="
 ```
 
@@ -1176,7 +1176,7 @@ lint:
 
 ```bash
 # Manual allocation (violations)
-grep -rn "\bnew \w\+\s*(" src/ui_*.cpp | grep -v "make_unique\|placement"
+grep -rn "\bnew \w\+\s*(" src/ui/ui_*.cpp | grep -v "make_unique\|placement"
 
 # Manual deallocation (violations)
 grep -rn "^\s*delete " src/ --include="*.cpp" | grep -v lib/
@@ -1198,19 +1198,19 @@ grep -rn "lvgl_make_unique\|std::make_unique\|std::unique_ptr" src/ --include="*
 
 ```bash
 # Event handlers
-grep -rn "lv_obj_add_event_cb" src/ui_*.cpp
+grep -rn "lv_obj_add_event_cb" src/ui/ui_*.cpp
 
 # Text updates
-grep -rn "lv_label_set_text\|lv_textarea_set_text" src/ui_*.cpp
+grep -rn "lv_label_set_text\|lv_textarea_set_text" src/ui/ui_*.cpp
 
 # Visibility control
-grep -rn "lv_obj_add_flag.*HIDDEN\|lv_obj_clear_flag.*HIDDEN" src/ui_*.cpp
+grep -rn "lv_obj_add_flag.*HIDDEN\|lv_obj_clear_flag.*HIDDEN" src/ui/ui_*.cpp
 
 # Inline styling
-grep -rn "lv_obj_set_style_" src/ui_*.cpp
+grep -rn "lv_obj_set_style_" src/ui/ui_*.cpp
 
 # Color literals
-grep -rn "lv_color_hex\|lv_color_make" src/ui_*.cpp | grep -v "theme\|parse"
+grep -rn "lv_color_hex\|lv_color_make" src/ui/ui_*.cpp | grep -v "theme\|parse"
 ```
 
 ### Design Token Patterns
@@ -1232,10 +1232,10 @@ grep -rn 'style_pad[^=]*="#' ui_xml/ --include="*.xml"
 wc -l src/*.cpp | sort -rn
 
 # Backend includes in UI (potential violation)
-grep -rn "#include.*backend" src/ui_*.cpp
+grep -rn "#include.*backend" src/ui/ui_*.cpp
 
 # Circular dependency check (manual review needed)
-grep -h "#include" src/ui_panel_*.cpp | sort | uniq -c | sort -rn
+grep -h "#include" src/ui/ui_panel_*.cpp | sort | uniq -c | sort -rn
 ```
 
 ---
@@ -1255,17 +1255,17 @@ echo "========================================"
 
 echo ""
 echo "=== Memory Safety ==="
-echo "Manual delete: $(grep -rn '^\s*delete ' src/ui_*.cpp 2>/dev/null | wc -l)"
+echo "Manual delete: $(grep -rn '^\s*delete ' src/ui/ui_*.cpp 2>/dev/null | wc -l)"
 echo "lv_malloc in src: $(grep -rn 'lv_malloc' src/ --include='*.cpp' 2>/dev/null | grep -v lib/ | wc -l)"
 echo "Timer creates: $(grep -rn 'lv_timer_create' src/ --include='*.cpp' 2>/dev/null | wc -l)"
 echo "Timer deletes: $(grep -rn 'lv_timer_del' src/ --include='*.cpp' 2>/dev/null | wc -l)"
 
 echo ""
 echo "=== Declarative UI ==="
-echo "Event handlers: $(grep -rn 'lv_obj_add_event_cb' src/ui_*.cpp 2>/dev/null | wc -l)"
-echo "Text updates: $(grep -rn 'lv_label_set_text' src/ui_*.cpp 2>/dev/null | wc -l)"
-echo "Visibility toggles: $(grep -rn 'lv_obj_add_flag.*HIDDEN' src/ui_*.cpp 2>/dev/null | wc -l)"
-echo "Inline styles: $(grep -rn 'lv_obj_set_style_' src/ui_*.cpp 2>/dev/null | wc -l)"
+echo "Event handlers: $(grep -rn 'lv_obj_add_event_cb' src/ui/ui_*.cpp 2>/dev/null | wc -l)"
+echo "Text updates: $(grep -rn 'lv_label_set_text' src/ui/ui_*.cpp 2>/dev/null | wc -l)"
+echo "Visibility toggles: $(grep -rn 'lv_obj_add_flag.*HIDDEN' src/ui/ui_*.cpp 2>/dev/null | wc -l)"
+echo "Inline styles: $(grep -rn 'lv_obj_set_style_' src/ui/ui_*.cpp 2>/dev/null | wc -l)"
 
 echo ""
 echo "=== Design Tokens ==="
@@ -1274,9 +1274,9 @@ echo "Hardcoded padding: $(grep -rn 'style_pad[^=]*=\"[1-9]' ui_xml/ 2>/dev/null
 echo ""
 echo "=== Code Size ==="
 echo "Files >2000 lines:"
-wc -l src/ui_panel_*.cpp 2>/dev/null | awk '$1 > 2000 {print "  " $0}' | head -5
+wc -l src/ui/ui_panel_*.cpp 2>/dev/null | awk '$1 > 2000 {print "  " $0}' | head -5
 echo "Files >1500 lines:"
-wc -l src/ui_panel_*.cpp 2>/dev/null | awk '$1 > 1500 && $1 <= 2000 {print "  " $0}' | head -5
+wc -l src/ui/ui_panel_*.cpp 2>/dev/null | awk '$1 > 1500 && $1 <= 2000 {print "  " $0}' | head -5
 
 echo ""
 echo "========================================"

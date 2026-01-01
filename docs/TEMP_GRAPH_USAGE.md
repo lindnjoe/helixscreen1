@@ -166,5 +166,5 @@ See `include/ui_temp_graph.h` for complete API documentation.
 ## Files
 
 - **Header**: `include/ui_temp_graph.h`
-- **Implementation**: `src/ui_temp_graph.cpp`
+- **Implementation**: `src/ui/ui_temp_graph.cpp`
 - **This Guide**: `TEMP_GRAPH_USAGE.md`

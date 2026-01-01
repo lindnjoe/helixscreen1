@@ -94,7 +94,7 @@ static void helix_theme_apply_cb(lv_theme_t* theme, lv_obj_t* obj) {
 ```
 
 ```cpp
-// src/ui_theme.cpp - Initializes custom theme
+// src/ui/ui_theme.cpp - Initializes custom theme
 void ui_theme_init(lv_display_t* display, bool dark_mode) {
     // Read colors from XML (NO hardcoded colors!)
     lv_color_t card_bg = parse_color(dark_mode ? card_bg_dark : card_bg_light);
@@ -499,9 +499,9 @@ static void my_widget_delete_cb(lv_event_t* e) {
 **See also:** `include/ui_widget_memory.h` for full API documentation
 
 **Examples:**
-- `src/ui_jog_pad.cpp` - Simple widget user_data
-- `src/ui_step_progress.cpp` - Complex nested allocations
-- `src/ui_temp_graph.cpp` - Standalone structure with custom destroy
+- `src/ui/ui_jog_pad.cpp` - Simple widget user_data
+- `src/ui/ui_step_progress.cpp` - Complex nested allocations
+- `src/ui/ui_temp_graph.cpp` - Standalone structure with custom destroy
 
 ### Static Object Destructors and Logging
 
@@ -522,9 +522,9 @@ MyManager::~MyManager() {
 - Any destructor that might run during `exit()` or program termination
 
 **Reference implementations:**
-- `src/wifi_manager.cpp:71-72`
-- `src/ethernet_manager.cpp:38-41`
-- `src/ethernet_backend_*.cpp` (all backend destructors)
+- `src/api/wifi_manager.cpp:71-72`
+- `src/api/ethernet_manager.cpp:38-41`
+- `src/api/ethernet_backend_*.cpp` (all backend destructors)
 
 **Note:** This is separate from the weak_ptr pattern used for async callback safety - that protects against managers being explicitly destroyed via `.reset()` while async operations are queued.
 
@@ -690,7 +690,7 @@ void WiFiManager::handle_scan_complete(const std::string& data) {
 
 **Without this pattern:** Race conditions, segfaults, undefined behavior when backend thread creates widgets while LVGL is rendering.
 
-**Reference Implementation:** `src/wifi_manager.cpp` (all event handlers use this pattern)
+**Reference Implementation:** `src/api/wifi_manager.cpp` (all event handlers use this pattern)
 
 ### When to Use ui_async_call()
 
