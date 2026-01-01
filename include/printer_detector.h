@@ -105,9 +105,9 @@ struct PrinterHardwareData {
  * Detection heuristics are defined in config/printer_database.json, allowing
  * new printer types to be added without recompilation.
  *
- * **Contract**: Returned type_name strings should match printer names in
- * PrinterTypes::PRINTER_TYPES_ROLLER for UI integration, but the detector
- * doesn't depend on that list and can be tested independently.
+ * **Contract**: Returned type_name strings are loaded from printer_database.json.
+ * The detector dynamically builds roller options from the database, making it
+ * fully data-driven with no hardcoded printer lists.
  */
 class PrinterDetector {
   public:
@@ -209,4 +209,38 @@ class PrinterDetector {
      * @return Capabilities struct, or empty struct if not found
      */
     static PrintStartCapabilities get_print_start_capabilities(const std::string& printer_name);
+
+    // =========================================================================
+    // User Extensions API
+    // =========================================================================
+
+    /**
+     * @brief Load status for debugging and settings UI
+     */
+    struct LoadStatus {
+        bool loaded;                           ///< True if database loaded successfully
+        int total_printers;                    ///< Total enabled printers
+        int user_overrides;                    ///< Number of bundled printers overridden by user
+        int user_additions;                    ///< Number of new printers added by user
+        std::vector<std::string> loaded_files; ///< Files loaded (bundled + extensions)
+        std::vector<std::string> load_errors;  ///< Non-fatal errors encountered
+    };
+
+    /**
+     * @brief Reload printer database and extensions
+     *
+     * Clears all caches and reloads from disk. Useful for development/testing
+     * after modifying extension files.
+     */
+    static void reload();
+
+    /**
+     * @brief Get load status for debugging/settings UI
+     *
+     * Returns information about what was loaded, including any errors
+     * encountered in user extension files.
+     *
+     * @return LoadStatus with details about loaded files and errors
+     */
+    static LoadStatus get_load_status();
 };

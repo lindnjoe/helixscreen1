@@ -204,18 +204,20 @@ make V=1  # Shows full compiler commands
 
 ```bash
 # First time setup: Copy template to create user config
-cp config/helixconfig.json.template helixconfig.json
+cp config/helixconfig.json.template config/helixconfig.json
 
 # Template is versioned, user config is git-ignored
 git status
-# helixconfig.json appears in .gitignore
+# config/helixconfig.json appears in .gitignore
 ```
 
 **Why this pattern:**
-- **helixconfig.json** (top-level) - User-specific settings, git-ignored
+- **config/helixconfig.json** - User-specific settings, git-ignored
 - **config/helixconfig.json.template** - Default values, versioned in git
 - Prevents accidental commits of user-specific settings (API keys, local paths, preferences)
 - Provides reference defaults for new developers/installations
+
+**Note:** Legacy config location (`helixconfig.json` in project root) is automatically migrated to `config/helixconfig.json` on startup.
 
 ### Adding New Config Fields
 
@@ -239,7 +241,7 @@ When adding new configuration options:
 
 3. **Update user's config** (automatic via config->save() or manual copy from template)
 
-**Important:** NEVER commit `helixconfig.json` (top-level). Only commit template changes.
+**Important:** NEVER commit `config/helixconfig.json`. Only commit template changes.
 
 ## Multi-Display Development (macOS)
 

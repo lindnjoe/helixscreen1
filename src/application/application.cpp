@@ -18,6 +18,7 @@
 #include "asset_manager.h"
 #include "config.h"
 #include "display_manager.h"
+#include "hardware_validator.h"
 #include "moonraker_manager.h"
 #include "panel_factory.h"
 #include "print_history_manager.h"
@@ -396,7 +397,7 @@ void Application::auto_configure_mock_state() {
 
 bool Application::init_config() {
     m_config = Config::get_instance();
-    m_config->init("helixconfig.json");
+    m_config->init("config/helixconfig.json");
 
     // Initialize streaming policy from config (auto-detects thresholds from RAM)
     helix::StreamingPolicy::instance().load_from_config();
@@ -1003,6 +1004,19 @@ bool Application::connect_moonraker() {
                     get_global_print_status_panel().auto_configure_led_if_needed(
                         client_ptr->get_leds());
                 }
+
+                // Hardware validation: check config expectations vs discovered hardware
+                HardwareValidator validator;
+                auto validation_result =
+                    validator.validate(Config::get_instance(), client_ptr, ctx->first);
+                get_printer_state().set_hardware_validation_result(validation_result);
+
+                if (validation_result.has_issues()) {
+                    validator.notify_user(validation_result);
+                }
+
+                // Save session snapshot for next comparison (even if no issues)
+                validator.save_session_snapshot(Config::get_instance(), client_ptr);
 
                 // Detect helix_print plugin during discovery (not UI-initiated)
                 // This ensures plugin status is known early for UI gating

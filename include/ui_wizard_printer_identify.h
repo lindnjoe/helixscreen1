@@ -119,8 +119,8 @@ class WizardPrinterIdentifyStep {
     /**
      * @brief Find printer type index by name
      *
-     * @param printer_name Name to search for in PRINTER_TYPES_ROLLER
-     * @return Index in the roller, or DEFAULT_PRINTER_TYPE_INDEX if not found
+     * @param printer_name Name to search for in PrinterDetector roller
+     * @return Index in the roller, or get_unknown_index() if not found
      */
     static int find_printer_type_index(const std::string& printer_name);
 
@@ -163,7 +163,7 @@ class WizardPrinterIdentifyStep {
  * @brief Printer auto-detection hint (confidence + reasoning)
  */
 struct PrinterDetectionHint {
-    int type_index;        // Index into PrinterTypes::PRINTER_TYPES_ROLLER
+    int type_index;        // Index into PrinterDetector roller
     int confidence;        // 0-100 (>=70 = auto-select, <70 = suggest)
     std::string type_name; // Detected printer type name
 };

@@ -2108,3 +2108,87 @@ TEST_CASE("PrintStartCapabilities: Helper methods work correctly", "[printer][ca
         REQUIRE(missing == nullptr);
     }
 }
+
+// ============================================================================
+// User Extensions and Load Status Tests
+// ============================================================================
+
+TEST_CASE("PrinterDetector: get_load_status returns valid data", "[printer][extensions]") {
+    // Force reload to ensure clean state
+    PrinterDetector::reload();
+
+    auto status = PrinterDetector::get_load_status();
+
+    // Should have loaded successfully
+    REQUIRE(status.loaded);
+
+    // Should have loaded the bundled database
+    REQUIRE(status.total_printers > 50); // Bundled has ~59 printers
+
+    // Should have at least one loaded file (bundled database)
+    REQUIRE_FALSE(status.loaded_files.empty());
+    REQUIRE(status.loaded_files[0].find("printer_database.json") != std::string::npos);
+}
+
+TEST_CASE("PrinterDetector: reload clears and reloads data", "[printer][extensions]") {
+    // Get initial status
+    auto status1 = PrinterDetector::get_load_status();
+    REQUIRE(status1.loaded);
+
+    // Reload
+    PrinterDetector::reload();
+
+    // Get status again
+    auto status2 = PrinterDetector::get_load_status();
+    REQUIRE(status2.loaded);
+
+    // Should have same number of printers (no extensions in test environment)
+    REQUIRE(status1.total_printers == status2.total_printers);
+}
+
+TEST_CASE("PrinterDetector: roller includes Custom/Other and Unknown", "[printer][extensions]") {
+    PrinterDetector::reload();
+
+    const auto& names = PrinterDetector::get_roller_names();
+
+    REQUIRE_FALSE(names.empty());
+
+    // Custom/Other should be second to last
+    REQUIRE(names[names.size() - 2] == "Custom/Other");
+
+    // Unknown should be last
+    REQUIRE(names.back() == "Unknown");
+}
+
+TEST_CASE("PrinterDetector: get_unknown_index returns last index", "[printer][extensions]") {
+    PrinterDetector::reload();
+
+    int unknown_idx = PrinterDetector::get_unknown_index();
+    const auto& names = PrinterDetector::get_roller_names();
+
+    REQUIRE(unknown_idx == static_cast<int>(names.size() - 1));
+    REQUIRE(names[static_cast<size_t>(unknown_idx)] == "Unknown");
+}
+
+TEST_CASE("PrinterDetector: find_roller_index is case insensitive", "[printer][extensions]") {
+    PrinterDetector::reload();
+
+    // Find a known printer with different cases
+    int idx1 = PrinterDetector::find_roller_index("Voron 2.4");
+    int idx2 = PrinterDetector::find_roller_index("voron 2.4");
+    int idx3 = PrinterDetector::find_roller_index("VORON 2.4");
+
+    // All should find the same index (not Unknown)
+    REQUIRE(idx1 == idx2);
+    REQUIRE(idx2 == idx3);
+    REQUIRE(idx1 != PrinterDetector::get_unknown_index());
+}
+
+TEST_CASE("PrinterDetector: find_roller_index returns Unknown for missing printer",
+          "[printer][extensions]") {
+    PrinterDetector::reload();
+
+    int idx = PrinterDetector::find_roller_index("Nonexistent Printer XYZ123");
+
+    REQUIRE(idx == PrinterDetector::get_unknown_index());
+}

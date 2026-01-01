@@ -29,6 +29,7 @@ __pycache__/
 # Configuration
 # ============================================================================
 # Local config (user-specific, use config/helixconfig.json.template)
+config/helixconfig.json
 helixconfig.json
 
 # ============================================================================

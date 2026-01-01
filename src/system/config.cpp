@@ -31,6 +31,42 @@ void Config::init(const std::string& config_path) {
     path = config_path;
     struct stat buffer;
 
+    // Migration: Check for legacy config at old location (helixconfig.json in app root)
+    // If new location doesn't exist but old location does, migrate it
+    if (stat(config_path.c_str(), &buffer) != 0) {
+        // New config doesn't exist - check for legacy locations
+        const std::vector<std::string> legacy_paths = {
+            "helixconfig.json",                  // Old location (app root)
+            "/opt/helixscreen/helixconfig.json", // Legacy embedded install
+        };
+
+        for (const auto& legacy_path : legacy_paths) {
+            if (stat(legacy_path.c_str(), &buffer) == 0) {
+                spdlog::info("[Config] Found legacy config at {}, migrating to {}", legacy_path,
+                             config_path);
+
+                // Ensure config/ directory exists
+                fs::path config_dir = fs::path(config_path).parent_path();
+                if (!config_dir.empty() && !fs::exists(config_dir)) {
+                    fs::create_directories(config_dir);
+                }
+
+                // Copy legacy config to new location, then remove old file
+                try {
+                    fs::copy_file(legacy_path, config_path);
+                    // Remove legacy file to avoid confusion
+                    fs::remove(legacy_path);
+                    spdlog::info("[Config] Migration complete: {} -> {} (old file removed)",
+                                 legacy_path, config_path);
+                } catch (const fs::filesystem_error& e) {
+                    spdlog::warn("[Config] Migration failed: {}", e.what());
+                    // Fall through to create default config
+                }
+                break;
+            }
+        }
+    }
+
     // Default sensor configuration for auto-discovery fallback
     json sensors_conf = {{{"id", "extruder"},
                           {"display_name", "Extruder"},

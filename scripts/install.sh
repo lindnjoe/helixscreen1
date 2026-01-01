@@ -85,7 +85,8 @@ error_handler() {
     if [ -n "$BACKUP_CONFIG" ] && [ -f "$BACKUP_CONFIG" ]; then
         log_info "Restoring backed up configuration..."
         if [ -d "$INSTALL_DIR" ]; then
-            $SUDO cp "$BACKUP_CONFIG" "${INSTALL_DIR}/helixconfig.json" 2>/dev/null || true
+            $SUDO mkdir -p "${INSTALL_DIR}/config" 2>/dev/null || true
+            $SUDO cp "$BACKUP_CONFIG" "${INSTALL_DIR}/config/helixconfig.json" 2>/dev/null || true
         fi
     fi
 
@@ -519,11 +520,15 @@ extract_release() {
     if [ -d "${INSTALL_DIR}" ]; then
         ORIGINAL_INSTALL_EXISTS=true
 
-        # Backup existing config
-        if [ -f "${INSTALL_DIR}/helixconfig.json" ]; then
+        # Backup existing config (check new location first, then legacy)
+        if [ -f "${INSTALL_DIR}/config/helixconfig.json" ]; then
+            BACKUP_CONFIG="${TMP_DIR}/helixconfig.json.backup"
+            cp "${INSTALL_DIR}/config/helixconfig.json" "$BACKUP_CONFIG"
+            log_info "Backed up existing configuration (from config/)"
+        elif [ -f "${INSTALL_DIR}/helixconfig.json" ]; then
             BACKUP_CONFIG="${TMP_DIR}/helixconfig.json.backup"
             cp "${INSTALL_DIR}/helixconfig.json" "$BACKUP_CONFIG"
-            log_info "Backed up existing configuration"
+            log_info "Backed up existing configuration (legacy location)"
         fi
     fi
 
@@ -556,10 +561,11 @@ extract_release() {
         exit 1
     fi
 
-    # Restore config if it existed
+    # Restore config to new location (config/helixconfig.json)
     if [ -n "$BACKUP_CONFIG" ] && [ -f "$BACKUP_CONFIG" ]; then
-        $SUDO cp "$BACKUP_CONFIG" "${INSTALL_DIR}/helixconfig.json"
-        log_info "Restored existing configuration"
+        $SUDO mkdir -p "${INSTALL_DIR}/config"
+        $SUDO cp "$BACKUP_CONFIG" "${INSTALL_DIR}/config/helixconfig.json"
+        log_info "Restored existing configuration to config/"
     fi
 
     log_success "Extracted to ${INSTALL_DIR}"

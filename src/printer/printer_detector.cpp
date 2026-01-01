@@ -14,24 +14,49 @@
 #include <fstream>
 #include <unordered_set>
 
+#ifdef __APPLE__
+#include <filesystem>
+namespace fs = std::filesystem;
+#else
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
+#endif
+
 #include "hv/json.hpp"
 
 using json = nlohmann::json;
 
 // ============================================================================
-// JSON Database Loader
+// JSON Database Loader with User Extensions Support
 // ============================================================================
 
 namespace {
-// Lazy-loaded printer database
+
+/**
+ * @brief Extensible printer database with user override support
+ *
+ * Loads printer definitions from:
+ * 1. Bundled database: config/printer_database.json
+ * 2. User extensions: config/printers.d/*.json (higher priority)
+ *
+ * User definitions can:
+ * - Add new printers (unique ID)
+ * - Override bundled printers (same ID replaces bundled)
+ * - Disable bundled printers ("enabled": false)
+ */
 struct PrinterDatabase {
     json data;
     bool loaded = false;
+    std::vector<std::string> loaded_files;
+    std::vector<std::string> load_errors;
+    int user_overrides = 0;
+    int user_additions = 0;
 
     bool load() {
         if (loaded)
             return true;
 
+        // Phase 1: Load bundled database
         try {
             std::ifstream file("config/printer_database.json");
             if (!file.is_open()) {
@@ -41,14 +66,155 @@ struct PrinterDatabase {
             }
 
             data = json::parse(file);
-            loaded = true;
-            spdlog::info("[PrinterDetector] Loaded printer database version {}",
+            loaded_files.push_back("config/printer_database.json");
+            spdlog::info("[PrinterDetector] Loaded bundled printer database version {}",
                          data.value("version", "unknown"));
-            return true;
         } catch (const std::exception& e) {
             NOTIFY_ERROR("Printer database format error");
             LOG_ERROR_INTERNAL("[PrinterDetector] Failed to parse printer database: {}", e.what());
             return false;
+        }
+
+        // Phase 2: Merge user extensions from config/printers.d/
+        merge_user_extensions();
+
+        loaded = true;
+        return true;
+    }
+
+    void reload() {
+        loaded = false;
+        loaded_files.clear();
+        load_errors.clear();
+        user_overrides = 0;
+        user_additions = 0;
+        data = json();
+        load();
+    }
+
+  private:
+    void merge_user_extensions() {
+        const std::string extensions_dir = "config/printers.d";
+
+        // Check if extensions directory exists
+        if (!fs::exists(extensions_dir) || !fs::is_directory(extensions_dir)) {
+            spdlog::debug("[PrinterDetector] No user extensions directory at {}", extensions_dir);
+            return;
+        }
+
+        // Build index of bundled printers by ID for fast lookup
+        std::map<std::string, size_t> bundled_index;
+        if (data.contains("printers") && data["printers"].is_array()) {
+            for (size_t i = 0; i < data["printers"].size(); ++i) {
+                std::string id = data["printers"][i].value("id", "");
+                if (!id.empty()) {
+                    bundled_index[id] = i;
+                }
+            }
+        }
+
+        // Scan for JSON files in extensions directory
+        std::vector<std::string> extension_files;
+        try {
+            for (const auto& entry : fs::directory_iterator(extensions_dir)) {
+                if (entry.path().extension() == ".json") {
+                    extension_files.push_back(entry.path().string());
+                }
+            }
+        } catch (const std::exception& e) {
+            load_errors.push_back(fmt::format("Failed to scan {}: {}", extensions_dir, e.what()));
+            spdlog::warn("[PrinterDetector] {}", load_errors.back());
+            return;
+        }
+
+        // Sort for consistent ordering
+        std::sort(extension_files.begin(), extension_files.end());
+
+        // Process each extension file
+        for (const auto& file_path : extension_files) {
+            merge_extension_file(file_path, bundled_index);
+        }
+
+        if (user_overrides > 0 || user_additions > 0) {
+            spdlog::info("[PrinterDetector] User extensions: {} overrides, {} additions",
+                         user_overrides, user_additions);
+        }
+    }
+
+    void merge_extension_file(const std::string& file_path,
+                              std::map<std::string, size_t>& bundled_index) {
+        try {
+            std::ifstream file(file_path);
+            if (!file.is_open()) {
+                load_errors.push_back(fmt::format("Could not open {}", file_path));
+                spdlog::warn("[PrinterDetector] {}", load_errors.back());
+                return;
+            }
+
+            json extension_data = json::parse(file);
+            loaded_files.push_back(file_path);
+
+            // Validate structure
+            if (!extension_data.contains("printers") || !extension_data["printers"].is_array()) {
+                load_errors.push_back(fmt::format("{}: missing 'printers' array", file_path));
+                spdlog::warn("[PrinterDetector] {}", load_errors.back());
+                return;
+            }
+
+            // Process each printer in the extension
+            for (const auto& printer : extension_data["printers"]) {
+                std::string id = printer.value("id", "");
+                if (id.empty()) {
+                    load_errors.push_back(fmt::format("{}: printer missing 'id' field", file_path));
+                    spdlog::warn("[PrinterDetector] {}", load_errors.back());
+                    continue;
+                }
+
+                // Check if printer is disabled
+                bool enabled = printer.value("enabled", true);
+
+                // Check if this overrides a bundled printer
+                auto it = bundled_index.find(id);
+                if (it != bundled_index.end()) {
+                    // Override bundled printer
+                    if (!enabled) {
+                        // Mark as disabled (will be filtered out in roller)
+                        data["printers"][it->second]["enabled"] = false;
+                        spdlog::debug("[PrinterDetector] Disabled bundled printer '{}'", id);
+                    } else {
+                        // Replace bundled definition
+                        data["printers"][it->second] = printer;
+                        spdlog::debug("[PrinterDetector] User override for '{}'", id);
+                    }
+                    user_overrides++;
+                } else {
+                    // Add new printer
+                    if (enabled) {
+                        // Validate required fields for new printers
+                        std::string name = printer.value("name", "");
+                        if (name.empty()) {
+                            load_errors.push_back(fmt::format(
+                                "{}: printer '{}' missing 'name' field", file_path, id));
+                            spdlog::warn("[PrinterDetector] {}", load_errors.back());
+                            continue;
+                        }
+
+                        data["printers"].push_back(printer);
+                        bundled_index[id] = data["printers"].size() - 1;
+                        spdlog::debug("[PrinterDetector] Added user printer '{}'", name);
+                        user_additions++;
+                    }
+                }
+            }
+
+            spdlog::debug("[PrinterDetector] Processed extension file: {}", file_path);
+
+        } catch (const json::parse_error& e) {
+            load_errors.push_back(fmt::format("{}: JSON parse error: {}", file_path, e.what()));
+            spdlog::warn("[PrinterDetector] {}", load_errors.back());
+        } catch (const std::exception& e) {
+            load_errors.push_back(fmt::format("{}: {}", file_path, e.what()));
+            spdlog::warn("[PrinterDetector] {}", load_errors.back());
         }
     }
 };
@@ -479,6 +645,12 @@ struct RollerCache {
     std::vector<std::string> names; // Vector of names for index lookups
     bool built = false;
 
+    void reset() {
+        options.clear();
+        names.clear();
+        built = false;
+    }
+
     void build() {
         if (built)
             return;
@@ -502,6 +674,12 @@ struct RollerCache {
 
         // Collect all printer names that should appear in roller
         for (const auto& printer : g_database.data["printers"]) {
+            // Check enabled flag (defaults to true if missing) - allows user to hide bundled
+            bool enabled = printer.value("enabled", true);
+            if (!enabled) {
+                continue;
+            }
+
             // Check show_in_roller flag (defaults to true if missing)
             bool show = printer.value("show_in_roller", true);
             if (!show) {
@@ -695,4 +873,38 @@ PrinterDetector::get_print_start_capabilities(const std::string& printer_name) {
 
     spdlog::debug("[PrinterDetector] No capabilities found for printer '{}'", printer_name);
     return result;
+}
+
+// ============================================================================
+// Reload and Status Functions
+// ============================================================================
+
+void PrinterDetector::reload() {
+    spdlog::info("[PrinterDetector] Reloading printer database and extensions");
+    g_roller_cache.reset();
+    g_database.reload();
+}
+
+PrinterDetector::LoadStatus PrinterDetector::get_load_status() {
+    // Ensure database is loaded
+    g_database.load();
+
+    LoadStatus status;
+    status.loaded = g_database.loaded;
+    status.total_printers = 0;
+    status.user_overrides = g_database.user_overrides;
+    status.user_additions = g_database.user_additions;
+    status.loaded_files = g_database.loaded_files;
+    status.load_errors = g_database.load_errors;
+
+    // Count enabled printers
+    if (g_database.data.contains("printers") && g_database.data["printers"].is_array()) {
+        for (const auto& printer : g_database.data["printers"]) {
+            if (printer.value("enabled", true)) {
+                status.total_printers++;
+            }
+        }
+    }
+
+    return status;
 }

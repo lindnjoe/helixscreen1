@@ -111,7 +111,8 @@ static void setup_signal_handlers() {
  * @return Timeout in seconds (0 = disabled), or default on failure
  */
 static int read_auto_restart_timeout() {
-    const char* paths[] = {"helixconfig.json", "/opt/helixscreen/helixconfig.json"};
+    const char* paths[] = {"config/helixconfig.json", "helixconfig.json",
+                           "/opt/helixscreen/helixconfig.json"};
 
     for (const char* path : paths) {
         std::ifstream file(path);
@@ -140,7 +141,8 @@ static int read_auto_restart_timeout() {
  * @brief Read brightness from helixconfig.json (same as splash)
  */
 static int read_config_brightness(int default_value = 100) {
-    const char* paths[] = {"helixconfig.json", "/opt/helixscreen/helixconfig.json"};
+    const char* paths[] = {"config/helixconfig.json", "helixconfig.json",
+                           "/opt/helixscreen/helixconfig.json"};
 
     for (const char* path : paths) {
         std::ifstream file(path);

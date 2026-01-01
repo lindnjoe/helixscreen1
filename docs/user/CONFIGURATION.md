@@ -27,15 +27,17 @@ Complete reference for HelixScreen configuration options.
 
 | Platform | Location |
 |----------|----------|
-| MainsailOS | `/opt/helixscreen/helixconfig.json` |
-| Adventurer 5M | `/opt/helixscreen/helixconfig.json` |
-| Development | `./helixconfig.json` (project root) |
+| MainsailOS | `/opt/helixscreen/config/helixconfig.json` |
+| Adventurer 5M | `/opt/helixscreen/config/helixconfig.json` |
+| Development | `./config/helixconfig.json` (in config/ directory) |
 
 The configuration file is created automatically by the first-run wizard. You can also copy from the template:
 
 ```bash
-cp config/helixconfig.json.template helixconfig.json
+cp config/helixconfig.json.template config/helixconfig.json
 ```
+
+**Note:** Legacy config locations (`helixconfig.json` in app root or `/opt/helixscreen/helixconfig.json`) are automatically migrated to the new location on startup.
 
 ---
 
@@ -45,7 +47,7 @@ The configuration file is JSON format with several top-level sections:
 
 ```json
 {
-  "config_path": "helixconfig.json",
+  "config_path": "config/helixconfig.json",
   "animations_enabled": true,
   "dark_mode": true,
   "display_rotate": 0,
@@ -494,7 +496,7 @@ Environment="HELIX_TOUCH_DEVICE=/dev/input/event0"
 
 ```json
 {
-  "config_path": "helixconfig.json",
+  "config_path": "config/helixconfig.json",
   "animations_enabled": true,
   "dark_mode": true,
   "display_rotate": 0,

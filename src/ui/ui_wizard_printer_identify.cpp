@@ -16,7 +16,6 @@
 #include "moonraker_client.h"
 #include "printer_detector.h"
 #include "printer_images.h"
-#include "printer_types.h"
 #include "static_panel_registry.h"
 #include "wizard_config_paths.h"
 
