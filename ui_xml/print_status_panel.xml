@@ -25,8 +25,7 @@
                height="100%" flex_grow="5" style_pad_all="0" style_radius="#border_radius" style_clip_corner="true">
         <!-- All children overlap as direct children of the card (matching print_file_detail pattern) -->
         <!-- Pre-rendered gradient background (shown in thumbnail[0] and 2D[2] modes, hidden in 3D[1]) -->
-        <lv_image name="gradient_background"
-                  width="100%" height="100%" src="A:assets/images/gradient-panel-medium.bin">
+        <lv_image name="gradient_background" width="100%" height="100%" src="A:assets/images/gradient-panel-medium.bin">
           <lv_obj-bind_flag_if_eq subject="gcode_viewer_mode" flag="hidden" ref_value="1"/>
         </lv_image>
         <!-- G-code Viewer (shown in 3D[1] and 2D[2] modes, hidden in thumbnail[0]) -->
@@ -62,39 +61,37 @@
                   style_radius="#space_xs" style_border_width="0"/>
         </lv_obj>
         <!-- PRINT COMPLETE OVERLAY: Shown when print finishes successfully -->
-        <!-- Hidden by default. Binding removes hidden ONLY when state == COMPLETE (3) -->
+        <!-- Hidden by default. Binding removes hidden ONLY when outcome == COMPLETE (1) -->
         <lv_obj name="print_complete_overlay"
                 width="100%" height="100%" align="center" style_bg_opa="0" style_border_width="0" style_radius="0"
                 style_pad_all="#space_lg" flex_flow="column" style_flex_main_place="center"
                 style_flex_cross_place="center" style_flex_track_place="center" style_pad_gap="#space_sm"
                 scrollable="false" hidden="true">
-          <lv_obj-bind_flag_if_not_eq subject="print_state_enum" flag="hidden" ref_value="3"/>
+          <lv_obj-bind_flag_if_not_eq subject="print_outcome" flag="hidden" ref_value="1"/>
           <!-- Green success badge with checkmark (animated on appearance) -->
           <lv_obj name="success_badge"
                   width="content" height="content" style_bg_color="#success_color" style_bg_opa="255"
                   style_radius="#space_lg" style_pad_left="#space_md" style_pad_right="#space_md"
-                  style_pad_top="#space_sm" style_pad_bottom="#space_sm" flex_flow="row"
-                  style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_sm"
-                  scrollable="false">
+                  style_pad_top="#space_sm" style_pad_bottom="#space_sm" flex_flow="row" style_flex_main_place="center"
+                  style_flex_cross_place="center" style_pad_gap="#space_sm" scrollable="false">
             <icon src="check_circle" size="md" color="#text_primary"/>
             <text_heading text="Print Complete!" style_text_color="#text_primary"/>
           </lv_obj>
         </lv_obj>
         <!-- PRINT CANCELLED OVERLAY: Shown when print is cancelled -->
-        <!-- Hidden by default. Binding removes hidden ONLY when state == CANCELLED (4) -->
+        <!-- Hidden by default. Binding removes hidden ONLY when outcome == CANCELLED (2) -->
         <lv_obj name="print_cancelled_overlay"
                 width="100%" height="100%" align="center" style_bg_opa="0" style_border_width="0" style_radius="0"
                 style_pad_all="#space_lg" flex_flow="column" style_flex_main_place="center"
                 style_flex_cross_place="center" style_flex_track_place="center" style_pad_gap="#space_sm"
                 scrollable="false" hidden="true">
-          <lv_obj-bind_flag_if_not_eq subject="print_state_enum" flag="hidden" ref_value="4"/>
+          <lv_obj-bind_flag_if_not_eq subject="print_outcome" flag="hidden" ref_value="2"/>
           <!-- Orange warning badge with cancel icon (animated on appearance) -->
           <lv_obj name="cancel_badge"
                   width="content" height="content" style_bg_color="#warning_color" style_bg_opa="255"
                   style_radius="#space_lg" style_pad_left="#space_md" style_pad_right="#space_md"
-                  style_pad_top="#space_sm" style_pad_bottom="#space_sm" flex_flow="row"
-                  style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_sm"
-                  scrollable="false">
+                  style_pad_top="#space_sm" style_pad_bottom="#space_sm" flex_flow="row" style_flex_main_place="center"
+                  style_flex_cross_place="center" style_pad_gap="#space_sm" scrollable="false">
             <icon src="cancel" size="md" color="#text_primary"/>
             <text_heading text="Print Cancelled" style_text_color="#text_primary"/>
           </lv_obj>
@@ -107,8 +104,8 @@
           <lv_obj name="metadata_overlay"
                   width="100%" height="99" align="bottom_mid" style_bg_opa="160" style_border_width="0"
                   style_radius="#border_radius" style_pad_left="#space_sm" style_pad_right="#space_sm"
-                  style_pad_top="#space_md" style_pad_bottom="#space_sm" style_pad_gap="#space_xs"
-                  flex_flow="column" scrollable="false">
+                  style_pad_top="#space_md" style_pad_bottom="#space_sm" style_pad_gap="#space_xs" flex_flow="column"
+                  scrollable="false">
             <!-- Print Progress Bar -->
             <lv_bar name="print_progress"
                     width="100%" height="#space_md" style_bg_opa="255" style_bg_color="#card_bg_dark"
@@ -237,22 +234,23 @@
               <icon src="tune" size="sm"/>
               <text_body text="Tune"/>
             </lv_button>
-            <!-- Cancel button: hidden when state == CANCELLED (4) -->
+            <!-- Cancel button: hidden when outcome == CANCELLED (2) -->
             <lv_button name="btn_cancel"
                        height="#button_height_large" flex_grow="1" style_border_width="0" style_bg_color="#error_color"
                        flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center"
                        style_flex_track_place="center" style_pad_gap="#space_xs">
-              <lv_obj-bind_flag_if_eq subject="print_state_enum" flag="hidden" ref_value="4"/>
+              <lv_obj-bind_flag_if_eq subject="print_outcome" flag="hidden" ref_value="2"/>
               <event_cb trigger="clicked" callback="on_print_status_cancel"/>
               <icon src="stop" size="sm" color="#text_primary"/>
               <text_body text="Cancel" style_text_color="#text_primary"/>
             </lv_button>
-            <!-- Reprint button: shown only when state == CANCELLED (4) -->
+            <!-- Reprint button: shown only when outcome == CANCELLED (2) -->
             <lv_button name="btn_reprint"
-                       height="#button_height_large" flex_grow="1" style_border_width="0" style_bg_color="#primary_color"
-                       flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center"
-                       style_flex_track_place="center" style_pad_gap="#space_xs" hidden="true">
-              <lv_obj-bind_flag_if_not_eq subject="print_state_enum" flag="hidden" ref_value="4"/>
+                       height="#button_height_large" flex_grow="1" style_border_width="0"
+                       style_bg_color="#primary_color" flex_flow="row" style_flex_main_place="center"
+                       style_flex_cross_place="center" style_flex_track_place="center" style_pad_gap="#space_xs"
+                       hidden="true">
+              <lv_obj-bind_flag_if_not_eq subject="print_outcome" flag="hidden" ref_value="2"/>
               <event_cb trigger="clicked" callback="on_print_status_reprint"/>
               <icon src="refresh" size="sm" color="#text_primary"/>
               <text_body text="Reprint" style_text_color="#text_primary"/>

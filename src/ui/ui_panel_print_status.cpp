@@ -1415,16 +1415,9 @@ void PrintStatusPanel::on_print_state_changed(PrintJobState job_state) {
         break;
     }
 
-    // Special handling for Complete/Cancelled -> Idle transition:
-    // Moonraker/Klipper often transitions to Standby shortly after Complete/Cancelled.
-    // We want to keep the badge and Reprint button visible with final stats
-    // until a new print starts (Printing state).
-    if ((current_state_ == PrintState::Complete || current_state_ == PrintState::Cancelled) &&
-        new_state == PrintState::Idle) {
-        spdlog::debug("[{}] Ignoring {} -> Idle transition (preserving state for UI)", get_name(),
-                      current_state_ == PrintState::Complete ? "Complete" : "Cancelled");
-        return;
-    }
+    // Note: Badge/Reprint button visibility is now handled via the print_outcome subject,
+    // which persists the terminal state (Complete/Cancelled/Error) until a new print starts.
+    // The print_state_enum subject now always reflects the true Moonraker state.
 
     // Only update if state actually changed
     if (new_state != current_state_) {

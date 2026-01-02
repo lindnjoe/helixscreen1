@@ -66,6 +66,25 @@ enum class PrintJobState {
 };
 
 /**
+ * @brief Terminal outcome of a print job (for UI persistence)
+ *
+ * Captures how the last print ended. Unlike PrintJobState (which always reflects
+ * the current Moonraker state, including STANDBY after completion), PrintOutcome
+ * persists the terminal state until a new print starts.
+ *
+ * This allows the UI to show "Print Complete!" or "Print Cancelled" badges and
+ * Reprint buttons even after Moonraker transitions to STANDBY.
+ *
+ * @note NONE means either no print has occurred, or we're in the middle of a print.
+ */
+enum class PrintOutcome {
+    NONE = 0,      ///< No completed print (printing, or never printed)
+    COMPLETE = 1,  ///< Last print finished successfully
+    CANCELLED = 2, ///< Last print was cancelled by user
+    ERROR = 3      ///< Last print failed with error
+};
+
+/**
  * @brief Parse Moonraker print state string to PrintJobState enum
  *
  * Converts Moonraker's print_stats.state string to the corresponding enum.
@@ -293,6 +312,22 @@ class PrinterState {
      */
     lv_subject_t* get_print_active_subject() {
         return &print_active_;
+    }
+
+    /**
+     * @brief Get print outcome subject for UI binding
+     *
+     * Integer subject holding PrintOutcome enum value for terminal print state.
+     * Unlike print_state_enum (which reflects live Moonraker state), print_outcome
+     * persists how the last print ended until a new print starts.
+     *
+     * Use this for showing completion/cancellation UI (badges, reprint buttons)
+     * that should persist after Moonraker transitions back to STANDBY.
+     *
+     * @return Pointer to integer subject (cast value to PrintOutcome)
+     */
+    lv_subject_t* get_print_outcome_subject() {
+        return &print_outcome_;
     }
 
     /**
@@ -1043,15 +1078,15 @@ class PrinterState {
     lv_subject_t bed_target_;
 
     // Print progress subjects
-    lv_subject_t print_progress_;          // Integer 0-100
-    lv_subject_t print_filename_;          // String buffer
-    lv_subject_t print_state_;             // String buffer (for UI display binding)
-    lv_subject_t print_state_enum_;        // Integer: PrintJobState enum (for type-safe logic)
-    bool complete_standby_logged_ = false; // Log spam guard for COMPLETE->STANDBY
-    lv_subject_t print_active_;            // Integer: 1 when PRINTING/PAUSED, 0 otherwise
-    lv_subject_t print_show_progress_;     // Integer: 1 when active AND not in start phase
-    lv_subject_t print_display_filename_;  // String: clean filename for UI display
-    lv_subject_t print_thumbnail_path_;    // String: LVGL path to current print thumbnail
+    lv_subject_t print_progress_;         // Integer 0-100
+    lv_subject_t print_filename_;         // String buffer
+    lv_subject_t print_state_;            // String buffer (for UI display binding)
+    lv_subject_t print_state_enum_;       // Integer: PrintJobState enum (for type-safe logic)
+    lv_subject_t print_outcome_;          // Integer: PrintOutcome enum (terminal state persistence)
+    lv_subject_t print_active_;           // Integer: 1 when PRINTING/PAUSED, 0 otherwise
+    lv_subject_t print_show_progress_;    // Integer: 1 when active AND not in start phase
+    lv_subject_t print_display_filename_; // String: clean filename for UI display
+    lv_subject_t print_thumbnail_path_;   // String: LVGL path to current print thumbnail
 
     // Layer tracking subjects (from Moonraker print_stats.info)
     lv_subject_t print_layer_current_; // Current layer (0-based)

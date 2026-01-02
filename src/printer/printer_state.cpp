@@ -207,6 +207,7 @@ void PrinterState::init_subjects(bool register_xml) {
     lv_subject_init_string(&print_state_, print_state_buf_, nullptr, sizeof(print_state_buf_),
                            "standby");
     lv_subject_init_int(&print_state_enum_, static_cast<int>(PrintJobState::STANDBY));
+    lv_subject_init_int(&print_outcome_, static_cast<int>(PrintOutcome::NONE));
     lv_subject_init_int(&print_active_, 0);        // 0 when idle, 1 when PRINTING/PAUSED
     lv_subject_init_int(&print_show_progress_, 0); // 1 when active AND not in start phase
     lv_subject_init_string(&print_display_filename_, print_display_filename_buf_, nullptr,
@@ -341,6 +342,7 @@ void PrinterState::init_subjects(bool register_xml) {
         lv_xml_register_subject(NULL, "print_filename", &print_filename_);
         lv_xml_register_subject(NULL, "print_state", &print_state_);
         lv_xml_register_subject(NULL, "print_state_enum", &print_state_enum_);
+        lv_xml_register_subject(NULL, "print_outcome", &print_outcome_);
         lv_xml_register_subject(NULL, "print_active", &print_active_);
         lv_xml_register_subject(NULL, "print_show_progress", &print_show_progress_);
         lv_xml_register_subject(NULL, "print_display_filename", &print_display_filename_);
@@ -524,30 +526,40 @@ void PrinterState::update_from_status(const json& state) {
             // Update enum subject (for type-safe logic)
             PrintJobState new_state = parse_print_job_state(state_str.c_str());
             auto current_state = static_cast<PrintJobState>(lv_subject_get_int(&print_state_enum_));
+            auto current_outcome = static_cast<PrintOutcome>(lv_subject_get_int(&print_outcome_));
 
-            // Guard: Preserve COMPLETE/CANCELLED states when transitioning to STANDBY
-            // Moonraker sends "standby" shortly after print completes or cancels.
-            // We want to keep showing the badge/reprint button until a NEW print starts.
-            // Only a transition to PRINTING should clear the complete/cancelled state.
-            bool preserve_state = (current_state == PrintJobState::COMPLETE ||
-                                   current_state == PrintJobState::CANCELLED) &&
-                                  new_state == PrintJobState::STANDBY;
-            if (preserve_state) {
-                if (!complete_standby_logged_) {
-                    spdlog::debug("[PrinterState] Ignoring {} -> STANDBY transition "
-                                  "(preserving state for UI)",
-                                  current_state == PrintJobState::COMPLETE ? "COMPLETE"
-                                                                           : "CANCELLED");
-                    complete_standby_logged_ = true;
+            // Update print_outcome based on state transitions:
+            // - Set outcome when print reaches a terminal state (COMPLETE/CANCELLED/ERROR)
+            // - Clear outcome when a NEW print starts (PRINTING from non-PAUSED)
+            if (new_state != current_state) {
+                // Entering a terminal state: record the outcome
+                if (new_state == PrintJobState::COMPLETE) {
+                    spdlog::info("[PrinterState] Print completed - setting outcome=COMPLETE");
+                    lv_subject_set_int(&print_outcome_, static_cast<int>(PrintOutcome::COMPLETE));
+                } else if (new_state == PrintJobState::CANCELLED) {
+                    spdlog::info("[PrinterState] Print cancelled - setting outcome=CANCELLED");
+                    lv_subject_set_int(&print_outcome_, static_cast<int>(PrintOutcome::CANCELLED));
+                } else if (new_state == PrintJobState::ERROR) {
+                    spdlog::info("[PrinterState] Print error - setting outcome=ERROR");
+                    lv_subject_set_int(&print_outcome_, static_cast<int>(PrintOutcome::ERROR));
                 }
-                // Still update print_active to 0 below, but keep print_state_enum unchanged
-            } else {
-                complete_standby_logged_ = false; // Reset on any actual state change
-                if (new_state != current_state) {
-                    spdlog::info("[PrinterState] print_stats.state: '{}' -> enum {} (was {})",
-                                 state_str, static_cast<int>(new_state),
-                                 static_cast<int>(current_state));
+                // Starting a NEW print: clear the previous outcome
+                // (only when transitioning TO PRINTING from a non-PAUSED state)
+                else if (new_state == PrintJobState::PRINTING &&
+                         current_state != PrintJobState::PAUSED) {
+                    if (current_outcome != PrintOutcome::NONE) {
+                        spdlog::info("[PrinterState] New print starting - clearing outcome");
+                        lv_subject_set_int(&print_outcome_, static_cast<int>(PrintOutcome::NONE));
+                    }
                 }
+            }
+
+            // Always update print_state_enum to reflect true Moonraker state
+            // (print_outcome handles UI persistence for terminal states)
+            if (new_state != current_state) {
+                spdlog::info("[PrinterState] print_stats.state: '{}' -> enum {} (was {})",
+                             state_str, static_cast<int>(new_state),
+                             static_cast<int>(current_state));
                 lv_subject_set_int(&print_state_enum_, static_cast<int>(new_state));
             }
 
