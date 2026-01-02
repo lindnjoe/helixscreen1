@@ -45,7 +45,7 @@
 
 
 ### [L009] [***--|-----] Icon font sync workflow
-- **Uses**: 9 | **Velocity**: 0.01 | **Learned**: 2025-12-14 | **Last**: 2026-01-01 | **Category**: gotcha
+- **Uses**: 10 | **Velocity**: 0.02 | **Learned**: 2025-12-14 | **Last**: 2026-01-01 | **Category**: gotcha
 > After adding icon to codepoints.h: add to regen_mdi_fonts.sh, run make regen-fonts, then rebuild. Forgetting any step = missing icon
 
 
@@ -120,7 +120,7 @@
 
 
 ### [L027] [***--|-----] Worktree initialization
-- **Uses**: 6 | **Velocity**: 0.01 | **Learned**: 2025-12-24 | **Last**: 2025-12-28 | **Category**: pattern
+- **Uses**: 7 | **Velocity**: 0.02 | **Learned**: 2025-12-24 | **Last**: 2026-01-01 | **Category**: pattern
 > When creating a git worktree, ALWAYS run ./scripts/init-worktree.sh BEFORE any commits. Worktrees don't auto-initialize submodules - uninitialized submodules appear as deletions and will be silently removed from git's tree on your next commit.
 
 
@@ -140,12 +140,12 @@
 
 
 ### [L031] [***--|-----] XML no recompile
-- **Uses**: 7 | **Velocity**: 0.01 | **Learned**: 2025-12-27 | **Last**: 2025-12-31 | **Category**: gotcha
+- **Uses**: 8 | **Velocity**: 0.01 | **Learned**: 2025-12-27 | **Last**: 2026-01-01 | **Category**: gotcha
 > XML layout changes (ui_xml/*.xml) don't require recompilation - just restart the app. Only C++ changes need make.
 
 
-### [L032] [*****|+----] Re-stage after pre-commit format
-- **Uses**: 46 | **Velocity**: 1.26 | **Learned**: 2025-12-27 | **Last**: 2026-01-01 | **Category**: correction
+### [L032] [*****|-----] Re-stage after pre-commit format
+- **Uses**: 49 | **Velocity**: 0.27 | **Learned**: 2025-12-27 | **Last**: 2026-01-02 | **Category**: correction
 > When pre-commit hook auto-formats files, they are NOT automatically re-staged. Always check git status after a commit and amend if the hook formatted files. Look for 'Auto-formatted: <file>' messages and run 'git add -u && git commit --amend --no-edit'.
 
 
@@ -192,3 +192,8 @@
 ### [L042] [*----|-----] XML bind_flag exclusive visibility
 - **Uses**: 2 | **Velocity**: 0.01 | **Learned**: 2025-12-31 | **Last**: 2025-12-31 | **Category**: pattern
 > Multiple bind_flag_if_eq on same object creates independent observers where last one wins (race condition). For 'show only when X=value' logic, use single bind_flag_if_not_eq instead. Example: bind_flag_if_not_eq ref_value="0" shows only when value IS 0.
+
+
+### [L043] [*----|-----] Sonnet for structural reviews
+- **Uses**: 2 | **Velocity**: 0.01 | **Learned**: 2026-01-01 | **Last**: 2026-01-01 | **Category**: pattern
+> Use Sonnet (not Haiku) for architectural-level code reviews, structural changes, or final comprehensive reviews. Haiku is fine for quick single-file spot-checks with clear pass/fail criteria.

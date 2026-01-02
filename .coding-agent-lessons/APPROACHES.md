@@ -21,11 +21,11 @@
 ---
 
 ### [A002] Move hardware row under SYSTEM, remove section hea...
-- **Status**: in_progress | **Phase**: research | **Agent**: user
-- **Created**: 2026-01-01 | **Updated**: 2026-01-01
+- **Status**: in_progress | **Phase**: implementing | **Agent**: user
+- **Created**: 2026-01-01 | **Updated**: 2026-01-02
 - **Files**: 
 - **Description**: 
-- **Checkpoint**: Great! I've completed the fan control refactoring with all medium priority issues fixed. The commit is on main ready for the next phase.
+- **Checkpoint**: Looking at the conversation excerpt above, here's a VERY BRIEF summary:
 
 **Tried**:
 1. [success] Move hardware row under SYSTEM, remove section header
@@ -106,6 +106,60 @@
 76. [success] [A002] Add per-fan reactive subjects for real-time speed updates
 77. [success] [A002] Code review and fix high/medium priority issues
 78. [success] [A002] Final commit
+79. [success] Document architectural debt in docs/ for future work
+80. [success] Fix layer violations in ams_state.cpp (dynamic_cast to backends)
+81. [success] Fix layer violations in gcode_streaming_controller.cpp
+82. [success] Create panel singleton macro to reduce boilerplate
+83. [success] Create SubjectManagedPanel base class
+84. [success] Code review all changes
+85. [success] Phase 1: Create worktree and branch
+86. [success] Phase 2: Implement Moonraker API (get/set machine limits)
+87. [success] Phase 2: Code review - API implementation
+88. [success] Phase 3: Create machine_limits_overlay.xml
+89. [success] Phase 3: Code review - XML layout
+90. [success] Phase 4: C++ integration in SettingsPanel
+91. [success] Phase 4: Code review - C++ integration
+92. [success] Phase 5: Testing and polish
+93. [success] Phase 5: Final code review (tip to stern)
+94. [success] Commit changes
+95. [success] Part 1: Root cause found - globals.xml has wrong codepoints
+96. [success] Part 2: Create scripts/gen_icon_consts.py
+97. [success] Part 2: Add marker comments to globals.xml
+98. [success] Part 2: Run generator to populate icons
+99. [success] Part 2: Add Makefile target
+100. [success] Rebuild and test tuning panel icons
+101. [success] Update print_tune_panel.xml with dual-icon visibility binding
+102. [success] Test with mock printer
+103. [success] Add init_early() declaration to logging_init.h
+104. [success] Add init_early() implementation to logging_init.cpp
+105. [success] Call init_early() at start of Application::run()
+106. [success] Build and test --help
+107. [success] Update printer_detector.cpp paths
+108. [success] Update printer_detector.h comments
+109. [success] Update mk/cross.mk preset path
+110. [success] git mv config/printers to config/presets
+111. [success] Update config/presets/README.md
+112. [success] Create config/printer_database.d/README.md
+113. [success] Update CLAUDE.md file tree
+114. [success] Create docs/GALLERY.md with all 8 screenshots
+115. [success] Create docs/FEATURES.md with detailed features + full comparison
+116. [success] Trim README.md to ~175 lines
+117. [success] Phase 1: Delete orphaned icon migration scripts and test XML
+118. [success] Phase 2: Delete test/debug scripts
+119. [success] Phase 3: Remove dead function from InputShaperPanel
+120. [success] Phase 4: Verify and delete unused headers
+121. [success] Phase 5: Build and test
+122. [success] Write new ROADMAP.md following plan template
+123. [success] Validate line count (~235 lines)
+124. [success] Verify all numbers are current (tests, panels, printers)
+125. [success] Rewrite config/helix_macros.cfg with merged content
+126. [success] Refactor macro_manager.cpp to read from file
+127. [success] Update macro_manager.h header
+128. [success] Update print_start_collector.cpp signal detection
+129. [success] Update moonraker-plugin/helix_print.py
+130. [success] Delete config/helix_phase_tracking.cfg
+131. [success] Update docs/PRINT_START_INTEGRATION.md
+132. [success] Update tests
 
 **Next**: Final report and commit
 
