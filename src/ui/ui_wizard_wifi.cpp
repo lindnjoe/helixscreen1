@@ -76,9 +76,7 @@ struct WifiWizardNetworkItemData {
     lv_subject_t is_secured;        // Stack-allocated subject
     lv_subject_t signal_icon_state; // Combined state 1-8 for icon visibility binding
     char ssid_buffer[64];
-    WizardWifiStep* parent;                            // Back-reference for callbacks
-    lv_observer_t* ssid_observer = nullptr;            // Track observer for cleanup
-    std::vector<lv_observer_t*> signal_icon_observers; // Track all 8 signal icon observers
+    WizardWifiStep* parent; // Back-reference for callbacks
 
     WifiWizardNetworkItemData(const WiFiNetwork& net, WizardWifiStep* p) : network(net), parent(p) {
         strncpy(ssid_buffer, network.ssid.c_str(), sizeof(ssid_buffer) - 1);
@@ -93,9 +91,11 @@ struct WifiWizardNetworkItemData {
     }
 
     ~WifiWizardNetworkItemData() {
-        // Subjects are stack members - they're automatically destroyed
-        // Note: Observers must be removed BEFORE this destructor runs
-        // (handled in network_item_delete_cb via LV_EVENT_DELETE)
+        // Deinit subjects before memory is freed
+        lv_subject_deinit(&ssid);
+        lv_subject_deinit(&signal_strength);
+        lv_subject_deinit(&is_secured);
+        lv_subject_deinit(&signal_icon_state);
     }
 };
 
@@ -312,10 +312,10 @@ void WizardWifiStep::populate_network_list(const std::vector<WiFiNetwork>& netwo
         // Create per-instance data with back-reference to this step
         WifiWizardNetworkItemData* item_data = new WifiWizardNetworkItemData(network, this);
 
-        // Bind SSID label (save observer for cleanup)
+        // Bind SSID label to subject (LVGL auto-cleans observers when widget is deleted)
         lv_obj_t* ssid_label = lv_obj_find_by_name(item, "ssid_label");
         if (ssid_label) {
-            item_data->ssid_observer = lv_label_bind_text(ssid_label, &item_data->ssid, nullptr);
+            lv_label_bind_text(ssid_label, &item_data->ssid, nullptr);
         }
 
         // Set security type text
@@ -329,9 +329,9 @@ void WizardWifiStep::populate_network_list(const std::vector<WiFiNetwork>& netwo
         }
 
         // Bind signal icons - 8 icons in container, show only the one matching state
+        // LVGL automatically removes observers when child widgets are deleted
         lv_obj_t* signal_icons = lv_obj_find_by_name(item, "signal_icons");
         if (signal_icons) {
-            // Icon names and their corresponding states
             static const struct {
                 const char* name;
                 int state;
@@ -346,12 +346,8 @@ void WizardWifiStep::populate_network_list(const std::vector<WiFiNetwork>& netwo
                 lv_obj_t* icon = lv_obj_find_by_name(signal_icons, binding.name);
                 if (icon) {
                     // Bind visibility: hidden when state != ref_value
-                    // Store observer for cleanup - prevents crash when deleting network items
-                    lv_observer_t* obs = lv_obj_bind_flag_if_not_eq(
-                        icon, &item_data->signal_icon_state, LV_OBJ_FLAG_HIDDEN, binding.state);
-                    if (obs) {
-                        item_data->signal_icon_observers.push_back(obs);
-                    }
+                    lv_obj_bind_flag_if_not_eq(icon, &item_data->signal_icon_state,
+                                               LV_OBJ_FLAG_HIDDEN, binding.state);
                 }
             }
 
@@ -430,23 +426,10 @@ void WizardWifiStep::network_item_delete_cb(lv_event_t* e) {
     if (!data)
         return;
 
-    // Remove ALL observers BEFORE freeing subjects (DELETE event fires before children deleted)
-    // This is critical: if we delete subjects while observers still point to them,
-    // LVGL will crash when trying to walk the corrupted observer linked list.
-    if (data->ssid_observer) {
-        lv_observer_remove(data->ssid_observer);
-        data->ssid_observer = nullptr;
-    }
+    // NOTE: Observers are auto-removed when LVGL deletes child widgets (before this callback).
+    // Do NOT manually remove them - the observer pointers are already freed = use-after-free.
 
-    // Remove all signal icon observers (8 total, one per icon visibility binding)
-    for (lv_observer_t* obs : data->signal_icon_observers) {
-        if (obs) {
-            lv_observer_remove(obs);
-        }
-    }
-    data->signal_icon_observers.clear();
-
-    // Clear user data and free
+    // Free the network item data (destructor calls lv_subject_deinit on all subjects)
     lv_obj_set_user_data(obj, nullptr);
     delete data;
 }
