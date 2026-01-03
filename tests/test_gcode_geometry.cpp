@@ -1,10 +1,5 @@
+// Copyright (C) 2025-2026 356C LLC
 // SPDX-License-Identifier: GPL-3.0-or-later
-/*
- * Copyright (C) 2025 HelixScreen Contributors
- *
- * Geometry validation tests for G-code tube generation
- * Tests the fix for perpendicular vector cross product orientation
- */
 
 #include "gcode_geometry_builder.h"
 #include "gcode_parser.h"

@@ -1,5 +1,5 @@
+// Copyright (C) 2025-2026 356C LLC
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Copyright (c) 2025 Preston Brown
 
 #include "ui_test_utils.h"
 

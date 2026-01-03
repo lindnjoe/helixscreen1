@@ -1,3 +1,4 @@
+// Copyright (C) 2025-2026 356C LLC
 // SPDX-License-Identifier: GPL-3.0-or-later
 /// @file nozzle_renderer_common.h
 /// @brief Common helper functions for nozzle/toolhead rendering

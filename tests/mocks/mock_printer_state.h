@@ -1,4 +1,4 @@
-// Copyright 2025 356C LLC
+// Copyright (C) 2025-2026 356C LLC
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #ifndef MOCK_PRINTER_STATE_H
@@ -48,7 +48,7 @@ class MockPrinterState {
 
     std::atomic<int> print_state{0}; ///< Maps to PrintJobState enum (0=standby, 1=printing, etc.)
     std::atomic<double> print_progress{0.0}; ///< Progress from 0.0 to 1.0
-    std::string current_filename;            ///< Currently printing file (protected by filename_mutex)
+    std::string current_filename; ///< Currently printing file (protected by filename_mutex)
 
     // ========================================================================
     // Object exclusion (needs mutex for set/vector operations)

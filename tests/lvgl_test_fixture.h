@@ -1,9 +1,10 @@
-// Copyright 2025 356C LLC
+// Copyright (C) 2025-2026 356C LLC
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #pragma once
 
 #include "lvgl/lvgl.h"
+
 #include <mutex>
 
 /**
@@ -33,7 +34,7 @@ constexpr int TEST_DISPLAY_HEIGHT = 480;
  * - Test screen creation with automatic cleanup
  */
 class LVGLTestFixture {
-public:
+  public:
     /**
      * @brief Construct fixture and ensure LVGL is initialized
      *
@@ -67,7 +68,9 @@ public:
      *
      * Use this as the parent for widgets created during tests.
      */
-    lv_obj_t* test_screen() const { return m_test_screen; }
+    lv_obj_t* test_screen() const {
+        return m_test_screen;
+    }
 
     /**
      * @brief Create a new test screen and set it as active
@@ -78,7 +81,7 @@ public:
      */
     lv_obj_t* create_test_screen();
 
-protected:
+  protected:
     /**
      * @brief Ensure LVGL is initialized (thread-safe, called once)
      *
@@ -87,8 +90,8 @@ protected:
      */
     static void ensure_lvgl_initialized();
 
-private:
-    lv_obj_t* m_test_screen;  ///< Test screen for this fixture instance
+  private:
+    lv_obj_t* m_test_screen; ///< Test screen for this fixture instance
 
     // Static initialization state
     static std::once_flag s_init_flag;

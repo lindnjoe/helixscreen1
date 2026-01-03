@@ -1,4 +1,5 @@
 #!/bin/bash
+# Copyright (C) 2025-2026 356C LLC
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # Pre-render printer images to LVGL binary format at multiple sizes

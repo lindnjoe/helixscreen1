@@ -1,15 +1,5 @@
+// Copyright (C) 2025-2026 356C LLC
 // SPDX-License-Identifier: GPL-3.0-or-later
-/*
- * Copyright (C) 2025 HelixScreen Contributors
- *
- * Unit tests for the helix_print Moonraker plugin API integration.
- *
- * Tests cover:
- * 1. Plugin detection (check_helix_plugin)
- * 2. Modified print API (start_modified_print) - v2.0 path-based
- * 3. Fallback behavior when plugin unavailable
- * 4. Error handling and validation
- */
 
 #include "../../include/moonraker_api.h"
 #include "../../include/moonraker_client.h"

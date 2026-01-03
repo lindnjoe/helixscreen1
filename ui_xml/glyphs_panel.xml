@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<!-- Copyright 2025 356C LLC -->
+<!-- Copyright (C) 2025-2026 356C LLC -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <component>
   <view name="glyphs_panel" extends="lv_obj" width="100%" height="100%">

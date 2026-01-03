@@ -1,16 +1,19 @@
+// Copyright (C) 2025-2026 356C LLC
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 /*
  * TinyGL Dithering Verification Test
  *
  * Tests RGB_TO_PIXEL_COND macro in isolation before integration.
  * Verifies dithering math and runtime enable/disable toggle.
  *
- * Copyright (c) 2025 HelixScreen Project
+ * Copyright (C) 2025-2026 356C LLC
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
 
 /* Include TinyGL dithering header */
 #include "../../tinygl/src/zdither.h"
@@ -18,9 +21,9 @@
 /* Define RGB_TO_PIXEL if not already defined (from zbuffer.h) */
 #ifndef RGB_TO_PIXEL
 #if TGL_FEATURE_RENDER_BITS == 32
-#define RGB_TO_PIXEL(r,g,b) (((r) & 0xff0000) | (((g) >> 8) & 0xff00) | ((b) >> 16))
+#define RGB_TO_PIXEL(r, g, b) (((r) & 0xff0000) | (((g) >> 8) & 0xff00) | ((b) >> 16))
 #elif TGL_FEATURE_RENDER_BITS == 16
-#define RGB_TO_PIXEL(r,g,b) (((((r) >> 8) & 0xf800) | (((g) >> 13) & 0x7E0) | ((b) >> 19)))
+#define RGB_TO_PIXEL(r, g, b) (((((r) >> 8) & 0xf800) | (((g) >> 13) & 0x7E0) | ((b) >> 19)))
 #endif
 #endif
 
@@ -50,9 +53,9 @@ int main(void) {
     printf("Test 2: RGB_TO_PIXEL_COND with dithering OFF\n");
     tgl_dithering_enabled = 0;
 
-    unsigned int r = 128 << 16;  /* Mid-gray red */
-    unsigned int g = 128 << 16;  /* Mid-gray green */
-    unsigned int b = 128 << 16;  /* Mid-gray blue */
+    unsigned int r = 128 << 16; /* Mid-gray red */
+    unsigned int g = 128 << 16; /* Mid-gray green */
+    unsigned int b = 128 << 16; /* Mid-gray blue */
 
     unsigned int pixel_nodither = RGB_TO_PIXEL_COND(r, g, b, 0, 0);
     unsigned int expected_nodither = RGB_TO_PIXEL(r, g, b);
@@ -107,7 +110,8 @@ int main(void) {
         for (int x = 0; x < 4; x++) {
             unsigned int pixel = RGB_TO_PIXEL_COND(r, g, b, x, y);
             if (x > 0 || y > 0) {
-                if (pixel != prev_pixel) variation_count++;
+                if (pixel != prev_pixel)
+                    variation_count++;
             }
             prev_pixel = pixel;
         }

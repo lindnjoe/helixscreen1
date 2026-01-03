@@ -1,7 +1,5 @@
-// Copyright 2025 HelixScreen
+// Copyright (C) 2025-2026 356C LLC
 // SPDX-License-Identifier: GPL-3.0-or-later
-
-#include "../catch_amalgamated.hpp"
 
 #include "usb_backend.h"
 #include "usb_backend_mock.h"
@@ -10,6 +8,8 @@
 #include <atomic>
 #include <chrono>
 #include <thread>
+
+#include "../catch_amalgamated.hpp"
 
 TEST_CASE("UsbBackendMock lifecycle", "[usb_backend][mock]") {
     UsbBackendMock backend;
@@ -74,10 +74,8 @@ TEST_CASE("UsbBackendMock drive simulation", "[usb_backend][mock]") {
     }
 
     SECTION("multiple drives") {
-        backend.simulate_drive_insert(
-            UsbDrive("/media/usb0", "/dev/sda1", "USB1", 1024, 512));
-        backend.simulate_drive_insert(
-            UsbDrive("/media/usb1", "/dev/sdb1", "USB2", 2048, 1024));
+        backend.simulate_drive_insert(UsbDrive("/media/usb0", "/dev/sda1", "USB1", 1024, 512));
+        backend.simulate_drive_insert(UsbDrive("/media/usb1", "/dev/sdb1", "USB2", 2048, 1024));
 
         std::vector<UsbDrive> drives;
         REQUIRE(backend.get_connected_drives(drives).success());
@@ -274,8 +272,7 @@ TEST_CASE("UsbManager drive queries", "[usb_manager]") {
     }
 
     SECTION("get_drives returns inserted drives") {
-        backend->simulate_drive_insert(
-            UsbDrive("/media/usb0", "/dev/sda1", "TEST", 1024, 512));
+        backend->simulate_drive_insert(UsbDrive("/media/usb0", "/dev/sda1", "TEST", 1024, 512));
 
         auto drives = manager.get_drives();
         REQUIRE(drives.size() == 1);
@@ -283,11 +280,11 @@ TEST_CASE("UsbManager drive queries", "[usb_manager]") {
     }
 
     SECTION("scan_for_gcode works through manager") {
-        backend->simulate_drive_insert(
-            UsbDrive("/media/usb0", "/dev/sda1", "TEST", 1024, 512));
-        backend->set_mock_files("/media/usb0", {
-            {"/media/usb0/test.gcode", "test.gcode", 100, 1000},
-        });
+        backend->simulate_drive_insert(UsbDrive("/media/usb0", "/dev/sda1", "TEST", 1024, 512));
+        backend->set_mock_files("/media/usb0",
+                                {
+                                    {"/media/usb0/test.gcode", "test.gcode", 100, 1000},
+                                });
 
         auto files = manager.scan_for_gcode("/media/usb0");
         REQUIRE(files.size() == 1);
@@ -323,8 +320,7 @@ TEST_CASE("UsbManager event callbacks", "[usb_manager]") {
     }
 
     SECTION("callback fires on drive remove") {
-        backend->simulate_drive_insert(
-            UsbDrive("/media/usb0", "/dev/sda1", "TEST", 1024, 512));
+        backend->simulate_drive_insert(UsbDrive("/media/usb0", "/dev/sda1", "TEST", 1024, 512));
         backend->simulate_drive_remove("/media/usb0");
 
         REQUIRE(event_count == 2);

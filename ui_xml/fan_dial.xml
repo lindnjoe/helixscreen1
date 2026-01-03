@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<!-- Copyright 2025 356C LLC -->
+<!-- Copyright (C) 2025-2026 356C LLC -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!-- FanDial: Reusable Bambu-style 270-degree rotary arc fan control widget -->
 <!-- Usage: <fan_dial fan_name="Part Fan" fan_id="fan" initial_value="0"/> -->

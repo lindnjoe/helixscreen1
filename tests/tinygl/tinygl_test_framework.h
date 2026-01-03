@@ -1,4 +1,4 @@
-// Copyright (c) 2025 HelixScreen Project
+// Copyright (C) 2025-2026 356C LLC
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // TinyGL Test Framework - Core utilities for quality and performance testing
@@ -19,11 +19,11 @@ namespace tinygl_test {
 
 // Image comparison metrics
 struct ImageMetrics {
-    double mse;       // Mean Squared Error
-    double psnr;      // Peak Signal-to-Noise Ratio (dB)
-    double ssim;      // Structural Similarity Index
-    double max_diff;  // Maximum pixel difference
-    int diff_pixels;  // Number of pixels that differ
+    double mse;      // Mean Squared Error
+    double psnr;     // Peak Signal-to-Noise Ratio (dB)
+    double ssim;     // Structural Similarity Index
+    double max_diff; // Maximum pixel difference
+    int diff_pixels; // Number of pixels that differ
 };
 
 // Performance metrics
@@ -33,7 +33,7 @@ struct PerfMetrics {
     double triangles_per_second;
     double pixels_per_second;
     size_t memory_usage_bytes;
-    double cache_miss_rate;  // If available from perf counters
+    double cache_miss_rate; // If available from perf counters
 };
 
 // Test scene configuration
@@ -52,7 +52,7 @@ struct SceneConfig {
 
 // Base class for test scenes
 class TestScene {
-public:
+  public:
     virtual ~TestScene() = default;
 
     // Setup the scene (called once)
@@ -71,7 +71,7 @@ public:
 
 // Test framework main class
 class TinyGLTestFramework {
-public:
+  public:
     TinyGLTestFramework(int width = 800, int height = 600);
     ~TinyGLTestFramework();
 
@@ -88,32 +88,24 @@ public:
     bool save_screenshot(const std::string& filename);
 
     // Compare two images
-    static ImageMetrics compare_images(
-        const std::vector<uint8_t>& img1,
-        const std::vector<uint8_t>& img2,
-        int width, int height
-    );
+    static ImageMetrics compare_images(const std::vector<uint8_t>& img1,
+                                       const std::vector<uint8_t>& img2, int width, int height);
 
     // Benchmark a scene
-    PerfMetrics benchmark_scene(
-        TestScene* scene,
-        const SceneConfig& config,
-        int num_frames = 100
-    );
+    PerfMetrics benchmark_scene(TestScene* scene, const SceneConfig& config, int num_frames = 100);
 
     // Load reference image from PPM
-    static std::vector<uint8_t> load_ppm(
-        const std::string& filename,
-        int& width, int& height
-    );
+    static std::vector<uint8_t> load_ppm(const std::string& filename, int& width, int& height);
 
     // Get TinyGL context for direct manipulation
-    ZBuffer* get_zbuffer() { return zb_; }
+    ZBuffer* get_zbuffer() {
+        return zb_;
+    }
 
     // Enable/disable Phong shading
     void set_phong_shading(bool enable);
 
-private:
+  private:
     int width_;
     int height_;
     ZBuffer* zb_;
@@ -131,37 +123,46 @@ private:
 
 // Predefined test scenes
 class SphereTesselationScene : public TestScene {
-public:
+  public:
     SphereTesselationScene(int subdivisions = 3);
     void setup(const SceneConfig& config) override;
     void render() override;
-    size_t get_vertex_count() const override { return vertices_.size() / 3; }
-    size_t get_triangle_count() const override { return vertices_.size() / 9; }
-    std::string get_name() const override { return "Sphere Tesselation"; }
+    size_t get_vertex_count() const override {
+        return vertices_.size() / 3;
+    }
+    size_t get_triangle_count() const override {
+        return vertices_.size() / 9;
+    }
+    std::string get_name() const override {
+        return "Sphere Tesselation";
+    }
 
-private:
+  private:
     int subdivisions_;
     std::vector<float> vertices_;
     std::vector<float> normals_;
     std::vector<float> colors_;
 
     void generate_sphere();
-    void subdivide_triangle(
-        float* v1, float* v2, float* v3,
-        int depth
-    );
+    void subdivide_triangle(float* v1, float* v2, float* v3, int depth);
 };
 
 class CubeGridScene : public TestScene {
-public:
+  public:
     CubeGridScene(int grid_size = 10);
     void setup(const SceneConfig& config) override;
     void render() override;
-    size_t get_vertex_count() const override { return grid_size_ * grid_size_ * grid_size_ * 24; }
-    size_t get_triangle_count() const override { return grid_size_ * grid_size_ * grid_size_ * 12; }
-    std::string get_name() const override { return "Cube Grid"; }
+    size_t get_vertex_count() const override {
+        return grid_size_ * grid_size_ * grid_size_ * 24;
+    }
+    size_t get_triangle_count() const override {
+        return grid_size_ * grid_size_ * grid_size_ * 12;
+    }
+    std::string get_name() const override {
+        return "Cube Grid";
+    }
 
-private:
+  private:
     int grid_size_;
     float rotation_;
 
@@ -169,57 +170,63 @@ private:
 };
 
 class GouraudArtifactScene : public TestScene {
-public:
+  public:
     void setup(const SceneConfig& config) override;
     void render() override;
-    size_t get_vertex_count() const override { return 360 * 2; }  // Cylinder vertices
-    size_t get_triangle_count() const override { return 360 * 2; }
-    std::string get_name() const override { return "Gouraud Artifacts"; }
+    size_t get_vertex_count() const override {
+        return 360 * 2;
+    } // Cylinder vertices
+    size_t get_triangle_count() const override {
+        return 360 * 2;
+    }
+    std::string get_name() const override {
+        return "Gouraud Artifacts";
+    }
 
-private:
+  private:
     void render_cylinder(float radius, float height, int segments);
     void render_large_triangles();
 };
 
 class ColorBandingScene : public TestScene {
-public:
+  public:
     void setup(const SceneConfig& config) override;
     void render() override;
-    size_t get_vertex_count() const override { return 4; }  // Gradient quad
-    size_t get_triangle_count() const override { return 2; }
-    std::string get_name() const override { return "Color Banding"; }
+    size_t get_vertex_count() const override {
+        return 4;
+    } // Gradient quad
+    size_t get_triangle_count() const override {
+        return 2;
+    }
+    std::string get_name() const override {
+        return "Color Banding";
+    }
 
-private:
+  private:
     void render_gradient_quad();
     void render_smooth_sphere();
 };
 
 // Utility functions
 namespace utils {
-    // Generate test G-code for rendering
-    std::string generate_test_gcode(const std::string& pattern);
+// Generate test G-code for rendering
+std::string generate_test_gcode(const std::string& pattern);
 
-    // Create a reference lighting setup matching OrcaSlicer
-    void setup_orcaslicer_lighting();
+// Create a reference lighting setup matching OrcaSlicer
+void setup_orcaslicer_lighting();
 
-    // Performance counter access (if available)
-    bool init_perf_counters();
-    double get_cache_miss_rate();
+// Performance counter access (if available)
+bool init_perf_counters();
+double get_cache_miss_rate();
 
-    // Image difference visualization
-    std::vector<uint8_t> create_diff_image(
-        const std::vector<uint8_t>& img1,
-        const std::vector<uint8_t>& img2,
-        int width, int height,
-        float amplification = 10.0f
-    );
+// Image difference visualization
+std::vector<uint8_t> create_diff_image(const std::vector<uint8_t>& img1,
+                                       const std::vector<uint8_t>& img2, int width, int height,
+                                       float amplification = 10.0f);
 
-    // Calculate SSIM (Structural Similarity Index)
-    double calculate_ssim(
-        const std::vector<uint8_t>& img1,
-        const std::vector<uint8_t>& img2,
-        int width, int height
-    );
-}
+// Calculate SSIM (Structural Similarity Index)
+double calculate_ssim(const std::vector<uint8_t>& img1, const std::vector<uint8_t>& img2, int width,
+                      int height);
+} // namespace utils
 
 } // namespace tinygl_test

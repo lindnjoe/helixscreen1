@@ -1,8 +1,8 @@
-// Copyright 2025 HelixScreen
+// Copyright (C) 2025-2026 356C LLC
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 /*
- * Copyright (C) 2025 356C LLC
+ * Copyright (C) 2025-2026 356C LLC
  * Author: Preston Brown <pbrown@brown-house.net>
  *
  * LVGL 8 to LVGL 9 compatibility layer for Material Design icons

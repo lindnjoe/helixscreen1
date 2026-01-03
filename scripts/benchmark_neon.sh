@@ -1,4 +1,5 @@
 #!/bin/bash
+# Copyright (C) 2025-2026 356C LLC
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # Benchmark script to compare NEON vs non-NEON rendering performance

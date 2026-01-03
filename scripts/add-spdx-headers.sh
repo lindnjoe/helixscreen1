@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Copyright (C) 2025-2026 356C LLC
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # Add or update SPDX license identifiers in source files
@@ -7,7 +8,7 @@
 set -euo pipefail
 
 # Configuration
-YEAR="2025"
+YEAR="2025-2026"
 COPYRIGHT="356C LLC"
 SPDX_ID="GPL-3.0-or-later"
 DRY_RUN=1
@@ -78,15 +79,15 @@ get_spdx_header() {
 
     case "$ext" in
         c|cpp|h|hpp)
-            echo "// Copyright $YEAR $COPYRIGHT"
+            echo "// Copyright (C) $YEAR $COPYRIGHT"
             echo "// SPDX-License-Identifier: $SPDX_ID"
             ;;
         py|sh)
-            echo "# Copyright $YEAR $COPYRIGHT"
+            echo "# Copyright (C) $YEAR $COPYRIGHT"
             echo "# SPDX-License-Identifier: $SPDX_ID"
             ;;
         xml)
-            echo "<!-- Copyright $YEAR $COPYRIGHT -->"
+            echo "<!-- Copyright (C) $YEAR $COPYRIGHT -->"
             echo "<!-- SPDX-License-Identifier: $SPDX_ID -->"
             ;;
         *)

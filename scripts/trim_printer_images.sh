@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Copyright (C) 2025-2026 356C LLC
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # Trim blank/transparent space around printer images and optionally

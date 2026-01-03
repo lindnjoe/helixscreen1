@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Preston Brown <pbrown@brown-house.net>
+// Copyright (C) 2025-2026 356C LLC
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // G-Code Geometry Builder Implementation

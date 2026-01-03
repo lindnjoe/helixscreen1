@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2025 356C LLC
+# Copyright (C) 2025-2026 356C LLC
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 set -e

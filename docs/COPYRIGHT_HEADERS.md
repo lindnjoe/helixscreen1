@@ -9,14 +9,14 @@ All source files must include this header at the top of the file:
 ### C/C++ Files (.c, .cpp, .h, .hpp)
 
 ```cpp
-// Copyright 2025 356C LLC
+// Copyright (C) 2025-2026 356C LLC
 // SPDX-License-Identifier: GPL-3.0-or-later
 ```
 
 ### Python Files (.py)
 
 ```python
-# Copyright 2025 356C LLC
+# Copyright (C) 2025-2026 356C LLC
 # SPDX-License-Identifier: GPL-3.0-or-later
 ```
 
@@ -24,7 +24,7 @@ All source files must include this header at the top of the file:
 
 ```bash
 #!/usr/bin/env bash
-# Copyright 2025 356C LLC
+# Copyright (C) 2025-2026 356C LLC
 # SPDX-License-Identifier: GPL-3.0-or-later
 ```
 
@@ -32,7 +32,7 @@ All source files must include this header at the top of the file:
 
 ```xml
 <?xml version="1.0"?>
-<!-- Copyright 2025 356C LLC -->
+<!-- Copyright (C) 2025-2026 356C LLC -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 ```
 

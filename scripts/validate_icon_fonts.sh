@@ -1,6 +1,6 @@
 #!/bin/bash
+# Copyright (C) 2025-2026 356C LLC
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright 2025 356C LLC
 #
 # Bidirectional icon validation:
 #   1. Forward:  codepoints.h → fonts (are defined icons compiled?)

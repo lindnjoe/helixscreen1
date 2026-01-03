@@ -1,10 +1,5 @@
+// Copyright (C) 2025-2026 356C LLC
 // SPDX-License-Identifier: GPL-3.0-or-later
-/*
- * Copyright (C) 2025 HelixScreen Contributors
- *
- * Unit tests for the UI injection point framework.
- * Tests registration, injection, and cleanup lifecycle.
- */
 
 #include "../lvgl_test_fixture.h"
 #include "injection_point_manager.h"

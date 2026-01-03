@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<!-- Copyright 2025 356C LLC -->
+<!-- Copyright (C) 2025-2026 356C LLC -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!-- Fan Control Overlay: Full-width overlay panel displaying all fans -->
 <!-- Single flex-wrap row: controllable fans first, then auto-controlled fans -->

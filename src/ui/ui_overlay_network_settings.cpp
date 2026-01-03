@@ -1,9 +1,8 @@
+// Copyright (C) 2025-2026 356C LLC
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Copyright (C) 2025 HelixScreen Contributors
 
 #include "ui_overlay_network_settings.h"
 
-#include "static_panel_registry.h"
 #include "ui_modal.h"
 #include "ui_nav.h"
 #include "ui_nav_manager.h"
@@ -13,6 +12,7 @@
 
 #include "ethernet_manager.h"
 #include "network_tester.h"
+#include "static_panel_registry.h"
 #include "wifi_manager.h"
 #include "wifi_ui_utils.h"
 

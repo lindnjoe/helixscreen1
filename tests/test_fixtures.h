@@ -1,4 +1,4 @@
-// Copyright 2025 356C LLC
+// Copyright (C) 2025-2026 356C LLC
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #pragma once
@@ -28,11 +28,13 @@
  * @see ui_test_utils.h for UITest input simulation
  */
 
-#include "lvgl_test_fixture.h"
 #include "ui_test_utils.h"
-#include "printer_state.h"
-#include "moonraker_client.h"
+
+#include "lvgl_test_fixture.h"
 #include "moonraker_api.h"
+#include "moonraker_client.h"
+#include "printer_state.h"
+
 #include <memory>
 
 // ============================================================================
@@ -51,7 +53,7 @@
  * Use for tests that need to verify API behavior without network connectivity.
  */
 class MoonrakerTestFixture : public LVGLTestFixture {
-public:
+  public:
     MoonrakerTestFixture();
     ~MoonrakerTestFixture() override;
 
@@ -65,21 +67,27 @@ public:
      * @brief Get the printer state for this test
      * @return Reference to initialized PrinterState
      */
-    PrinterState& state() { return m_state; }
+    PrinterState& state() {
+        return m_state;
+    }
 
     /**
      * @brief Get the Moonraker client (disconnected)
      * @return Reference to MoonrakerClient
      */
-    MoonrakerClient& client() { return *m_client; }
+    MoonrakerClient& client() {
+        return *m_client;
+    }
 
     /**
      * @brief Get the Moonraker API
      * @return Reference to MoonrakerAPI
      */
-    MoonrakerAPI& api() { return *m_api; }
+    MoonrakerAPI& api() {
+        return *m_api;
+    }
 
-protected:
+  protected:
     PrinterState m_state;
     std::unique_ptr<MoonrakerClient> m_client;
     std::unique_ptr<MoonrakerAPI> m_api;
@@ -102,7 +110,7 @@ protected:
  * @note UITest::cleanup() is called automatically in destructor
  */
 class UITestFixture : public LVGLTestFixture {
-public:
+  public:
     UITestFixture();
     ~UITestFixture() override;
 
@@ -117,7 +125,9 @@ public:
      * @param widget Widget to click
      * @return true if click was simulated
      */
-    bool click(lv_obj_t* widget) { return UITest::click(widget); }
+    bool click(lv_obj_t* widget) {
+        return UITest::click(widget);
+    }
 
     /**
      * @brief Simulate click at coordinates
@@ -125,7 +135,9 @@ public:
      * @param y Y coordinate
      * @return true if click was simulated
      */
-    bool click_at(int32_t x, int32_t y) { return UITest::click_at(x, y); }
+    bool click_at(int32_t x, int32_t y) {
+        return UITest::click_at(x, y);
+    }
 
     /**
      * @brief Type text into textarea
@@ -159,7 +171,7 @@ public:
  * Use for integration tests that need both API interactions and UI simulation.
  */
 class FullMoonrakerTestFixture : public MoonrakerTestFixture {
-public:
+  public:
     FullMoonrakerTestFixture();
     ~FullMoonrakerTestFixture() override;
 
@@ -170,8 +182,12 @@ public:
     FullMoonrakerTestFixture& operator=(FullMoonrakerTestFixture&&) = delete;
 
     // UITest convenience wrappers
-    bool click(lv_obj_t* widget) { return UITest::click(widget); }
-    bool click_at(int32_t x, int32_t y) { return UITest::click_at(x, y); }
+    bool click(lv_obj_t* widget) {
+        return UITest::click(widget);
+    }
+    bool click_at(int32_t x, int32_t y) {
+        return UITest::click_at(x, y);
+    }
     bool type_text(lv_obj_t* textarea, const std::string& text) {
         return UITest::type_text(textarea, text);
     }

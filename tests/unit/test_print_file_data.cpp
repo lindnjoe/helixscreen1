@@ -1,5 +1,5 @@
+// Copyright (C) 2025-2026 356C LLC
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Copyright (C) 2025 HelixScreen Authors
 
 #include "moonraker_types.h"
 #include "print_file_data.h"

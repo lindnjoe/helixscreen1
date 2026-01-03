@@ -1,5 +1,5 @@
+// Copyright (C) 2025-2026 356C LLC
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Copyright (C) 2025 HelixScreen Contributors
 /**
  * @file ui_heater_config.h
  * @brief Shared heater configuration structure and utilities

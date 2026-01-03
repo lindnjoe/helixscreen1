@@ -1,9 +1,5 @@
+// Copyright (C) 2025-2026 356C LLC
 // SPDX-License-Identifier: GPL-3.0-or-later
-/*
- * Copyright (C) 2025 356C LLC
- *
- * Unit tests for StandardMacros system
- */
 
 #include "printer_capabilities.h"
 #include "standard_macros.h"

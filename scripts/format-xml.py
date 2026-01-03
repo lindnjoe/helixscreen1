@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
+# Copyright (C) 2025-2026 356C LLC
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright 2025 356C LLC
 """
 XML Formatter with Attribute Wrapping
 
@@ -118,6 +118,15 @@ def format_attributes_wrapped(attrs: list[tuple[str, str]], indent: str, tag: st
     return "\n".join(lines)
 
 
+def count_blank_lines(text: str) -> int:
+    """Count the number of blank lines in whitespace text."""
+    if not text:
+        return 0
+    # Count newlines beyond the first one (which is just normal element separation)
+    newlines = text.count('\n')
+    return max(0, newlines - 1)
+
+
 def format_element(
     elem: etree._Element, indent_level: int = 0
 ) -> list[str]:
@@ -156,15 +165,25 @@ def format_element(
             escaped_text = html_escape(elem.text.strip(), quote=False)
             lines.append(f"{indent}{INDENT}{escaped_text}")
 
+        # Check for blank lines before first child (in elem.text whitespace)
+        if has_children and elem.text:
+            blank_count = count_blank_lines(elem.text)
+            lines.extend([''] * blank_count)
+
         # Handle children
         for child in elem:
             child_lines = format_element(child, indent_level + 1)
             lines.extend(child_lines)
 
             # Handle tail text (text after child element)
-            if child.tail and child.tail.strip():
-                escaped_tail = html_escape(child.tail.strip(), quote=False)
-                lines.append(f"{indent}{INDENT}{escaped_tail}")
+            if child.tail:
+                if child.tail.strip():
+                    escaped_tail = html_escape(child.tail.strip(), quote=False)
+                    lines.append(f"{indent}{INDENT}{escaped_tail}")
+                else:
+                    # Preserve blank lines between sibling elements
+                    blank_count = count_blank_lines(child.tail)
+                    lines.extend([''] * blank_count)
 
         # Closing tag
         lines.append(f"{indent}</{tag}>")
@@ -219,8 +238,8 @@ def format_xml_file(content: str) -> str:
     # Preprocess to fix common issues
     content = preprocess_xml(content)
 
-    # Parse the XML while preserving comments
-    parser = etree.XMLParser(remove_blank_text=True, remove_comments=False)
+    # Parse the XML while preserving comments and whitespace (for blank line detection)
+    parser = etree.XMLParser(remove_blank_text=False, remove_comments=False)
     try:
         root = etree.fromstring(content.encode("utf-8"), parser)
     except etree.XMLSyntaxError as e:
