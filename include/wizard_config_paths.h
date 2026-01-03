@@ -20,19 +20,19 @@ constexpr const char* PRINTER_NAME = "/printer/name";
 constexpr const char* PRINTER_TYPE = "/printer/type";
 
 // Bed hardware
-constexpr const char* BED_HEATER = "/printer/heater/bed";
-constexpr const char* BED_SENSOR = "/printer/sensor/bed";
+constexpr const char* BED_HEATER = "/printer/heaters/bed";
+constexpr const char* BED_SENSOR = "/printer/temp_sensors/bed";
 
 // Hotend hardware
-constexpr const char* HOTEND_HEATER = "/printer/heater/hotend";
-constexpr const char* HOTEND_SENSOR = "/printer/sensor/hotend";
+constexpr const char* HOTEND_HEATER = "/printer/heaters/hotend";
+constexpr const char* HOTEND_SENSOR = "/printer/temp_sensors/hotend";
 
 // Fan hardware
-constexpr const char* HOTEND_FAN = "/printer/fan/hotend";
-constexpr const char* PART_FAN = "/printer/fan/part";
+constexpr const char* HOTEND_FAN = "/printer/fans/hotend";
+constexpr const char* PART_FAN = "/printer/fans/part";
 
 // LED hardware
-constexpr const char* LED_STRIP = "/printer/led/strip";
+constexpr const char* LED_STRIP = "/printer/leds/strip";
 
 // Network configuration
 constexpr const char* MOONRAKER_HOST = "/printer/moonraker_host";
