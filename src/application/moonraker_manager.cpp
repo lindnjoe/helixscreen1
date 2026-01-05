@@ -379,11 +379,8 @@ void MoonrakerManager::create_api(const RuntimeConfig& runtime_config) {
     // Set API for AmsState Spoolman integration
     AmsState::instance().set_moonraker_api(m_api.get());
 
-    // Initialize E-Stop visibility coordinator (manages estop_visible subject for panel buttons)
-    EmergencyStopOverlay::instance().init(get_printer_state(), m_api.get());
-    EmergencyStopOverlay::instance().create();
-    EmergencyStopOverlay::instance().set_require_confirmation(
-        SettingsManager::instance().get_estop_require_confirmation());
+    // Note: EmergencyStopOverlay::init() and create() are called from Application
+    // after both MoonrakerManager and SubjectInitializer are ready
 }
 
 void MoonrakerManager::init_print_start_collector() {

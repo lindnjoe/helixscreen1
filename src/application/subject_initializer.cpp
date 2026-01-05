@@ -61,7 +61,18 @@ bool SubjectInitializer::init_all(const RuntimeConfig& runtime_config) {
         return false;
     }
 
-    spdlog::debug("[SubjectInitializer] Initializing reactive subjects...");
+    // Legacy path: init with nullptr API (panels will need inject_api later)
+    spdlog::debug("[SubjectInitializer] Initializing reactive subjects (legacy path)...");
+
+    init_core_and_state();
+    init_panels(nullptr, runtime_config);
+    init_post(runtime_config);
+
+    return true;
+}
+
+void SubjectInitializer::init_core_and_state() {
+    spdlog::debug("[SubjectInitializer] Initializing core and state subjects...");
 
     // Phase 1: Core subjects (must be first)
     init_core_subjects();
@@ -72,8 +83,19 @@ bool SubjectInitializer::init_all(const RuntimeConfig& runtime_config) {
     // Phase 3: AMS and filament sensor subjects
     init_ams_subjects();
 
+    spdlog::debug("[SubjectInitializer] Core and state subjects initialized");
+}
+
+void SubjectInitializer::init_panels(MoonrakerAPI* api, const RuntimeConfig& /* runtime_config */) {
+    spdlog::debug("[SubjectInitializer] Initializing panel subjects (api={})...",
+                  api ? "valid" : "nullptr");
+
     // Phase 4: Panel subjects
-    init_panel_subjects();
+    init_panel_subjects(api);
+}
+
+void SubjectInitializer::init_post(const RuntimeConfig& runtime_config) {
+    spdlog::debug("[SubjectInitializer] Initializing post-panel subjects...");
 
     // Phase 5: Observers (depend on subjects being ready)
     init_observers();
@@ -86,44 +108,6 @@ bool SubjectInitializer::init_all(const RuntimeConfig& runtime_config) {
 
     m_initialized = true;
     spdlog::info("[SubjectInitializer] Initialized {} observer guards", m_observers.size());
-
-    return true;
-}
-
-void SubjectInitializer::inject_api(MoonrakerAPI* api) {
-    if (!api) {
-        spdlog::warn("[SubjectInitializer] inject_api called with nullptr");
-        return;
-    }
-
-    spdlog::debug("[SubjectInitializer] Injecting MoonrakerAPI into panels");
-
-    // Panels with member pointer references
-    if (m_print_select_panel) {
-        m_print_select_panel->set_api(api);
-    }
-    if (m_print_status_panel) {
-        m_print_status_panel->set_api(api);
-    }
-    // MotionPanel now uses get_moonraker_api() global - no set_api() needed
-    // BedMeshPanel now uses get_moonraker_api() global - no set_api() needed
-    // ExtrusionPanel now uses get_moonraker_api() global - no set_api() needed
-    if (m_temp_control_panel) {
-        m_temp_control_panel->set_api(api);
-    }
-
-    // Panels using global accessor pattern
-    get_global_home_panel().set_api(api);
-    get_global_controls_panel().set_api(api);
-    get_global_filament_panel().set_api(api);
-    get_global_advanced_panel().set_api(api);
-    // SpoolmanPanel uses get_moonraker_api() global directly
-    // HistoryDashboardPanel uses get_moonraker_api() global directly (OverlayBase pattern)
-    // HistoryListPanel uses get_moonraker_api() global directly (OverlayBase pattern)
-    get_global_timelapse_settings().set_api(api);
-
-    // ActivePrintMediaManager needs API for thumbnail loading
-    helix::get_active_print_media_manager().set_api(api);
 }
 
 void SubjectInitializer::init_core_subjects() {
@@ -168,18 +152,24 @@ void SubjectInitializer::init_ams_subjects() {
     });
 }
 
-void SubjectInitializer::init_panel_subjects() {
+void SubjectInitializer::init_panel_subjects(MoonrakerAPI* api) {
     spdlog::trace("[SubjectInitializer] Initializing panel subjects");
 
-    // Basic panels
+    // Basic panels - these use PanelBase which stores API
     get_global_home_panel().init_subjects();
+    if (api)
+        get_global_home_panel().set_api(api);
     StaticPanelRegistry::instance().register_destroy(
         "HomePanelSubjects", []() { get_global_home_panel().deinit_subjects(); });
 
     // Controls, Filament, Settings panels: deinit handled by destructor
     // (registered with StaticPanelRegistry in their get_global_* functions)
     get_global_controls_panel().init_subjects();
+    if (api)
+        get_global_controls_panel().set_api(api);
     get_global_filament_panel().init_subjects();
+    if (api)
+        get_global_filament_panel().set_api(api);
     get_global_settings_panel().init_subjects();
 
     // SettingsManager subjects are initialized by settings_panel.init_subjects() above
@@ -188,7 +178,7 @@ void SubjectInitializer::init_panel_subjects() {
         "SettingsManager", []() { SettingsManager::instance().deinit_subjects(); });
 
     // Advanced panel family
-    init_global_advanced_panel(get_printer_state(), nullptr);
+    init_global_advanced_panel(get_printer_state(), api);
     get_global_advanced_panel().init_subjects();
 
     // SpoolmanPanel uses lazy initialization via get_global_spoolman_panel()
@@ -198,10 +188,10 @@ void SubjectInitializer::init_panel_subjects() {
     // HistoryListPanel is now lazy-initialized by HistoryDashboardPanel (OverlayBase pattern)
 
     // Settings overlays
-    init_global_timelapse_settings(nullptr);
+    init_global_timelapse_settings(api);
     get_global_timelapse_settings().init_subjects();
 
-    init_global_retraction_settings(nullptr);
+    init_global_retraction_settings(api ? get_moonraker_client() : nullptr);
     get_global_retraction_settings().init_subjects();
 
     // Fan control overlay (opened from Controls panel secondary fans list)
@@ -231,12 +221,14 @@ void SubjectInitializer::init_panel_subjects() {
     StaticPanelRegistry::instance().register_destroy("StatusBarSubjects",
                                                      ui_status_bar_deinit_subjects);
 
-    // Panels that need deferred API injection
+    // Panels with API injection at construction
     // Note: PrintSelectPanel registers its own deinit+destroy callback in get_print_select_panel()
-    m_print_select_panel = get_print_select_panel(get_printer_state(), nullptr);
+    m_print_select_panel = get_print_select_panel(get_printer_state(), api);
     m_print_select_panel->init_subjects();
 
     m_print_status_panel = &get_global_print_status_panel();
+    if (api)
+        m_print_status_panel->set_api(api);
     m_print_status_panel->init_subjects();
     StaticPanelRegistry::instance().register_destroy(
         "PrintStatusPanelSubjects", []() { get_global_print_status_panel().deinit_subjects(); });
@@ -261,7 +253,7 @@ void SubjectInitializer::init_panel_subjects() {
     get_global_zoffset_cal_panel().init_subjects();
 
     // TempControlPanel (owned by SubjectInitializer - destructor handles deinit_subjects)
-    m_temp_control_panel = std::make_unique<TempControlPanel>(get_printer_state(), nullptr);
+    m_temp_control_panel = std::make_unique<TempControlPanel>(get_printer_state(), api);
     m_temp_control_panel->init_subjects();
 
     // Inject TempControlPanel into dependent panels
@@ -278,6 +270,11 @@ void SubjectInitializer::init_panel_subjects() {
     // Navigation manager subjects (StaticSubjectRegistry - state manager, not a visual panel)
     StaticSubjectRegistry::instance().register_deinit(
         "NavigationManager", []() { NavigationManager::instance().deinit_subjects(); });
+
+    // ActivePrintMediaManager needs API for thumbnail loading
+    if (api) {
+        helix::get_active_print_media_manager().set_api(api);
+    }
 }
 
 void SubjectInitializer::init_observers() {

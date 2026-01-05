@@ -34,6 +34,7 @@
 #include "ui_card.h"
 #include "ui_component_header_bar.h"
 #include "ui_dialog.h"
+#include "ui_emergency_stop.h"
 #include "ui_fan_control_overlay.h"
 #include "ui_gcode_viewer.h"
 #include "ui_gradient_canvas.h"
@@ -70,6 +71,8 @@
 #include "ui_utils.h"
 #include "ui_wizard.h"
 #include "ui_wizard_wifi.h"
+
+#include "settings_manager.h"
 
 // Backend headers
 #include "action_prompt_manager.h"
@@ -194,20 +197,29 @@ int Application::run(int argc, char** argv) {
         return 1;
     }
 
-    // Phase 9: Initialize reactive subjects
-    if (!init_subjects()) {
+    // Phase 9a: Initialize core subjects and state (PrinterState, AmsState)
+    // Must happen before Moonraker init because API creation needs PrinterState
+    if (!init_core_subjects()) {
+        shutdown();
+        return 1;
+    }
+
+    // Phase 9b: Initialize Moonraker (creates client + API)
+    // Now works because PrinterState exists from phase 9a
+    if (!init_moonraker()) {
+        shutdown();
+        return 1;
+    }
+
+    // Phase 9c: Initialize panel subjects with API injection
+    // Panels receive API at construction - no deferred set_api() needed
+    if (!init_panel_subjects()) {
         shutdown();
         return 1;
     }
 
     // Phase 10: Create UI and wire panels
     if (!init_ui()) {
-        shutdown();
-        return 1;
-    }
-
-    // Phase 11: Initialize Moonraker
-    if (!init_moonraker()) {
         shutdown();
         return 1;
     }
@@ -608,12 +620,32 @@ bool Application::register_xml_components() {
     return true;
 }
 
-bool Application::init_subjects() {
+bool Application::init_core_subjects() {
     m_subjects = std::make_unique<SubjectInitializer>();
-    if (!m_subjects->init_all(*get_runtime_config())) {
-        spdlog::error("[Application] Subject initialization failed");
-        return false;
-    }
+
+    // Phase 1-3: Core subjects, PrinterState, AmsState
+    // These must exist before MoonrakerManager::init() can create the API
+    m_subjects->init_core_and_state();
+
+    spdlog::debug("[Application] Core subjects initialized");
+    helix::MemoryMonitor::log_now("after_core_subjects_init");
+    return true;
+}
+
+bool Application::init_panel_subjects() {
+    // Phase 4: Panel subjects with API injection
+    // API is now available from MoonrakerManager
+    m_subjects->init_panels(m_moonraker->api(), *get_runtime_config());
+
+    // Phase 5-7: Observers and utility subjects
+    m_subjects->init_post(*get_runtime_config());
+
+    // Initialize EmergencyStopOverlay (moved from MoonrakerManager)
+    // Must happen after both API and EmergencyStopOverlay::init_subjects()
+    EmergencyStopOverlay::instance().init(get_printer_state(), m_moonraker->api());
+    EmergencyStopOverlay::instance().create();
+    EmergencyStopOverlay::instance().set_require_confirmation(
+        SettingsManager::instance().get_estop_require_confirmation());
 
     // Register status bar callbacks
     ui_status_bar_register_callbacks();
@@ -625,8 +657,8 @@ bool Application::init_subjects() {
     set_temperature_history_manager(m_temp_history_manager.get());
     spdlog::debug("[Application] TemperatureHistoryManager created");
 
-    spdlog::debug("[Application] Subjects initialized");
-    helix::MemoryMonitor::log_now("after_subjects_init");
+    spdlog::debug("[Application] Panel subjects initialized");
+    helix::MemoryMonitor::log_now("after_panel_subjects_init");
     return true;
 }
 
@@ -705,8 +737,8 @@ bool Application::init_moonraker() {
         return false;
     }
 
-    // Inject API into panels
-    m_subjects->inject_api(m_moonraker->api());
+    // API is now injected at panel construction in init_panel_subjects()
+    // No need for deferred inject_api() call
 
     // Register MoonrakerManager globally (for Advanced panel access to MacroModificationManager)
     set_moonraker_manager(m_moonraker.get());

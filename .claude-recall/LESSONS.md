@@ -165,7 +165,7 @@
 
 
 ### [L036] [**---|-----] Header file documentation
-- **Uses**: 3 | **Velocity**: 0.26 | **Learned**: 2025-12-28 | **Last**: 2026-01-05 | **Category**: pattern
+- **Uses**: 3 | **Velocity**: 0.13 | **Learned**: 2025-12-28 | **Last**: 2026-01-05 | **Category**: pattern
 > Important files have documentation in their header files (include/*.h). Check the header file first when trying to understand a class or module - it often contains usage examples, design rationale, and API documentation.
 
 
@@ -200,5 +200,5 @@
 
 
 ### [L044] [**---|-----] Targeted tests during development
-- **Uses**: 4 | **Velocity**: 0.03 | **Learned**: 2026-01-04 | **Last**: 2026-01-04 | **Category**: preference
+- **Uses**: 4 | **Velocity**: 0.01 | **Learned**: 2026-01-04 | **Last**: 2026-01-04 | **Category**: preference
 > Run targeted tests with specific tags during implementation (e.g., ./build/bin/helix-tests "[tag]"). Only run full test suite (make test-run) at the end of a feature or phase. Full suite is SLOW - save it for final verification.

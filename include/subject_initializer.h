@@ -25,22 +25,23 @@ class UsbManager;
  * @brief Initializes all reactive subjects for LVGL data binding
  *
  * SubjectInitializer orchestrates the initialization of all reactive subjects
- * in the correct dependency order. It manages observer guards for proper cleanup
- * and holds references to panels that need deferred API injection.
+ * in the correct dependency order. It manages observer guards for proper cleanup.
  *
- * Initialization order is critical:
- * 1. Core subjects (app_globals, navigation, status bar)
- * 2. PrinterState subjects (must be before panels that observe them)
- * 3. AmsState and FilamentSensorManager subjects
- * 4. Panel subjects (home, controls, filament, settings, etc.)
- * 5. Observers (print completion, print start navigation)
- * 6. Utility subjects (wizard, keypad, notification)
+ * Initialization is split into phases to allow MoonrakerAPI injection:
+ * 1. init_core_and_state() - Core subjects, PrinterState, AmsState
+ * 2. init_panels(api) - Panel subjects with API injected at construction
+ * 3. init_post() - Observers and utility subjects
  *
- * Usage:
+ * Usage (preferred - proper DI):
+ *   SubjectInitializer subjects;
+ *   subjects.init_core_and_state();
+ *   // ... initialize MoonrakerManager to get API ...
+ *   subjects.init_panels(api, runtime_config);
+ *   subjects.init_post(runtime_config);
+ *
+ * Usage (legacy - deferred injection):
  *   SubjectInitializer subjects;
  *   subjects.init_all(runtime_config);
- *   // Later, after MoonrakerAPI is ready:
- *   subjects.inject_api(api);
  */
 class SubjectInitializer {
   public:
@@ -54,20 +55,42 @@ class SubjectInitializer {
     SubjectInitializer& operator=(SubjectInitializer&&) = delete;
 
     /**
-     * @brief Initialize all subjects in dependency order
+     * @brief Initialize all subjects in dependency order (legacy pattern)
      * @param runtime_config Runtime configuration for mock modes
      * @return true if initialization succeeded
+     *
+     * @deprecated Use init_core_and_state() + init_panels() + init_post() instead
+     *             for proper dependency injection.
      */
     bool init_all(const RuntimeConfig& runtime_config);
 
     /**
-     * @brief Inject MoonrakerAPI into panels that need it
-     * @param api Pointer to the initialized MoonrakerAPI
+     * @brief Initialize core subjects and state (phases 1-3)
      *
-     * Called after Moonraker connection is established. Panels stored during
-     * init_all() will have their set_api() method called.
+     * Initializes: app_globals, navigation, status bar, PrinterState, AmsState,
+     * FilamentSensorManager. Must be called before MoonrakerManager::init()
+     * so that PrinterState exists for API creation.
      */
-    void inject_api(MoonrakerAPI* api);
+    void init_core_and_state();
+
+    /**
+     * @brief Initialize panel subjects with API injection (phase 4)
+     * @param api Pointer to the initialized MoonrakerAPI (required)
+     * @param runtime_config Runtime configuration for mock modes
+     *
+     * Creates all panels with the API injected at construction time.
+     * Must be called after MoonrakerManager::init().
+     */
+    void init_panels(MoonrakerAPI* api, const RuntimeConfig& runtime_config);
+
+    /**
+     * @brief Initialize observers and utility subjects (phases 5-7)
+     * @param runtime_config Runtime configuration for mock modes
+     *
+     * Initializes: print completion observer, print start navigation,
+     * notification system, USB manager.
+     */
+    void init_post(const RuntimeConfig& runtime_config);
 
     /**
      * @brief Check if subjects have been initialized
@@ -115,11 +138,11 @@ class SubjectInitializer {
     }
 
   private:
-    // Initialization phases (called by init_all in order)
+    // Initialization phases
     void init_core_subjects();
     void init_printer_state_subjects();
     void init_ams_subjects();
-    void init_panel_subjects();
+    void init_panel_subjects(MoonrakerAPI* api);
     void init_observers();
     void init_utility_subjects();
     void init_usb_manager(const RuntimeConfig& runtime_config);
