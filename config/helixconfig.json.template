@@ -135,5 +135,9 @@
     "_threshold_mb_comment": "File size threshold in MB for using streaming (disk-based) operations instead of buffered (in-memory). 0 = auto-detect based on 10% of available RAM. Override with HELIX_FORCE_STREAMING=1 env var to force streaming for all files.",
     "force_streaming": false,
     "_force_streaming_comment": "Always use streaming operations regardless of file size. Useful for memory-constrained devices or testing. Can also be set via HELIX_FORCE_STREAMING=1 env var."
+  },
+  "plugins": {
+    "enabled": [],
+    "_enabled_comment": "List of plugin IDs to load. Plugins must be explicitly enabled. Example: [\"led-effects\"]"
   }
 }

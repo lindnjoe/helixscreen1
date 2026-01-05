@@ -773,6 +773,12 @@ bool Application::init_plugins() {
     m_plugin_manager->set_core_services(m_moonraker->api(), m_moonraker->client(),
                                         get_printer_state(), m_config);
 
+    // Read enabled plugins from config
+    auto enabled_plugins =
+        m_config->get<std::vector<std::string>>("/plugins/enabled", std::vector<std::string>{});
+    m_plugin_manager->set_enabled_plugins(enabled_plugins);
+    spdlog::info("[Application] Enabled plugins from config: {}", enabled_plugins.size());
+
     // Discover plugins in the plugins directory
     if (!m_plugin_manager->discover_plugins("plugins")) {
         spdlog::error("[Application] Plugin discovery failed");

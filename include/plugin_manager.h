@@ -146,7 +146,7 @@ class PluginManager {
      * @brief Set list of enabled plugin IDs
      *
      * Plugins not in this list will be discovered but not loaded.
-     * If empty, all discovered plugins are loaded.
+     * Plugins must be explicitly enabled - if empty, no plugins load.
      *
      * @param enabled_ids Plugin IDs to enable
      */

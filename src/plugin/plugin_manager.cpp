@@ -129,9 +129,9 @@ bool PluginManager::discover_plugins(const std::string& plugins_dir) {
             continue;
         }
 
-        // Check if plugin is enabled
-        bool enabled = enabled_ids_.empty() || std::find(enabled_ids_.begin(), enabled_ids_.end(),
-                                                         manifest.id) != enabled_ids_.end();
+        // Check if plugin is enabled (must be explicitly in enabled list)
+        bool enabled = !enabled_ids_.empty() && std::find(enabled_ids_.begin(), enabled_ids_.end(),
+                                                          manifest.id) != enabled_ids_.end();
 
         PluginInfo info;
         info.manifest = manifest;
