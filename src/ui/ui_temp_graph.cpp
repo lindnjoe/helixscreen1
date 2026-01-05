@@ -101,6 +101,46 @@ static ui_temp_series_meta_t* find_series_by_color(ui_temp_graph_t* graph, lv_co
     return nullptr;
 }
 
+// Helper: Update max visible temperature across all series
+// Called when data changes to maintain gradient reference point
+static void update_max_visible_temp(ui_temp_graph_t* graph) {
+    if (!graph)
+        return;
+
+    float max_temp = graph->min_temp; // Start at minimum
+
+    // Scan all series to find the maximum visible temperature
+    for (int i = 0; i < graph->series_count; i++) {
+        ui_temp_series_meta_t* meta = &graph->series_meta[i];
+        if (!meta->chart_series || !meta->visible)
+            continue;
+
+        // Get series data array from LVGL chart
+        uint32_t point_count = 0;
+        int32_t* y_points = lv_chart_get_y_array(graph->chart, meta->chart_series);
+        if (!y_points)
+            continue;
+
+        point_count = lv_chart_get_point_count(graph->chart);
+
+        // Find max in this series (skip uninitialized points at min_temp baseline)
+        for (uint32_t j = 0; j < point_count; j++) {
+            float temp = static_cast<float>(y_points[j]);
+            // Skip baseline values (uninitialized points set to min_temp)
+            if (temp > graph->min_temp && temp > max_temp) {
+                max_temp = temp;
+            }
+        }
+    }
+
+    // Ensure we have at least some gradient span (avoid division by zero)
+    if (max_temp <= graph->min_temp) {
+        max_temp = graph->min_temp + 1.0f;
+    }
+
+    graph->max_visible_temp = max_temp;
+}
+
 // LVGL 9 draw task callback for gradient fills under chart lines
 // Called for each draw task when LV_OBJ_FLAG_SEND_DRAW_TASK_EVENTS is set
 static void draw_task_cb(lv_event_t* e) {
@@ -154,15 +194,30 @@ static void draw_task_cb(lv_event_t* e) {
     int32_t line_y_lower = LV_MAX(line_dsc->p1.y, line_dsc->p2.y);
     int32_t chart_bottom = coords.y2;
 
-    // Calculate gradient span from line to chart bottom
-    int32_t gradient_span = chart_bottom - line_y_upper;
-    if (gradient_span <= 0)
-        gradient_span = 1;
+    // Calculate global gradient span based on max visible temperature
+    // This makes gradient intensity relative to the data range, creating a "heat map" effect
+    // where lower temperatures appear with less intense colors
+    int32_t max_y = temp_to_pixel_y(graph, graph->max_visible_temp);
+    int32_t global_gradient_span = chart_bottom - max_y;
+    if (global_gradient_span <= 0)
+        global_gradient_span = 1;
 
-    lv_opa_t opa_upper = top_opa;
-    int32_t lower_distance = line_y_lower - line_y_upper;
+    // Calculate where this line sits in the global gradient (0.0 = bottom, 1.0 = max)
+    int32_t line_height_from_bottom = chart_bottom - line_y_upper;
+    float line_fraction =
+        static_cast<float>(line_height_from_bottom) / static_cast<float>(global_gradient_span);
+    line_fraction = LV_CLAMP(0.0f, line_fraction, 1.0f);
+
+    // Opacity at the line is proportional to its position in the global gradient
+    lv_opa_t opa_upper = static_cast<lv_opa_t>(bottom_opa + (top_opa - bottom_opa) * line_fraction);
+
+    // For opa_lower (at lower vertex of line segment), calculate similarly
+    int32_t lower_height_from_bottom = chart_bottom - line_y_lower;
+    float lower_fraction =
+        static_cast<float>(lower_height_from_bottom) / static_cast<float>(global_gradient_span);
+    lower_fraction = LV_CLAMP(0.0f, lower_fraction, 1.0f);
     lv_opa_t opa_lower =
-        static_cast<lv_opa_t>(top_opa - (top_opa - bottom_opa) * lower_distance / gradient_span);
+        static_cast<lv_opa_t>(bottom_opa + (top_opa - bottom_opa) * lower_fraction);
 
     // Draw triangle from line segment down to the lower point
     // Use maximum gradient stops (8) to reduce visible banding
@@ -335,11 +390,11 @@ static void draw_x_axis_labels_cb(lv_event_t* e) {
         strncpy(prev_label, time_str, sizeof(prev_label) - 1);
 
         // Create label area (centered on label_x)
-        // Sized for 12H format like "2:30 PM" (wider than 24H "14:30")
+        // Sized for 12H format like "12:30 PM" (wider than 24H "14:30")
         lv_area_t label_area;
-        label_area.x1 = label_x - 28; // 56px width, centered
+        label_area.x1 = label_x - 40; // 80px width, centered (fits "12:30 PM")
         label_area.y1 = label_y;
-        label_area.x2 = label_x + 28;
+        label_area.x2 = label_x + 40;
         label_area.y2 = label_y + label_height;
 
         label_dsc.text = time_str;
@@ -361,11 +416,11 @@ static void draw_x_axis_labels_cb(lv_event_t* e) {
 
         // Only draw if different from last label
         if (strcmp(now_str, prev_label) != 0) {
-            // Sized for 12H format like "2:30 PM" (wider than 24H "14:30")
+            // Sized for 12H format like "12:30 PM" (wider than 24H "14:30")
             lv_area_t label_area;
-            label_area.x1 = content_x2 - 32;
+            label_area.x1 = content_x2 - 44; // 80px width, right-aligned
             label_area.y1 = label_y;
-            label_area.x2 = content_x2 + 24;
+            label_area.x2 = content_x2 + 36;
             label_area.y2 = label_y + label_height;
 
             label_dsc.text = now_str;
@@ -390,13 +445,14 @@ static void draw_y_axis_labels_cb(lv_event_t* e) {
     lv_area_t coords;
     lv_obj_get_coords(chart, &coords);
     int32_t pad_top = lv_obj_get_style_pad_top(chart, LV_PART_MAIN);
-    int32_t space_xs = ui_theme_get_spacing("space_xs"); // Gap between labels and chart
 
     // Chart content area (where data is drawn)
-    // Account for extra X-axis label space in bottom padding
+    // Account for extra X-axis label space in bottom padding (matches create() formula)
     int32_t x_axis_label_height = ui_theme_get_font_height(ui_theme_get_font("font_small"));
+    int32_t space_sm = ui_theme_get_spacing("space_sm");
+    int32_t space_md = ui_theme_get_spacing("space_md");
     int32_t content_top = coords.y1 + pad_top;
-    int32_t content_bottom = coords.y2 - (space_xs + x_axis_label_height + space_xs);
+    int32_t content_bottom = coords.y2 - (space_sm + x_axis_label_height + space_md);
     int32_t content_height = content_bottom - content_top;
 
     // Setup label descriptor - same style as X-axis
@@ -472,6 +528,7 @@ ui_temp_graph_t* ui_temp_graph_create(lv_obj_t* parent) {
     graph->next_series_id = 0;
     graph->y_axis_increment = 0; // Disabled by default (caller must enable)
     graph->show_y_axis = false;
+    graph->max_visible_temp = graph->min_temp + 1.0f; // Initialize to avoid zero gradient span
 
     // Create LVGL chart
     graph->chart = lv_chart_create(parent);
@@ -504,7 +561,9 @@ ui_temp_graph_t* ui_temp_graph_create(lv_obj_t* parent) {
     // Extra left padding for Y-axis labels: label width + gap
     lv_obj_set_style_pad_left(graph->chart, y_axis_label_width + space_xs, LV_PART_MAIN);
     // Extra bottom padding for X-axis time labels: gap + label height
-    lv_obj_set_style_pad_bottom(graph->chart, space_xs + label_height + space_xs, LV_PART_MAIN);
+    // Use space_md for larger gap to accommodate 12-hour AM/PM format labels
+    int32_t space_sm = ui_theme_get_spacing("space_sm"); // 6/8/10px
+    lv_obj_set_style_pad_bottom(graph->chart, space_sm + label_height + space_md, LV_PART_MAIN);
 
     // Style division lines (theme handles colors)
     lv_obj_set_style_line_width(graph->chart, 1, LV_PART_MAIN);
@@ -705,6 +764,9 @@ void ui_temp_graph_update_series(ui_temp_graph_t* graph, int series_id, float te
 
     // Add point to series (shifts old data left)
     lv_chart_set_next_value(graph->chart, meta->chart_series, (int32_t)temp);
+
+    // Update max visible temperature for gradient rendering
+    update_max_visible_temp(graph);
 }
 
 // Add temperature point with timestamp (for X-axis labels)
@@ -741,6 +803,9 @@ void ui_temp_graph_update_series_with_time(ui_temp_graph_t* graph, int series_id
 
     // Add point to series (shifts old data left)
     lv_chart_set_next_value(graph->chart, meta->chart_series, (int32_t)temp);
+
+    // Update max visible temperature for gradient rendering
+    update_max_visible_temp(graph);
 }
 
 // Replace all data points (array mode)
@@ -775,6 +840,10 @@ void ui_temp_graph_set_series_data(ui_temp_graph_t* graph, int series_id, const 
     // values automatically freed via ~unique_ptr()
 
     lv_chart_refresh(graph->chart);
+
+    // Update max visible temperature for gradient rendering
+    update_max_visible_temp(graph);
+
     spdlog::debug("[TempGraph] Series {} '{}' data set ({} points)", series_id, meta->name,
                   points_to_copy);
 }
@@ -794,6 +863,10 @@ void ui_temp_graph_clear(ui_temp_graph_t* graph) {
     }
 
     lv_chart_refresh(graph->chart);
+
+    // Update max visible temperature for gradient rendering
+    update_max_visible_temp(graph);
+
     spdlog::debug("[TempGraph] All data cleared");
 }
 
@@ -810,6 +883,10 @@ void ui_temp_graph_clear_series(ui_temp_graph_t* graph, int series_id) {
                             static_cast<int32_t>(graph->min_temp));
 
     lv_chart_refresh(graph->chart);
+
+    // Update max visible temperature for gradient rendering
+    update_max_visible_temp(graph);
+
     spdlog::debug("[TempGraph] Series {} '{}' cleared", series_id, meta->name);
 }
 

@@ -88,6 +88,9 @@ struct ui_temp_graph_t {
     float y_axis_increment; // Temperature increment between Y-axis labels (e.g., 80 for
                             // 0°,80°,160°...)
     bool show_y_axis;       // Whether to draw Y-axis labels
+
+    // Gradient rendering state (updated when data changes)
+    float max_visible_temp; // Maximum temperature currently visible in any series
 };
 
 /**
