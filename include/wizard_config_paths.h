@@ -30,6 +30,8 @@ constexpr const char* HOTEND_SENSOR = "/printer/temp_sensors/hotend";
 // Fan hardware
 constexpr const char* HOTEND_FAN = "/printer/fans/hotend";
 constexpr const char* PART_FAN = "/printer/fans/part";
+constexpr const char* CHAMBER_FAN = "/printer/fans/chamber";
+constexpr const char* EXHAUST_FAN = "/printer/fans/exhaust";
 
 // LED hardware
 constexpr const char* LED_STRIP = "/printer/leds/strip";

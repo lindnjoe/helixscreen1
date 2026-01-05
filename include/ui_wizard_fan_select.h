@@ -11,7 +11,7 @@
 
 /**
  * @file ui_wizard_fan_select.h
- * @brief Wizard fan selection step - configures hotend and part cooling fans
+ * @brief Wizard fan selection step - configures hotend, part, chamber, and exhaust fans
  *
  * Uses hardware discovery from MoonrakerClient to populate dropdowns.
  *
@@ -22,10 +22,12 @@
  * - Static trampolines for LVGL callbacks
  * - Global singleton getter for backwards compatibility
  *
- * ## Subject Bindings (2 total):
+ * ## Subject Bindings (4 total):
  *
  * - hotend_fan_selected (int) - Selected hotend fan index
  * - part_fan_selected (int) - Selected part cooling fan index
+ * - chamber_fan_selected (int) - Selected chamber fan index (optional)
+ * - exhaust_fan_selected (int) - Selected exhaust fan index (optional)
  */
 
 /**
@@ -89,12 +91,24 @@ class WizardFanSelectStep {
     lv_subject_t* get_part_fan_subject() {
         return &part_fan_selected_;
     }
+    lv_subject_t* get_chamber_fan_subject() {
+        return &chamber_fan_selected_;
+    }
+    lv_subject_t* get_exhaust_fan_subject() {
+        return &exhaust_fan_selected_;
+    }
 
     std::vector<std::string>& get_hotend_fan_items() {
         return hotend_fan_items_;
     }
     std::vector<std::string>& get_part_fan_items() {
         return part_fan_items_;
+    }
+    std::vector<std::string>& get_chamber_fan_items() {
+        return chamber_fan_items_;
+    }
+    std::vector<std::string>& get_exhaust_fan_items() {
+        return exhaust_fan_items_;
     }
 
   private:
@@ -104,10 +118,14 @@ class WizardFanSelectStep {
     // Subjects
     lv_subject_t hotend_fan_selected_;
     lv_subject_t part_fan_selected_;
+    lv_subject_t chamber_fan_selected_;
+    lv_subject_t exhaust_fan_selected_;
 
     // Dynamic options storage
     std::vector<std::string> hotend_fan_items_;
     std::vector<std::string> part_fan_items_;
+    std::vector<std::string> chamber_fan_items_;
+    std::vector<std::string> exhaust_fan_items_;
 
     // Track initialization
     bool subjects_initialized_ = false;

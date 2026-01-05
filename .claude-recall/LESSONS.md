@@ -197,3 +197,8 @@
 ### [L043] [*----|-----] Sonnet for structural reviews
 - **Uses**: 2 | **Velocity**: 0.01 | **Learned**: 2026-01-01 | **Last**: 2026-01-01 | **Category**: pattern
 > Use Sonnet (not Haiku) for architectural-level code reviews, structural changes, or final comprehensive reviews. Haiku is fine for quick single-file spot-checks with clear pass/fail criteria.
+
+
+### [L044] [*----|-----] Targeted tests during development
+- **Uses**: 1 | **Velocity**: 0.0 | **Learned**: 2026-01-04 | **Last**: 2026-01-04 | **Category**: preference
+> Run targeted tests with specific tags during implementation (e.g., ./build/bin/helix-tests "[tag]"). Only run full test suite (make test-run) at the end of a feature or phase. Full suite is SLOW - save it for final verification.

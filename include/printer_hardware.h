@@ -127,6 +127,42 @@ class PrinterHardware {
      */
     std::string guess_part_cooling_fan() const;
 
+    /**
+     * @brief Guess the most likely chamber fan (internal air circulation)
+     *
+     * Chamber fans are used for internal air circulation in enclosed printers.
+     * Common examples include bed fans, Nevermore filters, and recirculating filters.
+     *
+     * Priority order:
+     * 1. Exact match: "chamber_fan"
+     * 2. Substring priority chain:
+     *    - "chamber" - chamber air circulation
+     *    - "nevermore" - popular Klipper recirculating filter
+     *    - "bed_fans" - BTT Pi naming convention
+     *    - "filter" - air filtration
+     * 3. Return empty if no match (optional hardware)
+     *
+     * @return Chamber fan name or empty string if none found
+     */
+    std::string guess_chamber_fan() const;
+
+    /**
+     * @brief Guess the most likely exhaust fan (vents air out of enclosure)
+     *
+     * Exhaust fans are used to vent air out of the printer enclosure,
+     * typically through a filter or directly to outside.
+     *
+     * Priority order:
+     * 1. Exact match: "exhaust_fan"
+     * 2. Substring priority chain:
+     *    - "exhaust" - direct exhaust
+     *    - "vent" - ventilation
+     * 3. Return empty if no match (optional hardware)
+     *
+     * @return Exhaust fan name or empty string if none found
+     */
+    std::string guess_exhaust_fan() const;
+
     // ========================================================================
     // LED Guessing
     // ========================================================================

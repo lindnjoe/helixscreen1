@@ -209,6 +209,84 @@ std::string PrinterHardware::guess_part_cooling_fan() const {
     return fans_[0];
 }
 
+std::string PrinterHardware::guess_chamber_fan() const {
+    if (fans_.empty()) {
+        spdlog::debug("[PrinterHardware] guess_chamber_fan() -> no fans discovered");
+        return "";
+    }
+
+    // Priority 1: Exact match for "chamber_fan"
+    if (has_exact(fans_, "chamber_fan")) {
+        spdlog::debug("[PrinterHardware] guess_chamber_fan() -> 'chamber_fan' (exact)");
+        return "chamber_fan";
+    }
+
+    // Priority 2: Substring priority chain
+    // "chamber" - chamber air circulation
+    std::string match = find_containing(fans_, "chamber");
+    if (!match.empty()) {
+        spdlog::debug("[PrinterHardware] guess_chamber_fan() -> '{}' (contains 'chamber')", match);
+        return match;
+    }
+
+    // "nevermore" - popular Klipper recirculating filter
+    match = find_containing(fans_, "nevermore");
+    if (!match.empty()) {
+        spdlog::debug("[PrinterHardware] guess_chamber_fan() -> '{}' (contains 'nevermore')", match);
+        return match;
+    }
+
+    // "bed_fans" - BTT Pi naming convention
+    match = find_containing(fans_, "bed_fans");
+    if (!match.empty()) {
+        spdlog::debug("[PrinterHardware] guess_chamber_fan() -> '{}' (contains 'bed_fans')", match);
+        return match;
+    }
+
+    // "filter" - air filtration
+    match = find_containing(fans_, "filter");
+    if (!match.empty()) {
+        spdlog::debug("[PrinterHardware] guess_chamber_fan() -> '{}' (contains 'filter')", match);
+        return match;
+    }
+
+    // No match - chamber fan is optional hardware
+    spdlog::debug("[PrinterHardware] guess_chamber_fan() -> no match found (optional)");
+    return "";
+}
+
+std::string PrinterHardware::guess_exhaust_fan() const {
+    if (fans_.empty()) {
+        spdlog::debug("[PrinterHardware] guess_exhaust_fan() -> no fans discovered");
+        return "";
+    }
+
+    // Priority 1: Exact match for "exhaust_fan"
+    if (has_exact(fans_, "exhaust_fan")) {
+        spdlog::debug("[PrinterHardware] guess_exhaust_fan() -> 'exhaust_fan' (exact)");
+        return "exhaust_fan";
+    }
+
+    // Priority 2: Substring priority chain
+    // "exhaust" - direct exhaust
+    std::string match = find_containing(fans_, "exhaust");
+    if (!match.empty()) {
+        spdlog::debug("[PrinterHardware] guess_exhaust_fan() -> '{}' (contains 'exhaust')", match);
+        return match;
+    }
+
+    // "vent" - ventilation
+    match = find_containing(fans_, "vent");
+    if (!match.empty()) {
+        spdlog::debug("[PrinterHardware] guess_exhaust_fan() -> '{}' (contains 'vent')", match);
+        return match;
+    }
+
+    // No match - exhaust fan is optional hardware
+    spdlog::debug("[PrinterHardware] guess_exhaust_fan() -> no match found (optional)");
+    return "";
+}
+
 // ============================================================================
 // LED Guessing
 // ============================================================================

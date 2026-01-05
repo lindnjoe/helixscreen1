@@ -21,6 +21,25 @@ using namespace moonraker_internal;
 namespace {
 
 /**
+ * @brief Null-safe numeric value extraction from JSON
+ *
+ * Unlike json::value(), this handles fields that exist but are null.
+ * Returns default_val if key is missing OR if value is null.
+ *
+ * @tparam T Numeric type (double, int, uint64_t, etc.)
+ * @param j JSON object to extract from
+ * @param key Field name to extract
+ * @param default_val Value to return if missing or null
+ * @return Extracted value or default
+ */
+template <typename T> T json_number_or(const json& j, const char* key, T default_val) {
+    if (j.contains(key) && j[key].is_number()) {
+        return j[key].get<T>();
+    }
+    return default_val;
+}
+
+/**
  * @brief Format duration in seconds to human-readable string
  * @param seconds Duration in seconds
  * @return Formatted string like "2h 15m" or "45m" or "30s"
@@ -82,24 +101,30 @@ std::string format_history_filament(double mm) {
 PrintHistoryJob parse_history_job(const json& job_json) {
     PrintHistoryJob job;
 
+    // String fields (use value() - safe for null since it returns default for missing)
     job.job_id = job_json.value("job_id", "");
     job.filename = job_json.value("filename", "");
     job.status = parse_job_status(job_json.value("status", "unknown"));
-    job.start_time = job_json.value("start_time", 0.0);
-    job.end_time = job_json.value("end_time", 0.0);
-    job.print_duration = job_json.value("print_duration", 0.0);
-    job.total_duration = job_json.value("total_duration", 0.0);
-    job.filament_used = job_json.value("filament_used", 0.0);
+
+    // Numeric fields - use json_number_or() for null-safety
+    // end_time is notably null for in-progress jobs
+    job.start_time = json_number_or(job_json, "start_time", 0.0);
+    job.end_time = json_number_or(job_json, "end_time", 0.0);
+    job.print_duration = json_number_or(job_json, "print_duration", 0.0);
+    job.total_duration = json_number_or(job_json, "total_duration", 0.0);
+    job.filament_used = json_number_or(job_json, "filament_used", 0.0);
+
+    // Boolean - value() is safe here since we check for existence first
     job.exists = job_json.value("exists", false);
 
     // Metadata (may be nested or null)
     if (job_json.contains("metadata") && job_json["metadata"].is_object()) {
         const auto& meta = job_json["metadata"];
         job.filament_type = meta.value("filament_type", "");
-        job.layer_count = meta.value("layer_count", 0);
-        job.layer_height = meta.value("layer_height", 0.0);
-        job.nozzle_temp = meta.value("first_layer_extr_temp", 0.0);
-        job.bed_temp = meta.value("first_layer_bed_temp", 0.0);
+        job.layer_count = json_number_or(meta, "layer_count", 0u);
+        job.layer_height = json_number_or(meta, "layer_height", 0.0);
+        job.nozzle_temp = json_number_or(meta, "first_layer_extr_temp", 0.0);
+        job.bed_temp = json_number_or(meta, "first_layer_bed_temp", 0.0);
 
         // Thumbnail path (first available)
         if (meta.contains("thumbnails") && meta["thumbnails"].is_array() &&
@@ -143,7 +168,10 @@ void MoonrakerAPI::get_history_list(int limit, int start, double since, double b
 
             if (response.contains("result")) {
                 const auto& result = response["result"];
-                total_count = result.value("count", 0);
+                // Use null-safe access - count might be null in edge cases
+                if (result.contains("count") && result["count"].is_number()) {
+                    total_count = result["count"].get<uint64_t>();
+                }
 
                 if (result.contains("jobs") && result["jobs"].is_array()) {
                     for (const auto& job_json : result["jobs"]) {
@@ -170,12 +198,22 @@ void MoonrakerAPI::get_history_totals(HistoryTotalsCallback on_success, ErrorCal
         [on_success](json response) {
             PrintHistoryTotals totals;
 
-            if (response.contains("result") && response["result"].contains("job_totals")) {
+            if (response.contains("result") && response["result"].contains("job_totals") &&
+                response["result"]["job_totals"].is_object()) {
                 const auto& jt = response["result"]["job_totals"];
-                totals.total_jobs = jt.value("total_jobs", 0);
-                totals.total_time = static_cast<uint64_t>(jt.value("total_time", 0.0));
-                totals.total_filament_used = jt.value("total_filament_used", 0.0);
-                totals.longest_job = jt.value("longest_job", 0.0);
+                // Null-safe numeric access for all fields
+                if (jt.contains("total_jobs") && jt["total_jobs"].is_number()) {
+                    totals.total_jobs = jt["total_jobs"].get<uint64_t>();
+                }
+                if (jt.contains("total_time") && jt["total_time"].is_number()) {
+                    totals.total_time = static_cast<uint64_t>(jt["total_time"].get<double>());
+                }
+                if (jt.contains("total_filament_used") && jt["total_filament_used"].is_number()) {
+                    totals.total_filament_used = jt["total_filament_used"].get<double>();
+                }
+                if (jt.contains("longest_job") && jt["longest_job"].is_number()) {
+                    totals.longest_job = jt["longest_job"].get<double>();
+                }
                 // Note: Moonraker doesn't provide breakdown counts (completed/cancelled/failed)
                 // These must be calculated client-side from the job list if needed
             }

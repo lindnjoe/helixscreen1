@@ -84,17 +84,30 @@ struct FilamentUsageByType {
 
 /**
  * @brief Convert status string from Moonraker to enum
- * @param status Status string ("completed", "cancelled", "error", "in_progress")
+ * @param status Status string from Moonraker history API
  * @return Corresponding enum value, UNKNOWN if unrecognized
+ *
+ * Moonraker status strings:
+ * - "completed" - Job finished successfully
+ * - "cancelled" - User cancelled the job
+ * - "error" - Print failed due to error
+ * - "in_progress" / "printing" - Job currently active
+ * - "klippy_shutdown" - Klipper shutdown mid-print
+ * - "klippy_disconnect" - Connection lost mid-print
+ * - "server_exit" - Moonraker shutdown mid-print
+ * - "interrupted" - Job detected as interrupted on startup
  */
 [[nodiscard]] inline PrintJobStatus parse_job_status(const std::string& status) {
     if (status == "completed")
         return PrintJobStatus::COMPLETED;
     if (status == "cancelled")
         return PrintJobStatus::CANCELLED;
-    if (status == "error")
+    // Error states from Moonraker lifecycle events
+    if (status == "error" || status == "klippy_shutdown" || status == "klippy_disconnect" ||
+        status == "server_exit" || status == "interrupted")
         return PrintJobStatus::ERROR;
-    if (status == "in_progress")
+    // Active print states
+    if (status == "in_progress" || status == "printing")
         return PrintJobStatus::IN_PROGRESS;
     return PrintJobStatus::UNKNOWN;
 }

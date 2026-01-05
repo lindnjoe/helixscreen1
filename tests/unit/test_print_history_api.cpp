@@ -16,6 +16,7 @@
 #include "../../include/print_history_data.h"
 #include "../../include/printer_state.h"
 #include "../../lvgl/lvgl.h"
+#include "../ui_test_utils.h"
 
 #include <spdlog/fmt/fmt.h>
 
@@ -26,7 +27,6 @@
 #include <vector>
 
 #include "../catch_amalgamated.hpp"
-#include "../ui_test_utils.h"
 
 // ============================================================================
 // Global LVGL Initialization
@@ -383,16 +383,27 @@ TEST_CASE("json::value() handles null values", "[history][parsing]") {
 // PrintHistoryJob Parsing Tests
 // ============================================================================
 
+// Null-safe numeric extraction - mirrors production json_number_or()
+template <typename T>
+static T json_number_or(const nlohmann::json& j, const char* key, T default_val) {
+    if (j.contains(key) && j[key].is_number()) {
+        return j[key].get<T>();
+    }
+    return default_val;
+}
+
 // Helper function to parse a job JSON into PrintHistoryJob (mirrors MoonrakerAPI logic)
 static PrintHistoryJob parse_history_job(const nlohmann::json& job_json) {
     PrintHistoryJob job;
     job.job_id = job_json.value("job_id", "");
     job.filename = job_json.value("filename", "");
-    job.start_time = job_json.value("start_time", 0.0);
-    job.end_time = job_json.value("end_time", 0.0);
-    job.print_duration = job_json.value("print_duration", 0.0);
-    job.total_duration = job_json.value("total_duration", 0.0);
-    job.filament_used = job_json.value("filament_used", 0.0);
+
+    // Numeric fields use null-safe accessor (end_time can be null for in-progress jobs)
+    job.start_time = json_number_or(job_json, "start_time", 0.0);
+    job.end_time = json_number_or(job_json, "end_time", 0.0);
+    job.print_duration = json_number_or(job_json, "print_duration", 0.0);
+    job.total_duration = json_number_or(job_json, "total_duration", 0.0);
+    job.filament_used = json_number_or(job_json, "filament_used", 0.0);
     job.exists = job_json.value("exists", false);
 
     // Parse status string to enum
@@ -414,10 +425,10 @@ static PrintHistoryJob parse_history_job(const nlohmann::json& job_json) {
     if (job_json.contains("metadata") && job_json["metadata"].is_object()) {
         const auto& meta = job_json["metadata"];
         job.filament_type = meta.value("filament_type", "");
-        job.layer_count = meta.value("layer_count", 0u);
-        job.layer_height = meta.value("layer_height", 0.0);
-        job.nozzle_temp = meta.value("first_layer_extr_temp", 0.0);
-        job.bed_temp = meta.value("first_layer_bed_temp", 0.0);
+        job.layer_count = json_number_or(meta, "layer_count", 0u);
+        job.layer_height = json_number_or(meta, "layer_height", 0.0);
+        job.nozzle_temp = json_number_or(meta, "first_layer_extr_temp", 0.0);
+        job.bed_temp = json_number_or(meta, "first_layer_bed_temp", 0.0);
     }
 
     return job;
@@ -531,6 +542,42 @@ TEST_CASE("Parse job with missing optional fields", "[slow][history][parsing]") 
     REQUIRE(job.filament_type.empty());
     REQUIRE(job.layer_count == 0);
     REQUIRE(job.exists == false); // No metadata means file might not exist
+}
+
+TEST_CASE("Parse job with null end_time (in-progress job)", "[slow][history][parsing]") {
+    // In-progress jobs have null end_time - this must not throw
+    // Per Moonraker source: end_time is Optional[float] = None, other numeric fields init to 0.
+    // This tests the null-safety fix for json::value() gotcha
+    auto job_json = nlohmann::json::parse(R"({
+        "job_id": "000999",
+        "filename": "in_progress.gcode",
+        "status": "in_progress",
+        "start_time": 1760600000.0,
+        "end_time": null,
+        "print_duration": 120.5,
+        "total_duration": 125.0,
+        "filament_used": 500.0,
+        "exists": true,
+        "metadata": {
+            "layer_count": 10,
+            "layer_height": 0.2
+        }
+    })");
+
+    // This should NOT throw - null end_time should become 0.0
+    PrintHistoryJob job = parse_history_job(job_json);
+
+    REQUIRE(job.job_id == "000999");
+    REQUIRE(job.status == PrintJobStatus::IN_PROGRESS);
+    REQUIRE(job.start_time > 0.0);
+    // Null end_time should safely default to 0
+    REQUIRE(job.end_time == 0.0);
+    // Other fields should parse normally
+    REQUIRE(job.print_duration == 120.5);
+    REQUIRE(job.total_duration == 125.0);
+    REQUIRE(job.filament_used == 500.0);
+    REQUIRE(job.layer_count == 10);
+    REQUIRE(job.layer_height == 0.2);
 }
 
 // ============================================================================
@@ -847,6 +894,48 @@ TEST_CASE("Calculate stats from real Voron data", "[slow][history][stats][voron]
 // ============================================================================
 // Large Response Handling Tests
 // ============================================================================
+
+// ============================================================================
+// Status String Parsing Tests (production parse_job_status function)
+// ============================================================================
+
+TEST_CASE("Parse all Moonraker status strings", "[history][parsing]") {
+    // Test the production parse_job_status() function from print_history_data.h
+    // which handles all known Moonraker job status strings
+
+    SECTION("completed maps to COMPLETED") {
+        REQUIRE(parse_job_status("completed") == PrintJobStatus::COMPLETED);
+    }
+
+    SECTION("cancelled maps to CANCELLED") {
+        REQUIRE(parse_job_status("cancelled") == PrintJobStatus::CANCELLED);
+    }
+
+    SECTION("error states map to ERROR") {
+        // Direct error
+        REQUIRE(parse_job_status("error") == PrintJobStatus::ERROR);
+        // Klipper shutdown mid-print
+        REQUIRE(parse_job_status("klippy_shutdown") == PrintJobStatus::ERROR);
+        // Klipper connection lost
+        REQUIRE(parse_job_status("klippy_disconnect") == PrintJobStatus::ERROR);
+        // Moonraker server exit
+        REQUIRE(parse_job_status("server_exit") == PrintJobStatus::ERROR);
+        // Job interrupted (detected on startup)
+        REQUIRE(parse_job_status("interrupted") == PrintJobStatus::ERROR);
+    }
+
+    SECTION("active states map to IN_PROGRESS") {
+        REQUIRE(parse_job_status("in_progress") == PrintJobStatus::IN_PROGRESS);
+        REQUIRE(parse_job_status("printing") == PrintJobStatus::IN_PROGRESS);
+    }
+
+    SECTION("unknown strings map to UNKNOWN") {
+        REQUIRE(parse_job_status("") == PrintJobStatus::UNKNOWN);
+        REQUIRE(parse_job_status("unknown_status") == PrintJobStatus::UNKNOWN);
+        REQUIRE(parse_job_status("paused") == PrintJobStatus::UNKNOWN);
+        REQUIRE(parse_job_status("COMPLETED") == PrintJobStatus::UNKNOWN); // Case-sensitive
+    }
+}
 
 TEST_CASE("Handle large history response (simulating 200+ jobs)", "[history][parsing][large]") {
     // Build a large JSON response similar to what Moonraker returns for printers with lots of

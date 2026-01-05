@@ -419,6 +419,153 @@ TEST_CASE("PrinterHardware::guess_part_cooling_fan", "[slow][printer][guessing]"
 }
 
 // ============================================================================
+// guess_chamber_fan() Tests
+// ============================================================================
+
+TEST_CASE("PrinterHardware::guess_chamber_fan", "[slow][printer][guessing]") {
+    std::vector<std::string> heaters;
+    std::vector<std::string> sensors;
+    std::vector<std::string> leds;
+
+    SECTION("Exact match: 'chamber_fan' (highest priority)") {
+        std::vector<std::string> fans = {"fan", "heater_fan hotend_fan", "chamber_fan", "nevermore"};
+        PrinterHardware hw(heaters, sensors, fans, leds);
+        REQUIRE(hw.guess_chamber_fan() == "chamber_fan");
+    }
+
+    SECTION("Substring match: 'chamber' in name") {
+        std::vector<std::string> fans = {"fan", "heater_fan hotend_fan", "fan_generic chamber_circ"};
+        PrinterHardware hw(heaters, sensors, fans, leds);
+        REQUIRE(hw.guess_chamber_fan() == "fan_generic chamber_circ");
+    }
+
+    SECTION("Priority: 'chamber' wins over 'nevermore'") {
+        std::vector<std::string> fans = {"fan", "nevermore_filter", "chamber_circulation"};
+        PrinterHardware hw(heaters, sensors, fans, leds);
+        REQUIRE(hw.guess_chamber_fan() == "chamber_circulation");
+    }
+
+    SECTION("Substring match: 'nevermore' filter") {
+        std::vector<std::string> fans = {"fan", "heater_fan hotend_fan", "nevermore_filter"};
+        PrinterHardware hw(heaters, sensors, fans, leds);
+        REQUIRE(hw.guess_chamber_fan() == "nevermore_filter");
+    }
+
+    SECTION("Priority: 'nevermore' wins over 'bed_fans'") {
+        std::vector<std::string> fans = {"fan", "bed_fans", "nevermore"};
+        PrinterHardware hw(heaters, sensors, fans, leds);
+        REQUIRE(hw.guess_chamber_fan() == "nevermore");
+    }
+
+    SECTION("Substring match: 'bed_fans' (BTT Pi naming)") {
+        std::vector<std::string> fans = {"fan", "heater_fan hotend_fan", "bed_fans"};
+        PrinterHardware hw(heaters, sensors, fans, leds);
+        REQUIRE(hw.guess_chamber_fan() == "bed_fans");
+    }
+
+    SECTION("Priority: 'bed_fans' wins over 'filter'") {
+        std::vector<std::string> fans = {"fan", "air_filter", "bed_fans"};
+        PrinterHardware hw(heaters, sensors, fans, leds);
+        REQUIRE(hw.guess_chamber_fan() == "bed_fans");
+    }
+
+    SECTION("Substring match: 'filter' for air filtration") {
+        std::vector<std::string> fans = {"fan", "heater_fan hotend_fan", "carbon_filter_fan"};
+        PrinterHardware hw(heaters, sensors, fans, leds);
+        REQUIRE(hw.guess_chamber_fan() == "carbon_filter_fan");
+    }
+
+    SECTION("No match: returns empty string (optional hardware)") {
+        std::vector<std::string> fans = {"fan", "heater_fan hotend_fan", "controller_fan"};
+        PrinterHardware hw(heaters, sensors, fans, leds);
+        REQUIRE(hw.guess_chamber_fan() == "");
+    }
+
+    SECTION("Empty fans list: returns empty string") {
+        std::vector<std::string> fans = {};
+        PrinterHardware hw(heaters, sensors, fans, leds);
+        REQUIRE(hw.guess_chamber_fan() == "");
+    }
+
+    SECTION("Case sensitivity: 'Chamber' does not match 'chamber'") {
+        std::vector<std::string> fans = {"fan", "Chamber_Fan"};
+        PrinterHardware hw(heaters, sensors, fans, leds);
+        REQUIRE(hw.guess_chamber_fan() == "");
+    }
+
+    SECTION("Multiple substring matches: returns first in priority order") {
+        std::vector<std::string> fans = {"filter_fan", "nevermore", "chamber_fan"};
+        PrinterHardware hw(heaters, sensors, fans, leds);
+        // Exact "chamber_fan" should win
+        REQUIRE(hw.guess_chamber_fan() == "chamber_fan");
+    }
+}
+
+// ============================================================================
+// guess_exhaust_fan() Tests
+// ============================================================================
+
+TEST_CASE("PrinterHardware::guess_exhaust_fan", "[slow][printer][guessing]") {
+    std::vector<std::string> heaters;
+    std::vector<std::string> sensors;
+    std::vector<std::string> leds;
+
+    SECTION("Exact match: 'exhaust_fan' (highest priority)") {
+        std::vector<std::string> fans = {"fan", "heater_fan hotend_fan", "exhaust_fan", "vent_fan"};
+        PrinterHardware hw(heaters, sensors, fans, leds);
+        REQUIRE(hw.guess_exhaust_fan() == "exhaust_fan");
+    }
+
+    SECTION("Substring match: 'exhaust' in name") {
+        std::vector<std::string> fans = {"fan", "heater_fan hotend_fan", "fan_generic exhaust"};
+        PrinterHardware hw(heaters, sensors, fans, leds);
+        REQUIRE(hw.guess_exhaust_fan() == "fan_generic exhaust");
+    }
+
+    SECTION("Priority: 'exhaust' wins over 'vent'") {
+        std::vector<std::string> fans = {"fan", "vent_fan", "exhaust_blower"};
+        PrinterHardware hw(heaters, sensors, fans, leds);
+        REQUIRE(hw.guess_exhaust_fan() == "exhaust_blower");
+    }
+
+    SECTION("Substring match: 'vent' for ventilation") {
+        std::vector<std::string> fans = {"fan", "heater_fan hotend_fan", "vent_fan"};
+        PrinterHardware hw(heaters, sensors, fans, leds);
+        REQUIRE(hw.guess_exhaust_fan() == "vent_fan");
+    }
+
+    SECTION("Substring match: 'vent' in longer name") {
+        std::vector<std::string> fans = {"fan", "enclosure_ventilation"};
+        PrinterHardware hw(heaters, sensors, fans, leds);
+        REQUIRE(hw.guess_exhaust_fan() == "enclosure_ventilation");
+    }
+
+    SECTION("No match: returns empty string (optional hardware)") {
+        std::vector<std::string> fans = {"fan", "heater_fan hotend_fan", "controller_fan"};
+        PrinterHardware hw(heaters, sensors, fans, leds);
+        REQUIRE(hw.guess_exhaust_fan() == "");
+    }
+
+    SECTION("Empty fans list: returns empty string") {
+        std::vector<std::string> fans = {};
+        PrinterHardware hw(heaters, sensors, fans, leds);
+        REQUIRE(hw.guess_exhaust_fan() == "");
+    }
+
+    SECTION("Case sensitivity: 'Exhaust' does not match 'exhaust'") {
+        std::vector<std::string> fans = {"fan", "Exhaust_Fan"};
+        PrinterHardware hw(heaters, sensors, fans, leds);
+        REQUIRE(hw.guess_exhaust_fan() == "");
+    }
+
+    SECTION("Multiple fans with exhaust: returns first found") {
+        std::vector<std::string> fans = {"exhaust_main", "exhaust_secondary"};
+        PrinterHardware hw(heaters, sensors, fans, leds);
+        REQUIRE(hw.guess_exhaust_fan() == "exhaust_main");
+    }
+}
+
+// ============================================================================
 // guess_main_led_strip() Tests
 // ============================================================================
 
