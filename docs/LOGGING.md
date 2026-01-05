@@ -153,6 +153,6 @@ spdlog::trace("[Moonraker Client] Registered request {} for method {}", id, meth
 
 ## Related Documentation
 
-- `CONTRIBUTING.md` - Code standards
+- `DEVELOPMENT.md#contributing` - Code standards
 - `DEVELOPMENT.md` - Build and debug workflow
 - `CLAUDE.md` - AI assistant rules (includes verbosity flags)

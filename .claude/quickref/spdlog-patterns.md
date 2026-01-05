@@ -1,6 +1,6 @@
 # Logging Quick Reference (spdlog)
 
-**Ultra-condensed guide for spdlog usage. For complete patterns, see `CONTRIBUTING.md`**
+**Ultra-condensed guide for spdlog usage. For complete patterns, see `DEVELOPMENT.md#contributing`**
 
 ---
 
@@ -114,5 +114,5 @@ spdlog::info("Panel initialized");
 
 ---
 
-**Reference:** CONTRIBUTING.md "Logging Requirements"
+**Reference:** DEVELOPMENT.md#contributing "Logging Requirements"
 **Pre-commit check:** `.claude/hooks/pre-commit-check.sh` catches printf/cout usage

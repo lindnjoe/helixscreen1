@@ -265,7 +265,7 @@ Yes! HelixScreen is licensed under **GPL v3**. Source code is on GitHub.
 
 ### How can I contribute?
 
-See the [Contributing Guide](../CONTRIBUTING.md) for:
+See the [Contributing Guide](../DEVELOPMENT.md#contributing) for:
 - Code standards
 - Development setup
 - Pull request process

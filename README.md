@@ -27,7 +27,7 @@ HelixScreen is a printer control interface built with LVGL 9's declarative XML s
 
 ---
 
-**Quick Links:** [Features](#features) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [FAQ](#faq) · [Contributing](docs/CONTRIBUTING.md) · [Roadmap](docs/ROADMAP.md)
+**Quick Links:** [Features](#features) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [FAQ](#faq) · [Contributing](docs/DEVELOPMENT.md#contributing) · [Roadmap](docs/ROADMAP.md)
 
 ---
 
@@ -127,9 +127,8 @@ See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) or open a [GitHub issue](https://
 
 | Guide | Description |
 |-------|-------------|
-| [DEVELOPMENT.md](docs/DEVELOPMENT.md) | Build system, daily workflow |
+| [DEVELOPMENT.md](docs/DEVELOPMENT.md) | Build system, workflow, contributing |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design, patterns |
-| [CONTRIBUTING.md](docs/CONTRIBUTING.md) | Code standards, PR process |
 | [FEATURES.md](docs/FEATURES.md) | Detailed features, comparison |
 | [GALLERY.md](docs/GALLERY.md) | All screenshots |
 | [ROADMAP.md](docs/ROADMAP.md) | Feature timeline |

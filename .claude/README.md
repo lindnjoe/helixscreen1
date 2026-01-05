@@ -166,7 +166,7 @@ git commit --no-verify
 - `docs/DEVELOPER_QUICK_REFERENCE.md` - Common code patterns
 - `docs/BUILD_SYSTEM.md` - Makefile and patches
 - `ARCHITECTURE.md` - System design
-- `CONTRIBUTING.md` - Code standards
+- `DEVELOPMENT.md#contributing` - Code standards
 
 ---
 
@@ -216,7 +216,7 @@ git commit --no-verify
 ## ❓ Questions?
 
 - **General workflow:** See `DEVELOPMENT.md`
-- **Code standards:** See `CONTRIBUTING.md`
+- **Code standards:** See `DEVELOPMENT.md#contributing`
 - **Architecture:** See `ARCHITECTURE.md`
 - **Git workflow:** See `.gitmessage` for commit standards
 

@@ -1,796 +1,358 @@
 # Development Guide
 
-This document covers development environment setup, build processes, and daily development workflows for the HelixScreen prototype.
+Development environment setup, build processes, and workflows for HelixScreen.
 
-## Development Environment Setup
+## Quick Start
 
-### Prerequisites by Platform
-
-**macOS (Homebrew):**
 ```bash
-brew install cmake bear imagemagick python3 node
-# Optional (auto-built from submodules if not installed):
-#   brew install sdl2 spdlog libhv
-npm install         # Install lv_font_conv and lv_img_conv
-make venv-setup     # Set up Python venv with pypng and lz4 for icon conversion
+# Install dependencies (see platform-specific below)
+npm install && make venv-setup
+
+# Build and run
+make -j
+./build/bin/helix-screen --test -vv  # Mock printer + DEBUG logs
 ```
 
-**Minimum macOS Version:** macOS 10.15 (Catalina) or newer required for CoreWLAN/CoreLocation WiFi APIs. The build system enforces this via `-mmacosx-version-min=10.15` deployment target.
+## Development Environment
 
-**Note:** SDL2, spdlog, and libhv can be installed via package manager OR built automatically from submodules. The build system detects and uses system versions when available (preferred for faster builds).
+### macOS (Homebrew)
+```bash
+brew install cmake bear imagemagick python3 node
+npm install         # lv_font_conv and lv_img_conv
+make venv-setup     # Python venv with pypng/lz4
+```
+**Minimum:** macOS 10.15 (Catalina) for CoreWLAN/CoreLocation WiFi APIs.
 
-**Debian/Ubuntu (apt):**
+### Debian/Ubuntu
 ```bash
 sudo apt install cmake bear imagemagick python3 python3-venv clang make npm \
     libnl-3-dev libnl-genl-3-dev libssl-dev
-# Optional (auto-built from submodules if not installed):
-#   sudo apt install libsdl2-dev spdlog libhv-dev
-npm install         # Install lv_font_conv and lv_img_conv
-make venv-setup     # Set up Python venv with pypng and lz4 for icon conversion
+npm install && make venv-setup
 ```
 
-**Note:** `libnl-3-dev` and `libnl-genl-3-dev` are required for wpa_supplicant WiFi backend on Linux.
-
-**Fedora/RHEL/CentOS (dnf):**
+### Fedora/RHEL
 ```bash
 sudo dnf install cmake bear ImageMagick python3 clang make npm \
     libnl3-devel openssl-devel
-# Optional (auto-built from submodules if not installed):
-#   sudo dnf install SDL2-devel spdlog-devel libhv-devel
-npm install         # Install lv_font_conv and lv_img_conv
-make venv-setup     # Set up Python venv with pypng and lz4 for icon conversion
+npm install && make venv-setup
 ```
 
-### Dependency Overview
+### Dependencies
 
-**Core Dependencies (Required):**
-- **`clang`** - C/C++ compiler with C++17 support
-- **`cmake`** - Build system for SDL2 (version 3.16+)
-- **`make`** - GNU Make build system
-- **`python3`** - Icon generation scripts and build tools
-  - **`python3-venv`** - Python virtual environment support (required on Debian/Ubuntu; `sudo apt install python3-venv`)
-  - **`pypng`** / **`lz4`** - Python packages for PNG to C array conversion (installed via `make venv-setup` into `.venv/`)
-- **`node`** / **`npm`** - Package manager for JavaScript dependencies
-- **`lv_font_conv`** - Font converter (installed via `npm install`)
-
-**Optional (Auto-Built from Submodules if Not Installed):**
-- **SDL2** - Display simulator (auto-built from submodule if not system-installed)
-- **spdlog** - Logging library (header-only, auto-uses submodule if not system-installed)
-- **libhv** - WebSocket/HTTP client (auto-built from submodule if not system-installed)
-
-**Always Built from Submodules:**
-- **lvgl** - LVGL 9.4 graphics library (project-specific patches, must use submodule)
-- **TinyGL** - Software 3D rasterizer for G-code visualization (optional, enabled by default via `ENABLE_TINYGL_3D=yes`)
-
-**Development Tools (Optional):**
-- **`bear`** - Generates `compile_commands.json` for IDE/LSP support
-- **`imagemagick`** - Screenshot conversion and icon generation
-
-### Automated Dependency Management
+| Category | Components | Notes |
+|----------|------------|-------|
+| **Required** | clang, cmake 3.16+, make, python3, node/npm | Core build tools |
+| **Auto-built** | SDL2, spdlog, libhv | Built from submodules if not system-installed |
+| **Always submodule** | lvgl, TinyGL | Project-specific patches required |
+| **Optional** | bear, imagemagick | IDE support, screenshots |
 
 ```bash
-make check-deps      # Check what's missing (includes Python venv check)
-make install-deps    # Auto-install (interactive, includes venv setup)
-make venv-setup      # Manually set up Python venv with pypng and lz4
+make check-deps      # Check what's missing
+make install-deps    # Auto-install (interactive)
 ```
-
-The build system automatically:
-- Checks for Python virtual environment (`.venv/`)
-- Verifies pypng and lz4 packages are installed
-- Sets up the venv when running `make install-deps`
-
-For complete dependency management details, see **[BUILD_SYSTEM.md](docs/BUILD_SYSTEM.md)**.
 
 ## Build System
 
-### Quick Build Commands
+### Core Commands
 
 ```bash
-# Parallel incremental build (recommended for daily development)
-make -j
-
-# Clean parallel build with progress and timing
-make build
-
-# Run after building
-./build/bin/helix-screen
-
-# Run with specific theme mode
-./build/bin/helix-screen --dark    # Force dark mode
-./build/bin/helix-screen --light   # Force light mode
-
-# Generate IDE support (one-time setup)
-make compile_commands
-
-# Clean rebuild (only when needed)
-make clean && make -j
-
-# Build without 3D rendering support (smaller binary, faster builds)
-make -j ENABLE_TINYGL_3D=no
+make -j              # Parallel incremental build (recommended)
+make build           # Clean parallel build with progress/timing
+make clean && make -j  # Full rebuild (only when needed)
+make V=1             # Verbose mode (shows full commands)
+make compile_commands  # Generate compile_commands.json for IDE/LSP
 ```
 
-**Build Configuration:** See [BUILD_SYSTEM.md](docs/BUILD_SYSTEM.md) for additional build options like `ENABLE_TINYGL_3D` and `V=1` (verbose mode).
-
-### Theme Mode Control
-
-The UI supports dark and light themes:
+### Running the Application
 
 ```bash
-# Use stored preference from config file (default)
-./build/bin/helix-screen
-
-# Override with dark mode
-./build/bin/helix-screen --dark
-
-# Override with light mode
-./build/bin/helix-screen --light
+./build/bin/helix-screen                    # Production mode
+./build/bin/helix-screen --test             # Full mock mode (no hardware)
+./build/bin/helix-screen --test --real-wifi # Mix real WiFi + mock printer
+./build/bin/helix-screen --dark             # Force dark theme
+./build/bin/helix-screen --light            # Force light theme
+./build/bin/helix-screen -d 1 -s small      # Display 1, small size
 ```
 
-Theme preference is saved to `helixconfig.json` and persists across launches unless overridden by command-line flags.
+### Test Mode Flags
 
-### Logging
+| Flag | Effect |
+|------|--------|
+| `--test` | Enable test mode (required for mocks) |
+| `--real-wifi` | Use real WiFi instead of mock |
+| `--real-ethernet` | Use real Ethernet instead of mock |
+| `--real-moonraker` | Connect to real printer |
+| `--real-files` | Use real printer files |
 
-HelixScreen supports multiple logging backends with automatic detection:
+**Test mode keyboard shortcuts:** S=screenshot, P=test prompt, N=test notification, Q/Esc=quit
+
+### Build Options
 
 ```bash
-# Auto-detect best backend (journal on Linux/systemd, console on macOS)
-./build/bin/helix-screen
+make -j ENABLE_TINYGL_3D=no  # Disable 3D rendering (smaller/faster)
+```
 
-# Force specific log destination
-./build/bin/helix-screen --log-dest=journal   # systemd journal (Linux)
-./build/bin/helix-screen --log-dest=syslog    # Traditional syslog (Linux)
-./build/bin/helix-screen --log-dest=file      # Rotating file log
-./build/bin/helix-screen --log-dest=console   # Console only
+For cross-compilation, patches, and advanced options, see **[BUILD_SYSTEM.md](BUILD_SYSTEM.md)**.
 
-# File logging with custom path
-./build/bin/helix-screen --log-dest=file --log-file=/tmp/helix-debug.log
+## Logging
 
-# Verbosity levels
-./build/bin/helix-screen -v      # info level
-./build/bin/helix-screen -vv     # debug level
-./build/bin/helix-screen -vvv    # trace level (most verbose)
+### Verbosity Levels
+
+| Level | Flag | Use For |
+|-------|------|---------|
+| WARN | (default) | Errors and warnings only |
+| INFO | `-v` | User-visible milestones |
+| DEBUG | `-vv` | Troubleshooting, summaries |
+| TRACE | `-vvv` | Per-item loops, wire protocol |
+
+### Log Destinations
+
+```bash
+./build/bin/helix-screen --log-dest=console  # Console (default on macOS)
+./build/bin/helix-screen --log-dest=journal  # systemd journal (Linux)
+./build/bin/helix-screen --log-dest=file --log-file=/tmp/helix.log
 ```
 
 **Viewing logs on Linux:**
 ```bash
-# systemd journal
-journalctl -t helix -f
-
-# syslog (varies by distro)
-tail -f /var/log/syslog | grep helix
-
-# File (auto-detected path)
-tail -f /var/log/helix-screen.log
-# or
-tail -f ~/.local/share/helix-screen/helix.log
+journalctl -t helix -f              # systemd
+tail -f /var/log/helix-screen.log   # file
 ```
 
-**Configuration:** Set `log_dest` in `helixconfig.json` to override the default:
-```json
-{
-  "log_dest": "journal",
-  "log_path": ""
-}
+### Code Usage
+
+**ALWAYS use spdlog** - never printf/cout/LV_LOG_*:
+```cpp
+spdlog::info("[ComponentName] Message: {}", value);
+spdlog::debug("[Theme] Registered {} items", count);
 ```
 
-Priority: CLI flags > config file > auto-detect.
+**spdlog submodule:** Uses fmt-11.2.0 branch. Initialize with `git submodule update --init --recursive`.
 
-### Keyboard
+## Configuration
 
-The on-screen keyboard features:
-- Number row always visible (1-0)
-- QWERTY layout with backspace on row 4 (right of M, above Enter)
-- Long-press keys for alternative characters (e.g., hold 'a' for '@', '1' for '%')
-- Mode switching: ?123 for symbols, ABC to return, Shift for uppercase
-- Visual key feedback on press (pop-overs)
-
-No configuration needed - the keyboard is always enabled and ready to use.
-
-### Build System Features
-
-- **Auto-parallel builds** - Detects CPU cores automatically
-- **Color-coded output** - `[CXX]` (blue), `[CC]` (cyan), `[LD]` (magenta)
-- **Incremental compilation** - Only rebuilds changed files
-- **Automatic patch application** - LVGL patches applied transparently
-
-**Verbose mode:**
-```bash
-make V=1  # Shows full compiler commands
-```
-
-**For advanced features** (fonts, icons, patches, troubleshooting), see **[BUILD_SYSTEM.md](docs/BUILD_SYSTEM.md)**.
-
-## Configuration File Management
-
-**Pattern:** User-specific config files are git-ignored. Reference/default values live in `data/` directory as templates.
-
-### Template-Based Configuration
+### Config File Pattern
 
 ```bash
-# First time setup: Copy template to create user config
-cp config/helixconfig.json.template config/helixconfig.json
-
-# Template is versioned, user config is git-ignored
-git status
-# config/helixconfig.json appears in .gitignore
+cp config/helixconfig.json.template config/helixconfig.json  # First-time setup
 ```
 
-**Why this pattern:**
-- **config/helixconfig.json** - User-specific settings, git-ignored
-- **config/helixconfig.json.template** - Default values, versioned in git
-- Prevents accidental commits of user-specific settings (API keys, local paths, preferences)
-- Provides reference defaults for new developers/installations
+- `config/helixconfig.json` - User settings (git-ignored)
+- `config/helixconfig.json.template` - Defaults (versioned)
 
-**Note:** Legacy config location (`helixconfig.json` in project root) is automatically migrated to `config/helixconfig.json` on startup.
+**Never commit user config.** Legacy root location auto-migrates.
 
-### Adding New Config Fields
+### Config Structure
 
-When adding new configuration options:
-
-1. **Add to template** (`config/helixconfig.json.template`)
-   ```json
-   {
-     "config_path": "helixconfig.json",
-     "dark_mode": false,          // NEW: Theme preference
-     "printer": { ... },
-     ...
-   }
-   ```
-
-2. **Document in code** (src/config.cpp or relevant module)
-   ```cpp
-   // Read theme preference (default: false = light mode)
-   bool dark_mode = config->get<bool>("/dark_mode", false);
-   ```
-
-3. **Update user's config** (automatic via config->save() or manual copy from template)
-
-**Important:** NEVER commit `config/helixconfig.json`. Only commit template changes.
-
-### Config Key Naming Conventions
-
-When adding or modifying printer hardware configuration, follow these conventions:
-
-**Container Keys (Plural):**
-Use plural names for objects that contain role-based mappings:
-- `heaters` - Heater role mappings (`bed`, `hotend`)
-- `temp_sensors` - Temperature sensor role mappings (`bed`, `hotend`)
-- `fans` - Fan role mappings (`part`, `hotend`)
-- `leds` - LED role mappings (`strip`, `chamber`)
-
-**Role Keys (Singular):**
-Inside containers, use singular role names that describe the hardware's function:
-- `bed`, `hotend`, `chamber` (for heaters/sensors)
-- `part`, `hotend` (for fans)
-- `strip` (for LEDs)
-
-**Extra Hardware Groups:**
-Use `extra_*` prefix for supplementary hardware beyond primary role mappings:
-- `extra_sensors` - Additional temperature sensors to monitor
-
-**Explicit Type Naming:**
-Be explicit about sensor types to avoid ambiguity:
-- `temp_sensors` (not just `sensors`) - Temperature sensors specifically
-- Future: `filament_sensors`, `probe_sensors`, etc.
-
-**Example Structure:**
 ```json
 {
   "printer": {
     "heaters": { "bed": "heater_bed", "hotend": "extruder" },
     "temp_sensors": { "bed": "heater_bed", "hotend": "extruder" },
-    "fans": { "part": "fan", "hotend": "heater_fan hotend_fan" },
-    "leds": { "strip": "neopixel chamber_light" },
-    "extra_sensors": {},
-    "hardware": {
-      "optional": [],
-      "expected": [],
-      "last_snapshot": {}
-    }
+    "fans": { "part": "fan", "hotend": "heater_fan hotend_fan" }
   }
 }
 ```
 
-**Key Principles:**
-1. Container keys are always **plural** (`heaters`, not `heater`)
-2. Role keys inside containers are always **singular** (`bed`, not `beds`)
-3. Arrays are only used for **hardware tracking** metadata, not role mappings
-4. All hardware role mappings are **objects with string values** (Klipper names)
+**Naming:** Container keys plural (`heaters`), role keys singular (`bed`).
 
-> **Breaking Change (Jan 2026):** The config schema changed from singular container keys (`heater`, `sensor`, `fan`, `led`) to plural keys (`heaters`, `temp_sensors`, `fans`, `leds`). Users upgrading from older versions must delete their config and re-run the first-run wizard.
+## DPI & Hardware Profiles
 
-## Multi-Display Development (macOS)
-
-Control which display the UI window appears on:
+LVGL scales UI based on DPI. Default: 160 (reference, no scaling).
 
 ```bash
-./build/bin/helix-screen --display 1     # Display 1 (secondary)
+./build/bin/helix-screen --dpi 170  # 7" @ 1024x600 (BTT Pad 7)
+./build/bin/helix-screen --dpi 187  # 5" @ 800x480
+./build/bin/helix-screen --dpi 201  # 4.3" @ 720x480 (AD5M)
+```
+
+| Hardware | Resolution | DPI |
+|----------|------------|-----|
+| Reference | — | 160 |
+| 7" LCD | 1024×600 | 170 |
+| 5" LCD | 800×480 | 187 |
+| AD5M | 720×480 | 201 |
+
+## Multi-Display (macOS)
+
+```bash
+./build/bin/helix-screen --display 1     # Secondary display
 ./build/bin/helix-screen -d 1 -s small   # Combined options
 ```
 
-For complete multi-display details, see **[BUILD_SYSTEM.md](docs/BUILD_SYSTEM.md)**.
+Uses `SDL_GetDisplayBounds()` for proper positioning on multi-monitor setups.
 
-## DPI Configuration & Hardware Profiles
-
-### Overview
-
-LVGL's theme system scales UI elements based on display DPI (dots per inch). This ensures consistent physical sizing across different screen densities—a button should be roughly the same physical size whether displayed on a low-DPI 7" screen or a high-DPI 4.3" screen.
-
-**Key Formula:**
-```c
-// LVGL DPI scaling: LV_DPX_CALC(dpi, value) = (dpi * value + 80) / 160
-// Reference DPI: 160 (no scaling)
-// Example: PAD_DEF=12 @ 160 DPI → 12 pixels
-//          PAD_DEF=12 @ 187 DPI → 14 pixels (scaled up)
-```
-
-### Default DPI
-
-**Default: 160 DPI** (defined in `lv_conf.h` as `LV_DPI_DEF`)
-
-This is LVGL's reference DPI where theme padding values (12/16/20) are used exactly as specified with no scaling. Chosen as a conservative baseline that doesn't assume high-density displays.
-
-### Testing Different Hardware Profiles
-
-Use the `--dpi` flag to test how the UI will appear on target hardware:
+## Screenshots
 
 ```bash
-# Reference DPI (160) - no scaling
-./build/bin/helix-screen --dpi 160
+# Interactive: Press 'S' in running UI
 
-# 7" @ 1024x600 (170 DPI) - BTT Pad 7, similar displays
-./build/bin/helix-screen -s medium --dpi 170
-
-# 5" @ 800x480 (187 DPI) - Common 5" LCD panels
-./build/bin/helix-screen -s medium --dpi 187
-
-# 4.3" @ 720x480 (201 DPI) - FlashForge AD5M, compact screens
-./build/bin/helix-screen -s small --dpi 201
-```
-
-### Target Hardware DPI Reference
-
-| Hardware | Size | Resolution | DPI | Notes |
-|----------|------|------------|-----|-------|
-| **Reference** | — | — | **160** | LVGL baseline (no scaling) |
-| 7" LCD | 7.0" | 1024×600 | 170 | BTT Pad 7, common tablets |
-| 5" LCD | 5.0" | 800×480 | 187 | Popular touch panels |
-| AD5M | 4.3" | 720×480 | 201 | FlashForge printer display |
-
-**DPI Calculation:**
-```
-DPI = sqrt(width² + height²) / diagonal_inches
-
-Example (5" @ 800×480):
-DPI = sqrt(800² + 480²) / 5 = 933.06 / 5 = 186.6 ≈ 187
-```
-
-### How DPI Affects UI
-
-**At 160 DPI (reference):**
-- SMALL screen (≤480px): PAD_DEF=12, PAD_SMALL=8, PAD_TINY=2
-- MEDIUM screen (481-800px): PAD_DEF=16, PAD_SMALL=10, PAD_TINY=4
-- LARGE screen (>800px): PAD_DEF=20, PAD_SMALL=12, PAD_TINY=6
-
-**At 187 DPI (5" screen):**
-- MEDIUM screen PAD_DEF: `(187 * 16 + 80) / 160 = 19` pixels
-- ~19% larger than reference to maintain physical size
-
-**At 201 DPI (4.3" screen):**
-- MEDIUM screen PAD_DEF: `(201 * 16 + 80) / 160 = 20` pixels
-- ~25% larger than reference for smaller, denser display
-
-### Test Suite
-
-Verify DPI scaling behavior:
-```bash
-make test-responsive-theme  # Includes DPI scaling tests
-```
-
-Tests cover:
-- Breakpoint classification (SMALL/MEDIUM/LARGE)
-- DPI scaling accuracy for all hardware profiles (160/170/187/201)
-- Theme toggle preservation
-
-### When to Override DPI
-
-**Keep default (160) when:**
-- Developing on desktop/laptop without target hardware
-- Creating screenshots for documentation
-- Testing responsive layouts independent of density
-
-**Override DPI when:**
-- Testing how UI appears on specific target hardware
-- Verifying touch target sizes are appropriate
-- Validating spacing/padding looks good at actual density
-- Generating screenshots that match real device appearance
-
-## spdlog Logging Library
-
-### Overview
-
-HelixScreen uses [spdlog](https://github.com/gabime/spdlog) for all console/file logging. The library is integrated as an **independent git submodule**.
-
-**Version:** fmt 11.2.0 branch (updated 2025-11-01)
-- Eliminates fmt deprecation warnings
-- Clean build output
-- Header-only integration
-
-### Submodule Management
-
-**Initialize after clone:**
-```bash
-git submodule update --init --recursive spdlog
-```
-
-**Check submodule status:**
-```bash
-git submodule status spdlog
-# Should show: 14ab43ec0b9df6cf793c75785ec5f70b65f2f965 spdlog (v1.2.1-2508-g14ab43ec)
-```
-
-**Update to latest fmt-11.2.0:**
-```bash
-cd spdlog
-git fetch origin
-git checkout origin/fmt-11.2.0
-cd ..
-git add spdlog
-git commit -m "update: spdlog to latest fmt-11.2.0"
-```
-
-### Usage in Code
-
-**ALWAYS use spdlog** - NEVER printf/cout/cerr/LV_LOG_*:
-
-```cpp
-#include <spdlog/spdlog.h>
-
-spdlog::info("Application started");
-spdlog::debug("Debug value: {}", variable);
-spdlog::warn("Warning: {}", message);
-spdlog::error("Error occurred: {}", error_msg);
-```
-
-**Log levels:** `trace()`, `debug()`, `info()`, `warn()`, `error()`, `critical()`
-
-**Verbosity flags:** `-v` (info), `-vv` (debug), `-vvv` (trace). Default: warn only.
-
-## Multi-Display Development (macOS)
-
-Control which display the UI window appears on for dual-monitor workflows:
-
-**How it works:**
-- Uses `SDL_GetDisplayBounds()` to query actual display geometry
-- Calculates true center position for the specified display
-- Supports multi-monitor setups with different resolutions
-
-**Available displays:**
-Run without arguments to see auto-detected display information in logs.
-
-## macOS Location Permission (WiFi Development)
-
-**Required for:** Testing real WiFi scanning/connection on macOS (CoreWLAN backend)
-
-macOS 10.15+ requires Location Services permission for WiFi scanning because network SSIDs can reveal physical location. The app will automatically fall back to mock WiFi backend if permission is not granted.
-
-### Why Manual Permission Grant is Needed
-
-macOS's TCC (Transparency, Consent, and Control) system only shows automatic permission dialogs for:
-- Signed app bundles (`.app` packages)
-- Apps distributed via Mac App Store
-
-Command-line binaries (like our development build) require manual permission grant.
-
-### Grant Location Permission for Development
-
-**Option 1: Grant Permission to Terminal.app (Easiest)**
-
-Command-line apps inherit permissions from their parent process:
-
-1. Open **System Settings** → **Privacy & Security** → **Location Services**
-2. Find **Terminal** (or your terminal app) in the list
-3. Toggle it **ON**
-4. Restart your terminal
-5. Run the app - it will now have location access through Terminal
-
-**Option 2: TCC Database Direct Modification (Advanced)**
-
-Add permission directly via Terminal with Full Disk Access:
-
-```bash
-# First: Grant Terminal.app "Full Disk Access" in System Settings
-# Settings → Privacy & Security → Full Disk Access → Enable Terminal
-
-# Get absolute path to binary
-BINARY_PATH="$(cd $(dirname $0) && pwd)/build/bin/helix-screen"
-
-# Add location permission (macOS 15+ format)
-sudo sqlite3 ~/Library/Application\ Support/com.apple.TCC/TCC.db \
-  "INSERT OR REPLACE INTO access VALUES('kTCCServiceLocation','$BINARY_PATH',0,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,$(date +%s));"
-
-# Kill TCC daemon to reload permissions
-sudo killall tccd
-```
-
-**Option 3: Create Minimal App Bundle (Most Proper)**
-
-This makes macOS treat it as a real app that can request permissions:
-
-```bash
-# Create app bundle structure
-mkdir -p HelixUI.app/Contents/MacOS
-mkdir -p HelixUI.app/Contents/Resources
-
-# Copy binary
-cp build/bin/helix-screen HelixUI.app/Contents/MacOS/
-
-# Create Info.plist
-cat > HelixUI.app/Contents/Info.plist <<'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>CFBundleExecutable</key>
-    <string>helix-screen</string>
-    <key>CFBundleIdentifier</key>
-    <string>net.356c.helixui</string>
-    <key>CFBundleName</key>
-    <string>HelixUI</string>
-    <key>NSLocationWhenInUseUsageDescription</key>
-    <string>HelixScreen needs WiFi access for printer connectivity</string>
-</dict>
-</plist>
-EOF
-
-# Run from bundle - will trigger permission prompt
-open HelixUI.app
-```
-
-### Verify Permission Status
-
-Run the app with verbose logging to see permission status:
-
-```bash
-./build/bin/helix-screen --wizard -vv 2>&1 | grep -i "location\|permission\|wifi"
-```
-
-**Expected output with permission granted:**
-```
-[info] [macOS] Location permission already granted
-[info] [WiFiMacOS] CoreWLAN backend initialized successfully
-```
-
-**Expected output without permission (falls back to mock):**
-```
-[warning] [WiFiMacOS] Location permission not determined
-[warning] [WifiBackend] CoreWLAN backend failed - falling back to mock
-```
-
-### Revoking Permission
-
-To test permission denial or reset state:
-
-```bash
-# Remove permission via System Settings
-# Settings → Privacy & Security → Location Services → Remove helix-screen
-
-# Or reset via tccutil (requires SIP disabled or Full Disk Access)
-tccutil reset Location
-```
-
-## Screenshot Workflow
-
-### Interactive Screenshots
-
-```bash
-# Run the UI and press 'S' to take screenshot
-./build/bin/helix-screen
-# Press 'S' key -> saves timestamped PNG to /tmp/
-```
-
-### Automated Screenshot Script
-
-```bash
-# Basic usage (auto-opens on display 1)
+# Automated:
 ./scripts/screenshot.sh helix-screen output-name [panel] [options]
-
-# Examples
 ./scripts/screenshot.sh helix-screen home-screen home
-./scripts/screenshot.sh helix-screen motion-panel motion -s small
-./scripts/screenshot.sh helix-screen controls controls -s large
+./scripts/screenshot.sh helix-screen motion motion -s small
 
-# Override display for screenshots
+# Environment overrides:
 HELIX_SCREENSHOT_DISPLAY=0 ./scripts/screenshot.sh helix-screen test home
-
-# Auto-open in Preview after capture
 HELIX_SCREENSHOT_OPEN=1 ./scripts/screenshot.sh helix-screen review home
 ```
 
-**Script features:**
-- ✅ **Automatic display positioning** - Opens on display 1 by default
-- ✅ **Panel validation** - Catches invalid panel names before running
-- ✅ **Dependency checking** - Verifies ImageMagick is installed
-- ✅ **Smart cleanup** - Auto-removes BMP, keeps only compressed PNG
-- ✅ **Error handling** - Clear error messages with troubleshooting hints
+Output: `/tmp/ui-screenshot-[name].png`
 
-Screenshots saved to `/tmp/ui-screenshot-[name].png`
-
-## Icon & Asset Workflow
-
-### FontAwesome Icon Generation
+## Icon & Font Workflow
 
 ```bash
 python3 scripts/generate-icon-consts.py  # After editing include/ui_fonts.h
+make icon                                 # Generate platform icons
 ```
 
-Updates `ui_xml/globals.xml` with UTF-8 byte sequences for all icons.
+See **[BUILD_SYSTEM.md](BUILD_SYSTEM.md)** for complete font generation details.
 
-### Application Icon Generation
+## IDE Setup
 
 ```bash
-make icon  # Generates platform-specific icons
+make compile_commands  # Generates compile_commands.json (requires bear)
 ```
 
-For complete font/icon generation details, see **[BUILD_SYSTEM.md](docs/BUILD_SYSTEM.md)**.
+**VS Code:** C/C++ extension + clangd extension
+**Vim/Neovim:** Configure clangd LSP client
+**CLion:** Import as Makefile project
 
-## IDE & Editor Support
-
-### Generate LSP Support
-
-```bash
-make compile_commands  # Requires 'bear' to be installed
-```
-
-This creates `compile_commands.json` for IDE language servers (clangd, etc.).
-
-### Recommended Setup
-
-**VS Code:**
-- Install C/C++ extension pack
-- Install clangd extension
-- Ensure `compile_commands.json` is in project root
-
-**Vim/Neovim:**
-- Configure clangd LSP client
-- Ensure `compile_commands.json` is available
-
-**CLion/other IDEs:**
-- Import as Makefile project
-- Point to generated `compile_commands.json`
-
-## Daily Development Workflow
-
-### Typical Development Cycle
+## Daily Workflow
 
 1. **Edit code** in `src/` or `include/`
-2. **Edit XML** in `ui_xml/` (layout/styling changes - no rebuild needed)
-3. **Build** with `make -j` (parallel incremental build)
-4. **Test** with `./build/bin/helix-screen --test [panel_name]` (test mode)
-5. **Screenshot** with `./scripts/screenshot.sh` or press **S** in UI
-6. **Commit** with working incremental changes
-
-### Test Mode Development
-
-The test mode system allows development without hardware or network infrastructure:
-
-**Basic Usage:**
-```bash
-# Full mock mode - no hardware needed
-./build/bin/helix-screen --test
-
-# Test with real printer but mock network
-./build/bin/helix-screen --test --real-moonraker
-
-# Test with real WiFi but mock printer
-./build/bin/helix-screen --test --real-wifi
-
-# Mixed mode - real WiFi and printer, mock Ethernet
-./build/bin/helix-screen --test --real-wifi --real-moonraker
-```
-
-**Available Flags:**
-- `--test` - Enable test mode (required for all mock functionality)
-- `--real-wifi` - Use real WiFi hardware instead of mock
-- `--real-ethernet` - Use real Ethernet hardware instead of mock
-- `--real-moonraker` - Connect to real printer instead of mock
-- `--real-files` - Use real files from printer instead of test data
-
-**Test Mode Features:**
-- Mock WiFi backend with 10 realistic networks
-- Mock Ethernet backend with simulated connection
-- Test print files with various sizes and metadata
-- Simulated connection delays and failures (5% auth failure rate)
-- Visual banner showing what's mocked vs real
-
-**Test Mode Keyboard Shortcuts:**
-
-| Key | Action | Description |
-|-----|--------|-------------|
-| **S** | Screenshot | Save timestamped PNG to `/tmp/` |
-| **P** | Test Prompt | Show a sample `action:prompt` modal with all button types |
-| **N** | Test Notification | Show a sample `action:notify` toast |
-| **Q** / **Esc** | Quit | Exit the application |
-
-The test prompt (**P**) demonstrates all 5 button colors (primary, secondary, info, warning, error), button groups, and footer buttons - useful for testing the Klipper `action:prompt` protocol UI without a real printer.
-
-**Production Safety:**
-- **NEVER** uses mocks without explicit `--test` flag
-- Production mode fails gracefully if hardware unavailable
-- Clear error messages instead of silent mock fallbacks
-- Test mode banner prevents confusion about mock vs real
+2. **Edit XML** in `ui_xml/` (no rebuild needed for layout/styling)
+3. **Build** with `make -j`
+4. **Test** with `./build/bin/helix-screen --test -vv [panel]`
+5. **Screenshot** with S key or `./scripts/screenshot.sh`
+6. **Commit** working incremental changes
 
 ### XML vs C++ Changes
 
-**XML file changes:**
-- Layout, styling, colors, text content
-- **No recompilation needed** - changes visible immediately on restart
-- Edit `ui_xml/*.xml` files directly
+| Change Type | Location | Rebuild? |
+|-------------|----------|----------|
+| Layout, styling, colors | `ui_xml/*.xml` | No (restart only) |
+| Logic, bindings, handlers | `src/*.cpp`, `include/*.h` | Yes (`make -j`) |
 
-**C++ file changes:**
-- Business logic, subject bindings, event handlers
-- **Requires rebuild** - run `make -j` after changes
-- Edit `src/*.cpp` and `include/*.h` files
+## macOS WiFi Permission
 
-### Performance Tips
+Real WiFi scanning requires Location Services (network SSIDs reveal location).
 
-**Use incremental builds:**
+**Easiest:** System Settings → Privacy & Security → Location Services → Enable Terminal
+
+Without permission, app falls back to mock WiFi. Check with:
 ```bash
-make -j  # Only rebuilds changed files
-```
-
-**Avoid clean rebuilds unless necessary:**
-```bash
-# Only when troubleshooting build issues
-make clean && make -j
-```
-
-**Parallel compilation:**
-```bash
-make -j     # Auto-detects all CPU cores (recommended)
-make -j16   # Explicit core count (current system has 16 cores)
+./build/bin/helix-screen --wizard -vv 2>&1 | grep -i "location\|wifi"
 ```
 
 ## Troubleshooting
 
-### Quick Fixes
-
-**SDL2 not found:**
 ```bash
-brew install sdl2                # macOS
-sudo apt install libsdl2-dev     # Linux
+make check-deps              # Check missing dependencies
+make install-deps            # Auto-install
+make clean && make V=1       # Verbose rebuild
 ```
 
-**Compilation errors:**
+**SDL2 not found:** `brew install sdl2` (macOS) or `sudo apt install libsdl2-dev` (Linux)
+
+For complete troubleshooting, see **[BUILD_SYSTEM.md](BUILD_SYSTEM.md)**.
+
+---
+
+## Contributing
+
+### First-Time Setup
+
 ```bash
-make clean && make V=1  # Verbose mode
+make setup  # Configures pre-commit hook + commit template
 ```
 
-**Missing dependencies:**
-```bash
-make check-deps     # Check what's missing
-make install-deps   # Auto-install
+The pre-commit hook auto-formats code (clang-format) and runs quality checks.
+
+### Code Standards
+
+**Class-based architecture required** for all new code:
+
+```cpp
+// ✅ CORRECT: Class-based panel
+class MotionPanel : public PanelBase {
+public:
+    explicit MotionPanel(lv_obj_t* parent);
+    void show() override;
+};
+
+// ❌ AVOID: Function-based (legacy)
+void ui_panel_motion_init(lv_obj_t* parent);
 ```
 
-**For complete troubleshooting** (patches, performance, runtime issues), see **[BUILD_SYSTEM.md](docs/BUILD_SYSTEM.md)**.
+**Naming conventions:**
+- Functions/variables: `snake_case` (`ui_panel_home_init`, `temp_target`)
+- XML files: `kebab-case` (`nozzle-temp-panel.xml`)
+- Constants: `UPPER_SNAKE_CASE` (`MAX_TEMP`)
 
-## Cross-Platform Considerations
+**Critical patterns:**
+```cpp
+// Widget lookup: use names, not indices
+lv_obj_t* label = lv_obj_find_by_name(panel, "temp_display");  // ✅
+lv_obj_t* label = lv_obj_get_child(panel, 3);                   // ❌
 
-**This project is developed on both macOS and Linux:**
-- **NEVER invoke compilers directly** (`clang++`, `g++`) - always use `make`
-- Makefile auto-detects available compiler (clang > gcc priority)
-- Platform-specific features handled via Makefile platform detection
-- **WiFi Backend:** macOS uses CoreWLAN, Linux uses wpa_supplicant
+// LVGL API: public only
+lv_obj_get_x();        // ✅ Public
+_lv_obj_mark_dirty();  // ❌ Private (underscore prefix)
+```
 
-## Memory & Performance Analysis
+**Copyright headers** (all new files):
+```cpp
+// Copyright 2025 356C LLC
+// SPDX-License-Identifier: GPL-3.0-or-later
+```
 
-See **[docs/MEMORY_ANALYSIS.md](docs/MEMORY_ANALYSIS.md)** for detailed analysis tools and techniques.
+### Commit Messages
+
+```
+type(scope): description
+
+Optional detailed explanation.
+```
+
+**Types:** `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
+
+**Examples:**
+```
+feat(ui): add temperature control overlay panel
+fix(build): resolve SDL2 linking on macOS Sequoia
+docs(readme): update build instructions
+```
+
+### Pull Requests
+
+**Before submitting:**
+1. Rebase on latest `main`
+2. Test build and runtime
+3. Update docs if patterns changed
+4. Add screenshots for UI changes
+
+**PR description includes:**
+- What changed (summary)
+- Why (context/problem solved)
+- How to test
+- Screenshots (if visual)
+- Breaking changes (if any)
+
+### Code Review Focus
+
+- Architecture compliance (XML/Subject patterns)
+- Error handling (logging, null checks)
+- Performance (no blocking in UI thread)
+- Documentation updated
+
+---
 
 ## Related Documentation
 
-- **[README.md](README.md)** - Project overview and quick start
-- **[BUILD_SYSTEM.md](docs/BUILD_SYSTEM.md)** - Complete build system reference
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System design and patterns
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Code standards and workflow
-- **[LVGL 9 XML Guide](docs/LVGL9_XML_GUIDE.md)** - Complete XML system reference
-- **[Quick Reference](docs/DEVELOPER_QUICK_REFERENCE.md)** - Common patterns and gotchas
+- **[README.md](../README.md)** - Project overview
+- **[BUILD_SYSTEM.md](BUILD_SYSTEM.md)** - Complete build reference
+- **[ARCHITECTURE.md](../ARCHITECTURE.md)** - System design
+- **[LVGL9_XML_GUIDE.md](LVGL9_XML_GUIDE.md)** - XML syntax reference
+- **[DEVELOPER_QUICK_REFERENCE.md](DEVELOPER_QUICK_REFERENCE.md)** - Common patterns
+- **[MEMORY_ANALYSIS.md](MEMORY_ANALYSIS.md)** - Performance analysis

@@ -1144,8 +1144,7 @@ Only use `make clean && make` when:
 ## See Also
 
 - **[README.md](../README.md)** - Project overview and quick start
-- **[DEVELOPMENT.md](../DEVELOPMENT.md)** - Development environment setup and daily workflow
-- **[ARCHITECTURE.md](../ARCHITECTURE.md)** - System design and technical patterns
-- **[CONTRIBUTING.md](../CONTRIBUTING.md)** - Code standards and submission guidelines
+- **[DEVELOPMENT.md](DEVELOPMENT.md)** - Development environment, workflow, and contributing
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System design and technical patterns
 - **[CLAUDE.md](../CLAUDE.md)** - Development context and AI assistant guidelines
 - **[patches/README.md](../patches/README.md)** - Patch documentation

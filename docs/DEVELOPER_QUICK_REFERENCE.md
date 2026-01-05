@@ -339,4 +339,4 @@ style_flex_cross_place="center"
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** - System design, patterns, architectural decisions, "why" explanations
 - **[LVGL9_XML_GUIDE.md](LVGL9_XML_GUIDE.md)** - Complete XML syntax reference
 - **[DEVELOPMENT.md](DEVELOPMENT.md)** - Build system and daily workflow
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Code standards and git workflow
+- **[DEVELOPMENT.md#contributing](DEVELOPMENT.md#contributing)** - Code standards and git workflow

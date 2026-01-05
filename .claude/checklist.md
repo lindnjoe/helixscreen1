@@ -59,7 +59,7 @@ Use these checklists before starting common tasks to avoid frequent mistakes.
 - [ ] **Meaningful commit message:** Use `.gitmessage` template format
 - [ ] **Commit related changes together:** Don't mix unrelated fixes
 
-**Reference:** CONTRIBUTING.md, CLAUDE.md "Critical Rules"
+**Reference:** DEVELOPMENT.md#contributing, CLAUDE.md "Critical Rules"
 
 ---
 

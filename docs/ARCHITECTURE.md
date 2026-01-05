@@ -1063,5 +1063,5 @@ This document focuses on system design, patterns, and architectural decisions ("
 - **[DEVELOPER_QUICK_REFERENCE.md](DEVELOPER_QUICK_REFERENCE.md)** - Code snippets, common patterns, quick lookups ("how")
 - **[LVGL9_XML_GUIDE.md](LVGL9_XML_GUIDE.md)** - Complete XML syntax reference
 - **[DEVELOPMENT.md](DEVELOPMENT.md)** - Build system and daily workflow
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Code standards and git workflow
+- **[DEVELOPMENT.md#contributing](DEVELOPMENT.md#contributing)** - Code standards and git workflow
 - **[BUILD_SYSTEM.md](BUILD_SYSTEM.md)** - Build configuration and patches

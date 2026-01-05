@@ -169,7 +169,7 @@ See `docs/IDEAS.md` § "Design Philosophy: Local vs Remote UI" for full rational
 
 ## Contributing
 
-See `docs/CONTRIBUTING.md` for code standards and git workflow.
+See `docs/DEVELOPMENT.md#contributing` for code standards and git workflow.
 
 **Key references:**
 - `CLAUDE.md` - Project patterns and critical rules

@@ -165,7 +165,7 @@
 
 
 ### [L036] [**---|-----] Header file documentation
-- **Uses**: 3 | **Velocity**: 0.13 | **Learned**: 2025-12-28 | **Last**: 2026-01-05 | **Category**: pattern
+- **Uses**: 3 | **Velocity**: 0.07 | **Learned**: 2025-12-28 | **Last**: 2026-01-05 | **Category**: pattern
 > Important files have documentation in their header files (include/*.h). Check the header file first when trying to understand a class or module - it often contains usage examples, design rationale, and API documentation.
 
 

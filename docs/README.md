@@ -24,9 +24,8 @@ Welcome to the HelixScreen documentation. Choose your path:
 
 | Document | Description |
 |----------|-------------|
-| [**Development Guide**](DEVELOPMENT.md) | Build system and daily workflow |
+| [**Development Guide**](DEVELOPMENT.md) | Build system, workflow, and contributing |
 | [**Architecture**](ARCHITECTURE.md) | System design and patterns |
-| [**Contributing**](CONTRIBUTING.md) | Code standards and PR process |
 | [**Build System**](BUILD_SYSTEM.md) | Makefile, cross-compilation, patches |
 | [**Testing**](TESTING.md) | Test infrastructure and Catch2 usage |
 
@@ -85,9 +84,8 @@ docs/
 │   ├── TROUBLESHOOTING.md    # Common problems
 │   └── FAQ.md                # Frequently asked questions
 │
-├── DEVELOPMENT.md            # Developer setup and workflow
+├── DEVELOPMENT.md            # Developer setup, workflow, contributing
 ├── ARCHITECTURE.md           # System design
-├── CONTRIBUTING.md           # Code standards
 ├── BUILD_SYSTEM.md           # Build internals
 ├── TESTING.md                # Test infrastructure
 │
@@ -118,7 +116,7 @@ moonraker-plugin/
 | Install HelixScreen | [Installation Guide](user/INSTALL.md) |
 | Use HelixScreen | [User Guide](user/USER_GUIDE.md) |
 | Build from source | [Development Guide](DEVELOPMENT.md) |
-| Contribute code | [Contributing Guide](CONTRIBUTING.md) |
+| Contribute code | [Development Guide - Contributing](DEVELOPMENT.md#contributing) |
 | Create XML layouts | [LVGL 9 XML Guide](LVGL9_XML_GUIDE.md) |
 | Understand the architecture | [Architecture Guide](ARCHITECTURE.md) |
 | Cross-compile for Pi | [Build System - Cross-Compilation](BUILD_SYSTEM.md#cross-compilation-embedded-targets) |

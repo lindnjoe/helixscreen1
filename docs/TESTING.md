@@ -320,4 +320,4 @@ lldb build/bin/helix-tests
 
 - **[ARCHITECTURE.md](ARCHITECTURE.md):** Thread safety patterns
 - **[BUILD_SYSTEM.md](BUILD_SYSTEM.md):** Build configuration
-- **[CONTRIBUTING.md](CONTRIBUTING.md):** Code standards
+- **[DEVELOPMENT.md#contributing](DEVELOPMENT.md#contributing):** Code standards
