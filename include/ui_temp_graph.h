@@ -91,6 +91,9 @@ struct ui_temp_graph_t {
 
     // Gradient rendering state (updated when data changes)
     float max_visible_temp; // Maximum temperature currently visible in any series
+
+    // Axis label font (configurable via ui_temp_graph_set_axis_size)
+    const lv_font_t* axis_font; // Font for X/Y axis labels (default: font_small)
 };
 
 /**
@@ -265,3 +268,12 @@ void ui_temp_graph_set_series_gradient(ui_temp_graph_t* graph, int series_id, lv
  * @param show Whether to show Y-axis labels
  */
 void ui_temp_graph_set_y_axis(ui_temp_graph_t* graph, float increment, bool show);
+
+/**
+ * Set axis label font size
+ *
+ * @param graph Graph instance
+ * @param size Size name: "xs" (font_xs), "sm" (font_small, default), "md" (font_body), "lg"
+ * (font_heading)
+ */
+void ui_temp_graph_set_axis_size(ui_temp_graph_t* graph, const char* size);

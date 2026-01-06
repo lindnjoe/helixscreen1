@@ -1108,6 +1108,9 @@ void TempControlPanel::setup_mini_combined_graph(lv_obj_t* container) {
     // Configure Y-axis with 50°C increments for readability
     ui_temp_graph_set_y_axis(mini_graph_, 50.0f, true);
 
+    // Use smallest font for axis labels (cramped space on filament panel)
+    ui_temp_graph_set_axis_size(mini_graph_, "xs");
+
     // Add bed series FIRST (renders underneath) - cyan/cooling color
     mini_bed_series_id_ = ui_temp_graph_add_series(mini_graph_, "Bed", bed_config_.color);
     if (mini_bed_series_id_ >= 0) {

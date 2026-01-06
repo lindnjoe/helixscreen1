@@ -306,12 +306,12 @@ static void draw_x_axis_labels_cb(lv_event_t* e) {
     int32_t content_x2 = coords.x2 - pad_right;
 
     // Setup label descriptor - match Y-axis label style exactly
-    // Y-axis labels use font_small and get their color from LVGL's theme default
+    // Y-axis labels use configurable font and get their color from LVGL's theme default
     // We get the text color from the chart's LV_PART_TICKS style (used for axis labels)
     lv_draw_label_dsc_t label_dsc;
     lv_draw_label_dsc_init(&label_dsc);
     label_dsc.color = lv_obj_get_style_text_color(chart, LV_PART_MAIN); // Use chart's text color
-    label_dsc.font = ui_theme_get_font("font_small"); // Same font as Y-axis labels (noto_sans_16)
+    label_dsc.font = graph->axis_font; // Configurable axis font
     label_dsc.align = LV_TEXT_ALIGN_CENTER;
     label_dsc.opa = lv_obj_get_style_text_opa(chart, LV_PART_MAIN); // Use chart's text opacity
 
@@ -330,8 +330,7 @@ static void draw_x_axis_labels_cb(lv_event_t* e) {
     // Label positioning: Y is aligned with bottom Y-axis label (0° baseline)
     // The Y-axis labels use space_between layout, with 0° at the chart content bottom
     int32_t pad_bottom = lv_obj_get_style_pad_bottom(chart, LV_PART_MAIN);
-    int32_t label_height = ui_theme_get_font_height(
-        ui_theme_get_font("font_small")); // Get actual font height dynamically
+    int32_t label_height = ui_theme_get_font_height(graph->axis_font); // Configurable axis font
     // Add small gap between chart content and X-axis labels
     int32_t space_xs = ui_theme_get_spacing("space_xs"); // 4/5/6px gap
     // Position below chart content with responsive gap
@@ -459,12 +458,12 @@ static void draw_y_axis_labels_cb(lv_event_t* e) {
     lv_draw_label_dsc_t label_dsc;
     lv_draw_label_dsc_init(&label_dsc);
     label_dsc.color = lv_obj_get_style_text_color(chart, LV_PART_MAIN);
-    label_dsc.font = ui_theme_get_font("font_small");
+    label_dsc.font = graph->axis_font; // Configurable axis font
     label_dsc.align = LV_TEXT_ALIGN_RIGHT; // Right-align Y-axis labels
     label_dsc.opa = lv_obj_get_style_text_opa(chart, LV_PART_MAIN);
 
-    // Y-axis label width (for positioning)
-    int32_t label_height = ui_theme_get_font_height(ui_theme_get_font("font_small"));
+    // Y-axis label height (for positioning)
+    int32_t label_height = ui_theme_get_font_height(graph->axis_font);
     int32_t label_width = 40; // Fixed width for Y-axis labels (fits "320°")
 
     // Temperature range
@@ -529,6 +528,7 @@ ui_temp_graph_t* ui_temp_graph_create(lv_obj_t* parent) {
     graph->y_axis_increment = 0; // Disabled by default (caller must enable)
     graph->show_y_axis = false;
     graph->max_visible_temp = graph->min_temp + 1.0f; // Initialize to avoid zero gradient span
+    graph->axis_font = ui_theme_get_font("font_small"); // Default axis label font
 
     // Create LVGL chart
     graph->chart = lv_chart_create(parent);
@@ -997,4 +997,55 @@ void ui_temp_graph_set_y_axis(ui_temp_graph_t* graph, float increment, bool show
     lv_obj_invalidate(graph->chart);
 
     spdlog::debug("[TempGraph] Y-axis config: increment={:.0f}°, show={}", increment, show);
+}
+
+// Set axis label font size
+void ui_temp_graph_set_axis_size(ui_temp_graph_t* graph, const char* size) {
+    if (!graph) {
+        spdlog::error("[TempGraph] NULL graph in set_axis_size");
+        return;
+    }
+
+    // Map size name to font token (direct 1:1 mapping with theme system)
+    const char* font_token = "font_small"; // default "sm"
+    int32_t y_axis_width = 40;             // Width for Y-axis labels
+    if (size) {
+        if (strcmp(size, "xs") == 0) {
+            font_token = "font_xs";
+            y_axis_width = 24; // Smallest font, minimal width
+        } else if (strcmp(size, "sm") == 0) {
+            font_token = "font_small";
+            y_axis_width = 40;
+        } else if (strcmp(size, "md") == 0) {
+            font_token = "font_body";
+            y_axis_width = 45;
+        } else if (strcmp(size, "lg") == 0) {
+            font_token = "font_heading";
+            y_axis_width = 50;
+        }
+    }
+
+    graph->axis_font = ui_theme_get_font(font_token);
+
+    // Recalculate padding to match new font size
+    int32_t space_xs = ui_theme_get_spacing("space_xs");
+    int32_t space_sm = ui_theme_get_spacing("space_sm");
+    int32_t space_md = ui_theme_get_spacing("space_md");
+    int32_t label_height = ui_theme_get_font_height(graph->axis_font);
+
+    // Update padding (tighter for smaller sizes)
+    bool is_xs = size && strcmp(size, "xs") == 0;
+    int32_t top_pad = is_xs ? space_xs : space_md;
+    int32_t left_pad = y_axis_width + space_xs;
+    int32_t bottom_pad = is_xs ? (space_xs + label_height + space_xs)
+                               : (space_sm + label_height + space_md);
+
+    lv_obj_set_style_pad_top(graph->chart, top_pad, LV_PART_MAIN);
+    lv_obj_set_style_pad_left(graph->chart, left_pad, LV_PART_MAIN);
+    lv_obj_set_style_pad_bottom(graph->chart, bottom_pad, LV_PART_MAIN);
+
+    lv_obj_invalidate(graph->chart);
+
+    spdlog::debug("[TempGraph] Axis size: {} -> {} (y_width={}, label_h={})", size ? size : "null",
+                  font_token, y_axis_width, label_height);
 }
