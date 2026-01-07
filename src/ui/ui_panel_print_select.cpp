@@ -1057,6 +1057,15 @@ void PrintSelectPanel::set_api(MoonrakerAPI* api) {
                 // Check if we're on the printer source (not USB)
                 bool is_usb_active = self->usb_source_ && self->usb_source_->is_usb_active();
                 if (!is_usb_active) {
+                    // If detail view is open, just mark that files changed - will refresh on return
+                    if (self->detail_view_open_) {
+                        self->files_changed_while_detail_open_ = true;
+                        spdlog::debug(
+                            "[{}] Files changed while detail view open, deferring refresh",
+                            self->get_name());
+                        return;
+                    }
+
                     // Use async call to refresh on main thread
                     ui_async_call(
                         [](void* user_data) {
@@ -1118,8 +1127,22 @@ void PrintSelectPanel::on_activate() {
     bool is_usb_active = usb_source_ && usb_source_->is_usb_active();
 
     spdlog::debug(
-        "[{}] on_activate called (first_activation={}, file_count={}, usb_active={}, api={})",
-        get_name(), first_activation_, file_list_.size(), is_usb_active, (api_ != nullptr));
+        "[{}] on_activate called (first_activation={}, file_count={}, usb_active={}, api={}, "
+        "files_changed_while_detail={})",
+        get_name(), first_activation_, file_list_.size(), is_usb_active, (api_ != nullptr),
+        files_changed_while_detail_open_);
+
+    // Skip refresh when returning from detail view if no files changed
+    // This preserves scroll position by avoiding unnecessary repopulate
+    if (!first_activation_ && !file_list_.empty() && !files_changed_while_detail_open_) {
+        spdlog::debug("[{}] Returning from detail view, no file changes - skipping refresh",
+                      get_name());
+        files_changed_while_detail_open_ = false; // Reset flag
+        return;
+    }
+
+    // Reset the flag after checking
+    files_changed_while_detail_open_ = false;
 
     if (!is_usb_active && api_) {
         // Printer (Moonraker) source
@@ -1238,6 +1261,10 @@ void PrintSelectPanel::set_selected_file(const char* filename, const char* thumb
 }
 
 void PrintSelectPanel::show_detail_view() {
+    // Track that detail view is open (for smart refresh skip on return)
+    detail_view_open_ = true;
+    files_changed_while_detail_open_ = false;
+
     if (detail_view_) {
         std::string filename(selected_filename_buffer_);
         detail_view_->show(filename, current_path_, selected_filament_type_,
@@ -1248,6 +1275,9 @@ void PrintSelectPanel::show_detail_view() {
 }
 
 void PrintSelectPanel::hide_detail_view() {
+    // Clear detail view open flag (on_activate will check files_changed_while_detail_open_)
+    detail_view_open_ = false;
+
     if (detail_view_) {
         detail_view_->hide();
     }

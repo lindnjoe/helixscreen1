@@ -443,8 +443,10 @@ class PrintSelectPanel : public PanelBase {
     PrintSelectViewMode current_view_mode_ = PrintSelectViewMode::CARD;
     PrintSelectSortColumn current_sort_column_ = PrintSelectSortColumn::MODIFIED;
     PrintSelectSortDirection current_sort_direction_ = PrintSelectSortDirection::DESCENDING;
-    bool panel_initialized_ = false; ///< Guard flag for resize callback
-    bool first_activation_ = true;   ///< Skip redundant refresh on first activation
+    bool panel_initialized_ = false;               ///< Guard flag for resize callback
+    bool first_activation_ = true;                 ///< Skip redundant refresh on first activation
+    bool detail_view_open_ = false;                ///< True while detail view overlay is showing
+    bool files_changed_while_detail_open_ = false; ///< True if filelist changed while detail open
 
     // Debounce timer for view refresh (prevents rebuilding views for each metadata callback)
     lv_timer_t* refresh_timer_ = nullptr;
