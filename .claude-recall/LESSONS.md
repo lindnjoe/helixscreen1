@@ -20,17 +20,12 @@
 
 
 ### [L004] [****-|-----] Subject init before create
-- **Uses**: 13 | **Velocity**: 0.01 | **Learned**: 2025-12-14 | **Last**: 2025-12-30 | **Category**: pattern | **Type**: informational
+- **Uses**: 15 | **Velocity**: 0.13 | **Learned**: 2025-12-14 | **Last**: 2026-01-08 | **Category**: pattern | **Type**: informational
 > Initialize and register subjects BEFORE lv_xml_create(). Order: fonts, images, components, init subjects, register subjects, create UI
 
 
-### [L005] [***--|-----] Static buffers for subjects
-- **Uses**: 6 | **Velocity**: 0.01 | **Learned**: 2025-12-14 | **Last**: 2025-12-28 | **Category**: gotcha | **Type**: constraint
-> String subject buffers must be static or heap allocated, not stack. Stack buffers go out of scope and corrupt data
-
-
 ### [L007] [***--|-----] XML event callbacks only
-- **Uses**: 7 | **Velocity**: 0.01 | **Learned**: 2025-12-14 | **Last**: 2026-01-01 | **Category**: correction | **Type**: constraint
+- **Uses**: 8 | **Velocity**: 0.01 | **Learned**: 2025-12-14 | **Last**: 2026-01-07 | **Category**: correction | **Type**: constraint
 > Never use lv_obj_add_event_cb() in C++. Always use XML event_cb trigger and register with lv_xml_register_event_cb()
 
 
@@ -40,12 +35,12 @@
 
 
 ### [L009] [***--|-----] Icon font sync workflow
-- **Uses**: 10 | **Velocity**: 0.01 | **Learned**: 2025-12-14 | **Last**: 2026-01-01 | **Category**: gotcha | **Type**: constraint
+- **Uses**: 11 | **Velocity**: 0.01 | **Learned**: 2025-12-14 | **Last**: 2026-01-07 | **Category**: gotcha | **Type**: constraint
 > After adding icon to codepoints.h: add to regen_mdi_fonts.sh, run make regen-fonts, then rebuild. Forgetting any step = missing icon
 
 
-### [L011] [***--|-----] No mutex in destructors
-- **Uses**: 12 | **Velocity**: 0.01 | **Learned**: 2025-12-14 | **Last**: 2025-12-29 | **Category**: gotcha | **Type**: constraint
+### [L011] [****-|-----] No mutex in destructors
+- **Uses**: 13 | **Velocity**: 0.02 | **Learned**: 2025-12-14 | **Last**: 2026-01-08 | **Category**: gotcha | **Type**: constraint
 > Avoid mutex locks in destructors during static destruction phase. Other objects may already be destroyed, causing deadlock or crash on exit
 
 
@@ -59,18 +54,13 @@
 > Register event callbacks with lv_xml_register_event_cb() BEFORE calling lv_xml_create(). XML parser needs callbacks available during creation
 
 
-### [L014] [****-|+----] Register all XML components
-- **Uses**: 16 | **Velocity**: 1.01 | **Learned**: 2025-12-14 | **Last**: 2026-01-06 | **Category**: gotcha | **Type**: constraint
+### [L014] [****-|-----] Register all XML components
+- **Uses**: 16 | **Velocity**: 0.01 | **Learned**: 2025-12-14 | **Last**: 2026-01-06 | **Category**: gotcha | **Type**: constraint
 > When adding new XML components, must add lv_xml_component_register_from_file() call in main.cpp. Forgetting causes silent failures
 
 
-### [L015] [***--|-----] No hardcoded colors in C++
-- **Uses**: 6 | **Velocity**: 0.01 | **Learned**: 2025-12-14 | **Last**: 2025-12-28 | **Category**: correction | **Type**: constraint
-> Use ui_theme_get_color() for all colors in C++. Hardcoded lv_color_hex() values break dark mode and violate design token system
-
-
 ### [L020] [****-|-----] ObserverGuard for cleanup
-- **Uses**: 17 | **Velocity**: 0.01 | **Learned**: 2025-12-14 | **Last**: 2025-12-29 | **Category**: gotcha | **Type**: constraint
+- **Uses**: 18 | **Velocity**: 0.01 | **Learned**: 2025-12-14 | **Last**: 2026-01-07 | **Category**: gotcha | **Type**: constraint
 > Use ObserverGuard RAII wrapper for lv_subject observers. Manual observer cleanup is error-prone and causes use-after-free on panel destruction
 
 
@@ -94,19 +84,14 @@
 > LVGL observer callbacks use C-style function signatures (lv_observer_t*, lv_subject_t*) - NOT lambdas. Must pass user_data via lv_observer_get_user_data(observer). Also: lv_subject_set_*() from non-main threads must use ui_async_call() to avoid render-phase assertions.
 
 
-### [L031] [***--|+----] XML no recompile
-- **Uses**: 9 | **Velocity**: 1.01 | **Learned**: 2025-12-27 | **Last**: 2026-01-05 | **Category**: gotcha | **Type**: constraint
+### [L031] [***--|-----] XML no recompile
+- **Uses**: 10 | **Velocity**: 0.01 | **Learned**: 2025-12-27 | **Last**: 2026-01-07 | **Category**: gotcha | **Type**: constraint
 > XML layout changes (ui_xml/*.xml) don't require recompilation - just restart the app. Only C++ changes need make.
 
 
-### [L032] [*****|-----] Re-stage after pre-commit format
-- **Uses**: 50 | **Velocity**: 0.01 | **Learned**: 2025-12-27 | **Last**: 2026-01-04 | **Category**: correction | **Type**: constraint
+### [L032] [*****|+----] Re-stage after pre-commit format
+- **Uses**: 59 | **Velocity**: 0.64 | **Learned**: 2025-12-27 | **Last**: 2026-01-08 | **Category**: correction | **Type**: constraint
 > When pre-commit hook auto-formats files, they are NOT automatically re-staged. Always check git status after a commit and amend if the hook formatted files. Look for 'Auto-formatted: <file>' messages and run 'git add -u && git commit --amend --no-edit'.
-
-
-### [L033] [*----|-----] No detached threads on ARM/glibc
-- **Uses**: 2 | **Velocity**: 0.01 | **Learned**: 2025-12-28 | **Last**: 2025-12-28 | **Category**: gotcha | **Type**: constraint
-> std::thread::detach() causes SIGABRT on ARM Linux with static glibc due to TLS cleanup issues during thread exit. Affects anything using TLS (spdlog, std::function, STL). Use synchronous execution or persistent worker threads instead.
 
 
 ### [L034] [***--|-----] macOS audio feedback
@@ -120,7 +105,7 @@
 
 
 ### [L036] [**---|-----] Header file documentation
-- **Uses**: 3 | **Velocity**: 0.04 | **Learned**: 2025-12-28 | **Last**: 2026-01-05 | **Category**: pattern | **Type**: informational
+- **Uses**: 3 | **Velocity**: 0.01 | **Learned**: 2025-12-28 | **Last**: 2026-01-05 | **Category**: pattern | **Type**: informational
 > Important files have documentation in their header files (include/*.h). Check the header file first when trying to understand a class or module - it often contains usage examples, design rationale, and API documentation.
 
 
@@ -154,8 +139,8 @@
 > Use Sonnet (not Haiku) for architectural-level code reviews, structural changes, or final comprehensive reviews. Haiku is fine for quick single-file spot-checks with clear pass/fail criteria.
 
 
-### [L044] [**---|-----] Targeted tests during development
-- **Uses**: 4 | **Velocity**: 0.01 | **Learned**: 2026-01-04 | **Last**: 2026-01-04 | **Category**: preference | **Type**: informational
+### [L044] [**---|+----] Targeted tests during development
+- **Uses**: 5 | **Velocity**: 0.51 | **Learned**: 2026-01-04 | **Last**: 2026-01-08 | **Category**: preference | **Type**: informational
 > Run targeted tests with specific tags during implementation (e.g., ./build/bin/helix-tests "[tag]"). Only run full test suite (make test-run) at the end of a feature or phase. Full suite is SLOW - save it for final verification.
 
 
@@ -163,7 +148,17 @@
 - **Uses**: 1 | **Velocity**: 0.0 | **Learned**: 2026-01-06 | **Last**: 2026-01-06 | **Category**: correction | **Type**: constraint
 > LVGL dropdowns do NOT support bind_options in XML. Always use lv_dropdown_set_options() directly in C++ code to set dropdown options dynamically. All other dropdowns in the codebase follow this pattern.
 
+
 ### [L046] [*----|-----] XML subject shadows C++ subject
-- **Uses**: 1 | **Velocity**: 0 | **Learned**: 2026-01-06 | **Last**: 2026-01-06 | **Category**: correction
+- **Uses**: 1 | **Velocity**: 0.0 | **Learned**: 2026-01-06 | **Last**: 2026-01-06 | **Category**: correction | **Type**: constraint
 > When XML <subjects> declares a subject with the same name as a C++-registered subject (UI_SUBJECT_INIT_AND_REGISTER_*), the XML component-local subject shadows the global C++ one. XML bindings will find the local subject (stuck at default value) instead of the C++ one. Solution: Don't declare XML subjects for values managed entirely by C++.
 
+
+### [L047] [*----|+----] Claude session forensics
+- **Uses**: 2 | **Velocity**: 0.5 | **Learned**: 2026-01-08 | **Last**: 2026-01-08 | **Category**: recovery | **Type**: informational
+> Recover lost session content: 1) ~/.claude/history.jsonl has user prompts + session IDs + timestamps, 2) ~/.claude/projects/<url-encoded-path>/<session-id>.jsonl has full transcripts, 3) ~/.claude/plans/ survives /clear. Key grep: -l for filename search, -o to extract JSON fields, pipe through sed 's/\n/\n/g' to decode. Use ls -lt for recency, ls -lS for size (longer sessions).
+
+
+### [L048] [*----|-----] Async tests need queue drain
+- **Uses**: 1 | **Velocity**: 0.0 | **Learned**: 2026-01-08 | **Last**: 2026-01-08 | **Category**: pattern | **Type**: constraint
+> Tests calling async setters (functions using helix::async::invoke or ui_queue_update) must call helix::ui::UpdateQueue::instance().drain_queue_for_testing() before assertions. Without draining, the update is still pending and subjects won't have the new value. See test_printer_state.cpp for examples.
