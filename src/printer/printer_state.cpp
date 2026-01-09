@@ -1075,6 +1075,19 @@ void PrinterState::set_klippy_state_internal(KlippyState state) {
     lv_subject_set_int(&klippy_state_, state_int);
 }
 
+void PrinterState::set_print_in_progress(bool in_progress) {
+    // Thread-safe wrapper: defer LVGL subject updates to main thread
+    helix::async::invoke([this, in_progress]() { set_print_in_progress_internal(in_progress); });
+}
+
+void PrinterState::set_print_in_progress_internal(bool in_progress) {
+    int new_value = in_progress ? 1 : 0;
+    if (lv_subject_get_int(&print_in_progress_) != new_value) {
+        spdlog::debug("[PrinterState] Print in progress: {}", in_progress);
+        lv_subject_set_int(&print_in_progress_, new_value);
+    }
+}
+
 void PrinterState::set_tracked_led(const std::string& led_name) {
     tracked_led_name_ = led_name;
     if (!led_name.empty()) {
@@ -1490,4 +1503,9 @@ void PrinterState::remove_hardware_issue(const std::string& hardware_name) {
     set_hardware_validation_result(hardware_validation_result_);
 
     spdlog::debug("[PrinterState] Removed hardware issue: {}", hardware_name);
+}
+
+void PrinterState::set_print_outcome(PrintOutcome outcome) {
+    lv_subject_set_int(&print_outcome_, static_cast<int>(outcome));
+    spdlog::info("[PrinterState] Print outcome set to: {}", static_cast<int>(outcome));
 }

@@ -333,6 +333,16 @@ class PrinterState {
     }
 
     /**
+     * @brief Set print outcome for UI badge display
+     *
+     * Call this to manually set the print outcome (e.g., from AbortManager
+     * when Moonraker reports "standby" instead of "cancelled" after M112).
+     *
+     * @param outcome The print outcome value to set
+     */
+    void set_print_outcome(PrintOutcome outcome);
+
+    /**
      * @brief Get subject for showing print progress card on home panel
      *
      * Combined subject: 1 when print_active==1 AND print_start_phase==0.
@@ -398,13 +408,11 @@ class PrinterState {
      * - Race conditions from concurrent print requests
      *
      * Updates the print_in_progress_ subject so UI observers can react.
+     *
+     * Thread-safe: Uses helix::async::invoke() to defer LVGL subject updates
+     * to the main thread. Can be safely called from WebSocket callbacks.
      */
-    void set_print_in_progress(bool in_progress) {
-        int new_value = in_progress ? 1 : 0;
-        if (lv_subject_get_int(&print_in_progress_) != new_value) {
-            lv_subject_set_int(&print_in_progress_, new_value);
-        }
-    }
+    void set_print_in_progress(bool in_progress);
 
     /**
      * @brief Check if a print workflow is currently in progress
@@ -1267,6 +1275,7 @@ class PrinterState {
     void set_klipper_version_internal(const std::string& version);
     void set_moonraker_version_internal(const std::string& version);
     void set_klippy_state_internal(KlippyState state);
+    void set_print_in_progress_internal(bool in_progress);
 
     /**
      * @brief Update composite visibility subjects for G-code modification options

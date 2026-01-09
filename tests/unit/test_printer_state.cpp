@@ -1295,3 +1295,26 @@ TEST_CASE("PrinterState: Observer fires when bed_moves changes", "[state][kinema
     REQUIRE(user_data[0] == 3);
     REQUIRE(user_data[1] == 0); // Back to gantry moves
 }
+
+// ============================================================================
+// PrintOutcome Tests (set_print_outcome method - FAILING until implemented)
+// ============================================================================
+
+TEST_CASE("PrinterState: set_print_outcome updates subject", "[state][print_outcome]") {
+    lv_init_safe();
+
+    PrinterState& state = get_printer_state();
+    state.reset_for_testing();
+    state.init_subjects(false);
+
+    // Initial state should be NONE
+    auto initial = static_cast<PrintOutcome>(lv_subject_get_int(state.get_print_outcome_subject()));
+    REQUIRE(initial == PrintOutcome::NONE);
+
+    // Set to CANCELLED - THIS SHOULD FAIL TO COMPILE (method doesn't exist yet)
+    state.set_print_outcome(PrintOutcome::CANCELLED);
+    helix::ui::UpdateQueue::instance().drain_queue_for_testing();
+
+    auto after = static_cast<PrintOutcome>(lv_subject_get_int(state.get_print_outcome_subject()));
+    REQUIRE(after == PrintOutcome::CANCELLED);
+}
