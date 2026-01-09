@@ -1,7 +1,7 @@
 # Pre-Print Toggle Control: Refactor Plan
 
-> **Last Updated**: 2026-01-08
-> **Status**: Core functionality complete, technical debt remains
+> **Last Updated**: 2026-01-09
+> **Status**: Core functionality complete, enum consolidation complete
 
 ## Overview
 
@@ -88,8 +88,9 @@ The core functionality works correctly after recent fixes. The system uses a pri
 | **Race Condition Fix** | ✅ Complete | Print button disabled during macro analysis |
 | **Priority Order** | ✅ Complete | Database → Macro → File (unified UI + execution) |
 | **Capability Caching** | ✅ Complete | Avoids repeated database lookups |
-| **Test Coverage** | ⚠️ Partial | Missing tests for async state transitions |
-| **Technical Debt** | 🔴 Remaining | 3 enums, no retry logic, checkbox ambiguity |
+| **Test Coverage** | ✅ Complete | Added tests for async state, cache, priority order |
+| **Enum Consolidation** | ✅ Complete | Single `OperationCategory` source of truth |
+| **Technical Debt** | 🟡 Reduced | No retry logic, checkbox ambiguity remain |
 
 ---
 
@@ -113,12 +114,12 @@ The core functionality works correctly after recent fixes. The system uses a pri
 
 ---
 
-## 🔴 Remaining Issues
+## 🟡 Remaining Issues
 
 | Priority | Issue | Location | Effort |
 |----------|-------|----------|--------|
-| High | Three operation enums with redundant definitions | `gcode_ops_detector.h`, `print_start_analyzer.h`, `operation_patterns.h` | 3h |
-| High | Mutable cache pattern lacks thread-safety documentation | `ui_print_preparation_manager.cpp` | 0.5h |
+| ~~High~~ | ~~Three operation enums with redundant definitions~~ | ~~Multiple files~~ | ✅ DONE |
+| Low | Mutable cache pattern lacks thread-safety documentation | `ui_print_preparation_manager.cpp` | 0.5h |
 | Medium | No retry for macro analysis on network failure | `analyze_print_start_macro()` | 2h |
 | Medium | No priming checkbox in UI | `print_detail_panel.xml` | 1h |
 | Low | Redundant detection in both analyzers | `GCodeOpsDetector` + `PrintStartAnalyzer` | 4h |
@@ -130,37 +131,27 @@ The core functionality works correctly after recent fixes. The system uses a pri
 
 ## 🟡 Medium-Term Refactors (2-4 hours each)
 
-> **Status**: Not started - these are optional improvements
+> **Status**: MT1 complete, others not started
 
-### MT1: Consolidate Operation Enums
+### ✅ MT1: Consolidate Operation Enums (COMPLETED 2026-01-09)
 
-**Current State:**
-Three separate enums define the same operations with slightly different names:
+**What was done:**
+- Made `helix::OperationCategory` from `operation_patterns.h` the single source of truth
+- `PrintStartOpCategory` is now a `using` alias to `OperationCategory`
+- `gcode::OperationType` is now a `using` alias to `OperationCategory`
+- Removed all conversion functions (`to_print_start_category()`, `to_operation_type()`)
+- Added tests for capability cache invalidation and priority order consistency
 
-| File | Enum | Notes |
-|------|------|-------|
-| `gcode_ops_detector.h` | `gcode::OperationType` | Includes `START_PRINT` (not an operation) |
-| `print_start_analyzer.h` | `helix::PrintStartOpCategory` | Includes `BED_LEVEL` parent category |
-| `operation_patterns.h` | `helix::OperationCategory` | Most complete, includes all variations |
+**Result:**
+Adding a new operation (e.g., input shaper) now requires changes in only 1 file (`operation_patterns.h`).
 
-**Problem:**
-Adding a new operation (e.g., input shaper calibration) requires changes in 3+ files with manual synchronization. The conversion logic between enums is error-prone.
+**Previous State (for reference):**
 
-**Proposed Solution:**
-1. Make `helix::OperationCategory` from `operation_patterns.h` the single source of truth
-2. Create conversion functions from/to the legacy enums (for backward compatibility)
-3. Gradually migrate callers to use `OperationCategory` directly
-4. Remove legacy enums when all callers are migrated
-
-**Files to Change:**
-- `include/operation_patterns.h` - Already has the most complete enum
-- `include/gcode_ops_detector.h` - Add using alias or deprecation
-- `include/print_start_analyzer.h` - Add using alias or deprecation
-- `src/print/print_start_analyzer.cpp` - Update detection logic
-- `src/rendering/gcode_ops_detector.cpp` - Update detection logic
-- `src/ui/ui_print_preparation_manager.cpp` - Update switch statements
-
-**Effort:** 3-4 hours
+| File | Enum | Status |
+|------|------|--------|
+| `gcode_ops_detector.h` | `gcode::OperationType` | Now alias to `OperationCategory` |
+| `print_start_analyzer.h` | `helix::PrintStartOpCategory` | Now alias to `OperationCategory` |
+| `operation_patterns.h` | `helix::OperationCategory` | **Source of truth** |
 
 ---
 

@@ -20,6 +20,7 @@
  */
 
 #include "moonraker_error.h"
+#include "operation_patterns.h"
 
 #include <functional>
 #include <string>
@@ -35,23 +36,16 @@ namespace helix {
 // ============================================================================
 
 /**
- * @brief Categories of operations detected in PRINT_START
+ * @brief Alias for OperationCategory
  *
- * These category names (via category_to_string()) serve as capability keys
- * in printer_database.json's print_start_capabilities section.
+ * PrintStartOpCategory is now an alias to the shared OperationCategory enum
+ * in operation_patterns.h. This provides a single source of truth for
+ * operation categories across the codebase.
+ *
+ * Note: OperationCategory::PURGE_LINE corresponds to what was previously
+ * PrintStartOpCategory::PRIMING.
  */
-enum class PrintStartOpCategory {
-    BED_MESH,     // BED_MESH_CALIBRATE, G29
-    QGL,          // QUAD_GANTRY_LEVEL
-    Z_TILT,       // Z_TILT_ADJUST
-    BED_LEVEL,    // Physical bed/gantry leveling (parent of QGL and Z_TILT)
-    NOZZLE_CLEAN, // CLEAN_NOZZLE, NOZZLE_WIPE, BRUSH_NOZZLE
-    PRIMING,      // PURGE_LINE, PRIME_LINE, PRIME_NOZZLE
-    SKEW_CORRECT, // SKEW_PROFILE, SET_SKEW
-    HOMING,       // G28
-    CHAMBER_SOAK, // HEAT_SOAK, CHAMBER_SOAK
-    UNKNOWN       // Unrecognized operation
-};
+using PrintStartOpCategory = OperationCategory;
 
 /**
  * @brief Get string representation of operation category

@@ -17,97 +17,13 @@
 namespace helix {
 
 // ============================================================================
-// Category Mapping (shared OperationCategory <-> PrintStartOpCategory)
-// ============================================================================
-
-namespace {
-
-/**
- * @brief Map shared OperationCategory to PrintStartOpCategory
- */
-PrintStartOpCategory to_print_start_category(OperationCategory cat) {
-    switch (cat) {
-    case OperationCategory::BED_MESH:
-        return PrintStartOpCategory::BED_MESH;
-    case OperationCategory::QGL:
-        return PrintStartOpCategory::QGL;
-    case OperationCategory::Z_TILT:
-        return PrintStartOpCategory::Z_TILT;
-    case OperationCategory::NOZZLE_CLEAN:
-        return PrintStartOpCategory::NOZZLE_CLEAN;
-    case OperationCategory::PURGE_LINE:
-        return PrintStartOpCategory::PRIMING;
-    case OperationCategory::SKEW_CORRECT:
-        return PrintStartOpCategory::SKEW_CORRECT;
-    case OperationCategory::HOMING:
-        return PrintStartOpCategory::HOMING;
-    case OperationCategory::CHAMBER_SOAK:
-        return PrintStartOpCategory::CHAMBER_SOAK;
-    case OperationCategory::BED_LEVEL:
-        return PrintStartOpCategory::BED_LEVEL;
-    default:
-        return PrintStartOpCategory::UNKNOWN;
-    }
-}
-
-/**
- * @brief Map PrintStartOpCategory to shared OperationCategory
- */
-OperationCategory to_operation_category(PrintStartOpCategory cat) {
-    switch (cat) {
-    case PrintStartOpCategory::BED_MESH:
-        return OperationCategory::BED_MESH;
-    case PrintStartOpCategory::QGL:
-        return OperationCategory::QGL;
-    case PrintStartOpCategory::Z_TILT:
-        return OperationCategory::Z_TILT;
-    case PrintStartOpCategory::NOZZLE_CLEAN:
-        return OperationCategory::NOZZLE_CLEAN;
-    case PrintStartOpCategory::PRIMING:
-        return OperationCategory::PURGE_LINE;
-    case PrintStartOpCategory::SKEW_CORRECT:
-        return OperationCategory::SKEW_CORRECT;
-    case PrintStartOpCategory::HOMING:
-        return OperationCategory::HOMING;
-    case PrintStartOpCategory::CHAMBER_SOAK:
-        return OperationCategory::CHAMBER_SOAK;
-    case PrintStartOpCategory::BED_LEVEL:
-        return OperationCategory::BED_LEVEL;
-    default:
-        return OperationCategory::UNKNOWN;
-    }
-}
-
-} // anonymous namespace
-
-// ============================================================================
 // Category Helpers
 // ============================================================================
 
 const char* category_to_string(PrintStartOpCategory category) {
-    switch (category) {
-    case PrintStartOpCategory::BED_MESH:
-        return "bed_mesh";
-    case PrintStartOpCategory::QGL:
-        return "qgl";
-    case PrintStartOpCategory::Z_TILT:
-        return "z_tilt";
-    case PrintStartOpCategory::NOZZLE_CLEAN:
-        return "nozzle_clean";
-    case PrintStartOpCategory::PRIMING:
-        return "priming";
-    case PrintStartOpCategory::SKEW_CORRECT:
-        return "skew_correct";
-    case PrintStartOpCategory::HOMING:
-        return "homing";
-    case PrintStartOpCategory::CHAMBER_SOAK:
-        return "chamber_soak";
-    case PrintStartOpCategory::BED_LEVEL:
-        return "bed_level";
-    case PrintStartOpCategory::UNKNOWN:
-    default:
-        return "unknown";
-    }
+    // Delegate to the shared category_key() function from operation_patterns.h
+    // Note: PrintStartOpCategory is now an alias for OperationCategory
+    return category_key(category);
 }
 
 // ============================================================================
@@ -413,9 +329,10 @@ PrintStartOpCategory PrintStartAnalyzer::categorize_operation(const std::string&
     }
 
     // Use shared pattern registry
+    // Note: PrintStartOpCategory is now an alias for OperationCategory
     const auto* kw = find_keyword(cmd);
     if (kw) {
-        return to_print_start_category(kw->category);
+        return kw->category;
     }
 
     return PrintStartOpCategory::UNKNOWN;
@@ -460,11 +377,12 @@ std::vector<PrintStartOperation> PrintStartAnalyzer::detect_operations(const std
             (end_of_cmd != std::string::npos) ? trimmed.substr(0, end_of_cmd) : trimmed;
 
         // Check against shared pattern registry
+        // Note: PrintStartOpCategory is now an alias for OperationCategory
         const auto* kw = find_keyword(cmd);
         if (kw) {
             PrintStartOperation op;
             op.name = cmd; // Store actual command, not just the pattern keyword
-            op.category = to_print_start_category(kw->category);
+            op.category = kw->category;
             op.line_number = line_num;
 
             // Avoid duplicates (same operation appearing multiple times)
@@ -535,10 +453,10 @@ bool PrintStartAnalyzer::detect_skip_conditional(const std::string& gcode,
         return false;
     };
 
-    OperationCategory shared_cat = to_operation_category(category);
-
+    // PrintStartOpCategory is now an alias for OperationCategory,
+    // so we can pass it directly to the variation functions
     // First check SKIP_* patterns (opt-out semantics)
-    auto skip_variations = get_all_skip_variations(shared_cat);
+    auto skip_variations = get_all_skip_variations(category);
     for (const auto& param : skip_variations) {
         if (check_param_in_context(param)) {
             out_semantic = ParameterSemantic::OPT_OUT;
@@ -547,7 +465,7 @@ bool PrintStartAnalyzer::detect_skip_conditional(const std::string& gcode,
     }
 
     // Then check PERFORM_* patterns (opt-in semantics)
-    auto perform_variations = get_all_perform_variations(shared_cat);
+    auto perform_variations = get_all_perform_variations(category);
     for (const auto& param : perform_variations) {
         if (check_param_in_context(param)) {
             out_semantic = ParameterSemantic::OPT_IN;

@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include "operation_patterns.h"
+
 #include <chrono>
 #include <filesystem>
 #include <functional>
@@ -15,19 +17,11 @@ namespace gcode {
 
 /**
  * @brief Type of pre-print operation detected in G-code
+ *
+ * Alias to the shared OperationCategory enum in operation_patterns.h.
+ * This ensures consistency between GCodeOpsDetector and PrintStartAnalyzer.
  */
-enum class OperationType {
-    BED_MESH,     ///< BED_MESH_CALIBRATE, G29, etc.
-    QGL,          ///< QUAD_GANTRY_LEVEL
-    Z_TILT,       ///< Z_TILT_ADJUST
-    BED_LEVEL,    ///< Physical bed/gantry leveling (QGL, Z_TILT)
-    NOZZLE_CLEAN, ///< CLEAN_NOZZLE, NOZZLE_WIPE, etc.
-    HOMING,       ///< G28
-    CHAMBER_SOAK, ///< HEAT_SOAK, chamber heating commands
-    PURGE_LINE,   ///< Priming/purge line sequences
-    SKEW_CORRECT, ///< SKEW_PROFILE, SET_SKEW
-    START_PRINT,  ///< SDCARD_PRINT_FILE or api call to start print
-};
+using OperationType = helix::OperationCategory;
 
 /**
  * @brief How the operation is embedded in the G-code file

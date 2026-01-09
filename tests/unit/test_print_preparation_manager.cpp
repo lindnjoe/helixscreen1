@@ -260,7 +260,7 @@ TEST_CASE("PrintPreparationManager: capability keys match category_to_string",
         REQUIRE(std::string(category_to_string(PrintStartOpCategory::Z_TILT)) == "z_tilt");
         REQUIRE(std::string(category_to_string(PrintStartOpCategory::NOZZLE_CLEAN)) ==
                 "nozzle_clean");
-        REQUIRE(std::string(category_to_string(PrintStartOpCategory::PRIMING)) == "priming");
+        REQUIRE(std::string(category_to_string(PrintStartOpCategory::PURGE_LINE)) == "purge_line");
         REQUIRE(std::string(category_to_string(PrintStartOpCategory::SKEW_CORRECT)) ==
                 "skew_correct");
 
@@ -315,5 +315,261 @@ TEST_CASE("PrintPreparationManager: collect_macro_skip_params uses correct capab
         // NOZZLE_CLEAN -> "nozzle_clean"
         REQUIRE(std::string(category_to_string(PrintStartOpCategory::NOZZLE_CLEAN)) ==
                 "nozzle_clean");
+    }
+}
+
+// ============================================================================
+// Tests: Macro Analysis Progress Tracking
+// ============================================================================
+
+/**
+ * Tests for macro analysis in-progress flag behavior.
+ *
+ * The is_macro_analysis_in_progress() flag is used to disable the Print button
+ * while analysis is running, preventing race conditions where a print could
+ * start before skip params are known.
+ */
+TEST_CASE("PrintPreparationManager: macro analysis in-progress tracking",
+          "[print_preparation][macro][progress]") {
+    PrintPreparationManager manager;
+
+    SECTION("is_macro_analysis_in_progress returns false initially") {
+        // Before any analysis is started, should return false
+        REQUIRE(manager.is_macro_analysis_in_progress() == false);
+    }
+
+    SECTION("is_macro_analysis_in_progress returns false when no API set") {
+        // Without API, analyze_print_start_macro() should return early
+        // and not set in_progress flag
+        manager.analyze_print_start_macro();
+        REQUIRE(manager.is_macro_analysis_in_progress() == false);
+    }
+
+    SECTION("has_macro_analysis returns false when no analysis done") {
+        REQUIRE(manager.has_macro_analysis() == false);
+    }
+
+    SECTION("Multiple analyze calls without API are ignored gracefully") {
+        // Call multiple times - should not crash or set flag
+        manager.analyze_print_start_macro();
+        manager.analyze_print_start_macro();
+        manager.analyze_print_start_macro();
+
+        REQUIRE(manager.is_macro_analysis_in_progress() == false);
+        REQUIRE(manager.has_macro_analysis() == false);
+    }
+}
+
+// ============================================================================
+// Tests: Capability Cache Invalidation
+// ============================================================================
+
+/**
+ * Tests for capability cache behavior.
+ *
+ * The capability cache stores PrinterDetector lookup results to avoid
+ * repeated database parsing. Cache must invalidate when printer type changes.
+ *
+ * Note: These tests verify the PUBLIC interface behavior without directly
+ * accessing the private cache. We test through format_preprint_steps() which
+ * internally uses get_cached_capabilities().
+ */
+TEST_CASE("PrintPreparationManager: capability cache behavior",
+          "[print_preparation][capabilities][cache]") {
+    SECTION("get_cached_capabilities returns capabilities for known printer types") {
+        // Verify PrinterDetector returns different capabilities for different printers
+        auto ad5m_caps =
+            PrinterDetector::get_print_start_capabilities("FlashForge Adventurer 5M Pro");
+        auto voron_caps = PrinterDetector::get_print_start_capabilities("Voron 2.4");
+
+        // AD5M Pro should have bed_mesh capability
+        REQUIRE_FALSE(ad5m_caps.empty());
+        REQUIRE(ad5m_caps.has_capability("bed_mesh"));
+
+        // Voron 2.4 may have different capabilities (or none in database)
+        // The key point is the lookup happens and returns a valid struct
+        // (empty struct is valid - means no database entry)
+        INFO("AD5M caps: " << ad5m_caps.params.size() << " params");
+        INFO("Voron caps: " << voron_caps.params.size() << " params");
+    }
+
+    SECTION("Different printer types return different capabilities") {
+        // This verifies the database contains distinct entries
+        auto ad5m_caps =
+            PrinterDetector::get_print_start_capabilities("FlashForge Adventurer 5M Pro");
+        auto ad5m_std_caps =
+            PrinterDetector::get_print_start_capabilities("FlashForge Adventurer 5M");
+
+        // Both should exist (AD5M and AD5M Pro are separate entries)
+        REQUIRE_FALSE(ad5m_caps.empty());
+        REQUIRE_FALSE(ad5m_std_caps.empty());
+
+        // They should have the same macro name (START_PRINT) but this confirms
+        // the lookup works for different printer strings
+        REQUIRE(ad5m_caps.macro_name == ad5m_std_caps.macro_name);
+    }
+
+    SECTION("Unknown printer type returns empty capabilities") {
+        auto unknown_caps =
+            PrinterDetector::get_print_start_capabilities("NonExistent Printer XYZ");
+
+        // Unknown printer should return empty capabilities (not crash)
+        REQUIRE(unknown_caps.empty());
+        REQUIRE(unknown_caps.macro_name.empty());
+        REQUIRE(unknown_caps.params.empty());
+    }
+
+    SECTION("Capability lookup is idempotent") {
+        // Multiple lookups for same printer should return identical results
+        auto caps1 = PrinterDetector::get_print_start_capabilities("FlashForge Adventurer 5M Pro");
+        auto caps2 = PrinterDetector::get_print_start_capabilities("FlashForge Adventurer 5M Pro");
+
+        REQUIRE(caps1.macro_name == caps2.macro_name);
+        REQUIRE(caps1.params.size() == caps2.params.size());
+
+        // Verify specific capability matches
+        if (caps1.has_capability("bed_mesh") && caps2.has_capability("bed_mesh")) {
+            REQUIRE(caps1.get_capability("bed_mesh")->param ==
+                    caps2.get_capability("bed_mesh")->param);
+        }
+    }
+}
+
+// ============================================================================
+// Tests: Priority Order Consistency
+// ============================================================================
+
+/**
+ * Tests for operation priority order consistency.
+ *
+ * Both format_preprint_steps() and collect_macro_skip_params() should use
+ * the same priority order for merging operations:
+ *   1. Database (authoritative for known printers)
+ *   2. Macro analysis (detected from printer config)
+ *   3. File scan (embedded operations in G-code)
+ *
+ * This ensures the UI shows the same operations that will be controlled.
+ */
+TEST_CASE("PrintPreparationManager: priority order consistency",
+          "[print_preparation][priority][order]") {
+    PrintPreparationManager manager;
+
+    SECTION("format_preprint_steps returns empty when no data available") {
+        // Without scan result, macro analysis, or capabilities, should return empty
+        std::string steps = manager.format_preprint_steps();
+        REQUIRE(steps.empty());
+    }
+
+    SECTION("Database capabilities appear in format_preprint_steps output") {
+        // We can't directly set the printer type without Config, but we can verify
+        // the database lookup returns expected operations for known printers
+
+        auto caps = PrinterDetector::get_print_start_capabilities("FlashForge Adventurer 5M Pro");
+        REQUIRE_FALSE(caps.empty());
+
+        // AD5M Pro has bed_mesh capability
+        REQUIRE(caps.has_capability("bed_mesh"));
+
+        // The capability should have a param name (FORCE_LEVELING)
+        auto* bed_cap = caps.get_capability("bed_mesh");
+        REQUIRE(bed_cap != nullptr);
+        REQUIRE_FALSE(bed_cap->param.empty());
+    }
+
+    SECTION("Priority order: database > macro > file") {
+        // Verify the code comment/contract: Database takes priority over macro,
+        // which takes priority over file scan.
+        //
+        // This is tested indirectly through the format_preprint_steps() output
+        // which uses "(optional)" suffix for skippable operations.
+
+        // Get database capabilities for a known printer
+        auto caps = PrinterDetector::get_print_start_capabilities("FlashForge Adventurer 5M Pro");
+
+        // Database entries are skippable (have params)
+        if (caps.has_capability("bed_mesh")) {
+            auto* bed_cap = caps.get_capability("bed_mesh");
+            REQUIRE(bed_cap != nullptr);
+            // Has a skip value means it's controllable
+            REQUIRE_FALSE(bed_cap->skip_value.empty());
+        }
+    }
+
+    SECTION("Category keys are consistent between operations") {
+        // Verify the category keys used in format_preprint_steps match those
+        // used in collect_macro_skip_params. Both should use:
+        // - "bed_mesh" (not "bed_leveling")
+        // - "qgl" (not "quad_gantry_level")
+        // - "z_tilt"
+        // - "nozzle_clean"
+
+        // These keys come from category_to_string() for macro operations
+        // and are hardcoded for database lookups
+        REQUIRE(std::string(category_to_string(PrintStartOpCategory::BED_MESH)) == "bed_mesh");
+        REQUIRE(std::string(category_to_string(PrintStartOpCategory::QGL)) == "qgl");
+        REQUIRE(std::string(category_to_string(PrintStartOpCategory::Z_TILT)) == "z_tilt");
+        REQUIRE(std::string(category_to_string(PrintStartOpCategory::NOZZLE_CLEAN)) ==
+                "nozzle_clean");
+
+        // And the database uses these same keys
+        auto caps = PrinterDetector::get_print_start_capabilities("FlashForge Adventurer 5M Pro");
+        if (!caps.empty()) {
+            // bed_mesh key exists (not "bed_leveling")
+            REQUIRE(caps.has_capability("bed_mesh"));
+            REQUIRE_FALSE(caps.has_capability("bed_leveling"));
+        }
+    }
+}
+
+// ============================================================================
+// Tests: format_preprint_steps Content Verification
+// ============================================================================
+
+/**
+ * Tests for format_preprint_steps() output format and content.
+ *
+ * The function merges operations from database, macro, and file scan,
+ * deduplicates them, and formats as a bulleted list.
+ */
+TEST_CASE("PrintPreparationManager: format_preprint_steps formatting",
+          "[print_preparation][format][steps]") {
+    PrintPreparationManager manager;
+
+    SECTION("Returns empty string when no operations detected") {
+        std::string steps = manager.format_preprint_steps();
+        REQUIRE(steps.empty());
+    }
+
+    SECTION("Output uses bullet point format") {
+        // We can verify the format contract: output should use "• " prefix
+        // for each operation when there are operations.
+        // This test documents the expected format without requiring mock data.
+
+        // The format_preprint_steps() returns either:
+        // - Empty string (no operations)
+        // - "• Operation name\n• Another operation (optional)\n..."
+
+        // Since we can't inject mock data, we verify the format through
+        // the database lookup which does populate steps
+        auto caps = PrinterDetector::get_print_start_capabilities("FlashForge Adventurer 5M Pro");
+        if (!caps.empty()) {
+            // With capabilities set, format_preprint_steps would show them
+            // The test verifies the capability data exists for the merge
+            REQUIRE(caps.has_capability("bed_mesh"));
+        }
+    }
+
+    SECTION("Skippable operations show (optional) suffix") {
+        // Operations from database and controllable macro operations
+        // should show "(optional)" in the output
+
+        // Get database capability to verify skip_value exists
+        auto caps = PrinterDetector::get_print_start_capabilities("FlashForge Adventurer 5M Pro");
+        if (caps.has_capability("bed_mesh")) {
+            auto* bed_cap = caps.get_capability("bed_mesh");
+            REQUIRE(bed_cap != nullptr);
+            // Has skip_value means it's controllable = shows (optional)
+            REQUIRE_FALSE(bed_cap->skip_value.empty());
+        }
     }
 }

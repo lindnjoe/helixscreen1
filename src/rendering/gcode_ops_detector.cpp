@@ -17,44 +17,6 @@ namespace helix {
 namespace gcode {
 
 // ============================================================================
-// Category Mapping (shared OperationCategory <-> gcode::OperationType)
-// ============================================================================
-
-namespace {
-
-/**
- * @brief Map shared OperationCategory to gcode::OperationType
- */
-OperationType to_operation_type(OperationCategory cat) {
-    switch (cat) {
-    case OperationCategory::BED_MESH:
-        return OperationType::BED_MESH;
-    case OperationCategory::QGL:
-        return OperationType::QGL;
-    case OperationCategory::Z_TILT:
-        return OperationType::Z_TILT;
-    case OperationCategory::NOZZLE_CLEAN:
-        return OperationType::NOZZLE_CLEAN;
-    case OperationCategory::PURGE_LINE:
-        return OperationType::PURGE_LINE;
-    case OperationCategory::HOMING:
-        return OperationType::HOMING;
-    case OperationCategory::CHAMBER_SOAK:
-        return OperationType::CHAMBER_SOAK;
-    case OperationCategory::SKEW_CORRECT:
-        return OperationType::SKEW_CORRECT;
-    case OperationCategory::START_PRINT:
-        return OperationType::START_PRINT;
-    case OperationCategory::BED_LEVEL:
-        return OperationType::BED_LEVEL;
-    default:
-        return OperationType::HOMING; // Safe fallback
-    }
-}
-
-} // anonymous namespace
-
-// ============================================================================
 // DetectedOperation implementation
 // ============================================================================
 
@@ -80,6 +42,8 @@ std::string DetectedOperation::display_name() const {
         return "Skew Correction";
     case OperationType::START_PRINT:
         return "Start Print";
+    case OperationType::UNKNOWN:
+        return "Unknown";
     }
     return "Unknown";
 }
@@ -161,29 +125,7 @@ GCodeOpsDetector::GCodeOpsDetector(const DetectionConfig& config) : config_(conf
 }
 
 std::string GCodeOpsDetector::operation_type_name(OperationType type) {
-    switch (type) {
-    case OperationType::BED_MESH:
-        return "bed_mesh";
-    case OperationType::QGL:
-        return "qgl";
-    case OperationType::Z_TILT:
-        return "z_tilt";
-    case OperationType::BED_LEVEL:
-        return "bed_level";
-    case OperationType::NOZZLE_CLEAN:
-        return "nozzle_clean";
-    case OperationType::HOMING:
-        return "homing";
-    case OperationType::CHAMBER_SOAK:
-        return "chamber_soak";
-    case OperationType::PURGE_LINE:
-        return "purge_line";
-    case OperationType::SKEW_CORRECT:
-        return "skew_correct";
-    case OperationType::START_PRINT:
-        return "start_print";
-    }
-    return "unknown";
+    return category_key(type);
 }
 
 void GCodeOpsDetector::init_default_patterns() {
@@ -211,7 +153,7 @@ void GCodeOpsDetector::init_default_patterns() {
             embedding = OperationEmbedding::DIRECT_COMMAND;
         }
 
-        patterns_.push_back({to_operation_type(kw.category), pattern, embedding, kw.exact_match});
+        patterns_.push_back({kw.category, pattern, embedding, kw.exact_match});
     }
 
     spdlog::debug("[GCodeOpsDetector] Initialized {} patterns from shared registry",
