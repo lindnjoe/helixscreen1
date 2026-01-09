@@ -122,10 +122,7 @@ class FanControlOverlay : public OverlayBase {
      */
     void send_fan_speed(const std::string& object_name, int speed_percent);
 
-    /**
-     * @brief Observer callback for fans_version changes (structural)
-     */
-    static void on_fans_version_changed(lv_observer_t* obs, lv_subject_t* subject);
+    // on_fans_version_changed migrated to lambda observer factory
 
     /**
      * @brief Observer callback for per-fan speed changes
