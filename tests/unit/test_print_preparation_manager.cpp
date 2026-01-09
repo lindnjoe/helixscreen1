@@ -211,6 +211,7 @@ struct PreprintSubjectsFixture {
     lv_subject_t preprint_qgl{};
     lv_subject_t preprint_z_tilt{};
     lv_subject_t preprint_nozzle_clean{};
+    lv_subject_t preprint_purge_line{};
     lv_subject_t preprint_timelapse{};
 
     // Visibility subjects (1 = visible/enabled, 0 = hidden/disabled)
@@ -218,6 +219,7 @@ struct PreprintSubjectsFixture {
     lv_subject_t can_show_qgl{};
     lv_subject_t can_show_z_tilt{};
     lv_subject_t can_show_nozzle_clean{};
+    lv_subject_t can_show_purge_line{};
     lv_subject_t can_show_timelapse{};
 
     bool initialized = false;
@@ -232,6 +234,7 @@ struct PreprintSubjectsFixture {
         lv_subject_init_int(&preprint_qgl, 0);
         lv_subject_init_int(&preprint_z_tilt, 0);
         lv_subject_init_int(&preprint_nozzle_clean, 0);
+        lv_subject_init_int(&preprint_purge_line, 0);
         lv_subject_init_int(&preprint_timelapse, 0);
 
         // Initialize visibility subjects (default visible)
@@ -239,6 +242,7 @@ struct PreprintSubjectsFixture {
         lv_subject_init_int(&can_show_qgl, 1);
         lv_subject_init_int(&can_show_z_tilt, 1);
         lv_subject_init_int(&can_show_nozzle_clean, 1);
+        lv_subject_init_int(&can_show_purge_line, 1);
         lv_subject_init_int(&can_show_timelapse, 1);
 
         initialized = true;
@@ -251,12 +255,14 @@ struct PreprintSubjectsFixture {
 
         // Deinitialize in reverse order
         lv_subject_deinit(&can_show_timelapse);
+        lv_subject_deinit(&can_show_purge_line);
         lv_subject_deinit(&can_show_nozzle_clean);
         lv_subject_deinit(&can_show_z_tilt);
         lv_subject_deinit(&can_show_qgl);
         lv_subject_deinit(&can_show_bed_mesh);
 
         lv_subject_deinit(&preprint_timelapse);
+        lv_subject_deinit(&preprint_purge_line);
         lv_subject_deinit(&preprint_nozzle_clean);
         lv_subject_deinit(&preprint_z_tilt);
         lv_subject_deinit(&preprint_qgl);
@@ -288,7 +294,7 @@ TEST_CASE("PrintPreparationManager: read_options_from_subjects with initialized 
         // Set subjects on manager (this method doesn't exist yet - will cause compile failure)
         manager.set_preprint_subjects(&subjects.preprint_bed_mesh, &subjects.preprint_qgl,
                                       &subjects.preprint_z_tilt, &subjects.preprint_nozzle_clean,
-                                      &subjects.preprint_timelapse);
+                                      &subjects.preprint_purge_line, &subjects.preprint_timelapse);
 
         // Read options from subjects (this method doesn't exist yet - will cause compile failure)
         auto options = manager.read_options_from_subjects();
@@ -310,7 +316,7 @@ TEST_CASE("PrintPreparationManager: read_options_from_subjects with initialized 
 
         manager.set_preprint_subjects(&subjects.preprint_bed_mesh, &subjects.preprint_qgl,
                                       &subjects.preprint_z_tilt, &subjects.preprint_nozzle_clean,
-                                      &subjects.preprint_timelapse);
+                                      &subjects.preprint_purge_line, &subjects.preprint_timelapse);
 
         auto options = manager.read_options_from_subjects();
 
@@ -325,7 +331,7 @@ TEST_CASE("PrintPreparationManager: read_options_from_subjects with initialized 
         // All checkboxes unchecked (default state from fixture init)
         manager.set_preprint_subjects(&subjects.preprint_bed_mesh, &subjects.preprint_qgl,
                                       &subjects.preprint_z_tilt, &subjects.preprint_nozzle_clean,
-                                      &subjects.preprint_timelapse);
+                                      &subjects.preprint_purge_line, &subjects.preprint_timelapse);
 
         auto options = manager.read_options_from_subjects();
 
@@ -354,10 +360,11 @@ TEST_CASE("PrintPreparationManager: read_options_from_subjects respects visibili
         // Set both checkbox and visibility subjects
         manager.set_preprint_subjects(&subjects.preprint_bed_mesh, &subjects.preprint_qgl,
                                       &subjects.preprint_z_tilt, &subjects.preprint_nozzle_clean,
-                                      &subjects.preprint_timelapse);
+                                      &subjects.preprint_purge_line, &subjects.preprint_timelapse);
         manager.set_preprint_visibility_subjects(
             &subjects.can_show_bed_mesh, &subjects.can_show_qgl, &subjects.can_show_z_tilt,
-            &subjects.can_show_nozzle_clean, &subjects.can_show_timelapse);
+            &subjects.can_show_nozzle_clean, &subjects.can_show_purge_line,
+            &subjects.can_show_timelapse);
 
         auto options = manager.read_options_from_subjects();
 
@@ -382,10 +389,11 @@ TEST_CASE("PrintPreparationManager: read_options_from_subjects respects visibili
 
         manager.set_preprint_subjects(&subjects.preprint_bed_mesh, &subjects.preprint_qgl,
                                       &subjects.preprint_z_tilt, &subjects.preprint_nozzle_clean,
-                                      &subjects.preprint_timelapse);
+                                      &subjects.preprint_purge_line, &subjects.preprint_timelapse);
         manager.set_preprint_visibility_subjects(
             &subjects.can_show_bed_mesh, &subjects.can_show_qgl, &subjects.can_show_z_tilt,
-            &subjects.can_show_nozzle_clean, &subjects.can_show_timelapse);
+            &subjects.can_show_nozzle_clean, &subjects.can_show_purge_line,
+            &subjects.can_show_timelapse);
 
         auto options = manager.read_options_from_subjects();
 
@@ -406,10 +414,11 @@ TEST_CASE("PrintPreparationManager: read_options_from_subjects respects visibili
 
         manager.set_preprint_subjects(&subjects.preprint_bed_mesh, &subjects.preprint_qgl,
                                       &subjects.preprint_z_tilt, &subjects.preprint_nozzle_clean,
-                                      &subjects.preprint_timelapse);
+                                      &subjects.preprint_purge_line, &subjects.preprint_timelapse);
         manager.set_preprint_visibility_subjects(
             &subjects.can_show_bed_mesh, &subjects.can_show_qgl, &subjects.can_show_z_tilt,
-            &subjects.can_show_nozzle_clean, &subjects.can_show_timelapse);
+            &subjects.can_show_nozzle_clean, &subjects.can_show_purge_line,
+            &subjects.can_show_timelapse);
 
         auto options = manager.read_options_from_subjects();
 
@@ -435,7 +444,7 @@ TEST_CASE("PrintPreparationManager: read_options_from_subjects with null subject
     }
 
     SECTION("Returns all false when subjects explicitly set to nullptr") {
-        manager.set_preprint_subjects(nullptr, nullptr, nullptr, nullptr, nullptr);
+        manager.set_preprint_subjects(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
 
         auto options = manager.read_options_from_subjects();
 
@@ -443,6 +452,7 @@ TEST_CASE("PrintPreparationManager: read_options_from_subjects with null subject
         REQUIRE(options.qgl == false);
         REQUIRE(options.z_tilt == false);
         REQUIRE(options.nozzle_clean == false);
+        REQUIRE(options.purge_line == false);
         REQUIRE(options.timelapse == false);
     }
 
@@ -455,7 +465,7 @@ TEST_CASE("PrintPreparationManager: read_options_from_subjects with null subject
 
         // Set only some subjects, others are nullptr
         manager.set_preprint_subjects(&subjects.preprint_bed_mesh, nullptr, nullptr, nullptr,
-                                      &subjects.preprint_timelapse);
+                                      nullptr, &subjects.preprint_timelapse);
 
         auto options = manager.read_options_from_subjects();
 
@@ -463,6 +473,7 @@ TEST_CASE("PrintPreparationManager: read_options_from_subjects with null subject
         REQUIRE(options.qgl == false);          // nullptr subject = false
         REQUIRE(options.z_tilt == false);       // nullptr subject = false
         REQUIRE(options.nozzle_clean == false); // nullptr subject = false
+        REQUIRE(options.purge_line == false);   // nullptr subject = false
         REQUIRE(options.timelapse == true);
     }
 }
@@ -478,7 +489,7 @@ TEST_CASE("PrintPreparationManager: subject state changes are reflected immediat
         // Initial state: unchecked
         manager.set_preprint_subjects(&subjects.preprint_bed_mesh, &subjects.preprint_qgl,
                                       &subjects.preprint_z_tilt, &subjects.preprint_nozzle_clean,
-                                      &subjects.preprint_timelapse);
+                                      &subjects.preprint_purge_line, &subjects.preprint_timelapse);
 
         auto options1 = manager.read_options_from_subjects();
         REQUIRE(options1.bed_mesh == false);
@@ -508,10 +519,11 @@ TEST_CASE("PrintPreparationManager: subject state changes are reflected immediat
 
         manager.set_preprint_subjects(&subjects.preprint_bed_mesh, &subjects.preprint_qgl,
                                       &subjects.preprint_z_tilt, &subjects.preprint_nozzle_clean,
-                                      &subjects.preprint_timelapse);
+                                      &subjects.preprint_purge_line, &subjects.preprint_timelapse);
         manager.set_preprint_visibility_subjects(
             &subjects.can_show_bed_mesh, &subjects.can_show_qgl, &subjects.can_show_z_tilt,
-            &subjects.can_show_nozzle_clean, &subjects.can_show_timelapse);
+            &subjects.can_show_nozzle_clean, &subjects.can_show_purge_line,
+            &subjects.can_show_timelapse);
 
         // Initially visible
         auto options1 = manager.read_options_from_subjects();
