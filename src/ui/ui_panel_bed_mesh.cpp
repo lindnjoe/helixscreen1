@@ -514,48 +514,52 @@ void BedMeshPanel::setup_moonraker_subscription() {
 
     auto alive = alive_; // Capture shared_ptr by value for destruction detection [L012]
 
-    api->get_client().register_notify_update([this, api, alive](nlohmann::json notification) {
-        // Check destruction flag FIRST - panel may have been deleted
-        if (!alive->load()) {
-            return;
-        }
+    SubscriptionId id =
+        api->get_client().register_notify_update([this, api, alive](nlohmann::json notification) {
+            // Check destruction flag FIRST - panel may have been deleted
+            if (!alive->load()) {
+                return;
+            }
 
-        // Check if this notification contains bed_mesh data BEFORE deferring to main thread
-        // This avoids unnecessary context switches for unrelated notifications
-        if (!notification.contains("params") || !notification["params"].is_array() ||
-            notification["params"].empty()) {
-            return;
-        }
-        const nlohmann::json& params = notification["params"][0];
-        if (!params.contains("bed_mesh") || !params["bed_mesh"].is_object()) {
-            return;
-        }
+            // Check if this notification contains bed_mesh data BEFORE deferring to main thread
+            // This avoids unnecessary context switches for unrelated notifications
+            if (!notification.contains("params") || !notification["params"].is_array() ||
+                notification["params"].empty()) {
+                return;
+            }
+            const nlohmann::json& params = notification["params"][0];
+            if (!params.contains("bed_mesh") || !params["bed_mesh"].is_object()) {
+                return;
+            }
 
-        // CRITICAL: Defer LVGL modifications to main thread via ui_async_call [L012]
-        // WebSocket callbacks run on libhv thread - direct lv_subject_* calls cause crashes
-        struct Ctx {
-            BedMeshPanel* panel;
-            MoonrakerAPI* api;
-            std::shared_ptr<std::atomic<bool>> alive;
-        };
-        auto* ctx = new Ctx{this, api, alive};
-        ui_async_call(
-            [](void* user_data) {
-                auto* c = static_cast<Ctx*>(user_data);
-                // Check again on main thread - panel could be destroyed between queue and exec
-                if (!c->alive->load()) {
+            // CRITICAL: Defer LVGL modifications to main thread via ui_async_call [L012]
+            // WebSocket callbacks run on libhv thread - direct lv_subject_* calls cause crashes
+            struct Ctx {
+                BedMeshPanel* panel;
+                MoonrakerAPI* api;
+                std::shared_ptr<std::atomic<bool>> alive;
+            };
+            auto* ctx = new Ctx{this, api, alive};
+            ui_async_call(
+                [](void* user_data) {
+                    auto* c = static_cast<Ctx*>(user_data);
+                    // Check again on main thread - panel could be destroyed between queue and exec
+                    if (!c->alive->load()) {
+                        delete c;
+                        return;
+                    }
+                    const BedMeshProfile* mesh = c->api->get_active_bed_mesh();
+                    if (mesh) {
+                        c->panel->on_mesh_update_internal(*mesh);
+                    }
+                    c->panel->update_profile_list_subjects();
                     delete c;
-                    return;
-                }
-                const BedMeshProfile* mesh = c->api->get_active_bed_mesh();
-                if (mesh) {
-                    c->panel->on_mesh_update_internal(*mesh);
-                }
-                c->panel->update_profile_list_subjects();
-                delete c;
-            },
-            ctx);
-    });
+                },
+                ctx);
+        });
+
+    // Store in RAII guard for automatic cleanup on destruction
+    subscription_ = SubscriptionGuard(&api->get_client(), id);
     spdlog::debug("[{}] Registered Moonraker callback for mesh updates", get_name());
 }
 

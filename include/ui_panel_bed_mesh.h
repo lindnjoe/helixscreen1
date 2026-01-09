@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include "ui_subscription_guard.h"
+
 #include "moonraker_domain_service.h" // For BedMeshProfile
 #include "overlay_base.h"
 
@@ -160,6 +162,9 @@ class BedMeshPanel : public OverlayBase {
     // Destruction flag for async callback safety [L012]
     // Shared with WebSocket callbacks to detect when panel is destroyed
     std::shared_ptr<std::atomic<bool>> alive_ = std::make_shared<std::atomic<bool>>(true);
+
+    // RAII subscription guard - auto-unsubscribes from Moonraker on destruction
+    SubscriptionGuard subscription_;
 
     lv_obj_t* parent_screen_ = nullptr;
     bool callbacks_registered_ = false;
