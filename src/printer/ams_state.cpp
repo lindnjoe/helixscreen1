@@ -803,19 +803,9 @@ void AmsState::update_modal_text_subjects() {
              modal_target_temp_c_);
     lv_subject_copy_string(&dryer_modal_temp_text_, dryer_modal_temp_text_buf_);
 
-    // Format duration (e.g., "4h" or "4h 30m")
-    // Note: Uses compact format ("%dm") different from duration_from_minutes ("%d min")
-    int hours = modal_duration_min_ / 60;
-    int mins = modal_duration_min_ % 60;
-    if (mins == 0) {
-        snprintf(dryer_modal_duration_text_buf_, sizeof(dryer_modal_duration_text_buf_), "%dh",
-                 hours);
-    } else if (hours == 0) {
-        snprintf(dryer_modal_duration_text_buf_, sizeof(dryer_modal_duration_text_buf_), "%dm",
-                 mins);
-    } else {
-        snprintf(dryer_modal_duration_text_buf_, sizeof(dryer_modal_duration_text_buf_), "%dh %dm",
-                 hours, mins);
-    }
+    // Format duration using utility (e.g., "4h", "30m", "4h 30m")
+    std::string duration = helix::fmt::duration(modal_duration_min_ * 60);
+    snprintf(dryer_modal_duration_text_buf_, sizeof(dryer_modal_duration_text_buf_), "%s",
+             duration.c_str());
     lv_subject_copy_string(&dryer_modal_duration_text_, dryer_modal_duration_text_buf_);
 }

@@ -5,6 +5,7 @@
 
 #include "ui_theme.h"
 
+#include "format_utils.h"
 #include "settings_manager.h"
 
 #include <spdlog/spdlog.h>
@@ -98,19 +99,7 @@ std::string resolve_gcode_filename(const std::string& path) {
 // ============================================================================
 
 std::string format_print_time(int minutes) {
-    char buf[32];
-    if (minutes < 60) {
-        snprintf(buf, sizeof(buf), "%d min", minutes);
-    } else {
-        int hours = minutes / 60;
-        int mins = minutes % 60;
-        if (mins == 0) {
-            snprintf(buf, sizeof(buf), "%dh", hours);
-        } else {
-            snprintf(buf, sizeof(buf), "%dh %dm", hours, mins);
-        }
-    }
-    return std::string(buf);
+    return helix::fmt::duration_from_minutes(minutes);
 }
 
 std::string format_filament_weight(float grams) {

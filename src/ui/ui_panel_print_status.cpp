@@ -22,6 +22,7 @@
 #include "app_globals.h"
 #include "config.h"
 #include "filament_sensor_manager.h"
+#include "format_utils.h"
 #include "injection_point_manager.h"
 #include "memory_utils.h"
 #include "moonraker_api.h"
@@ -551,9 +552,8 @@ void PrintStatusPanel::cleanup() {
 // ============================================================================
 
 void PrintStatusPanel::format_time(int seconds, char* buf, size_t buf_size) {
-    int hours = seconds / 3600;
-    int minutes = (seconds % 3600) / 60;
-    std::snprintf(buf, buf_size, "%dh %02dm", hours, minutes);
+    std::string formatted = helix::fmt::duration_padded(seconds);
+    std::snprintf(buf, buf_size, "%s", formatted.c_str());
 }
 
 void PrintStatusPanel::cleanup_temp_gcode() {
