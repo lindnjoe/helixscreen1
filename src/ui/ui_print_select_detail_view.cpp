@@ -35,6 +35,7 @@ static void on_preprint_bed_mesh_toggled(lv_event_t* e);
 static void on_preprint_qgl_toggled(lv_event_t* e);
 static void on_preprint_z_tilt_toggled(lv_event_t* e);
 static void on_preprint_nozzle_clean_toggled(lv_event_t* e);
+static void on_preprint_purge_line_toggled(lv_event_t* e);
 static void on_preprint_timelapse_toggled(lv_event_t* e);
 
 // ============================================================================
@@ -71,6 +72,7 @@ PrintSelectDetailView::~PrintSelectDetailView() {
         lv_subject_deinit(&preprint_qgl_);
         lv_subject_deinit(&preprint_z_tilt_);
         lv_subject_deinit(&preprint_nozzle_clean_);
+        lv_subject_deinit(&preprint_purge_line_);
         lv_subject_deinit(&preprint_timelapse_);
         subjects_initialized_ = false;
     }
@@ -110,6 +112,8 @@ void PrintSelectDetailView::init_subjects() {
         lv_xml_register_event_cb(nullptr, "on_preprint_z_tilt_toggled", on_preprint_z_tilt_toggled);
         lv_xml_register_event_cb(nullptr, "on_preprint_nozzle_clean_toggled",
                                  on_preprint_nozzle_clean_toggled);
+        lv_xml_register_event_cb(nullptr, "on_preprint_purge_line_toggled",
+                                 on_preprint_purge_line_toggled);
         lv_xml_register_event_cb(nullptr, "on_preprint_timelapse_toggled",
                                  on_preprint_timelapse_toggled);
         s_callbacks_registered = true;
@@ -122,6 +126,7 @@ void PrintSelectDetailView::init_subjects() {
     lv_subject_init_int(&preprint_qgl_, 1);
     lv_subject_init_int(&preprint_z_tilt_, 1);
     lv_subject_init_int(&preprint_nozzle_clean_, 1);
+    lv_subject_init_int(&preprint_purge_line_, 1);
 
     // Add-on switches default OFF (0) - "don't add extras by default"
     lv_subject_init_int(&preprint_timelapse_, 0);
@@ -131,6 +136,7 @@ void PrintSelectDetailView::init_subjects() {
     lv_xml_register_subject(nullptr, "preprint_qgl", &preprint_qgl_);
     lv_xml_register_subject(nullptr, "preprint_z_tilt", &preprint_z_tilt_);
     lv_xml_register_subject(nullptr, "preprint_nozzle_clean", &preprint_nozzle_clean_);
+    lv_xml_register_subject(nullptr, "preprint_purge_line", &preprint_purge_line_);
     lv_xml_register_subject(nullptr, "preprint_timelapse", &preprint_timelapse_);
 
     subjects_initialized_ = true;
@@ -179,6 +185,7 @@ lv_obj_t* PrintSelectDetailView::create(lv_obj_t* parent_screen) {
     qgl_checkbox_ = lv_obj_find_by_name(overlay_root_, "qgl_checkbox");
     z_tilt_checkbox_ = lv_obj_find_by_name(overlay_root_, "z_tilt_checkbox");
     nozzle_clean_checkbox_ = lv_obj_find_by_name(overlay_root_, "nozzle_clean_checkbox");
+    purge_line_checkbox_ = lv_obj_find_by_name(overlay_root_, "purge_line_checkbox");
     timelapse_checkbox_ = lv_obj_find_by_name(overlay_root_, "timelapse_checkbox");
 
     // Look up color requirements display
@@ -210,7 +217,7 @@ void PrintSelectDetailView::set_dependencies(MoonrakerAPI* api, PrinterState* pr
         prep_manager_->set_preprint_subjects(
             get_preprint_bed_mesh_subject(), get_preprint_qgl_subject(),
             get_preprint_z_tilt_subject(), get_preprint_nozzle_clean_subject(),
-            get_preprint_timelapse_subject());
+            get_preprint_purge_line_subject(), get_preprint_timelapse_subject());
 
         // Wire up visibility subjects from PrinterState
         if (printer_state_) {
@@ -219,6 +226,7 @@ void PrintSelectDetailView::set_dependencies(MoonrakerAPI* api, PrinterState* pr
                 printer_state_->get_can_show_qgl_subject(),
                 printer_state_->get_can_show_z_tilt_subject(),
                 printer_state_->get_can_show_nozzle_clean_subject(),
+                printer_state_->get_can_show_purge_line_subject(),
                 printer_state_->get_printer_has_timelapse_subject());
         }
     }
@@ -292,6 +300,7 @@ void PrintSelectDetailView::on_activate() {
     lv_subject_set_int(&preprint_qgl_, 1);
     lv_subject_set_int(&preprint_z_tilt_, 1);
     lv_subject_set_int(&preprint_nozzle_clean_, 1);
+    lv_subject_set_int(&preprint_purge_line_, 1);
     // Timelapse stays OFF by default (it's an add-on feature)
     lv_subject_set_int(&preprint_timelapse_, 0);
 
@@ -339,6 +348,7 @@ void PrintSelectDetailView::cleanup() {
         lv_subject_deinit(&preprint_qgl_);
         lv_subject_deinit(&preprint_z_tilt_);
         lv_subject_deinit(&preprint_nozzle_clean_);
+        lv_subject_deinit(&preprint_purge_line_);
         lv_subject_deinit(&preprint_timelapse_);
         subjects_initialized_ = false;
     }
@@ -564,6 +574,16 @@ static void on_preprint_nozzle_clean_toggled(lv_event_t* e) {
     lv_subject_set_int(s_detail_view_instance->get_preprint_nozzle_clean_subject(),
                        checked ? 1 : 0);
     spdlog::debug("[DetailView] Nozzle clean toggled: {}", checked);
+}
+
+static void on_preprint_purge_line_toggled(lv_event_t* e) {
+    if (!s_detail_view_instance) {
+        return;
+    }
+    auto* sw = static_cast<lv_obj_t*>(lv_event_get_target(e));
+    bool checked = lv_obj_has_state(sw, LV_STATE_CHECKED);
+    lv_subject_set_int(s_detail_view_instance->get_preprint_purge_line_subject(), checked ? 1 : 0);
+    spdlog::debug("[DetailView] Purge line toggled: {}", checked);
 }
 
 static void on_preprint_timelapse_toggled(lv_event_t* e) {

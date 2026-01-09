@@ -54,6 +54,7 @@ struct PrePrintOptions {
     bool qgl = false;
     bool z_tilt = false;
     bool nozzle_clean = false;
+    bool purge_line = false;
     bool timelapse = false;
 
     // Macro-level skip flags (passed to PRINT_START as parameters)
@@ -62,6 +63,7 @@ struct PrePrintOptions {
     bool skip_macro_qgl = false;
     bool skip_macro_z_tilt = false;
     bool skip_macro_nozzle_clean = false;
+    bool skip_macro_purge_line = false;
 };
 
 /**
@@ -151,10 +153,12 @@ class PrintPreparationManager {
      * @param qgl Subject for QGL checkbox state
      * @param z_tilt Subject for Z-tilt checkbox state
      * @param nozzle_clean Subject for nozzle clean checkbox state
+     * @param purge_line Subject for purge line (priming) checkbox state
      * @param timelapse Subject for timelapse checkbox state
      */
     void set_preprint_subjects(lv_subject_t* bed_mesh, lv_subject_t* qgl, lv_subject_t* z_tilt,
-                               lv_subject_t* nozzle_clean, lv_subject_t* timelapse);
+                               lv_subject_t* nozzle_clean, lv_subject_t* purge_line,
+                               lv_subject_t* timelapse);
 
     /**
      * @brief Set pre-print option visibility subjects (LT2)
@@ -166,11 +170,13 @@ class PrintPreparationManager {
      * @param can_show_qgl Subject for QGL row visibility
      * @param can_show_z_tilt Subject for Z-tilt row visibility
      * @param can_show_nozzle_clean Subject for nozzle clean row visibility
+     * @param can_show_purge_line Subject for purge line row visibility
      * @param can_show_timelapse Subject for timelapse row visibility
      */
     void set_preprint_visibility_subjects(lv_subject_t* can_show_bed_mesh,
                                           lv_subject_t* can_show_qgl, lv_subject_t* can_show_z_tilt,
                                           lv_subject_t* can_show_nozzle_clean,
+                                          lv_subject_t* can_show_purge_line,
                                           lv_subject_t* can_show_timelapse);
 
     /**
@@ -417,6 +423,7 @@ class PrintPreparationManager {
     lv_subject_t* preprint_qgl_subject_ = nullptr;
     lv_subject_t* preprint_z_tilt_subject_ = nullptr;
     lv_subject_t* preprint_nozzle_clean_subject_ = nullptr;
+    lv_subject_t* preprint_purge_line_subject_ = nullptr;
     lv_subject_t* preprint_timelapse_subject_ = nullptr;
 
     // === Visibility Subjects (LT2 - from PrinterState) ===
@@ -426,6 +433,7 @@ class PrintPreparationManager {
     lv_subject_t* can_show_qgl_subject_ = nullptr;
     lv_subject_t* can_show_z_tilt_subject_ = nullptr;
     lv_subject_t* can_show_nozzle_clean_subject_ = nullptr;
+    lv_subject_t* can_show_purge_line_subject_ = nullptr;
     lv_subject_t* can_show_timelapse_subject_ = nullptr;
 
     // === Scan Cache ===

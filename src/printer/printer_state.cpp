@@ -174,6 +174,7 @@ void PrinterState::reset_for_testing() {
     lv_subject_deinit(&printer_has_spoolman_);
     lv_subject_deinit(&printer_has_speaker_);
     lv_subject_deinit(&printer_has_timelapse_);
+    lv_subject_deinit(&printer_has_purge_line_);
     lv_subject_deinit(&helix_plugin_installed_);
     lv_subject_deinit(&phase_tracking_enabled_);
     lv_subject_deinit(&printer_has_firmware_retraction_);
@@ -182,6 +183,7 @@ void PrinterState::reset_for_testing() {
     lv_subject_deinit(&can_show_qgl_);
     lv_subject_deinit(&can_show_z_tilt_);
     lv_subject_deinit(&can_show_nozzle_clean_);
+    lv_subject_deinit(&can_show_purge_line_);
     lv_subject_deinit(&retract_length_);
     lv_subject_deinit(&retract_speed_);
     lv_subject_deinit(&unretract_extra_length_);
@@ -314,6 +316,7 @@ void PrinterState::init_subjects(bool register_xml) {
     lv_subject_init_int(&printer_has_spoolman_, 0);
     lv_subject_init_int(&printer_has_speaker_, 0);
     lv_subject_init_int(&printer_has_timelapse_, 0);
+    lv_subject_init_int(&printer_has_purge_line_, 0);
     lv_subject_init_int(&helix_plugin_installed_, -1); // -1=unknown, 0=not installed, 1=installed
     lv_subject_init_int(&phase_tracking_enabled_, -1); // -1=unknown, 0=disabled, 1=enabled
     lv_subject_init_int(&printer_has_firmware_retraction_, 0);
@@ -325,6 +328,7 @@ void PrinterState::init_subjects(bool register_xml) {
     lv_subject_init_int(&can_show_qgl_, 0);
     lv_subject_init_int(&can_show_z_tilt_, 0);
     lv_subject_init_int(&can_show_nozzle_clean_, 0);
+    lv_subject_init_int(&can_show_purge_line_, 0);
 
     // Hardware validation subjects (for Hardware Health section in Settings)
     lv_subject_init_int(&hardware_has_issues_, 0);
@@ -425,6 +429,7 @@ void PrinterState::init_subjects(bool register_xml) {
         lv_xml_register_subject(NULL, "can_show_qgl", &can_show_qgl_);
         lv_xml_register_subject(NULL, "can_show_z_tilt", &can_show_z_tilt_);
         lv_xml_register_subject(NULL, "can_show_nozzle_clean", &can_show_nozzle_clean_);
+        lv_xml_register_subject(NULL, "can_show_purge_line", &can_show_purge_line_);
         lv_xml_register_subject(NULL, "hardware_has_issues", &hardware_has_issues_);
         lv_xml_register_subject(NULL, "hardware_issue_count", &hardware_issue_count_);
         lv_xml_register_subject(NULL, "hardware_max_severity", &hardware_max_severity_);
@@ -1251,12 +1256,15 @@ void PrinterState::update_gcode_modification_visibility() {
                       (plugin && lv_subject_get_int(&printer_has_z_tilt_)) ? 1 : 0);
     update_if_changed(&can_show_nozzle_clean_,
                       (plugin && lv_subject_get_int(&printer_has_nozzle_clean_)) ? 1 : 0);
+    update_if_changed(&can_show_purge_line_,
+                      (plugin && lv_subject_get_int(&printer_has_purge_line_)) ? 1 : 0);
 
     spdlog::debug("[PrinterState] G-code modification visibility updated: bed_mesh={}, qgl={}, "
-                  "z_tilt={}, nozzle_clean={} (plugin={})",
+                  "z_tilt={}, nozzle_clean={}, purge_line={} (plugin={})",
                   lv_subject_get_int(&can_show_bed_mesh_), lv_subject_get_int(&can_show_qgl_),
                   lv_subject_get_int(&can_show_z_tilt_),
-                  lv_subject_get_int(&can_show_nozzle_clean_), plugin);
+                  lv_subject_get_int(&can_show_nozzle_clean_),
+                  lv_subject_get_int(&can_show_purge_line_), plugin);
 }
 
 void PrinterState::update_print_show_progress() {
@@ -1555,8 +1563,18 @@ void PrinterState::set_printer_type_sync(const std::string& type) {
 void PrinterState::set_printer_type_internal(const std::string& type) {
     printer_type_ = type;
     print_start_capabilities_ = PrinterDetector::get_print_start_capabilities(type);
-    spdlog::info("[PrinterState] Printer type set to: '{}' (capabilities: {})", type,
-                 print_start_capabilities_.empty() ? "none" : print_start_capabilities_.macro_name);
+
+    // Update printer_has_purge_line_ based on capabilities database
+    // "priming" is the capability key for purge/prime line in the database
+    bool has_priming = print_start_capabilities_.get_capability("priming") != nullptr;
+    lv_subject_set_int(&printer_has_purge_line_, has_priming ? 1 : 0);
+
+    // Recalculate composite visibility subjects
+    update_gcode_modification_visibility();
+
+    spdlog::info("[PrinterState] Printer type set to: '{}' (capabilities: {}, priming={})", type,
+                 print_start_capabilities_.empty() ? "none" : print_start_capabilities_.macro_name,
+                 has_priming);
 }
 
 const std::string& PrinterState::get_printer_type() const {

@@ -248,6 +248,9 @@ class PrintSelectDetailView : public OverlayBase {
     [[nodiscard]] lv_subject_t* get_preprint_timelapse_subject() {
         return &preprint_timelapse_;
     }
+    [[nodiscard]] lv_subject_t* get_preprint_purge_line_subject() {
+        return &preprint_purge_line_;
+    }
 
     // === Resize Handling ===
 
@@ -283,6 +286,7 @@ class PrintSelectDetailView : public OverlayBase {
     lv_obj_t* qgl_checkbox_ = nullptr;
     lv_obj_t* z_tilt_checkbox_ = nullptr;
     lv_obj_t* nozzle_clean_checkbox_ = nullptr;
+    lv_obj_t* purge_line_checkbox_ = nullptr;
     lv_obj_t* timelapse_checkbox_ = nullptr;
 
     // Color requirements display
@@ -300,6 +304,7 @@ class PrintSelectDetailView : public OverlayBase {
     lv_subject_t preprint_qgl_{};
     lv_subject_t preprint_z_tilt_{};
     lv_subject_t preprint_nozzle_clean_{};
+    lv_subject_t preprint_purge_line_{};
     lv_subject_t preprint_timelapse_{};
     // Note: subjects_initialized_ inherited from OverlayBase
 

@@ -983,6 +983,25 @@ class PrinterState {
     }
 
     /**
+     * @brief Get capability subject for purge line (priming)
+     *
+     * Returns 1 when printer has purge/priming capability, 0 otherwise.
+     */
+    lv_subject_t* get_printer_has_purge_line_subject() {
+        return &printer_has_purge_line_;
+    }
+
+    /**
+     * @brief Get visibility subject for purge line row
+     *
+     * Returns 1 when purge line option should be visible (helix_plugin_installed AND
+     * printer_has_purge_line), 0 otherwise.
+     */
+    lv_subject_t* get_can_show_purge_line_subject() {
+        return &can_show_purge_line_;
+    }
+
+    /**
      * @brief Set printer kinematics type and update bed_moves subject
      *
      * Updates printer_bed_moves_ subject based on kinematics type.
@@ -1279,6 +1298,7 @@ class PrinterState {
     lv_subject_t printer_has_spoolman_;      // Integer: 0=no, 1=yes (for filament tracking)
     lv_subject_t printer_has_speaker_;       // Integer: 0=no, 1=yes (for M300 audio feedback)
     lv_subject_t printer_has_timelapse_;  // Integer: 0=no, 1=yes (for Moonraker-Timelapse plugin)
+    lv_subject_t printer_has_purge_line_; // Integer: 0=no, 1=yes (for purge/priming capability)
     lv_subject_t helix_plugin_installed_; // Tri-state: -1=unknown, 0=not installed, 1=installed
     lv_subject_t phase_tracking_enabled_; // Tri-state: -1=unknown, 0=disabled, 1=enabled
     lv_subject_t printer_has_firmware_retraction_; // Integer: 0=no, 1=yes (for G10/G11 retraction)
@@ -1291,6 +1311,7 @@ class PrinterState {
     lv_subject_t can_show_qgl_;          // helix_plugin_installed && printer_has_qgl
     lv_subject_t can_show_z_tilt_;       // helix_plugin_installed && printer_has_z_tilt
     lv_subject_t can_show_nozzle_clean_; // helix_plugin_installed && printer_has_nozzle_clean
+    lv_subject_t can_show_purge_line_;   // helix_plugin_installed && printer_has_purge_line
 
     // Firmware retraction settings (from firmware_retraction Klipper module)
     // Lengths stored as centimillimeters (x100) to preserve 0.01mm precision with integers

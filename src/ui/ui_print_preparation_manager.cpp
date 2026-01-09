@@ -92,11 +92,13 @@ void PrintPreparationManager::set_checkboxes(lv_obj_t* bed_mesh, lv_obj_t* qgl, 
 void PrintPreparationManager::set_preprint_subjects(lv_subject_t* bed_mesh, lv_subject_t* qgl,
                                                     lv_subject_t* z_tilt,
                                                     lv_subject_t* nozzle_clean,
+                                                    lv_subject_t* purge_line,
                                                     lv_subject_t* timelapse) {
     preprint_bed_mesh_subject_ = bed_mesh;
     preprint_qgl_subject_ = qgl;
     preprint_z_tilt_subject_ = z_tilt;
     preprint_nozzle_clean_subject_ = nozzle_clean;
+    preprint_purge_line_subject_ = purge_line;
     preprint_timelapse_subject_ = timelapse;
     spdlog::debug("[PrintPreparationManager] Pre-print subjects set");
 }
@@ -105,11 +107,13 @@ void PrintPreparationManager::set_preprint_visibility_subjects(lv_subject_t* can
                                                                lv_subject_t* can_show_qgl,
                                                                lv_subject_t* can_show_z_tilt,
                                                                lv_subject_t* can_show_nozzle_clean,
+                                                               lv_subject_t* can_show_purge_line,
                                                                lv_subject_t* can_show_timelapse) {
     can_show_bed_mesh_subject_ = can_show_bed_mesh;
     can_show_qgl_subject_ = can_show_qgl;
     can_show_z_tilt_subject_ = can_show_z_tilt;
     can_show_nozzle_clean_subject_ = can_show_nozzle_clean;
+    can_show_purge_line_subject_ = can_show_purge_line;
     can_show_timelapse_subject_ = can_show_timelapse;
     spdlog::debug("[PrintPreparationManager] Visibility subjects set");
 }
@@ -769,6 +773,8 @@ PrePrintOptions PrintPreparationManager::read_options_from_subjects() const {
     options.z_tilt = is_visible_and_checked(can_show_z_tilt_subject_, preprint_z_tilt_subject_);
     options.nozzle_clean =
         is_visible_and_checked(can_show_nozzle_clean_subject_, preprint_nozzle_clean_subject_);
+    options.purge_line =
+        is_visible_and_checked(can_show_purge_line_subject_, preprint_purge_line_subject_);
     options.timelapse =
         is_visible_and_checked(can_show_timelapse_subject_, preprint_timelapse_subject_);
 
