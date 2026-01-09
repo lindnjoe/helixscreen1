@@ -122,10 +122,13 @@ static void update_max_visible_temp(ui_temp_graph_t* graph) {
 
         point_count = lv_chart_get_point_count(graph->chart);
 
-        // Find max in this series (skip uninitialized points at min_temp baseline)
+        // Find max in this series (skip uninitialized LV_CHART_POINT_NONE values)
         for (uint32_t j = 0; j < point_count; j++) {
+            // Skip uninitialized points (LVGL sets these to LV_CHART_POINT_NONE = INT32_MAX)
+            if (y_points[j] == LV_CHART_POINT_NONE)
+                continue;
+
             float temp = static_cast<float>(y_points[j]);
-            // Skip baseline values (uninitialized points set to min_temp)
             if (temp > graph->min_temp && temp > max_temp) {
                 max_temp = temp;
             }
