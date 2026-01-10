@@ -18,6 +18,7 @@
 #include "ams_state.h"
 #include "lvgl/lvgl.h"
 #include "lvgl/src/xml/lv_xml.h"
+#include "observer_factory.h"
 
 #include <spdlog/spdlog.h>
 
@@ -35,22 +36,7 @@ struct AmsCurrentToolData {
 // Registry for cleanup
 static std::unordered_map<lv_obj_t*, std::unique_ptr<AmsCurrentToolData>> s_registry;
 
-// Observer callback when color subject changes
-static void on_color_changed(lv_observer_t* observer, lv_subject_t* subject) {
-    lv_obj_t* widget = static_cast<lv_obj_t*>(lv_observer_get_user_data(observer));
-    if (!widget)
-        return;
-
-    auto it = s_registry.find(widget);
-    if (it == s_registry.end() || !it->second->color_swatch)
-        return;
-
-    int color_int = lv_subject_get_int(subject);
-    lv_color_t color = lv_color_hex(static_cast<uint32_t>(color_int));
-    lv_obj_set_style_bg_color(it->second->color_swatch, color, 0);
-
-    spdlog::trace("[AmsCurrentTool] Color updated to 0x{:06X}", color_int);
-}
+// on_color_changed migrated to lambda observer in on_widget_created()
 
 // Cleanup callback when widget is deleted
 static void on_delete(lv_event_t* e) {
@@ -95,14 +81,23 @@ static void on_widget_created(lv_obj_t* widget) {
     }
 
     // Set initial color from current subject value
+    // Using observer factory for type-safe lambda observer
+    using helix::ui::observe_int_sync;
     lv_subject_t* color_subject = AmsState::instance().get_current_color_subject();
     if (color_subject) {
         int color_int = lv_subject_get_int(color_subject);
         lv_color_t color = lv_color_hex(static_cast<uint32_t>(color_int));
         lv_obj_set_style_bg_color(data->color_swatch, color, 0);
 
-        // Observe future color changes using ObserverGuard for RAII cleanup [L020]
-        data->color_observer = ObserverGuard(color_subject, on_color_changed, widget);
+        // Observe future color changes using factory pattern [L020]
+        data->color_observer = observe_int_sync<AmsCurrentToolData>(
+            color_subject, data.get(), [](AmsCurrentToolData* d, int color_int) {
+                if (!d->color_swatch)
+                    return;
+                lv_color_t color = lv_color_hex(static_cast<uint32_t>(color_int));
+                lv_obj_set_style_bg_color(d->color_swatch, color, 0);
+                spdlog::trace("[AmsCurrentTool] Color updated to 0x{:06X}", color_int);
+            });
     }
 
     // Register cleanup callback

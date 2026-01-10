@@ -115,7 +115,6 @@ class ExtrusionPanel : public OverlayBase {
 
     // Static callbacks (amount buttons use imperative wiring due to loop/index logic)
     static void on_amount_button_clicked(lv_event_t* e);
-    static void on_nozzle_temp_changed(lv_observer_t* observer, lv_subject_t* subject);
 
     // Observer for nozzle temperature (ObserverGuard handles cleanup)
     ObserverGuard nozzle_temp_observer_;

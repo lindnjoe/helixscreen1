@@ -377,25 +377,12 @@ class ControlsPanel : public PanelBase {
     static void on_flow_down(lv_event_t* e);
 
     //
-    // === Observer Callbacks (static - update dashboard display) ===
+    // === Observer Callbacks (static - only for complex cases not using factory) ===
     //
 
-    static void on_extruder_temp_changed(lv_observer_t* obs, lv_subject_t* subject);
-    static void on_extruder_target_changed(lv_observer_t* obs, lv_subject_t* subject);
-    static void on_bed_temp_changed(lv_observer_t* obs, lv_subject_t* subject);
-    static void on_bed_target_changed(lv_observer_t* obs, lv_subject_t* subject);
-    static void on_fan_changed(lv_observer_t* obs, lv_subject_t* subject);
-    static void on_fans_version_changed(lv_observer_t* obs, lv_subject_t* subject);
     static void on_secondary_fan_speed_changed(lv_observer_t* obs, lv_subject_t* subject);
     void subscribe_to_secondary_fan_speeds();
     void update_secondary_fan_speed(const std::string& object_name, int speed_pct);
-    static void on_pending_z_offset_changed(lv_observer_t* obs, lv_subject_t* subject);
-    static void on_homed_axes_changed(lv_observer_t* obs, lv_subject_t* subject);
-    static void on_position_x_changed(lv_observer_t* obs, lv_subject_t* subject);
-    static void on_position_y_changed(lv_observer_t* obs, lv_subject_t* subject);
-    static void on_position_z_changed(lv_observer_t* obs, lv_subject_t* subject);
-    static void on_speed_factor_changed(lv_observer_t* obs, lv_subject_t* subject);
-    static void on_extrude_factor_changed(lv_observer_t* obs, lv_subject_t* subject);
 };
 
 // Global instance accessor (needed by main.cpp and XML event_cb trampolines)

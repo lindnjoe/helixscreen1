@@ -21,6 +21,7 @@
 #include "app_globals.h"
 #include "filament_sensor_manager.h"
 #include "moonraker_api.h"
+#include "observer_factory.h"
 #include "printer_state.h"
 #include "standard_macros.h"
 #include "static_panel_registry.h"
@@ -36,6 +37,7 @@ static const int MATERIAL_NOZZLE_TEMPS[] = {210, 240, 250, 230};
 static const int MATERIAL_BED_TEMPS[] = {60, 80, 100, 50};
 static const char* MATERIAL_NAMES[] = {"PLA", "PETG", "ABS", "TPU"};
 
+using helix::ui::observe_int_async;
 using helix::ui::temperature::centi_to_degrees;
 using helix::ui::temperature::get_heating_state_color;
 
@@ -90,80 +92,40 @@ FilamentPanel::FilamentPanel(PrinterState& printer_state, MoonrakerAPI* api)
     // Subscribe to PrinterState temperatures to show actual printer state
     // NOTE: Observers must defer UI updates via ui_async_call to avoid render-phase assertions
     // [L029]
-    extruder_temp_observer_ = ObserverGuard(
-        printer_state_.get_extruder_temp_subject(),
-        [](lv_observer_t* observer, lv_subject_t* subject) {
-            auto* self = static_cast<FilamentPanel*>(lv_observer_get_user_data(observer));
-            if (self) {
-                self->nozzle_current_ = centi_to_degrees(lv_subject_get_int(subject));
-                ui_async_call(
-                    [](void* ctx) {
-                        auto* panel = static_cast<FilamentPanel*>(ctx);
-                        panel->update_left_card_temps();
-                        panel->update_temp_display();
-                        panel->update_warning_text();
-                        panel->update_safety_state();
-                        panel->update_status(); // Update status text based on new temp
-                    },
-                    self);
-            }
-        },
-        this);
+    extruder_temp_observer_ = observe_int_async<FilamentPanel>(
+        printer_state_.get_extruder_temp_subject(), this,
+        [](FilamentPanel* self, int raw) { self->nozzle_current_ = centi_to_degrees(raw); },
+        [](FilamentPanel* self) {
+            self->update_left_card_temps();
+            self->update_temp_display();
+            self->update_warning_text();
+            self->update_safety_state();
+            self->update_status();
+        });
 
-    extruder_target_observer_ = ObserverGuard(
-        printer_state_.get_extruder_target_subject(),
-        [](lv_observer_t* observer, lv_subject_t* subject) {
-            auto* self = static_cast<FilamentPanel*>(lv_observer_get_user_data(observer));
-            if (self) {
-                self->nozzle_target_ = centi_to_degrees(lv_subject_get_int(subject));
-                ui_async_call(
-                    [](void* ctx) {
-                        auto* panel = static_cast<FilamentPanel*>(ctx);
-                        panel->update_left_card_temps();
-                        panel->update_material_temp_display();
-                        panel->update_warning_text();
-                        panel->update_status(); // Status depends on target temp too
-                        // Update cooldown button visibility
-                        lv_subject_set_int(&panel->nozzle_heating_subject_,
-                                           panel->nozzle_target_ > 0 ? 1 : 0);
-                    },
-                    self);
-            }
-        },
-        this);
+    extruder_target_observer_ = observe_int_async<FilamentPanel>(
+        printer_state_.get_extruder_target_subject(), this,
+        [](FilamentPanel* self, int raw) { self->nozzle_target_ = centi_to_degrees(raw); },
+        [](FilamentPanel* self) {
+            self->update_left_card_temps();
+            self->update_material_temp_display();
+            self->update_warning_text();
+            self->update_status();
+            lv_subject_set_int(&self->nozzle_heating_subject_, self->nozzle_target_ > 0 ? 1 : 0);
+        });
 
-    bed_temp_observer_ = ObserverGuard(
-        printer_state_.get_bed_temp_subject(),
-        [](lv_observer_t* observer, lv_subject_t* subject) {
-            auto* self = static_cast<FilamentPanel*>(lv_observer_get_user_data(observer));
-            if (self) {
-                self->bed_current_ = centi_to_degrees(lv_subject_get_int(subject));
-                ui_async_call(
-                    [](void* ctx) {
-                        auto* panel = static_cast<FilamentPanel*>(ctx);
-                        panel->update_left_card_temps();
-                    },
-                    self);
-            }
-        },
-        this);
+    bed_temp_observer_ = observe_int_async<FilamentPanel>(
+        printer_state_.get_bed_temp_subject(), this,
+        [](FilamentPanel* self, int raw) { self->bed_current_ = centi_to_degrees(raw); },
+        [](FilamentPanel* self) { self->update_left_card_temps(); });
 
-    bed_target_observer_ = ObserverGuard(
-        printer_state_.get_bed_target_subject(),
-        [](lv_observer_t* observer, lv_subject_t* subject) {
-            auto* self = static_cast<FilamentPanel*>(lv_observer_get_user_data(observer));
-            if (self) {
-                self->bed_target_ = centi_to_degrees(lv_subject_get_int(subject));
-                ui_async_call(
-                    [](void* ctx) {
-                        auto* panel = static_cast<FilamentPanel*>(ctx);
-                        panel->update_left_card_temps();
-                        panel->update_material_temp_display();
-                    },
-                    self);
-            }
-        },
-        this);
+    bed_target_observer_ = observe_int_async<FilamentPanel>(
+        printer_state_.get_bed_target_subject(), this,
+        [](FilamentPanel* self, int raw) { self->bed_target_ = centi_to_degrees(raw); },
+        [](FilamentPanel* self) {
+            self->update_left_card_temps();
+            self->update_material_temp_display();
+        });
 }
 
 FilamentPanel::~FilamentPanel() {

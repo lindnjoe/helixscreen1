@@ -15,9 +15,12 @@
 #include "app_constants.h"
 #include "app_globals.h"
 #include "moonraker_api.h"
+#include "observer_factory.h"
 #include "printer_state.h"
 #include "settings_manager.h"
 #include "static_panel_registry.h"
+
+using helix::ui::observe_int_sync;
 
 #include <spdlog/spdlog.h>
 
@@ -253,8 +256,15 @@ void ExtrusionPanel::setup_temperature_observer() {
     lv_subject_t* nozzle_temp = lv_xml_get_subject(NULL, "nozzle_temp_current");
 
     if (nozzle_temp) {
-        // ObserverGuard handles cleanup automatically in destructor
-        nozzle_temp_observer_ = ObserverGuard(nozzle_temp, on_nozzle_temp_changed, this);
+        // Observer factory handles ObserverGuard creation and cleanup
+        nozzle_temp_observer_ =
+            observe_int_sync(nozzle_temp, this, [](ExtrusionPanel* p, int temp) {
+                spdlog::debug("[{}] Nozzle temp update from subject: {}C", p->get_name(), temp);
+                p->nozzle_current_ = temp;
+                p->update_temp_status();
+                p->update_warning_text();
+                p->update_safety_state();
+            });
         spdlog::debug("[{}] Subscribed to nozzle_temp_current subject", get_name());
     } else {
         spdlog::warn("[{}] nozzle_temp_current subject not found - temperature updates unavailable",
@@ -432,25 +442,6 @@ void ExtrusionPanel::on_amount_button_clicked(lv_event_t* e) {
         self->handle_amount_button(btn);
     }
     LVGL_SAFE_EVENT_CB_END();
-}
-
-void ExtrusionPanel::on_nozzle_temp_changed(lv_observer_t* observer, lv_subject_t* subject) {
-    // Get user_data from observer (set when registering)
-    auto* self = static_cast<ExtrusionPanel*>(lv_observer_get_user_data(observer));
-    if (!self)
-        return;
-
-    // Get the new temperature value
-    // The subject may be int or float depending on implementation
-    int new_temp = lv_subject_get_int(subject);
-
-    spdlog::debug("[{}] Nozzle temp update from subject: {}C", self->get_name(), new_temp);
-
-    // Update our local state and refresh UI
-    self->nozzle_current_ = new_temp;
-    self->update_temp_status();
-    self->update_warning_text();
-    self->update_safety_state();
 }
 
 void ExtrusionPanel::set_temp(int current, int target) {

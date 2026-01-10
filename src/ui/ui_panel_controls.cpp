@@ -24,6 +24,7 @@
 
 #include "app_globals.h"
 #include "moonraker_api.h"
+#include "observer_factory.h"
 #include "printer_state.h"
 #include "standard_macros.h"
 #include "static_panel_registry.h"
@@ -34,6 +35,9 @@
 #include <cstdio>
 #include <cstring>
 #include <memory>
+
+using helix::ui::observe_int_sync;
+using helix::ui::observe_string;
 
 // Forward declarations for class-based API
 class MotionPanel;
@@ -182,10 +186,48 @@ void ControlsPanel::init_subjects() {
     UI_SUBJECT_INIT_AND_REGISTER_STRING(macro_3_name_, macro_3_name_buf_, "", "macro_3_name");
     UI_SUBJECT_INIT_AND_REGISTER_STRING(macro_4_name_, macro_4_name_buf_, "", "macro_4_name");
 
-    // Observe homed_axes from PrinterState to update homing subjects
-    if (auto* homed = printer_state_.get_homed_axes_subject()) {
-        homed_axes_observer_ = ObserverGuard(homed, on_homed_axes_changed, this);
-    }
+    // Observe homed_axes from PrinterState to update homing subjects using string observer
+    homed_axes_observer_ = observe_string<ControlsPanel>(
+        printer_state_.get_homed_axes_subject(), this, [](ControlsPanel* self, const char* axes) {
+            bool has_x = strchr(axes, 'x') != nullptr;
+            bool has_y = strchr(axes, 'y') != nullptr;
+            bool has_z = strchr(axes, 'z') != nullptr;
+
+            int x = has_x ? 1 : 0;
+            int y = has_y ? 1 : 0;
+            int xy = (has_x && has_y) ? 1 : 0;
+            int z = has_z ? 1 : 0;
+            int all = (has_x && has_y && has_z) ? 1 : 0;
+
+            // Only update if changed (avoid unnecessary redraws)
+            bool changed = false;
+            if (lv_subject_get_int(&self->x_homed_) != x) {
+                lv_subject_set_int(&self->x_homed_, x);
+                changed = true;
+            }
+            if (lv_subject_get_int(&self->y_homed_) != y) {
+                lv_subject_set_int(&self->y_homed_, y);
+                changed = true;
+            }
+            if (lv_subject_get_int(&self->xy_homed_) != xy) {
+                lv_subject_set_int(&self->xy_homed_, xy);
+                changed = true;
+            }
+            if (lv_subject_get_int(&self->z_homed_) != z) {
+                lv_subject_set_int(&self->z_homed_, z);
+                changed = true;
+            }
+            if (lv_subject_get_int(&self->all_homed_) != all) {
+                lv_subject_set_int(&self->all_homed_, all);
+                changed = true;
+            }
+
+            if (changed) {
+                spdlog::info("[ControlsPanel] Homing status changed: x={}, y={}, z={}, all={} "
+                             "(axes='{}')",
+                             x, y, z, all, axes);
+            }
+        });
 
     // Register calibration button event callbacks (direct buttons in card, no modal)
     lv_xml_register_event_cb(nullptr, "on_calibration_bed_mesh", on_calibration_bed_mesh);
@@ -386,51 +428,77 @@ void ControlsPanel::setup_card_handlers() {
 }
 
 void ControlsPanel::register_observers() {
-    // Subscribe to temperature updates
-    if (auto* ext_temp = printer_state_.get_extruder_temp_subject()) {
-        extruder_temp_observer_ = ObserverGuard(ext_temp, on_extruder_temp_changed, this);
-    }
-    if (auto* ext_target = printer_state_.get_extruder_target_subject()) {
-        extruder_target_observer_ = ObserverGuard(ext_target, on_extruder_target_changed, this);
-    }
-    if (auto* bed_temp = printer_state_.get_bed_temp_subject()) {
-        bed_temp_observer_ = ObserverGuard(bed_temp, on_bed_temp_changed, this);
-    }
-    if (auto* bed_target = printer_state_.get_bed_target_subject()) {
-        bed_target_observer_ = ObserverGuard(bed_target, on_bed_target_changed, this);
-    }
+    // Subscribe to temperature updates using observer factory (raw caching pattern)
+    extruder_temp_observer_ = observe_int_sync<ControlsPanel>(
+        printer_state_.get_extruder_temp_subject(), this, [](ControlsPanel* self, int value) {
+            self->cached_extruder_temp_ = value;
+            self->update_nozzle_temp_display();
+        });
+
+    extruder_target_observer_ = observe_int_sync<ControlsPanel>(
+        printer_state_.get_extruder_target_subject(), this, [](ControlsPanel* self, int value) {
+            self->cached_extruder_target_ = value;
+            self->update_nozzle_temp_display();
+        });
+
+    bed_temp_observer_ = observe_int_sync<ControlsPanel>(printer_state_.get_bed_temp_subject(),
+                                                         this, [](ControlsPanel* self, int value) {
+                                                             self->cached_bed_temp_ = value;
+                                                             self->update_bed_temp_display();
+                                                         });
+
+    bed_target_observer_ = observe_int_sync<ControlsPanel>(
+        printer_state_.get_bed_target_subject(), this, [](ControlsPanel* self, int value) {
+            self->cached_bed_target_ = value;
+            self->update_bed_temp_display();
+        });
 
     // Subscribe to fan updates
-    if (auto* fan = printer_state_.get_fan_speed_subject()) {
-        fan_observer_ = ObserverGuard(fan, on_fan_changed, this);
-    }
+    fan_observer_ = observe_int_sync<ControlsPanel>(
+        printer_state_.get_fan_speed_subject(), this,
+        [](ControlsPanel* self, int /* value */) { self->update_fan_display(); });
 
     // Subscribe to multi-fan list changes (fires when fans are discovered/updated)
-    if (auto* fans_ver = printer_state_.get_fans_version_subject()) {
-        fans_version_observer_ = ObserverGuard(fans_ver, on_fans_version_changed, this);
-    }
+    fans_version_observer_ = observe_int_sync<ControlsPanel>(
+        printer_state_.get_fans_version_subject(), this,
+        [](ControlsPanel* self, int /* version */) { self->populate_secondary_fans(); });
 
     // Subscribe to pending Z-offset delta (for unsaved adjustment banner)
-    if (auto* pending_delta = printer_state_.get_pending_z_offset_delta_subject()) {
-        pending_z_offset_observer_ =
-            ObserverGuard(pending_delta, on_pending_z_offset_changed, this);
-    }
+    pending_z_offset_observer_ =
+        observe_int_sync<ControlsPanel>(printer_state_.get_pending_z_offset_delta_subject(), this,
+                                        [](ControlsPanel* self, int delta_microns) {
+                                            self->update_z_offset_delta_display(delta_microns);
+                                        });
 
     // Subscribe to position updates for Position card
-    if (auto* pos_x = printer_state_.get_position_x_subject()) {
-        position_x_observer_ = ObserverGuard(pos_x, on_position_x_changed, this);
-    }
-    if (auto* pos_y = printer_state_.get_position_y_subject()) {
-        position_y_observer_ = ObserverGuard(pos_y, on_position_y_changed, this);
-    }
-    if (auto* pos_z = printer_state_.get_position_z_subject()) {
-        position_z_observer_ = ObserverGuard(pos_z, on_position_z_changed, this);
-    }
+    position_x_observer_ = observe_int_sync<ControlsPanel>(
+        printer_state_.get_position_x_subject(), this, [](ControlsPanel* self, int value) {
+            float x = static_cast<float>(value);
+            std::snprintf(self->controls_pos_x_buf_, sizeof(self->controls_pos_x_buf_), "%7.1f mm",
+                          x);
+            lv_subject_copy_string(&self->controls_pos_x_subject_, self->controls_pos_x_buf_);
+        });
+
+    position_y_observer_ = observe_int_sync<ControlsPanel>(
+        printer_state_.get_position_y_subject(), this, [](ControlsPanel* self, int value) {
+            float y = static_cast<float>(value);
+            std::snprintf(self->controls_pos_y_buf_, sizeof(self->controls_pos_y_buf_), "%7.1f mm",
+                          y);
+            lv_subject_copy_string(&self->controls_pos_y_subject_, self->controls_pos_y_buf_);
+        });
+
+    position_z_observer_ = observe_int_sync<ControlsPanel>(
+        printer_state_.get_position_z_subject(), this, [](ControlsPanel* self, int value) {
+            float z = static_cast<float>(value);
+            std::snprintf(self->controls_pos_z_buf_, sizeof(self->controls_pos_z_buf_), "%7.2f mm",
+                          z);
+            lv_subject_copy_string(&self->controls_pos_z_subject_, self->controls_pos_z_buf_);
+        });
 
     // Subscribe to speed/flow factor updates
-    if (auto* speed = printer_state_.get_speed_factor_subject()) {
-        speed_factor_observer_ = ObserverGuard(speed, on_speed_factor_changed, this);
-    }
+    speed_factor_observer_ = observe_int_sync<ControlsPanel>(
+        printer_state_.get_speed_factor_subject(), this,
+        [](ControlsPanel* self, int /* value */) { self->update_speed_display(); });
 
     spdlog::debug("[{}] Observers registered for dashboard live data", get_name());
 }
@@ -1441,55 +1509,8 @@ void ControlsPanel::on_save_z_offset(lv_event_t* e) {
 }
 
 // ============================================================================
-// OBSERVER CALLBACKS (Static - update dashboard display)
+// OBSERVER CALLBACKS (Static - only for complex cases not using factory)
 // ============================================================================
-
-void ControlsPanel::on_extruder_temp_changed(lv_observer_t* obs, lv_subject_t* subject) {
-    auto* self = static_cast<ControlsPanel*>(lv_observer_get_user_data(obs));
-    if (self) {
-        self->cached_extruder_temp_ = lv_subject_get_int(subject);
-        self->update_nozzle_temp_display();
-    }
-}
-
-void ControlsPanel::on_extruder_target_changed(lv_observer_t* obs, lv_subject_t* subject) {
-    auto* self = static_cast<ControlsPanel*>(lv_observer_get_user_data(obs));
-    if (self) {
-        self->cached_extruder_target_ = lv_subject_get_int(subject);
-        self->update_nozzle_temp_display();
-    }
-}
-
-void ControlsPanel::on_bed_temp_changed(lv_observer_t* obs, lv_subject_t* subject) {
-    auto* self = static_cast<ControlsPanel*>(lv_observer_get_user_data(obs));
-    if (self) {
-        self->cached_bed_temp_ = lv_subject_get_int(subject);
-        self->update_bed_temp_display();
-    }
-}
-
-void ControlsPanel::on_bed_target_changed(lv_observer_t* obs, lv_subject_t* subject) {
-    auto* self = static_cast<ControlsPanel*>(lv_observer_get_user_data(obs));
-    if (self) {
-        self->cached_bed_target_ = lv_subject_get_int(subject);
-        self->update_bed_temp_display();
-    }
-}
-
-void ControlsPanel::on_fan_changed(lv_observer_t* obs, lv_subject_t* /* subject */) {
-    auto* self = static_cast<ControlsPanel*>(lv_observer_get_user_data(obs));
-    if (self) {
-        self->update_fan_display();
-    }
-}
-
-void ControlsPanel::on_fans_version_changed(lv_observer_t* obs, lv_subject_t* /* subject */) {
-    auto* self = static_cast<ControlsPanel*>(lv_observer_get_user_data(obs));
-    if (self) {
-        // Structural change - rebuild the secondary fans list (includes resubscribing)
-        self->populate_secondary_fans();
-    }
-}
 
 void ControlsPanel::on_secondary_fan_speed_changed(lv_observer_t* obs, lv_subject_t* subject) {
     auto* self = static_cast<ControlsPanel*>(lv_observer_get_user_data(obs));
@@ -1536,110 +1557,6 @@ void ControlsPanel::update_secondary_fan_speed(const std::string& object_name, i
             break;
         }
     }
-}
-
-void ControlsPanel::on_pending_z_offset_changed(lv_observer_t* obs, lv_subject_t* subject) {
-    auto* self = static_cast<ControlsPanel*>(lv_observer_get_user_data(obs));
-    if (self) {
-        int delta_microns = lv_subject_get_int(subject);
-        self->update_z_offset_delta_display(delta_microns);
-    }
-}
-
-void ControlsPanel::on_homed_axes_changed(lv_observer_t* obs, lv_subject_t* subject) {
-    auto* self = static_cast<ControlsPanel*>(lv_observer_get_user_data(obs));
-    if (!self)
-        return;
-
-    const char* axes = lv_subject_get_string(subject);
-    if (!axes)
-        axes = "";
-
-    bool has_x = strchr(axes, 'x') != nullptr;
-    bool has_y = strchr(axes, 'y') != nullptr;
-    bool has_z = strchr(axes, 'z') != nullptr;
-
-    int x = has_x ? 1 : 0;
-    int y = has_y ? 1 : 0;
-    int xy = (has_x && has_y) ? 1 : 0;
-    int z = has_z ? 1 : 0;
-    int all = (has_x && has_y && has_z) ? 1 : 0;
-
-    // Only update if changed (avoid unnecessary redraws)
-    bool changed = false;
-    if (lv_subject_get_int(&self->x_homed_) != x) {
-        lv_subject_set_int(&self->x_homed_, x);
-        changed = true;
-    }
-    if (lv_subject_get_int(&self->y_homed_) != y) {
-        lv_subject_set_int(&self->y_homed_, y);
-        changed = true;
-    }
-    if (lv_subject_get_int(&self->xy_homed_) != xy) {
-        lv_subject_set_int(&self->xy_homed_, xy);
-        changed = true;
-    }
-    if (lv_subject_get_int(&self->z_homed_) != z) {
-        lv_subject_set_int(&self->z_homed_, z);
-        changed = true;
-    }
-    if (lv_subject_get_int(&self->all_homed_) != all) {
-        lv_subject_set_int(&self->all_homed_, all);
-        changed = true;
-    }
-
-    if (changed) {
-        spdlog::info("[ControlsPanel] Homing status changed: x={}, y={}, z={}, all={} (axes='{}')",
-                     x, y, z, all, axes);
-    }
-}
-
-void ControlsPanel::on_position_x_changed(lv_observer_t* obs, lv_subject_t* subject) {
-    auto* self = static_cast<ControlsPanel*>(lv_observer_get_user_data(obs));
-    if (!self)
-        return;
-
-    float x = static_cast<float>(lv_subject_get_int(subject));
-    std::snprintf(self->controls_pos_x_buf_, sizeof(self->controls_pos_x_buf_), "%7.1f mm", x);
-    lv_subject_copy_string(&self->controls_pos_x_subject_, self->controls_pos_x_buf_);
-}
-
-void ControlsPanel::on_position_y_changed(lv_observer_t* obs, lv_subject_t* subject) {
-    auto* self = static_cast<ControlsPanel*>(lv_observer_get_user_data(obs));
-    if (!self)
-        return;
-
-    float y = static_cast<float>(lv_subject_get_int(subject));
-    std::snprintf(self->controls_pos_y_buf_, sizeof(self->controls_pos_y_buf_), "%7.1f mm", y);
-    lv_subject_copy_string(&self->controls_pos_y_subject_, self->controls_pos_y_buf_);
-}
-
-void ControlsPanel::on_position_z_changed(lv_observer_t* obs, lv_subject_t* subject) {
-    auto* self = static_cast<ControlsPanel*>(lv_observer_get_user_data(obs));
-    if (!self)
-        return;
-
-    float z = static_cast<float>(lv_subject_get_int(subject));
-    std::snprintf(self->controls_pos_z_buf_, sizeof(self->controls_pos_z_buf_), "%7.2f mm", z);
-    lv_subject_copy_string(&self->controls_pos_z_subject_, self->controls_pos_z_buf_);
-}
-
-void ControlsPanel::on_speed_factor_changed(lv_observer_t* obs, lv_subject_t* subject) {
-    auto* self = static_cast<ControlsPanel*>(lv_observer_get_user_data(obs));
-    if (!self)
-        return;
-
-    int speed_pct = lv_subject_get_int(subject);
-    self->update_speed_display();
-    (void)speed_pct; // Already handled by update_speed_display
-}
-
-void ControlsPanel::on_extrude_factor_changed(lv_observer_t* obs, lv_subject_t* /* subject */) {
-    auto* self = static_cast<ControlsPanel*>(lv_observer_get_user_data(obs));
-    if (!self)
-        return;
-
-    self->update_flow_display();
 }
 
 // ============================================================================

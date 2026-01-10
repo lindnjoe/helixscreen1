@@ -53,6 +53,7 @@ using PrintStartOpCategory = OperationCategory;
 [[nodiscard]] const char* category_to_string(PrintStartOpCategory category);
 
 // ParameterSemantic is now defined in operation_patterns.h (LT3 unification)
+// Use helix::ParameterSemantic from that header
 
 /**
  * @brief An operation detected within a PRINT_START macro

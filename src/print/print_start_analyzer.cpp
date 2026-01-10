@@ -404,11 +404,11 @@ bool PrintStartAnalyzer::detect_skip_conditional(const std::string& gcode,
     // Search up to 500 characters before the operation
     size_t search_start = (op_pos > 500) ? op_pos - 500 : 0;
     std::string context = gcode.substr(search_start, op_pos - search_start);
-    std::string context_lower = to_lower(context);
+    std::string context_lower = helix::to_lower(context);
 
     // Helper lambda to check if a param is in an if statement or set statement
     auto check_param_in_context = [&](const std::string& param) -> bool {
-        std::string param_lower = to_lower(param);
+        std::string param_lower = helix::to_lower(param);
 
         if (context_lower.find(param_lower) == std::string::npos) {
             return false;

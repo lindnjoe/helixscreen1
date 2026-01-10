@@ -9,14 +9,16 @@
 ## Active Lessons
 
 
+
+
+### [L003] [***--|-----] Component names explicit
+- **Uses**: 10 | **Velocity**: 0.01 | **Learned**: 2025-12-14 | **Last**: 2025-12-30 | **Category**: pattern | **Type**: constraint
+> Always add name='component_name' on XML component tags. Internal view names don't propagate, causing lv_obj_find_by_name to return NULL
+
+
 ### [L004] [****-|-----] Subject init before create
 - **Uses**: 16 | **Velocity**: 0.01 | **Learned**: 2025-12-14 | **Last**: 2026-01-08 | **Category**: pattern | **Type**: informational
-> Initialize and register subjects BEFORE lv_xml_create(). Order: fonts, images, components, init subjects, register subjects, create UI
-
-
-### [L007] [***--|-----] XML event callbacks only
-- **Uses**: 10 | **Velocity**: 0.01 | **Learned**: 2025-12-14 | **Last**: 2026-01-09 | **Category**: correction | **Type**: constraint
-> Never use lv_obj_add_event_cb() in C++. Always use XML event_cb trigger and register with lv_xml_register_event_cb()
+>
 
 
 ### [L008] [***--|-----] Design tokens mandatory
@@ -32,11 +34,6 @@
 ### [L011] [****-|-----] No mutex in destructors
 - **Uses**: 13 | **Velocity**: 0.01 | **Learned**: 2025-12-14 | **Last**: 2026-01-08 | **Category**: gotcha | **Type**: constraint
 > Avoid mutex locks in destructors during static destruction phase. Other objects may already be destroyed, causing deadlock or crash on exit
-
-
-### [L013] [****-|-----] Callbacks before XML creation
-- **Uses**: 13 | **Velocity**: 0.01 | **Learned**: 2025-12-14 | **Last**: 2026-01-08 | **Category**: correction | **Type**: constraint
-> Register event callbacks with lv_xml_register_event_cb() BEFORE calling lv_xml_create(). XML parser needs callbacks available during creation
 
 
 ### [L014] [****-|-----] Register all XML components
@@ -60,7 +57,7 @@
 
 
 ### [L027] [***--|-----] Worktree initialization
-- **Uses**: 8 | **Velocity**: 0.07 | **Learned**: 2025-12-24 | **Last**: 2026-01-09 | **Category**: pattern | **Type**: constraint
+- **Uses**: 8 | **Velocity**: 0.04 | **Learned**: 2025-12-24 | **Last**: 2026-01-09 | **Category**: pattern | **Type**: constraint
 > When creating a git worktree, ALWAYS run ./scripts/init-worktree.sh BEFORE any commits. Worktrees don't auto-initialize submodules - uninitialized submodules appear as deletions and will be silently removed from git's tree on your next commit.
 
 
@@ -71,12 +68,7 @@
 
 ### [L031] [****-|-----] XML no recompile
 - **Uses**: 14 | **Velocity**: 0.01 | **Learned**: 2025-12-27 | **Last**: 2026-01-09 | **Category**: gotcha | **Type**: constraint
-> XML layout changes (ui_xml/*.xml) don't require recompilation - just restart the app. Only C++ changes need make.
-
-
-### [L032] [*****|+----] Re-stage after pre-commit format
-- **Uses**: 81 | **Velocity**: 0.51 | **Learned**: 2025-12-27 | **Last**: 2026-01-09 | **Category**: correction | **Type**: constraint
-> When pre-commit hook auto-formats files, they are NOT automatically re-staged. Always check git status after a commit and amend if the hook formatted files. Look for 'Auto-formatted: <file>' messages and run 'git add -u && git commit --amend --no-edit'.
+>
 
 
 ### [L035] [**---|-----] Push It celebration
@@ -99,11 +91,6 @@
 > When using bind_style for reactive visual changes, inline style attributes (style_bg_color, style_text_color, etc.) have higher priority in LVGL's style cascade. bind_style cannot override them. Solution: use TWO bind_styles (one per state) with NO inline styling for properties you want to change reactively.
 
 
-### [L041] [***--|-----] Subject init/deinit symmetry
-- **Uses**: 9 | **Velocity**: 0.01 | **Learned**: 2025-12-31 | **Last**: 2026-01-08 | **Category**: pattern | **Type**: constraint
-> Every init_subjects() must have a corresponding deinit_subjects() that calls lv_subject_deinit() on each subject. This applies to singletons AND panel classes with local lv_subject_t members.
-
-
 ### [L042] [*----|-----] XML bind_flag exclusive visibility
 - **Uses**: 2 | **Velocity**: 0.01 | **Learned**: 2025-12-31 | **Last**: 2025-12-31 | **Category**: pattern | **Type**: informational
 > Multiple bind_flag_if_eq on same object creates independent observers where last one wins (race condition). For 'show only when X=value' logic, use single bind_flag_if_not_eq instead. Example: bind_flag_if_not_eq ref_value="0" shows only when value IS 0.
@@ -112,11 +99,6 @@
 ### [L043] [*----|-----] Sonnet for structural reviews
 - **Uses**: 2 | **Velocity**: 0.01 | **Learned**: 2026-01-01 | **Last**: 2026-01-01 | **Category**: pattern | **Type**: informational
 > Use Sonnet (not Haiku) for architectural-level code reviews, structural changes, or final comprehensive reviews. Haiku is fine for quick single-file spot-checks with clear pass/fail criteria.
-
-
-### [L044] [***--|-----] Targeted tests during development
-- **Uses**: 6 | **Velocity**: 0.01 | **Learned**: 2026-01-04 | **Last**: 2026-01-08 | **Category**: preference | **Type**: informational
-> Run targeted tests with specific tags during implementation (e.g., ./build/bin/helix-tests "[tag]"). Only run full test suite (make test-run) at the end of a feature or phase. Full suite is SLOW - save it for final verification.
 
 
 ### [L045] [*----|-----] LVGL dropdown options
@@ -139,11 +121,6 @@
 > Tests calling async setters (functions using helix::async::invoke or ui_queue_update) must call helix::ui::UpdateQueue::instance().drain_queue_for_testing() before assertions. Without draining, the update is still pending and subjects won't have the new value. See test_printer_state.cpp for examples.
 
 
-### [L049] [**---|-----] Test fixture LVGL cleanup
-- **Uses**: 4 | **Velocity**: 0.07 | **Learned**: 2026-01-08 | **Last**: 2026-01-09 | **Category**: gotcha | **Type**: constraint
-> Test fixtures using LVGL subjects must: 1) Remove observers before local user_data goes out of scope (lv_observer_remove), 2) Call deinit_subjects() in fixture destructor BEFORE base LVGLTestFixture tears down LVGL. Dangling pointers cause SIGSEGV on test cleanup.
-
-
 ### [L050] [*----|-----] Post-compaction agent recovery
 - **Uses**: 2 | **Velocity**: 0.01 | **Learned**: 2026-01-08 | **Last**: 2026-01-08 | **Category**: recovery | **Type**: informational
 > When context compacts mid-session, agent outputs are summarized away but full content is preserved in the session JSONL. To recover: 1) Find current session file in ~/.claude/projects/<project>/<session-id>.jsonl (use ls -lt to find most recent), 2) Search for agent outputs: grep "tool_result.*agentId" <file>.jsonl, 3) Search for distinctive keywords from lost work to extract full analysis. The JSONL is append-only so nothing is truly lost - compaction only affects Claude's active context window.
@@ -154,6 +131,11 @@
 > When using lv_timer_create with object pointer as user_data, wrap in struct that captures alive_guard. Check alive_guard BEFORE dereferencing object pointer to prevent use-after-free if object destroyed during timer delay.
 
 
-### [L052] [**---|*----] Tag hv::EventLoop tests as slow
-- **Uses**: 4 | **Velocity**: 1.5 | **Learned**: 2026-01-09 | **Last**: 2026-01-09 | **Category**: gotcha | **Type**: constraint
+### [L051] [*----|+----] LVGL timer lifetime safety
+- **Uses**: 2 | **Velocity**: 0.5 | **Learned**: 2026-01-08 | **Last**: 2026-01-08 | **Category**: gotcha | **Type**: constraint
+> When using lv_timer_create with object pointer as user_data, wrap in struct that captures alive_guard. Check alive_guard BEFORE dereferencing object pointer to prevent use-after-free if object destroyed during timer delay.
+
+
+### [L052] [**---|+----] Tag hv::EventLoop tests as slow
+- **Uses**: 4 | **Velocity**: 0.75 | **Learned**: 2026-01-09 | **Last**: 2026-01-09 | **Category**: gotcha | **Type**: constraint
 > Tests using hv::EventLoop (libhv network operations) MUST be tagged [slow] or they cause parallel test shards to hang indefinitely. This includes fixtures like MoonrakerRobustnessFixture, MoonrakerClientSecurityFixture, NewFeaturesTestFixture, EventTestFixture. The [slow] tag excludes them from default `make test-run` which uses filter `~[.] ~[slow]`.

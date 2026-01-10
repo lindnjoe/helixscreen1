@@ -11,6 +11,7 @@
 #include "app_globals.h"
 #include "lvgl/src/xml/lv_xml.h"
 #include "moonraker_api.h"
+#include "observer_factory.h"
 #include "static_panel_registry.h"
 
 #include <spdlog/spdlog.h>
@@ -114,8 +115,18 @@ void FanControlOverlay::on_activate() {
     OverlayBase::on_activate();
 
     // Subscribe to fans_version subject for structural changes (fan discovery)
+    // Using observer factory for type-safe lambda observer
+    using helix::ui::observe_int_sync;
     if (auto* fans_ver = printer_state_.get_fans_version_subject()) {
-        fans_observer_ = ObserverGuard(fans_ver, on_fans_version_changed, this);
+        fans_observer_ = observe_int_sync<FanControlOverlay>(
+            fans_ver, this, [](FanControlOverlay* self, int /* version */) {
+                if (self->is_visible()) {
+                    // Structural change - rebuild fan list and resubscribe
+                    self->populate_fans();
+                    self->unsubscribe_from_fan_speeds();
+                    self->subscribe_to_fan_speeds();
+                }
+            });
     }
 
     // Subscribe to per-fan speed subjects for reactive updates
@@ -291,15 +302,7 @@ void FanControlOverlay::send_fan_speed(const std::string& object_name, int speed
 // OBSERVER CALLBACK
 // ============================================================================
 
-void FanControlOverlay::on_fans_version_changed(lv_observer_t* obs, lv_subject_t* /* subject */) {
-    auto* self = static_cast<FanControlOverlay*>(lv_observer_get_user_data(obs));
-    if (self && self->is_visible()) {
-        // Structural change - rebuild fan list and resubscribe
-        self->populate_fans();
-        self->unsubscribe_from_fan_speeds();
-        self->subscribe_to_fan_speeds();
-    }
-}
+// on_fans_version_changed migrated to lambda in on_activate()
 
 void FanControlOverlay::on_fan_speed_changed(lv_observer_t* obs, lv_subject_t* /* subject */) {
     auto* self = static_cast<FanControlOverlay*>(lv_observer_get_user_data(obs));

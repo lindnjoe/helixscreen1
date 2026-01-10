@@ -129,6 +129,13 @@
     <px name="keypad_display_height_medium" value="72"/>
     <px name="keypad_display_height_large" value="88"/>
 
+    <!-- printer_img_size moved to home_panel.xml -->
+    <!-- accent_bar_width moved to home_panel.xml -->
+    <px name="accent_bar_height" value="28"/>
+    <!-- accent_bar_gap moved to home_panel.xml -->
+    <percentage name="card_width" value="45%"/>
+    <percentage name="card_height" value="80%"/>
+
     <!-- Preview/thumbnail vertical offset to account for metadata overlays -->
     <!-- Shifts content up to prevent overlap with bottom metadata areas -->
     <percentage name="preview_offset_y" value="-20%"/>
@@ -144,6 +151,7 @@
     <px name="button_height_sm_small" value="36"/>
     <px name="button_height_sm_medium" value="40"/>
     <px name="button_height_sm_large" value="48"/>
+    <px name="button_height_sm" value="40"/>
 
     <px name="button_height_normal" value="56"/>
 
@@ -155,6 +163,8 @@
     <px name="header_height" value="60"/>
 
     <!-- Primary action buttons -->
+    <px name="button_row_height" value="64"/>
+    <!-- Row height for button containers -->
     <px name="input_height" value="48"/>
     <!-- Standard height for all input fields (textareas, dropdowns, etc.) -->
     <px name="slider_height" value="8"/>

@@ -4,7 +4,11 @@
 #include "ui_print_preparation_manager.h"
 #include "ui_update_queue.h"
 
+#include "../mocks/mock_websocket_server.h"
 #include "../ui_test_utils.h"
+#include "hv/EventLoopThread.h"
+#include "moonraker_api.h"
+#include "moonraker_client.h"
 #include "moonraker_error.h"
 #include "print_start_analyzer.h"
 #include "printer_detector.h"
@@ -13,8 +17,10 @@
 #include <spdlog/sinks/null_sink.h>
 #include <spdlog/spdlog.h>
 
+#include <atomic>
 #include <chrono>
 #include <functional>
+#include <mutex>
 #include <thread>
 #include <vector>
 
@@ -1112,371 +1118,97 @@ TEST_CASE("PrintPreparationManager: format_preprint_steps formatting",
 }
 
 // ============================================================================
-// Tests: Macro Analysis Retry Logic
+// Tests: Macro Analysis Retry Logic (with MockWebSocketServer)
 // ============================================================================
 
 /**
- * Tests for macro analysis retry behavior.
- *
- * These tests validate the retry logic for PRINT_START macro analysis:
- * - MAX_RETRIES = 2 (3 total attempts: 1 initial + 2 retries)
- * - Exponential backoff: 1s, 2s delays between retries
- * - is_macro_analysis_in_progress() stays true during retries
- * - Error notification only shown after final failure
- * - Retry counter resets on new analysis request or success
- *
- * NOTE: These tests are written to FAIL initially because the retry logic
- * doesn't exist yet. They serve as a specification for the feature.
- */
-
-/**
- * @brief Mock MoonrakerAPI for testing macro analysis retry behavior
- *
- * Allows configuring:
- * - Number of times to fail before succeeding
- * - Whether to succeed or fail permanently
- * - Tracking of attempt counts
- */
-class MockMoonrakerAPIForRetry {
-  public:
-    MockMoonrakerAPIForRetry() = default;
-
-    /**
-     * @brief Configure mock to fail N times, then succeed
-     */
-    void set_failures_before_success(int failures) {
-        failures_before_success_ = failures;
-        permanent_failure_ = false;
-        attempt_count_ = 0;
-    }
-
-    /**
-     * @brief Configure mock to always fail
-     */
-    void set_permanent_failure() {
-        permanent_failure_ = true;
-        attempt_count_ = 0;
-    }
-
-    /**
-     * @brief Configure mock to always succeed
-     */
-    void set_always_succeed() {
-        failures_before_success_ = 0;
-        permanent_failure_ = false;
-        attempt_count_ = 0;
-    }
-
-    /**
-     * @brief Get number of attempts made
-     */
-    int get_attempt_count() const {
-        return attempt_count_;
-    }
-
-    /**
-     * @brief Reset attempt counter
-     */
-    void reset_attempts() {
-        attempt_count_ = 0;
-    }
-
-    /**
-     * @brief Simulate an API call that may fail based on configuration
-     *
-     * @param on_success Called if this attempt should succeed
-     * @param on_error Called if this attempt should fail
-     */
-    template <typename SuccessCallback, typename ErrorCallback>
-    void simulate_api_call(SuccessCallback on_success, ErrorCallback on_error) {
-        attempt_count_++;
-
-        if (permanent_failure_) {
-            MoonrakerError error;
-            error.message = "Mock permanent failure";
-            error.type = MoonrakerErrorType::UNKNOWN;
-            on_error(error);
-            return;
-        }
-
-        if (attempt_count_ <= failures_before_success_) {
-            MoonrakerError error;
-            error.message = "Mock temporary failure";
-            error.type = MoonrakerErrorType::UNKNOWN;
-            on_error(error);
-            return;
-        }
-
-        // Success - create a mock analysis result
-        helix::PrintStartAnalysis analysis;
-        analysis.found = true;
-        analysis.macro_name = "PRINT_START";
-        on_success(analysis);
-    }
-
-  private:
-    int failures_before_success_ = 0;
-    bool permanent_failure_ = false;
-    int attempt_count_ = 0;
-};
-
-TEST_CASE("PrintPreparationManager: macro analysis retry - first attempt succeeds",
-          "[print_preparation][retry]") {
-    PrintPreparationManager manager;
-
-    // NOTE: This test will FAIL because:
-    // 1. We can't inject a mock API into PrintPreparationManager
-    // 2. The analyze_print_start_macro() method doesn't have retry logic yet
-    //
-    // Once retry logic is implemented, this test should:
-    // - Verify is_macro_analysis_in_progress() goes true then false
-    // - Verify callback is invoked with success result
-    // - Verify only 1 attempt was made
-
-    SECTION("Success on first attempt - no retries needed") {
-        // Setup: Mock API that succeeds immediately
-        MockMoonrakerAPIForRetry mock_api;
-        mock_api.set_always_succeed();
-
-        // TODO: Inject mock_api into manager
-        // manager.set_mock_api(&mock_api);
-
-        bool callback_invoked = false;
-        bool callback_found = false;
-
-        // Set callback to capture result
-        manager.set_macro_analysis_callback([&](const helix::PrintStartAnalysis& analysis) {
-            callback_invoked = true;
-            callback_found = analysis.found;
-        });
-
-        // Without API, analyze_print_start_macro() returns early
-        // This test documents expected behavior once API injection is possible
-        manager.analyze_print_start_macro();
-
-        // Current behavior: returns early without API
-        // Expected behavior after retry implementation:
-        // REQUIRE(callback_invoked == true);
-        // REQUIRE(callback_found == true);
-        // REQUIRE(mock_api.get_attempt_count() == 1);
-        // REQUIRE(manager.is_macro_analysis_in_progress() == false);
-
-        // For now, verify baseline behavior
-        REQUIRE(manager.is_macro_analysis_in_progress() == false);
-        REQUIRE(manager.has_macro_analysis() == false);
-    }
-}
-
-TEST_CASE("PrintPreparationManager: macro analysis retry - first fails, second succeeds",
-          "[print_preparation][retry]") {
-    PrintPreparationManager manager;
-
-    SECTION("Retry succeeds on second attempt") {
-        // Setup: Mock API fails first call, succeeds second
-        MockMoonrakerAPIForRetry mock_api;
-        mock_api.set_failures_before_success(1);
-
-        // TODO: Inject mock_api into manager
-        // manager.set_mock_api(&mock_api);
-
-        bool callback_invoked = false;
-        bool callback_found = false;
-
-        manager.set_macro_analysis_callback([&](const helix::PrintStartAnalysis& analysis) {
-            callback_invoked = true;
-            callback_found = analysis.found;
-        });
-
-        // Trigger analysis
-        manager.analyze_print_start_macro();
-
-        // Expected behavior after retry implementation:
-        // - First attempt fails
-        // - is_macro_analysis_in_progress() stays TRUE during retry delay
-        // - Second attempt succeeds
-        // - Callback invoked with found=true
-        // - is_macro_analysis_in_progress() goes FALSE
-
-        // REQUIRE(callback_invoked == true);
-        // REQUIRE(callback_found == true);
-        // REQUIRE(mock_api.get_attempt_count() == 2);
-        // REQUIRE(manager.is_macro_analysis_in_progress() == false);
-        // REQUIRE(manager.has_macro_analysis() == true);
-
-        // For now, verify current behavior
-        REQUIRE(manager.is_macro_analysis_in_progress() == false);
-    }
-}
-
-TEST_CASE("PrintPreparationManager: macro analysis retry - all retries exhausted",
-          "[print_preparation][retry]") {
-    PrintPreparationManager manager;
-
-    SECTION("Error notification after 3 failed attempts") {
-        // Setup: Mock API always fails
-        MockMoonrakerAPIForRetry mock_api;
-        mock_api.set_permanent_failure();
-
-        // TODO: Inject mock_api into manager
-        // manager.set_mock_api(&mock_api);
-
-        bool callback_invoked = false;
-        bool callback_found = true; // Start true to verify it becomes false
-
-        manager.set_macro_analysis_callback([&](const helix::PrintStartAnalysis& analysis) {
-            callback_invoked = true;
-            callback_found = analysis.found;
-        });
-
-        // Trigger analysis
-        manager.analyze_print_start_macro();
-
-        // Expected behavior after retry implementation:
-        // - Attempt 1: fails
-        // - Wait 1 second (exponential backoff)
-        // - Attempt 2: fails
-        // - Wait 2 seconds (exponential backoff)
-        // - Attempt 3: fails (MAX_RETRIES=2, so 3 total attempts)
-        // - Error notification shown
-        // - Callback invoked with found=false
-        // - is_macro_analysis_in_progress() goes FALSE
-
-        // REQUIRE(callback_invoked == true);
-        // REQUIRE(callback_found == false);  // Analysis failed
-        // REQUIRE(mock_api.get_attempt_count() == 3);  // 1 initial + 2 retries
-        // REQUIRE(manager.is_macro_analysis_in_progress() == false);
-        // REQUIRE(manager.has_macro_analysis() == false);  // Or true with found=false
-
-        // For now, verify current behavior
-        REQUIRE(manager.is_macro_analysis_in_progress() == false);
-    }
-}
-
-TEST_CASE("PrintPreparationManager: macro analysis retry counter resets on new request",
-          "[print_preparation][retry]") {
-    PrintPreparationManager manager;
-
-    SECTION("New analysis request resets retry counter") {
-        // Setup: Mock API fails first two calls, then succeeds
-        MockMoonrakerAPIForRetry mock_api;
-        mock_api.set_failures_before_success(2);
-
-        // TODO: Inject mock_api into manager
-        // manager.set_mock_api(&mock_api);
-
-        int callback_count = 0;
-        manager.set_macro_analysis_callback(
-            [&](const helix::PrintStartAnalysis& /*analysis*/) { callback_count++; });
-
-        // First analysis - should fail once, then we'll start new analysis
-        manager.analyze_print_start_macro();
-
-        // Expected behavior:
-        // - First attempt fails
-        // - Before retry completes, start new analysis
-        // - Retry counter should reset to 0
-        // - New analysis starts fresh
-
-        // Simulate starting new analysis before retry completes
-        // This should cancel the pending retry and start fresh
-        mock_api.reset_attempts();
-        mock_api.set_always_succeed();
-        manager.analyze_print_start_macro();
-
-        // REQUIRE(mock_api.get_attempt_count() == 1);  // Fresh start, not continuing old count
-        // REQUIRE(manager.has_macro_analysis() == true);
-
-        // For now, verify current behavior
-        REQUIRE(manager.is_macro_analysis_in_progress() == false);
-    }
-}
-
-TEST_CASE("PrintPreparationManager: in-progress flag stays true during retries",
-          "[print_preparation][retry]") {
-    PrintPreparationManager manager;
-
-    SECTION("is_macro_analysis_in_progress remains true during retry delay") {
-        // Setup: Mock API fails first call
-        MockMoonrakerAPIForRetry mock_api;
-        mock_api.set_failures_before_success(1);
-
-        // TODO: Inject mock_api into manager
-        // manager.set_mock_api(&mock_api);
-
-        manager.set_macro_analysis_callback([&](const helix::PrintStartAnalysis& /*analysis*/) {
-            // Callback shouldn't be called until retries complete
-        });
-
-        // Trigger analysis
-        manager.analyze_print_start_macro();
-
-        // BUG TO FIX: Currently, when first attempt fails:
-        // - macro_analysis_in_progress_ is set to FALSE in error callback
-        // - This allows Print button to be enabled prematurely
-        // - User could start print before skip params are known
-
-        // EXPECTED behavior after fix:
-        // - After first failure, is_macro_analysis_in_progress() should still be TRUE
-        // - Flag only goes FALSE after:
-        //   a) Final retry fails (all retries exhausted), OR
-        //   b) A retry succeeds
-
-        // This test should FAIL until the bug is fixed
-        // Currently the flag goes false immediately on first failure
-
-        // To test this properly, we need to:
-        // 1. Trigger analysis
-        // 2. Simulate first failure callback
-        // 3. Check flag BEFORE retry completes
-        // 4. Flag should be TRUE
-
-        // For now, just document the expected vs actual behavior
-        // REQUIRE(manager.is_macro_analysis_in_progress() == true);  // EXPECTED
-        REQUIRE(manager.is_macro_analysis_in_progress() == false); // ACTUAL (bug)
-    }
-}
-
-// ============================================================================
-// Integration Test Helpers for Retry Logic
-// ============================================================================
-
-/**
- * @brief Test fixture for macro analysis retry tests with real async behavior
+ * @brief Test fixture for macro analysis retry tests using real WebSocket infrastructure
  *
  * This fixture provides:
- * - LVGL initialization for ui_queue_update draining
- * - Mock API injection capability (when implemented)
- * - Timing helpers for verifying exponential backoff
+ * - MockWebSocketServer for controlling JSON-RPC responses
+ * - Real MoonrakerClient + MoonrakerAPI connected to the mock server
+ * - PrinterState with initialized subjects
+ * - Helper methods for waiting on async operations with queue draining
+ *
+ * The PrintStartAnalyzer flow:
+ * 1. Calls api->list_files("config", ...) which sends server.files.list via WebSocket
+ * 2. For each .cfg file found, calls api->download_file() via HTTP
+ * 3. Scans each file for [gcode_macro PRINT_START] or similar
+ *
+ * We can test retry logic by controlling the server.files.list response:
+ * - Return error to trigger retry
+ * - Return empty list to complete with "not found"
+ * - Return file list to proceed to download phase
  */
-class MacroAnalysisRetryTestFixture {
+class MacroAnalysisRetryFixture {
   public:
-    MacroAnalysisRetryTestFixture() {
-        // Suppress spdlog output during tests
-        static bool logger_initialized = false;
-        if (!logger_initialized) {
-            auto null_sink = std::make_shared<spdlog::sinks::null_sink_mt>();
-            auto null_logger = std::make_shared<spdlog::logger>("null", null_sink);
-            spdlog::set_default_logger(null_logger);
-            logger_initialized = true;
-        }
-
-        // Initialize LVGL for update queue
+    MacroAnalysisRetryFixture() {
+        // Initialize LVGL for subjects and update queue
         lv_init_safe();
+
+        // Initialize PrinterState subjects (needed for dependency injection)
+        printer_state_.init_subjects(false); // false = no XML registration
+
+        // Start mock WebSocket server on fixed port (ephemeral port lookup is unreliable)
+        server_ = std::make_unique<MockWebSocketServer>();
+        int port = server_->start(18766); // Fixed port for retry tests
+        REQUIRE(port > 0);
+
+        // Create event loop and client
+        loop_thread_ = std::make_shared<hv::EventLoopThread>();
+        loop_thread_->start();
+
+        client_ = std::make_unique<MoonrakerClient>(loop_thread_->loop());
+        client_->set_connection_timeout(2000);
+        client_->set_default_request_timeout(2000);
+        client_->setReconnect(nullptr); // Disable auto-reconnect
+
+        // Create API wrapper
+        api_ = std::make_unique<MoonrakerAPI>(*client_, printer_state_);
+
+        // Connect to mock server
+        std::atomic<bool> connected{false};
+        client_->connect(server_->url().c_str(), [&connected]() { connected = true; }, []() {});
+
+        // Wait for connection
+        for (int i = 0; i < 50 && !connected; i++) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        REQUIRE(connected);
+
+        // Set up manager with dependencies
+        // NOTE: We set dependencies BEFORE setting connection state to avoid
+        // triggering auto-analysis on connection (which would race with test setup)
+        manager_.set_dependencies(api_.get(), &printer_state_);
+
+        // Don't set connection state to CONNECTED yet - let tests control when
+        // analysis starts by calling analyze_print_start_macro() explicitly
     }
 
-    ~MacroAnalysisRetryTestFixture() = default;
+    ~MacroAnalysisRetryFixture() {
+        // Stop event loop FIRST to prevent callbacks during teardown
+        loop_thread_->stop();
+        loop_thread_->join();
+
+        // Destroy resources in order
+        api_.reset();
+        client_.reset();
+        server_->stop();
+        server_.reset();
+    }
 
     /**
      * @brief Drain pending UI updates (simulates main loop iteration)
      */
     void drain_queue() {
         helix::ui::UpdateQueue::instance().drain_queue_for_testing();
+        lv_timer_handler(); // Process LVGL timers for retry scheduling
     }
 
     /**
      * @brief Wait for condition with queue draining
      */
-    bool wait_for(std::function<bool()> condition, int timeout_ms = 1000) {
+    bool wait_for(std::function<bool()> condition, int timeout_ms = 5000) {
         auto start = std::chrono::steady_clock::now();
         while (!condition()) {
             drain_queue();
@@ -1491,49 +1223,323 @@ class MacroAnalysisRetryTestFixture {
         return true;
     }
 
+    /**
+     * @brief Configure server to return error for list_files N times, then succeed
+     *
+     * @param failures Number of times to return error before success
+     * @param success_files Files to return on success (empty = no files found)
+     */
+    void set_list_files_failures(int failures, const std::vector<std::string>& success_files = {}) {
+        list_files_call_count_ = 0;
+        list_files_failures_ = failures;
+        list_files_success_files_ = success_files;
+
+        server_->clear_handlers();
+
+        // Handler that fails N times, then succeeds
+        server_->on_method("server.files.list", [this](const json& params) -> json {
+            list_files_call_count_++;
+            {
+                std::lock_guard<std::mutex> lock(call_times_mutex_);
+                list_files_call_times_.push_back(std::chrono::steady_clock::now());
+            }
+
+            if (list_files_call_count_ <= list_files_failures_) {
+                // Throw to trigger error response
+                throw std::runtime_error("Mock failure #" + std::to_string(list_files_call_count_));
+            }
+
+            // Success: return file list
+            json result = json::array();
+            for (const auto& file : list_files_success_files_) {
+                result.push_back({{"path", file}, {"size", 1024}, {"modified", 1234567890.0}});
+            }
+            return result;
+        });
+    }
+
+    /**
+     * @brief Configure server to always return error for list_files
+     */
+    void set_list_files_always_fail() {
+        list_files_call_count_ = 0;
+
+        server_->clear_handlers();
+        server_->on_method_error("server.files.list", [this](const json&) {
+            list_files_call_count_++;
+            {
+                std::lock_guard<std::mutex> lock(call_times_mutex_);
+                list_files_call_times_.push_back(std::chrono::steady_clock::now());
+            }
+            return std::make_pair(-1, "Mock permanent failure");
+        });
+    }
+
+    /**
+     * @brief Configure server to succeed immediately with empty file list
+     *
+     * This results in "no PRINT_START found" but with analysis complete.
+     */
+    void set_list_files_success_empty() {
+        list_files_call_count_ = 0;
+
+        server_->clear_handlers();
+        server_->on_method("server.files.list", [this](const json&) -> json {
+            list_files_call_count_++;
+            {
+                std::lock_guard<std::mutex> lock(call_times_mutex_);
+                list_files_call_times_.push_back(std::chrono::steady_clock::now());
+            }
+            return json::array(); // Empty file list
+        });
+    }
+
+    int get_list_files_call_count() const {
+        return list_files_call_count_;
+    }
+
+    std::vector<std::chrono::steady_clock::time_point> get_call_times() {
+        std::lock_guard<std::mutex> lock(call_times_mutex_);
+        return list_files_call_times_;
+    }
+
+    void clear_call_times() {
+        std::lock_guard<std::mutex> lock(call_times_mutex_);
+        list_files_call_times_.clear();
+    }
+
   protected:
+    std::unique_ptr<MockWebSocketServer> server_;
+    std::shared_ptr<hv::EventLoopThread> loop_thread_;
+    std::unique_ptr<MoonrakerClient> client_;
+    std::unique_ptr<MoonrakerAPI> api_;
+    PrinterState printer_state_;
     PrintPreparationManager manager_;
-    MockMoonrakerAPIForRetry mock_api_;
+
+    std::atomic<int> list_files_call_count_{0};
+    int list_files_failures_{0};
+    std::vector<std::string> list_files_success_files_;
+
+    std::mutex call_times_mutex_;
+    std::vector<std::chrono::steady_clock::time_point> list_files_call_times_;
 };
 
-TEST_CASE_METHOD(MacroAnalysisRetryTestFixture,
-                 "PrintPreparationManager: retry timing follows exponential backoff",
-                 "[print_preparation][retry][timing]") {
-    SECTION("Backoff delays: 1s, 2s between retries") {
-        // Setup: Mock API always fails so we can measure retry timing
-        mock_api_.set_permanent_failure();
+TEST_CASE_METHOD(MacroAnalysisRetryFixture,
+                 "PrintPreparationManager: macro analysis retry - first attempt succeeds",
+                 "[print_preparation][retry]") {
+    SECTION("Success on first attempt - no retries needed") {
+        // Configure server to succeed immediately with empty file list
+        // (Results in "no macro found" but analysis completes successfully)
+        set_list_files_success_empty();
 
-        // TODO: Inject mock_api_ into manager_
-        // manager_.set_mock_api(&mock_api_);
+        std::atomic<bool> callback_invoked{false};
+        std::atomic<bool> callback_found{true}; // Start true to verify it becomes false
 
-        // Record timestamps of each attempt
-        std::vector<std::chrono::steady_clock::time_point> attempt_times;
+        manager_.set_macro_analysis_callback([&](const helix::PrintStartAnalysis& analysis) {
+            spdlog::info("[TEST] Callback invoked, found={}", analysis.found);
+            callback_invoked = true;
+            callback_found = analysis.found;
+        });
 
-        // Expected timing (after implementation):
-        // Attempt 1: immediate
-        // Wait 1 second
-        // Attempt 2: ~1s after attempt 1
-        // Wait 2 seconds
-        // Attempt 3: ~3s after attempt 1 (1s + 2s)
+        // Trigger analysis
+        spdlog::info("[TEST] Starting analysis");
+        manager_.analyze_print_start_macro();
+        spdlog::info("[TEST] Analysis started, waiting for callback");
 
-        // Start analysis
+        // Wait for callback - use longer timeout and debug
+        auto start = std::chrono::steady_clock::now();
+        while (!callback_invoked.load()) {
+            drain_queue();
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                               std::chrono::steady_clock::now() - start)
+                               .count();
+            if (elapsed > 100 && elapsed % 500 < 20) {
+                spdlog::info("[TEST] Waiting... elapsed={}ms, callback_invoked={}", elapsed,
+                             callback_invoked.load());
+            }
+            if (elapsed > 5000) {
+                spdlog::error("[TEST] Timeout waiting for callback!");
+                break;
+            }
+        }
+
+        REQUIRE(callback_invoked);
+        REQUIRE(get_list_files_call_count() == 1);
+        REQUIRE(callback_found == false); // No config files = no macro found
+        REQUIRE(manager_.is_macro_analysis_in_progress() == false);
+        REQUIRE(manager_.has_macro_analysis() == true); // Has result, just found=false
+    }
+}
+
+TEST_CASE_METHOD(MacroAnalysisRetryFixture,
+                 "PrintPreparationManager: macro analysis retry - first fails, second succeeds",
+                 "[print_preparation][retry]") {
+    SECTION("Retry succeeds on second attempt") {
+        // Configure server to fail once, then succeed with empty list
+        set_list_files_failures(1, {}); // Fail once, then return empty list
+
+        std::atomic<bool> callback_invoked{false};
+        std::atomic<bool> callback_found{true};
+
+        manager_.set_macro_analysis_callback([&](const helix::PrintStartAnalysis& analysis) {
+            callback_invoked = true;
+            callback_found = analysis.found;
+        });
+
+        // Trigger analysis
         manager_.analyze_print_start_macro();
 
-        // For now, just verify the test infrastructure works
+        // Wait for callback (allow extra time for retry delay)
+        REQUIRE(wait_for([&]() { return callback_invoked.load(); }, 5000));
+
+        // Verify retry happened: 1 failure + 1 success = 2 calls
+        REQUIRE(get_list_files_call_count() == 2);
+        REQUIRE(callback_found == false); // Empty list = no macro found
+        REQUIRE(manager_.is_macro_analysis_in_progress() == false);
+        REQUIRE(manager_.has_macro_analysis() == true);
+    }
+}
+
+TEST_CASE_METHOD(MacroAnalysisRetryFixture,
+                 "PrintPreparationManager: macro analysis retry - all retries exhausted",
+                 "[print_preparation][retry]") {
+    SECTION("Callback invoked with found=false after 3 failed attempts") {
+        // Configure server to always fail
+        set_list_files_always_fail();
+
+        std::atomic<bool> callback_invoked{false};
+        std::atomic<bool> callback_found{true}; // Start true to verify it becomes false
+
+        manager_.set_macro_analysis_callback([&](const helix::PrintStartAnalysis& analysis) {
+            callback_invoked = true;
+            callback_found = analysis.found;
+        });
+
+        // Trigger analysis
+        manager_.analyze_print_start_macro();
+
+        // Wait for callback (allow time for all retries: 1s + 2s delays)
+        REQUIRE(wait_for([&]() { return callback_invoked.load(); }, 8000));
+
+        // Verify all attempts: 1 initial + 2 retries = 3 total
+        REQUIRE(get_list_files_call_count() == 3);
+        REQUIRE(callback_found == false); // All attempts failed
+        REQUIRE(manager_.is_macro_analysis_in_progress() == false);
+        REQUIRE(manager_.has_macro_analysis() == true); // Has result with found=false
+    }
+}
+
+TEST_CASE_METHOD(MacroAnalysisRetryFixture,
+                 "PrintPreparationManager: macro analysis retry counter resets on new request",
+                 "[print_preparation][retry]") {
+    SECTION("New analysis request after cache clears uses fresh retry counter") {
+        // First analysis: succeed immediately
+        set_list_files_success_empty();
+
+        std::atomic<int> callback_count{0};
+        manager_.set_macro_analysis_callback(
+            [&](const helix::PrintStartAnalysis&) { callback_count++; });
+
+        manager_.analyze_print_start_macro();
+        REQUIRE(wait_for([&]() { return callback_count.load() == 1; }, 3000));
+        REQUIRE(get_list_files_call_count() == 1);
+
+        // Clear the cache to allow new analysis
+        // (Normally, the manager caches results and won't re-analyze)
+        // We need to create a new manager to reset state
+        PrintPreparationManager manager2;
+        manager2.set_dependencies(api_.get(), &printer_state_);
+
+        // Reset call count and configure failures
+        clear_call_times();
+        list_files_call_count_ = 0;
+        set_list_files_failures(1, {}); // Fail once, then succeed
+
+        std::atomic<bool> callback2_invoked{false};
+        manager2.set_macro_analysis_callback(
+            [&](const helix::PrintStartAnalysis&) { callback2_invoked = true; });
+
+        manager2.analyze_print_start_macro();
+        REQUIRE(wait_for([&]() { return callback2_invoked.load(); }, 5000));
+
+        // Should have retried fresh: 1 failure + 1 success = 2 calls
+        REQUIRE(get_list_files_call_count() == 2);
+    }
+}
+
+TEST_CASE_METHOD(MacroAnalysisRetryFixture,
+                 "PrintPreparationManager: in-progress flag stays true during retries",
+                 "[print_preparation][retry]") {
+    SECTION("is_macro_analysis_in_progress remains true during retry delay") {
+        // Configure server to fail first call
+        set_list_files_failures(1, {});
+
+        std::atomic<bool> callback_invoked{false};
+        manager_.set_macro_analysis_callback(
+            [&](const helix::PrintStartAnalysis&) { callback_invoked = true; });
+
+        // Trigger analysis
+        manager_.analyze_print_start_macro();
+
+        // Immediately after starting, should be in progress
+        REQUIRE(manager_.is_macro_analysis_in_progress() == true);
+
+        // Wait a short time for first failure to process (but not for retry to complete)
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
         drain_queue();
 
-        // Expected verification (after implementation):
-        // REQUIRE(attempt_times.size() == 3);
-        // auto delay1 = std::chrono::duration_cast<std::chrono::milliseconds>(
-        //     attempt_times[1] - attempt_times[0]).count();
-        // auto delay2 = std::chrono::duration_cast<std::chrono::milliseconds>(
-        //     attempt_times[2] - attempt_times[1]).count();
-        // REQUIRE(delay1 >= 900);   // ~1s with tolerance
-        // REQUIRE(delay1 <= 1200);
-        // REQUIRE(delay2 >= 1900);  // ~2s with tolerance
-        // REQUIRE(delay2 <= 2200);
+        // During retry delay, should STILL be in progress
+        // This is the key assertion - the in_progress flag should stay true during retries
+        if (!callback_invoked.load()) {
+            // Only check if callback hasn't been invoked yet
+            REQUIRE(manager_.is_macro_analysis_in_progress() == true);
+        }
 
-        // For now, document expected behavior
+        // Wait for final callback
+        REQUIRE(wait_for([&]() { return callback_invoked.load(); }, 5000));
+
+        // After completion, should no longer be in progress
         REQUIRE(manager_.is_macro_analysis_in_progress() == false);
+    }
+}
+
+TEST_CASE_METHOD(MacroAnalysisRetryFixture,
+                 "PrintPreparationManager: retry timing follows exponential backoff",
+                 "[print_preparation][retry][timing]") {
+    SECTION("Backoff delays: ~1s, ~2s between retries") {
+        // Configure server to always fail so we can measure all retry timings
+        set_list_files_always_fail();
+
+        std::atomic<bool> callback_invoked{false};
+        manager_.set_macro_analysis_callback(
+            [&](const helix::PrintStartAnalysis&) { callback_invoked = true; });
+
+        // Clear timing data
+        clear_call_times();
+
+        // Trigger analysis
+        manager_.analyze_print_start_macro();
+
+        // Wait for all attempts to complete
+        REQUIRE(wait_for([&]() { return callback_invoked.load(); }, 8000));
+
+        // Get call timestamps
+        auto times = get_call_times();
+        REQUIRE(times.size() == 3); // 1 initial + 2 retries
+
+        // Verify exponential backoff delays
+        auto delay1 = std::chrono::duration_cast<std::chrono::milliseconds>(times[1] - times[0]);
+        auto delay2 = std::chrono::duration_cast<std::chrono::milliseconds>(times[2] - times[1]);
+
+        // First delay should be ~1s (1000ms with tolerance)
+        INFO("Delay 1: " << delay1.count() << "ms");
+        REQUIRE(delay1.count() >= 800);  // At least 800ms
+        REQUIRE(delay1.count() <= 1500); // At most 1.5s
+
+        // Second delay should be ~2s (2000ms with tolerance)
+        INFO("Delay 2: " << delay2.count() << "ms");
+        REQUIRE(delay2.count() >= 1800); // At least 1.8s
+        REQUIRE(delay2.count() <= 2500); // At most 2.5s
     }
 }

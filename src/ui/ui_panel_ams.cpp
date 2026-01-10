@@ -24,6 +24,7 @@
 #include "config.h"
 #include "filament_database.h"
 #include "moonraker_api.h"
+#include "observer_factory.h"
 #include "printer_state.h"
 #include "static_panel_registry.h"
 #include "wizard_config_paths.h"
@@ -200,18 +201,32 @@ void AmsPanel::init_subjects() {
     // Panel should NOT create backends - it just observes the existing one.
 
     // Register observers for state changes
+    // Using observer factory for action and slot_count; others use traditional callbacks
+    using helix::ui::observe_int_sync;
+
     slots_version_observer_ = ObserverGuard(AmsState::instance().get_slots_version_subject(),
                                             on_slots_version_changed, this);
 
-    action_observer_ =
-        ObserverGuard(AmsState::instance().get_ams_action_subject(), on_action_changed, this);
+    action_observer_ = observe_int_sync<AmsPanel>(
+        AmsState::instance().get_ams_action_subject(), this, [](AmsPanel* self, int action_int) {
+            if (!self->subjects_initialized_ || !self->panel_)
+                return;
+            auto action = static_cast<AmsAction>(action_int);
+            spdlog::debug("[AmsPanel] Action changed: {}", ams_action_to_string(action));
+            self->update_action_display(action);
+        });
 
     current_slot_observer_ = ObserverGuard(AmsState::instance().get_current_slot_subject(),
                                            on_current_slot_changed, this);
 
     // Slot count observer for dynamic slot creation
-    slot_count_observer_ =
-        ObserverGuard(AmsState::instance().get_slot_count_subject(), on_slot_count_changed, this);
+    slot_count_observer_ = observe_int_sync<AmsPanel>(
+        AmsState::instance().get_slot_count_subject(), this, [](AmsPanel* self, int new_count) {
+            if (!self->panel_)
+                return;
+            spdlog::debug("[AmsPanel] Slot count changed to {}", new_count);
+            self->create_slots(new_count);
+        });
 
     // Path state observers for filament path visualization
     path_segment_observer_ = ObserverGuard(AmsState::instance().get_path_filament_segment_subject(),
@@ -565,16 +580,7 @@ void AmsPanel::update_tray_size() {
                   grid_height);
 }
 
-void AmsPanel::on_slot_count_changed(lv_observer_t* observer, lv_subject_t* subject) {
-    auto* self = static_cast<AmsPanel*>(lv_observer_get_user_data(observer));
-    if (!self || !self->panel_) {
-        return;
-    }
-
-    int new_count = lv_subject_get_int(subject);
-    spdlog::debug("[AmsPanel] Slot count changed to {}", new_count);
-    self->create_slots(new_count);
-}
+// on_slot_count_changed migrated to lambda in init_subjects()
 
 void AmsPanel::setup_action_buttons() {
     // Store panel pointer for static callbacks to access
@@ -976,18 +982,7 @@ void AmsPanel::on_slots_version_changed(lv_observer_t* observer, lv_subject_t* /
     self->refresh_slots();
 }
 
-void AmsPanel::on_action_changed(lv_observer_t* observer, lv_subject_t* subject) {
-    auto* self = static_cast<AmsPanel*>(lv_observer_get_user_data(observer));
-    if (!self) {
-        return;
-    }
-    if (!self->subjects_initialized_ || !self->panel_) {
-        return; // Not yet ready
-    }
-    auto action = static_cast<AmsAction>(lv_subject_get_int(subject));
-    spdlog::debug("[AmsPanel] Action changed: {}", ams_action_to_string(action));
-    self->update_action_display(action);
-}
+// on_action_changed migrated to lambda in init_subjects()
 
 void AmsPanel::on_current_slot_changed(lv_observer_t* observer, lv_subject_t* subject) {
     auto* self = static_cast<AmsPanel*>(lv_observer_get_user_data(observer));
