@@ -337,6 +337,47 @@ PrintPreparationManager::get_macro_param_semantic(helix::PrintStartOpCategory ca
 }
 
 // ============================================================================
+// CapabilityMatrix Integration
+// ============================================================================
+
+CapabilityMatrix PrintPreparationManager::build_capability_matrix() const {
+    CapabilityMatrix matrix;
+
+    // Layer 1: Database capabilities (highest priority)
+    const auto& db_caps = get_cached_capabilities();
+    if (!db_caps.empty()) {
+        matrix.add_from_database(db_caps);
+    }
+
+    // Layer 2: Macro analysis (medium priority)
+    if (macro_analysis_ && macro_analysis_->found) {
+        matrix.add_from_macro_analysis(*macro_analysis_);
+    }
+
+    // Layer 3: File scan (lowest priority)
+    if (cached_scan_result_) {
+        matrix.add_from_file_scan(*cached_scan_result_);
+    }
+
+    return matrix;
+}
+
+void PrintPreparationManager::set_macro_analysis(const helix::PrintStartAnalysis& analysis) {
+    macro_analysis_ = analysis;
+}
+
+void PrintPreparationManager::set_cached_scan_result(const gcode::ScanResult& scan,
+                                                     const std::string& filename) {
+    cached_scan_result_ = scan;
+    cached_scan_filename_ = filename;
+}
+
+std::vector<std::pair<std::string, std::string>>
+PrintPreparationManager::get_skip_params_for_testing() const {
+    return collect_macro_skip_params();
+}
+
+// ============================================================================
 // G-code Scanning
 // ============================================================================
 

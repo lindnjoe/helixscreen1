@@ -5,6 +5,7 @@
 
 #include "ui_observer_guard.h"
 
+#include "capability_matrix.h"
 #include "gcode_file_modifier.h"
 #include "gcode_ops_detector.h"
 #include "moonraker_api.h"
@@ -250,6 +251,44 @@ class PrintPreparationManager {
      */
     [[nodiscard]] helix::ParameterSemantic
     get_macro_param_semantic(helix::PrintStartOpCategory category) const;
+
+    // === CapabilityMatrix Integration ===
+
+    /**
+     * @brief Builds a CapabilityMatrix from all available sources
+     *
+     * Layers capabilities with priority: DATABASE > MACRO_ANALYSIS > FILE_SCAN
+     * @return CapabilityMatrix populated with all known capabilities
+     */
+    [[nodiscard]] CapabilityMatrix build_capability_matrix() const;
+
+    // === Test Helpers ===
+
+    /**
+     * @brief Set macro analysis data (for testing)
+     *
+     * Allows injecting mock macro analysis data without async API calls.
+     * @param analysis The analysis result to set
+     */
+    void set_macro_analysis(const helix::PrintStartAnalysis& analysis);
+
+    /**
+     * @brief Set cached scan result (for testing)
+     *
+     * Allows injecting mock scan data without async file downloads.
+     * @param scan The scan result to cache
+     * @param filename The filename to associate with this scan
+     */
+    void set_cached_scan_result(const gcode::ScanResult& scan, const std::string& filename);
+
+    /**
+     * @brief Get skip params for testing
+     *
+     * Exposes collect_macro_skip_params() for testing.
+     * @return Vector of (param_name, value) pairs
+     */
+    [[nodiscard]] std::vector<std::pair<std::string, std::string>>
+    get_skip_params_for_testing() const;
 
     // === G-code Scanning ===
 
