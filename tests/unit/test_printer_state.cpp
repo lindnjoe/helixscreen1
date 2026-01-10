@@ -81,7 +81,8 @@ TEST_CASE("PrinterState: Observer fires when printer connection state changes",
 
     int user_data[2] = {0, -1}; // [callback_count, last_value]
 
-    lv_subject_add_observer(state.get_printer_connection_state_subject(), observer_cb, user_data);
+    lv_observer_t* observer =
+        lv_subject_add_observer(state.get_printer_connection_state_subject(), observer_cb, user_data);
 
     // LVGL auto-notifies observers when first added (fires immediately with current value)
     REQUIRE(user_data[0] == 1); // Callback fired immediately with initial value (0)
@@ -101,6 +102,8 @@ TEST_CASE("PrinterState: Observer fires when printer connection state changes",
 
     REQUIRE(user_data[0] == 3); // Callback fired three times total (initial + 2 changes)
     REQUIRE(user_data[1] == static_cast<int>(ConnectionState::CONNECTED));
+
+    lv_observer_remove(observer);
 }
 
 TEST_CASE("PrinterState: Observer fires when network status changes",
@@ -118,7 +121,8 @@ TEST_CASE("PrinterState: Observer fires when network status changes",
         (*count_ptr)++;
     };
 
-    lv_subject_add_observer(state.get_network_status_subject(), observer_cb, &callback_count);
+    lv_observer_t* observer =
+        lv_subject_add_observer(state.get_network_status_subject(), observer_cb, &callback_count);
 
     // LVGL auto-notifies observers when first added (fires immediately with current value)
     // Note: init_subjects() initializes network_status to CONNECTED (2) as mock mode default
@@ -130,6 +134,8 @@ TEST_CASE("PrinterState: Observer fires when network status changes",
     REQUIRE(callback_count == 2); // Callback fired again with new value
     REQUIRE(lv_subject_get_int(state.get_network_status_subject()) ==
             static_cast<int>(NetworkStatus::DISCONNECTED));
+
+    lv_observer_remove(observer);
 }
 
 TEST_CASE("PrinterState: Multiple observers on same subject all fire", "[state][observer]") {
@@ -147,9 +153,12 @@ TEST_CASE("PrinterState: Multiple observers on same subject all fire", "[state][
     };
 
     // Register three observers on printer connection state
-    lv_subject_add_observer(state.get_printer_connection_state_subject(), observer_cb, &count1);
-    lv_subject_add_observer(state.get_printer_connection_state_subject(), observer_cb, &count2);
-    lv_subject_add_observer(state.get_printer_connection_state_subject(), observer_cb, &count3);
+    lv_observer_t* observer1 =
+        lv_subject_add_observer(state.get_printer_connection_state_subject(), observer_cb, &count1);
+    lv_observer_t* observer2 =
+        lv_subject_add_observer(state.get_printer_connection_state_subject(), observer_cb, &count2);
+    lv_observer_t* observer3 =
+        lv_subject_add_observer(state.get_printer_connection_state_subject(), observer_cb, &count3);
 
     // LVGL auto-notifies observers when first added (each fires immediately with current value)
     REQUIRE(count1 == 1); // First observer fired immediately
@@ -163,6 +172,10 @@ TEST_CASE("PrinterState: Multiple observers on same subject all fire", "[state][
     REQUIRE(count1 == 2); // All observers fired again
     REQUIRE(count2 == 2);
     REQUIRE(count3 == 2);
+
+    lv_observer_remove(observer1);
+    lv_observer_remove(observer2);
+    lv_observer_remove(observer3);
 }
 
 // ============================================================================
@@ -514,7 +527,8 @@ TEST_CASE("PrinterState: Homed axes observer pattern for derived subjects",
         state->callback_count++;
     };
 
-    lv_subject_add_observer(state.get_homed_axes_subject(), observer_cb, &homing);
+    lv_observer_t* observer =
+        lv_subject_add_observer(state.get_homed_axes_subject(), observer_cb, &homing);
 
     // Initial callback fires immediately (LVGL behavior)
     REQUIRE(homing.callback_count == 1);
@@ -551,6 +565,8 @@ TEST_CASE("PrinterState: Homed axes observer pattern for derived subjects",
     REQUIRE(homing.xy_homed == 0);
     REQUIRE(homing.z_homed == 0);
     REQUIRE(homing.all_homed == 0);
+
+    lv_observer_remove(observer);
 }
 
 // ============================================================================
@@ -1067,7 +1083,8 @@ TEST_CASE("PrinterState: Observer fires when klippy state changes", "[state][kli
 
     int user_data[2] = {0, -1}; // [callback_count, last_value]
 
-    lv_subject_add_observer(state.get_klippy_state_subject(), observer_cb, user_data);
+    lv_observer_t* observer =
+        lv_subject_add_observer(state.get_klippy_state_subject(), observer_cb, user_data);
 
     // LVGL auto-notifies observers when first added (fires immediately with current value)
     REQUIRE(user_data[0] == 1);
@@ -1085,6 +1102,8 @@ TEST_CASE("PrinterState: Observer fires when klippy state changes", "[state][kli
 
     REQUIRE(user_data[0] == 3);
     REQUIRE(user_data[1] == static_cast<int>(KlippyState::READY));
+
+    lv_observer_remove(observer);
 }
 
 TEST_CASE("PrinterState: Update klippy state from webhooks notification",
@@ -1279,7 +1298,8 @@ TEST_CASE("PrinterState: Observer fires when bed_moves changes", "[state][kinema
 
     int user_data[2] = {0, -1}; // [callback_count, last_value]
 
-    lv_subject_add_observer(state.get_printer_bed_moves_subject(), observer_cb, user_data);
+    lv_observer_t* observer =
+        lv_subject_add_observer(state.get_printer_bed_moves_subject(), observer_cb, user_data);
 
     // LVGL auto-notifies observers when first added
     REQUIRE(user_data[0] == 1);
@@ -1294,6 +1314,8 @@ TEST_CASE("PrinterState: Observer fires when bed_moves changes", "[state][kinema
     state.set_kinematics("corexy");
     REQUIRE(user_data[0] == 3);
     REQUIRE(user_data[1] == 0); // Back to gantry moves
+
+    lv_observer_remove(observer);
 }
 
 // ============================================================================
