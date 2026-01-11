@@ -1330,7 +1330,7 @@ bool MacroAnalysisRetryFixture::queue_initialized = false;
 
 TEST_CASE_METHOD(MacroAnalysisRetryFixture,
                  "PrintPreparationManager: macro analysis retry - first attempt succeeds",
-                 "[print_preparation][retry][slow]") {
+                 "[print_preparation][retry][eventloop][slow]") {
     SECTION("Success on first attempt - no retries needed") {
         // Configure server to succeed immediately with empty file list
         // (Results in "no macro found" but analysis completes successfully)
@@ -1378,7 +1378,7 @@ TEST_CASE_METHOD(MacroAnalysisRetryFixture,
 
 TEST_CASE_METHOD(MacroAnalysisRetryFixture,
                  "PrintPreparationManager: macro analysis retry - first fails, second succeeds",
-                 "[print_preparation][retry][slow]") {
+                 "[print_preparation][retry][eventloop][slow]") {
     SECTION("Retry succeeds on second attempt") {
         // Configure server to fail once, then succeed with empty list
         set_list_files_failures(1, {}); // Fail once, then return empty list
@@ -1407,7 +1407,7 @@ TEST_CASE_METHOD(MacroAnalysisRetryFixture,
 
 TEST_CASE_METHOD(MacroAnalysisRetryFixture,
                  "PrintPreparationManager: macro analysis retry - all retries exhausted",
-                 "[print_preparation][retry][slow]") {
+                 "[print_preparation][retry][eventloop][slow]") {
     SECTION("Callback invoked with found=false after 3 failed attempts") {
         // Configure server to always fail
         set_list_files_always_fail();
@@ -1436,7 +1436,7 @@ TEST_CASE_METHOD(MacroAnalysisRetryFixture,
 
 TEST_CASE_METHOD(MacroAnalysisRetryFixture,
                  "PrintPreparationManager: macro analysis retry counter resets on new request",
-                 "[print_preparation][retry][slow]") {
+                 "[print_preparation][retry][eventloop][slow]") {
     SECTION("New analysis request after cache clears uses fresh retry counter") {
         // First analysis: succeed immediately
         set_list_files_success_empty();
@@ -1474,7 +1474,7 @@ TEST_CASE_METHOD(MacroAnalysisRetryFixture,
 
 TEST_CASE_METHOD(MacroAnalysisRetryFixture,
                  "PrintPreparationManager: in-progress flag stays true during retries",
-                 "[print_preparation][retry][slow]") {
+                 "[print_preparation][retry][eventloop][slow]") {
     SECTION("is_macro_analysis_in_progress remains true during retry delay") {
         // Configure server to fail first call
         set_list_files_failures(1, {});
@@ -1510,7 +1510,7 @@ TEST_CASE_METHOD(MacroAnalysisRetryFixture,
 
 TEST_CASE_METHOD(MacroAnalysisRetryFixture,
                  "PrintPreparationManager: retry timing follows exponential backoff",
-                 "[print_preparation][retry][timing][slow]") {
+                 "[print_preparation][retry][timing][eventloop][slow]") {
     SECTION("Backoff delays: ~1s, ~2s between retries") {
         // Configure server to always fail so we can measure all retry timings
         set_list_files_always_fail();

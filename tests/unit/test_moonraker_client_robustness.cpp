@@ -95,7 +95,7 @@ class MoonrakerRobustnessFixture {
 // Fixed: Now uses MockWebSocketServer to provide real responses
 TEST_CASE_METHOD(MoonrakerRobustnessFixture,
                  "MoonrakerClient handles concurrent send_jsonrpc calls",
-                 "[connection][edge][concurrent][priority1][slow]") {
+                 "[connection][edge][concurrent][priority1][eventloop][slow]") {
     SECTION("10 threads × 100 requests = 1000 total (no race conditions)") {
         constexpr int NUM_THREADS = 10;
         constexpr int REQUESTS_PER_THREAD = 100;
@@ -181,7 +181,7 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
 
 TEST_CASE_METHOD(MoonrakerRobustnessFixture,
                  "MoonrakerClient handles concurrent connect/disconnect",
-                 "[connection][edge][concurrent][slow][priority1]") {
+                 "[connection][edge][concurrent][eventloop][slow][priority1]") {
     SECTION("Multiple threads calling connect() simultaneously") {
         constexpr int NUM_THREADS = 5;
         std::atomic<int> connect_attempts{0};
@@ -248,7 +248,7 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
 
 TEST_CASE_METHOD(MoonrakerRobustnessFixture,
                  "MoonrakerClient handles concurrent callback registration",
-                 "[.][connection][edge][concurrent][priority1][slow]") {
+                 "[.][connection][edge][concurrent][priority1][eventloop][slow]") {
     SECTION("Multiple threads registering notify callbacks") {
         constexpr int NUM_THREADS = 10;
         std::atomic<int> registered{0};
@@ -304,7 +304,7 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
 // ============================================================================
 
 TEST_CASE("MoonrakerClient handles malformed JSON gracefully",
-          "[connection][edge][parsing][priority2][slow]") {
+          "[connection][edge][parsing][priority2][eventloop][slow]") {
     // Note: These tests document expected behavior when receiving
     // malformed messages. Actual testing requires simulating server
     // responses, which is done via code inspection and manual testing.
@@ -380,7 +380,7 @@ TEST_CASE("MoonrakerClient rejects oversized messages", "[connection][edge][pars
 }
 
 TEST_CASE("MoonrakerClient handles invalid field types robustly",
-          "[connection][edge][parsing][priority2][slow]") {
+          "[connection][edge][parsing][priority2][eventloop][slow]") {
     SECTION("Response 'id' as string instead of integer") {
         // Server sends: {"id": "not_an_int", "result": {}}
         // Expected: Type check fails (line 153), warning logged, ignored
@@ -419,7 +419,7 @@ TEST_CASE("MoonrakerClient handles invalid field types robustly",
 
 TEST_CASE_METHOD(MoonrakerRobustnessFixture,
                  "MoonrakerClient times out requests after configured duration",
-                 "[connection][edge][timeout][priority3][slow]") {
+                 "[connection][edge][timeout][priority3][eventloop][slow]") {
     SECTION("Request with 100ms timeout times out correctly") {
         bool error_occurred = false;
         bool callback_invoked = false;
@@ -486,7 +486,7 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
 
 TEST_CASE_METHOD(MoonrakerRobustnessFixture,
                  "MoonrakerClient cleans up multiple timed out requests",
-                 "[connection][edge][timeout][priority3][slow]") {
+                 "[connection][edge][timeout][priority3][eventloop][slow]") {
     SECTION("10 requests all timeout and get cleaned up") {
         std::atomic<int> error_callbacks{0};
         constexpr int NUM_REQUESTS = 10;
@@ -550,7 +550,7 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
 // there's an issue with the WebSocket send() function when not connected
 // See: test_moonraker_client_robustness.cpp:611
 TEST_CASE_METHOD(MoonrakerRobustnessFixture, "MoonrakerClient state machine transitions correctly",
-                 "[.][connection][edge][state][priority4][slow]") {
+                 "[.][connection][edge][state][priority4][eventloop][slow]") {
     SECTION("Cannot send requests while disconnected") {
 #if 0 // FIXME: Disabled - see comment above TEST_CASE
       // Verify state is DISCONNECTED
@@ -590,7 +590,7 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture, "MoonrakerClient state machine tran
 }
 
 TEST_CASE_METHOD(MoonrakerRobustnessFixture, "MoonrakerClient disconnect clears pending requests",
-                 "[connection][edge][state][priority4][slow]") {
+                 "[connection][edge][state][priority4][eventloop][slow]") {
     SECTION("Disconnect invokes error callbacks for pending requests") {
         std::atomic<int> error_callbacks{0};
         constexpr int NUM_REQUESTS = 5;
@@ -620,7 +620,7 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture, "MoonrakerClient disconnect clears 
 
 TEST_CASE_METHOD(MoonrakerRobustnessFixture,
                  "MoonrakerClient handles disconnect during active requests",
-                 "[connection][edge][state][priority4][slow]") {
+                 "[connection][edge][state][priority4][eventloop][slow]") {
     SECTION("Send request then immediately disconnect") {
         bool error_callback_invoked = false;
 
@@ -660,7 +660,7 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture,
 // ============================================================================
 
 TEST_CASE("MoonrakerClient callbacks not invoked after disconnect",
-          "[connection][edge][lifecycle][priority5][slow]") {
+          "[connection][edge][lifecycle][priority5][eventloop][slow]") {
     SECTION("Disconnect clears connection callbacks") {
         auto loop = std::make_shared<hv::EventLoopThread>();
         loop->start();
@@ -697,7 +697,7 @@ TEST_CASE("MoonrakerClient callbacks not invoked after disconnect",
 }
 
 TEST_CASE_METHOD(MoonrakerRobustnessFixture, "MoonrakerClient handles exceptions in user callbacks",
-                 "[connection][edge][lifecycle][priority5][slow]") {
+                 "[connection][edge][lifecycle][priority5][eventloop][slow]") {
     SECTION("Exception in success callback is caught") {
         // Verified via code inspection - no try/catch in response handling
         // Callbacks run in libhv event loop context
@@ -748,7 +748,7 @@ TEST_CASE_METHOD(MoonrakerRobustnessFixture, "MoonrakerClient handles exceptions
 
 TEST_CASE_METHOD(MoonrakerRobustnessFixture,
                  "MoonrakerClient callback invocation order is consistent",
-                 "[connection][edge][lifecycle][priority5][slow]") {
+                 "[connection][edge][lifecycle][priority5][eventloop][slow]") {
     SECTION("Multiple pending requests cleaned up in order") {
         std::mutex order_mutex;
         std::vector<int> cleanup_order;
@@ -825,7 +825,7 @@ TEST_CASE("MoonrakerClient stress test - sustained load", "[connection][edge][st
 // Memory Safety Tests
 // ============================================================================
 
-TEST_CASE("MoonrakerClient memory safety", "[connection][edge][memory][slow]") {
+TEST_CASE("MoonrakerClient memory safety", "[connection][edge][memory][eventloop][slow]") {
     SECTION("Rapid create/destroy cycles") {
         for (int i = 0; i < 50; i++) {
             auto loop = std::make_shared<hv::EventLoopThread>();

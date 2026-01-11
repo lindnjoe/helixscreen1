@@ -93,7 +93,7 @@ class MoonrakerClientSecurityFixture {
 
 TEST_CASE_METHOD(MoonrakerClientSecurityFixture,
                  "MoonrakerClient callbacks use pass-by-value (no data races)",
-                 "[connection][security][race][issue2][slow]") {
+                 "[connection][security][race][issue2][eventloop][slow]") {
     SECTION("Callback receives copy of JSON, not reference") {
         // This test verifies that callbacks receive copies of JSON data,
         // preventing data races when callbacks run on different threads.
@@ -154,7 +154,7 @@ TEST_CASE_METHOD(MoonrakerClientSecurityFixture,
 
 TEST_CASE_METHOD(MoonrakerClientSecurityFixture,
                  "MoonrakerClient request IDs use uint64_t consistently",
-                 "[connection][security][overflow][issue3][slow]") {
+                 "[connection][security][overflow][issue3][eventloop][slow]") {
     SECTION("Request ID type is uint64_t") {
         // Verify that request IDs are 64-bit unsigned integers
         // This is primarily a compile-time verification
@@ -199,7 +199,7 @@ TEST_CASE_METHOD(MoonrakerClientSecurityFixture,
 
 TEST_CASE_METHOD(MoonrakerClientSecurityFixture,
                  "MoonrakerClient handles uint64_t request IDs correctly in map",
-                 "[connection][security][overflow][issue3][slow]") {
+                 "[connection][security][overflow][issue3][eventloop][slow]") {
     SECTION("Pending requests map uses uint64_t keys") {
         // Verify that pending_requests_ map uses uint64_t keys,
         // not smaller integer types that could overflow
@@ -222,7 +222,7 @@ TEST_CASE_METHOD(MoonrakerClientSecurityFixture,
 // ============================================================================
 
 TEST_CASE("MoonrakerClient destructor clears callbacks (UAF prevention)",
-          "[connection][security][uaf][issue4][slow]") {
+          "[connection][security][uaf][issue4][eventloop][slow]") {
     SECTION("Destroy client before connection completes") {
         auto loop = std::make_shared<hv::EventLoop>();
         auto client = std::make_unique<MoonrakerClient>(loop);
@@ -321,7 +321,7 @@ TEST_CASE("MoonrakerClient destructor clears callbacks (UAF prevention)",
 // before any timeout can occur. Marked as integration test.
 TEST_CASE_METHOD(MoonrakerClientSecurityFixture,
                  "MoonrakerClient timeout callbacks invoked outside mutex",
-                 "[connection][security][deadlock][issue6][.integration][slow]") {
+                 "[connection][security][deadlock][issue6][.integration][eventloop][slow]") {
     SECTION("Timeout callback can safely call send_jsonrpc (no deadlock)") {
         // This test verifies the two-phase timeout pattern:
         // Phase 1: Copy callbacks under lock
@@ -396,7 +396,7 @@ TEST_CASE_METHOD(MoonrakerClientSecurityFixture,
 // ============================================================================
 
 TEST_CASE_METHOD(MoonrakerClientSecurityFixture, "MoonrakerClient validates method names",
-                 "[connection][security][validation][issue7][slow]") {
+                 "[connection][security][validation][issue7][eventloop][slow]") {
     SECTION("Empty method name rejected") {
         // Note: Current implementation doesn't validate method names
         // in send_jsonrpc, but this test documents expected behavior
@@ -437,7 +437,7 @@ TEST_CASE_METHOD(MoonrakerClientSecurityFixture, "MoonrakerClient validates meth
 }
 
 TEST_CASE_METHOD(MoonrakerClientSecurityFixture, "MoonrakerClient validates params structure",
-                 "[connection][security][validation][issue7][slow]") {
+                 "[connection][security][validation][issue7][eventloop][slow]") {
     SECTION("Params as object accepted") {
         json params = {{"key", "value"}};
         int result = client->send_jsonrpc("printer.info", params);
@@ -475,7 +475,7 @@ TEST_CASE_METHOD(MoonrakerClientSecurityFixture, "MoonrakerClient validates para
 }
 
 TEST_CASE_METHOD(MoonrakerClientSecurityFixture, "MoonrakerClient handles large payloads safely",
-                 "[connection][security][validation][issue7][slow]") {
+                 "[connection][security][validation][issue7][eventloop][slow]") {
     SECTION("Large but reasonable payload") {
         // Create a large params object (but under 1MB)
         json params = json::object();
@@ -507,7 +507,7 @@ TEST_CASE_METHOD(MoonrakerClientSecurityFixture, "MoonrakerClient handles large 
 
 TEST_CASE_METHOD(MoonrakerClientSecurityFixture,
                  "MoonrakerClient state change callback is exception safe",
-                 "[connection][security][exception][issue9][slow]") {
+                 "[connection][security][exception][issue9][eventloop][slow]") {
     SECTION("State change callback that throws doesn't crash") {
         bool callback_invoked = false;
 
@@ -529,7 +529,7 @@ TEST_CASE_METHOD(MoonrakerClientSecurityFixture,
 
 TEST_CASE_METHOD(MoonrakerClientSecurityFixture,
                  "MoonrakerClient success callbacks are exception safe",
-                 "[connection][security][exception][issue9][slow]") {
+                 "[connection][security][exception][issue9][eventloop][slow]") {
     SECTION("Success callback throwing doesn't crash client") {
         // Register request with throwing callback
         // Note: Since not connected, request will timeout and error callback invoked
@@ -553,7 +553,7 @@ TEST_CASE_METHOD(MoonrakerClientSecurityFixture,
 
 TEST_CASE_METHOD(MoonrakerClientSecurityFixture,
                  "MoonrakerClient error callbacks are exception safe",
-                 "[connection][security][exception][issue9][slow]") {
+                 "[connection][security][exception][issue9][eventloop][slow]") {
     SECTION("Error callback throwing doesn't crash during cleanup") {
         bool first_callback_called = false;
         bool second_callback_called = false;
@@ -610,7 +610,7 @@ TEST_CASE_METHOD(MoonrakerClientSecurityFixture,
 
 TEST_CASE_METHOD(MoonrakerClientSecurityFixture,
                  "MoonrakerClient notify callbacks are exception safe",
-                 "[connection][security][exception][issue9][slow]") {
+                 "[connection][security][exception][issue9][eventloop][slow]") {
     SECTION("Notify callback throwing doesn't crash") {
         bool callback_invoked = false;
 
@@ -641,7 +641,7 @@ TEST_CASE_METHOD(MoonrakerClientSecurityFixture,
 }
 
 TEST_CASE("MoonrakerClient all callback types exception-safe (comprehensive)",
-          "[connection][security][exception][issue9][slow]") {
+          "[connection][security][exception][issue9][eventloop][slow]") {
     SECTION("Exception in every callback type doesn't crash") {
         auto loop = std::make_shared<hv::EventLoop>();
         auto client = std::make_unique<MoonrakerClient>(loop);
@@ -685,7 +685,7 @@ TEST_CASE("MoonrakerClient all callback types exception-safe (comprehensive)",
 // Related to the mutex lock failures seen in concurrent tests.
 // See: test_moonraker_client_security.cpp:806
 TEST_CASE("MoonrakerClient security properties work together correctly",
-          "[.][connection][security][integration][slow]") {
+          "[.][connection][security][integration][eventloop][slow]") {
     SECTION("Cleanup with exceptions, large IDs, and nested requests") {
 #if 0 // FIXME: Disabled - see comment above TEST_CASE
         auto loop = std::make_shared<hv::EventLoop>();
