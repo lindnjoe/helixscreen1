@@ -49,31 +49,6 @@ static std::unique_ptr<PrintStatusPanel> g_print_status_panel;
 
 using helix::ui::temperature::centi_to_degrees;
 
-// ============================================================================
-// Modal Subclass Implementations
-// ============================================================================
-
-void ExcludeObjectModal::on_show() {
-    wire_ok_button("btn_ok");
-    wire_cancel_button("btn_cancel");
-}
-
-void RunoutGuidanceModal::on_show() {
-    // RunoutGuidanceModal has 6 buttons for runout handling:
-    // - btn_load_filament → on_ok() (primary action)
-    // - btn_unload_filament → on_quaternary() (unload before loading new)
-    // - btn_purge → on_quinary() (purge after loading)
-    // - btn_resume → on_cancel() (resume paused print)
-    // - btn_cancel_print → on_tertiary() (cancel print)
-    // - btn_ok → on_senary() (dismiss when idle)
-    wire_ok_button("btn_load_filament");
-    wire_quaternary_button("btn_unload_filament");
-    wire_quinary_button("btn_purge");
-    wire_cancel_button("btn_resume");
-    wire_tertiary_button("btn_cancel_print");
-    wire_senary_button("btn_ok");
-}
-
 // Forward declarations for XML event callbacks (registered in init_subjects)
 static void on_tune_speed_changed_cb(lv_event_t* e);
 static void on_tune_flow_changed_cb(lv_event_t* e);
