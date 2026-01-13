@@ -794,6 +794,7 @@ _Log each session here for continuity_
 ### Session 3 (Phase 2 Implementation)
 - Date: 2026-01-13
 - Branch: `feature/input-shaping` in worktree `helixscreen-input-shaping`
+- Commit: `8f1de83e` - feat(input-shaper): complete Phase 2 - InputShaperCalibrator
 - Completed:
   - Created `InputShaperCalibrator` class with state machine (IDLE, CHECKING_ADXL, TESTING_X, TESTING_Y, READY)
   - Test-first: wrote 35 test cases before implementation
