@@ -10,6 +10,7 @@
 #include "printer_capabilities_state.h"
 #include "printer_composite_visibility_state.h"
 #include "printer_detector.h"
+#include "printer_excluded_objects_state.h"
 #include "printer_fan_state.h"
 #include "printer_hardware_discovery.h"
 #include "printer_hardware_validation_state.h"
@@ -19,6 +20,7 @@
 #include "printer_plugin_status_state.h"
 #include "printer_print_state.h"
 #include "printer_temperature_state.h"
+#include "printer_versions_state.h"
 #include "spdlog/spdlog.h"
 #include "subject_managed_panel.h"
 
@@ -698,7 +700,7 @@ class PrinterState {
      * @return Subject pointer (integer, incremented on each change)
      */
     lv_subject_t* get_excluded_objects_version_subject() {
-        return &excluded_objects_version_;
+        return excluded_objects_state_.get_excluded_objects_version_subject();
     }
 
     /**
@@ -710,7 +712,7 @@ class PrinterState {
      * @return Reference to the set of excluded object names
      */
     const std::unordered_set<std::string>& get_excluded_objects() const {
-        return excluded_objects_;
+        return excluded_objects_state_.get_excluded_objects();
     }
 
     /**
@@ -849,14 +851,14 @@ class PrinterState {
      * @brief Get Klipper version subject for XML binding
      */
     lv_subject_t* get_klipper_version_subject() {
-        return &klipper_version_;
+        return versions_state_.get_klipper_version_subject();
     }
 
     /**
      * @brief Get Moonraker version subject for XML binding
      */
     lv_subject_t* get_moonraker_version_subject() {
-        return &moonraker_version_;
+        return versions_state_.get_moonraker_version_subject();
     }
 
     /**
@@ -1251,6 +1253,12 @@ class PrinterState {
     /// Network state component (connection, klippy, nav buttons)
     helix::PrinterNetworkState network_state_;
 
+    /// Versions state component (klipper and moonraker version strings)
+    helix::PrinterVersionsState versions_state_;
+
+    /// Excluded objects state component (excluded_objects_version, excluded_objects set)
+    helix::PrinterExcludedObjectsState excluded_objects_state_;
+
     // Note: Print subjects are now managed by print_domain_ component
     // (print_progress_, print_filename_, print_state_, print_state_enum_,
     //  print_outcome_, print_active_, print_show_progress_, print_display_filename_,
@@ -1272,9 +1280,8 @@ class PrinterState {
     // Note: LED subjects (led_state_, led_r_, led_g_, led_b_, led_w_, led_brightness_)
     // are now managed by led_state_component_
 
-    // Exclude object subjects
-    lv_subject_t excluded_objects_version_;            // Integer: incremented on change
-    std::unordered_set<std::string> excluded_objects_; // Set of excluded object names
+    // Note: Excluded objects subjects (excluded_objects_version_, excluded_objects_)
+    // are now managed by excluded_objects_state_ component
 
     // Note: Printer capability subjects (printer_has_qgl_, printer_has_z_tilt_,
     // printer_has_bed_mesh_, printer_has_nozzle_clean_, printer_has_probe_,
@@ -1295,9 +1302,8 @@ class PrinterState {
     //  manual_probe_active_, manual_probe_z_position_, motors_enabled_)
     // are now managed by calibration_state_ component
 
-    // Version subjects (for About section)
-    lv_subject_t klipper_version_;
-    lv_subject_t moonraker_version_;
+    // Note: Version subjects (klipper_version_, moonraker_version_) are now managed
+    // by versions_state_ component
 
     // Note: Hardware validation subjects (hardware_has_issues_, hardware_issue_count_,
     // hardware_max_severity_, hardware_validation_version_, hardware_critical_count_,
@@ -1307,13 +1313,12 @@ class PrinterState {
 
     // Note: tracked_led_name_ is now managed by led_state_component_
 
-    // String buffers for subject storage
-    // Note: homed_axes_buf_ is now in motion_state_ component
-    // Note: print-related buffers are now in print_domain_ component
-    // Note: hardware validation buffers are now in hardware_validation_state_ component
-    // Note: printer_connection_message_buf_ is now in network_state_ component
-    char klipper_version_buf_[64];
-    char moonraker_version_buf_[64];
+    // Note: String buffers are now managed by their respective component classes
+    // - homed_axes_buf_ is now in motion_state_ component
+    // - print-related buffers are now in print_domain_ component
+    // - hardware validation buffers are now in hardware_validation_state_ component
+    // - printer_connection_message_buf_ is now in network_state_ component
+    // - klipper_version_buf_, moonraker_version_buf_ are now in versions_state_ component
 
     // JSON cache for complex data
     json json_state_;

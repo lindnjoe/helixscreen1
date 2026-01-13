@@ -84,16 +84,11 @@ const char* print_job_state_to_string(PrintJobState state) {
 // ============================================================================
 
 PrinterState::PrinterState() {
-    // Initialize string buffers
-    // Note: homed_axes_buf_ is now in motion_state_ component
-    // Note: print-related buffers are now in print_domain_ component
-    // Note: printer_connection_message_buf_ is now in network_state_ component
-    std::memset(klipper_version_buf_, 0, sizeof(klipper_version_buf_));
-    std::memset(moonraker_version_buf_, 0, sizeof(moonraker_version_buf_));
-
-    // Set default values
-    std::strcpy(klipper_version_buf_, "—");
-    std::strcpy(moonraker_version_buf_, "—");
+    // Note: String buffer initialization is now handled by component classes:
+    // - homed_axes_buf_ is now in motion_state_ component
+    // - print-related buffers are now in print_domain_ component
+    // - printer_connection_message_buf_ is now in network_state_ component
+    // - klipper_version_buf_, moonraker_version_buf_ are now in versions_state_ component
 
     // Load user-configured capability overrides from helixconfig.json
     capability_overrides_.load_from_config();
@@ -142,6 +137,12 @@ void PrinterState::reset_for_testing() {
 
     // Reset network state component
     network_state_.reset_for_testing();
+
+    // Reset versions state component
+    versions_state_.reset_for_testing();
+
+    // Reset excluded objects state component
+    excluded_objects_state_.reset_for_testing();
 
     // Use SubjectManager for automatic subject cleanup
     subjects_.deinit_all();
@@ -209,8 +210,8 @@ void PrinterState::init_subjects(bool register_xml) {
 
     // Note: LED subjects are initialized by led_state_component_.init_subjects() above
 
-    // Excluded objects version subject (incremented when excluded_objects_ changes)
-    lv_subject_init_int(&excluded_objects_version_, 0);
+    // Excluded objects state component (excluded_objects_version, excluded_objects set)
+    excluded_objects_state_.init_subjects(register_xml);
 
     // Plugin status subjects - delegated to plugin_status_state_ component
     plugin_status_state_.init_subjects(register_xml);
@@ -230,11 +231,8 @@ void PrinterState::init_subjects(bool register_xml) {
     // Note: Firmware retraction, manual probe, and motor state subjects
     // are now initialized by calibration_state_.init_subjects() above
 
-    // Version subjects (for About section)
-    lv_subject_init_string(&klipper_version_, klipper_version_buf_, nullptr,
-                           sizeof(klipper_version_buf_), "—");
-    lv_subject_init_string(&moonraker_version_, moonraker_version_buf_, nullptr,
-                           sizeof(moonraker_version_buf_), "—");
+    // Version subjects (for About section) - delegated to versions_state_ component
+    versions_state_.init_subjects(register_xml);
 
     // Register all subjects with SubjectManager for automatic cleanup
     // Note: Temperature subjects are managed by temperature_state_ component
@@ -244,15 +242,13 @@ void PrinterState::init_subjects(bool register_xml) {
     // Note: Capability subjects are managed by capabilities_state_ component
     // Note: Network subjects are registered by network_state_.init_subjects()
     // Note: LED subjects are registered by led_state_component_.init_subjects()
-    // Excluded objects
-    subjects_.register_subject(&excluded_objects_version_);
+    // Note: Excluded objects subjects are registered by excluded_objects_state_.init_subjects()
     // Note: Plugin status subjects are registered by plugin_status_state_.init_subjects()
     // Note: Composite visibility subjects are registered by
     // composite_visibility_state_.init_subjects() Note: Hardware validation subjects are registered
     // by hardware_validation_state_.init_subjects() Note: Firmware retraction, manual probe, and
-    // motor state subjects are registered by calibration_state_.init_subjects() Version subjects
-    subjects_.register_subject(&klipper_version_);
-    subjects_.register_subject(&moonraker_version_);
+    // motor state subjects are registered by calibration_state_.init_subjects()
+    // Note: Version subjects are registered by versions_state_.init_subjects()
 
     spdlog::debug("[PrinterState] Registered {} subjects with SubjectManager", subjects_.count());
 
@@ -269,14 +265,9 @@ void PrinterState::init_subjects(bool register_xml) {
     // composite_visibility_state_.init_subjects() Note: Hardware validation subjects are registered
     // by hardware_validation_state_.init_subjects() Note: Firmware retraction, manual probe, and
     // motor state subjects are registered by calibration_state_.init_subjects()
-    if (register_xml) {
-        spdlog::debug("[PrinterState] Registering subjects with XML system");
-        lv_xml_register_subject(NULL, "excluded_objects_version", &excluded_objects_version_);
-        lv_xml_register_subject(NULL, "klipper_version", &klipper_version_);
-        lv_xml_register_subject(NULL, "moonraker_version", &moonraker_version_);
-    } else {
-        spdlog::debug("[PrinterState] Skipping XML registration (tests mode)");
-    }
+    // Note: Version subjects are registered by versions_state_.init_subjects()
+    // Note: Excluded objects subjects are registered by excluded_objects_state_.init_subjects()
+    // All component subjects handle their own XML registration in init_subjects(register_xml)
 
     subjects_initialized_ = true;
     spdlog::debug("[PrinterState] Subjects initialized and registered successfully");
@@ -476,8 +467,7 @@ void PrinterState::set_klipper_version(const std::string& version) {
 }
 
 void PrinterState::set_klipper_version_internal(const std::string& version) {
-    lv_subject_copy_string(&klipper_version_, version.c_str());
-    spdlog::debug("[PrinterState] Klipper version set: {}", version);
+    versions_state_.set_klipper_version_internal(version);
 }
 
 void PrinterState::set_moonraker_version(const std::string& version) {
@@ -486,8 +476,7 @@ void PrinterState::set_moonraker_version(const std::string& version) {
 }
 
 void PrinterState::set_moonraker_version_internal(const std::string& version) {
-    lv_subject_copy_string(&moonraker_version_, version.c_str());
-    spdlog::debug("[PrinterState] Moonraker version set: {}", version);
+    versions_state_.set_moonraker_version_internal(version);
 }
 
 void PrinterState::set_spoolman_available(bool available) {
@@ -530,17 +519,7 @@ void PrinterState::update_gcode_modification_visibility() {
 // Note: update_print_show_progress() is now in print_domain_ component
 
 void PrinterState::set_excluded_objects(const std::unordered_set<std::string>& objects) {
-    // Only update if the set actually changed
-    if (excluded_objects_ != objects) {
-        excluded_objects_ = objects;
-
-        // Increment version to notify observers
-        int version = lv_subject_get_int(&excluded_objects_version_);
-        lv_subject_set_int(&excluded_objects_version_, version + 1);
-
-        spdlog::debug("[PrinterState] Excluded objects updated: {} objects (version {})",
-                      excluded_objects_.size(), version + 1);
-    }
+    excluded_objects_state_.set_excluded_objects(objects);
 }
 
 PrintJobState PrinterState::get_print_job_state() const {
