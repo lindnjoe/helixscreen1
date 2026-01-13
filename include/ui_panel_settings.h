@@ -120,20 +120,19 @@ class SettingsPanel : public PanelBase {
     /// RAII manager for automatic subject cleanup
     SubjectManager subjects_;
 
-    // Slider value subjects
-    lv_subject_t brightness_value_subject_;
+    // Note: brightness_value_subject_ is now managed by DisplaySettingsOverlay
 
     // Info row subjects
     lv_subject_t version_value_subject_;
     lv_subject_t printer_value_subject_;
 
     // Static buffers for string subjects (required for lv_subject_init_string)
-    char brightness_value_buf_[8]; // e.g., "75%"
-    char version_value_buf_[32];   // e.g., "1.2.3"
-    char printer_value_buf_[64];   // e.g., "Voron 2.4"
+    // Note: brightness_value_buf_ is now managed by DisplaySettingsOverlay
+    char version_value_buf_[32]; // e.g., "1.2.3"
+    char printer_value_buf_[64]; // e.g., "Voron 2.4"
 
-    // Lazily-created overlay panels
-    lv_obj_t* display_settings_overlay_ = nullptr;
+    // Note: Display Settings overlay is now managed by DisplaySettingsOverlay class
+    // See ui_settings_display.h
     // Note: Filament Sensors overlay is now managed by FilamentSensorSettingsOverlay class
     // See ui_settings_filament_sensors.h
     // Note: Macro Buttons overlay is now managed by MacroButtonsOverlay class
@@ -228,7 +227,7 @@ class SettingsPanel : public PanelBase {
     static void on_restart_later_clicked(lv_event_t* e);
     static void on_restart_now_clicked(lv_event_t* e);
     static void on_header_back_clicked(lv_event_t* e);
-    static void on_brightness_changed(lv_event_t* e);
+    // Note: on_brightness_changed is now in DisplaySettingsOverlay
 
     // Note: Hardware save confirmation callbacks moved to HardwareHealthOverlay
     // See ui_settings_hardware_health.h

@@ -10,6 +10,7 @@
 #include "ui_nav_manager.h"
 #include "ui_overlay_network_settings.h"
 #include "ui_panel_memory_stats.h"
+#include "ui_settings_display.h"
 #include "ui_settings_filament_sensors.h"
 #include "ui_settings_hardware_health.h"
 #include "ui_settings_machine_limits.h"
@@ -211,9 +212,8 @@ void SettingsPanel::init_subjects() {
     // Initialize SettingsManager subjects (for reactive binding)
     SettingsManager::instance().init_subjects();
 
-    // Initialize slider value subjects (for reactive binding)
-    UI_MANAGED_SUBJECT_STRING(brightness_value_subject_, brightness_value_buf_, "100%",
-                              "brightness_value", subjects_);
+    // Note: brightness_value subject is now managed by DisplaySettingsOverlay
+    // See ui_settings_display.cpp
 
     // Initialize info row subjects (for reactive binding)
     UI_MANAGED_SUBJECT_STRING(version_value_subject_, version_value_buf_, "—", "version_value",
@@ -249,6 +249,10 @@ void SettingsPanel::init_subjects() {
     // See ui_settings_filament_sensors.h
     helix::settings::get_filament_sensor_settings_overlay().register_callbacks();
 
+    // Note: Display Settings overlay callbacks are now handled by DisplaySettingsOverlay
+    // See ui_settings_display.h
+    helix::settings::get_display_settings_overlay().register_callbacks();
+
     lv_xml_register_event_cb(nullptr, "on_macro_buttons_clicked", on_macro_buttons_clicked);
 
     // Note: Macro Buttons overlay callbacks are now handled by MacroButtonsOverlay
@@ -274,7 +278,7 @@ void SettingsPanel::init_subjects() {
     lv_xml_register_event_cb(nullptr, "on_factory_reset_confirm", on_factory_reset_confirm);
     lv_xml_register_event_cb(nullptr, "on_factory_reset_cancel", on_factory_reset_cancel);
     lv_xml_register_event_cb(nullptr, "on_header_back_clicked", on_header_back_clicked);
-    lv_xml_register_event_cb(nullptr, "on_brightness_changed", on_brightness_changed);
+    // Note: on_brightness_changed is now handled by DisplaySettingsOverlay
 
     // Note: BedMeshPanel subjects are initialized in main.cpp during startup
 
@@ -610,116 +614,11 @@ void SettingsPanel::show_restart_prompt() {
 }
 
 void SettingsPanel::handle_display_settings_clicked() {
-    spdlog::debug("[{}] Display Settings clicked - opening overlay", get_name());
+    spdlog::debug("[{}] Display Settings clicked - delegating to DisplaySettingsOverlay",
+                  get_name());
 
-    // Create display settings overlay on first access (lazy initialization)
-    if (!display_settings_overlay_ && parent_screen_) {
-        spdlog::debug("[{}] Creating display settings overlay...", get_name());
-
-        // Create from XML - component name matches filename
-        display_settings_overlay_ = static_cast<lv_obj_t*>(
-            lv_xml_create(parent_screen_, "display_settings_overlay", nullptr));
-        if (display_settings_overlay_) {
-            // Back button event handler already wired via header_bar XML event_cb
-            // Brightness slider event handler already wired via XML event_cb
-
-            // Wire up brightness slider initial state
-            lv_obj_t* brightness_slider =
-                lv_obj_find_by_name(display_settings_overlay_, "brightness_slider");
-            lv_obj_t* brightness_label =
-                lv_obj_find_by_name(display_settings_overlay_, "brightness_value_label");
-            if (brightness_slider && brightness_label) {
-                // Set initial value from settings
-                int brightness = SettingsManager::instance().get_brightness();
-                lv_slider_set_value(brightness_slider, brightness, LV_ANIM_OFF);
-                // Update subject (label binding happens in XML)
-                snprintf(brightness_value_buf_, sizeof(brightness_value_buf_), "%d%%", brightness);
-                lv_subject_copy_string(&brightness_value_subject_, brightness_value_buf_);
-                // Event handler already wired via XML event_cb
-            }
-
-            // Initialize sleep timeout dropdown (inside setting_dropdown_row)
-            lv_obj_t* sleep_row =
-                lv_obj_find_by_name(display_settings_overlay_, "row_display_sleep");
-            lv_obj_t* sleep_dropdown =
-                sleep_row ? lv_obj_find_by_name(sleep_row, "dropdown") : nullptr;
-            if (sleep_dropdown) {
-                // Set dropdown options
-                lv_dropdown_set_options(sleep_dropdown,
-                                        "Never\n1 minute\n5 minutes\n10 minutes\n30 minutes");
-                // Set initial selection based on current setting
-                int current_sec = SettingsManager::instance().get_display_sleep_sec();
-                int index = SettingsManager::sleep_seconds_to_index(current_sec);
-                lv_dropdown_set_selected(sleep_dropdown, index);
-                spdlog::debug("[{}] Sleep dropdown initialized to index {} ({}s)", get_name(),
-                              index, current_sec);
-            }
-
-            // Initialize bed mesh render mode dropdown (inside setting_dropdown_row)
-            lv_obj_t* bed_mesh_row =
-                lv_obj_find_by_name(display_settings_overlay_, "row_bed_mesh_mode");
-            lv_obj_t* bed_mesh_dropdown =
-                bed_mesh_row ? lv_obj_find_by_name(bed_mesh_row, "dropdown") : nullptr;
-            if (bed_mesh_dropdown) {
-                // Set dropdown options
-                lv_dropdown_set_options(bed_mesh_dropdown,
-                                        SettingsManager::get_bed_mesh_render_mode_options());
-                // Set initial selection based on current setting
-                int current_mode = SettingsManager::instance().get_bed_mesh_render_mode();
-                lv_dropdown_set_selected(bed_mesh_dropdown, current_mode);
-                spdlog::debug("[{}] Bed mesh mode dropdown initialized to {} ({})", get_name(),
-                              current_mode,
-                              current_mode == 0 ? "Auto" : (current_mode == 1 ? "3D" : "2D"));
-            }
-
-            // Initialize G-code render mode dropdown (inside setting_dropdown_row, currently
-            // hidden)
-            lv_obj_t* gcode_row = lv_obj_find_by_name(display_settings_overlay_, "row_gcode_mode");
-            lv_obj_t* gcode_dropdown =
-                gcode_row ? lv_obj_find_by_name(gcode_row, "dropdown") : nullptr;
-            if (gcode_dropdown) {
-                // Set dropdown options
-                lv_dropdown_set_options(gcode_dropdown,
-                                        SettingsManager::get_gcode_render_mode_options());
-                // Set initial selection based on current setting
-                int current_mode = SettingsManager::instance().get_gcode_render_mode();
-                lv_dropdown_set_selected(gcode_dropdown, current_mode);
-                spdlog::debug(
-                    "[{}] G-code mode dropdown initialized to {} ({})", get_name(), current_mode,
-                    current_mode == 0 ? "Auto" : (current_mode == 1 ? "3D" : "2D Layers"));
-            }
-
-            // Initialize time format dropdown
-            lv_obj_t* time_format_row =
-                lv_obj_find_by_name(display_settings_overlay_, "row_time_format");
-            lv_obj_t* time_format_dropdown =
-                time_format_row ? lv_obj_find_by_name(time_format_row, "dropdown") : nullptr;
-            if (time_format_dropdown) {
-                // Set dropdown options
-                lv_dropdown_set_options(time_format_dropdown,
-                                        SettingsManager::get_time_format_options());
-                // Set initial selection based on current setting
-                auto current_format = SettingsManager::instance().get_time_format();
-                lv_dropdown_set_selected(time_format_dropdown,
-                                         static_cast<uint32_t>(current_format));
-                spdlog::debug("[{}] Time format dropdown initialized to {} ({})", get_name(),
-                              static_cast<int>(current_format),
-                              current_format == TimeFormat::HOUR_12 ? "12H" : "24H");
-            }
-
-            // Initially hidden
-            lv_obj_add_flag(display_settings_overlay_, LV_OBJ_FLAG_HIDDEN);
-            spdlog::info("[{}] Display settings overlay created", get_name());
-        } else {
-            spdlog::error("[{}] Failed to create display settings overlay from XML", get_name());
-            return;
-        }
-    }
-
-    // Push overlay onto navigation history and show it
-    if (display_settings_overlay_) {
-        ui_nav_push_overlay(display_settings_overlay_);
-    }
+    auto& overlay = helix::settings::get_display_settings_overlay();
+    overlay.show(parent_screen_);
 }
 
 void SettingsPanel::handle_filament_sensors_clicked() {
@@ -988,19 +887,8 @@ void SettingsPanel::on_header_back_clicked(lv_event_t* /*e*/) {
     LVGL_SAFE_EVENT_CB_END();
 }
 
-void SettingsPanel::on_brightness_changed(lv_event_t* e) {
-    LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_brightness_changed");
-    auto* slider = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
-    int value = lv_slider_get_value(slider);
-    SettingsManager::instance().set_brightness(value);
-
-    // Update subject (label binding happens in XML)
-    auto& panel_ref = get_global_settings_panel();
-    snprintf(panel_ref.brightness_value_buf_, sizeof(panel_ref.brightness_value_buf_), "%d%%",
-             value);
-    lv_subject_copy_string(&panel_ref.brightness_value_subject_, panel_ref.brightness_value_buf_);
-    LVGL_SAFE_EVENT_CB_END();
-}
+// Note: on_brightness_changed is now handled by DisplaySettingsOverlay
+// See ui_settings_display.cpp
 
 // ============================================================================
 // GLOBAL INSTANCE
