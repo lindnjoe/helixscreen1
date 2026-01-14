@@ -570,7 +570,10 @@ PrinterDetectionResult PrinterDetector::detect(const PrinterHardwareData& hardwa
                              result.reason);
             }
 
-            if (result.confidence > best_match.confidence) {
+            // Use match_count as tiebreaker when confidence is equal
+            if (result.confidence > best_match.confidence ||
+                (result.confidence == best_match.confidence &&
+                 result.match_count > best_match.match_count)) {
                 best_match = result;
             }
         }

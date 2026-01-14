@@ -2280,7 +2280,7 @@ TEST_CASE("PrinterDetector: Combined scoring rewards multiple matches",
     REQUIRE(result.confidence > 95);
 }
 
-TEST_CASE("PrinterDetector: Generic delta scores lower than specific Doron Velta",
+TEST_CASE("PrinterDetector: Specific printer wins over generic with same confidence",
           "[printer][combined_scoring]") {
     PrinterDetector::reload();
 
@@ -2312,31 +2312,35 @@ TEST_CASE("PrinterDetector: Generic delta scores lower than specific Doron Velta
 
     // Doron Velta should match itself with hostname bonus
     REQUIRE(doron_result.type_name == "Doron Velta");
+
+    // Doron Velta has more matching heuristics (hostname matches)
     REQUIRE(doron_result.match_count > generic_result.match_count);
 
-    // Doron Velta should score higher due to additional hostname matches
-    REQUIRE(doron_result.confidence > generic_result.confidence);
+    // When confidence ties at 100%, higher match_count wins (tiebreaker)
+    // Both may cap at 100%, but Doron Velta wins due to more matches
+    REQUIRE(doron_result.confidence >= generic_result.confidence);
 }
 
-TEST_CASE("PrinterDetector: Single heuristic match unchanged", "[printer][combined_scoring]") {
+TEST_CASE("PrinterDetector: Single heuristic match works without bonus",
+          "[printer][combined_scoring]") {
     PrinterDetector::reload();
 
-    // Printer with only tvocValue sensor - single distinctive match
+    // Printer with only exhaust_fan - single distinctive match for Voron
     PrinterHardwareData hardware{.heaters = {"extruder", "heater_bed"},
-                                 .sensors = {"tvocValue"},
-                                 .fans = {},
+                                 .sensors = {},
+                                 .fans = {"exhaust_fan"},
                                  .leds = {},
                                  .hostname = "random-hostname-xyz"};
 
     auto result = PrinterDetector::detect(hardware);
 
     REQUIRE(result.detected());
-    // tvocValue is FlashForge AD5M signature
-    REQUIRE(result.type_name.find("FlashForge") != std::string::npos);
+    // exhaust_fan is Voron signature
+    REQUIRE(result.type_name.find("Voron") != std::string::npos);
     // Single match should have match_count of 1
     REQUIRE(result.match_count == 1);
-    // Confidence should be the base value (95% for tvocValue) without bonus
-    REQUIRE(result.confidence == 95);
+    // Confidence should be the base value (60% for exhaust_fan) without bonus
+    REQUIRE(result.confidence == 60);
 }
 
 TEST_CASE("PrinterDetector: match_count in result reflects actual matches",
