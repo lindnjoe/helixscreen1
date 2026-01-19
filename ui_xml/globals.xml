@@ -260,21 +260,6 @@
     <color name="step_completed" value="#a3be8c"/>  <!-- nord14 -->
     <color name="step_label_inactive_light" value="#4c566a"/>  <!-- nord3 -->
     <color name="step_label_inactive_dark" value="#d8dee9"/>   <!-- nord4 -->
-    <!-- Jog pad colors (motion panel, theme-aware) -->
-    <color name="jog_outer_ring_light" value="#d8dee9"/>       <!-- nord4 -->
-    <color name="jog_outer_ring_dark" value="#3b4252"/>        <!-- nord1 -->
-    <color name="jog_inner_circle_light" value="#e5e9f0"/>     <!-- nord5 -->
-    <color name="jog_inner_circle_dark" value="#2e3440"/>      <!-- nord0 -->
-    <color name="jog_grid_lines_light" value="#4c566a"/>       <!-- nord3 -->
-    <color name="jog_grid_lines_dark" value="#434c5e"/>        <!-- nord2 -->
-    <color name="jog_home_bg_light" value="#d8dee9"/>          <!-- nord4 -->
-    <color name="jog_home_bg_dark" value="#4c566a"/>           <!-- nord3 -->
-    <color name="jog_home_border_light" value="#81a1c1"/>      <!-- nord9 -->
-    <color name="jog_home_border_dark" value="#81a1c1"/>       <!-- nord9 -->
-    <color name="jog_boundary_lines_light" value="#d8dee9"/>   <!-- nord4 -->
-    <color name="jog_boundary_lines_dark" value="#4c566a"/>    <!-- nord3 -->
-    <color name="jog_distance_labels_light" value="#2e3440"/>  <!-- nord0 -->
-    <color name="jog_distance_labels_dark" value="#d8dee9"/>   <!-- nord4 -->
     <!-- Filament path visualization colors -->
     <color name="filament_idle_light" value="#d8dee9"/>         <!-- nord4 -->
     <color name="filament_idle_dark" value="#4c566a"/>          <!-- nord3 -->
