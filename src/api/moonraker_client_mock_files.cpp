@@ -90,7 +90,7 @@ static json build_mock_file_list_response(const std::string& path = "") {
         return response;
     }
 
-    if (path.empty()) {
+    if (path.empty() || path == "gcodes" || path == "gcodes/") {
         // Root directory - scan real files from test gcode directory
         auto filenames = scan_mock_gcode_files();
 
@@ -210,6 +210,27 @@ void register_file_handlers(std::unordered_map<std::string, MethodHandler>& regi
         }
         json response = build_mock_file_list_response(path);
         spdlog::info("[MoonrakerClientMock] Returning mock file list for path: '{}'",
+                     path.empty() ? "/" : path);
+        success_cb(response);
+        return true;
+    };
+
+    // server.files.get_directory - Get directory contents (same format as list)
+    registry["server.files.get_directory"] =
+        [](MoonrakerClientMock* self, const json& params, std::function<void(json)> success_cb,
+           std::function<void(const MoonrakerError&)> error_cb) -> bool {
+        (void)self;
+        (void)error_cb;
+        if (!success_cb) {
+            return true;
+        }
+
+        std::string path;
+        if (params.contains("path")) {
+            path = params["path"].get<std::string>();
+        }
+        json response = build_mock_file_list_response(path);
+        spdlog::info("[MoonrakerClientMock] Returning mock directory listing for path: '{}'",
                      path.empty() ? "/" : path);
         success_cb(response);
         return true;

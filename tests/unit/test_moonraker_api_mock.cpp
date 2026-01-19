@@ -662,6 +662,30 @@ TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
     REQUIRE(active_spool->remaining_length_m == Catch::Approx(expected_length).epsilon(0.1));
 }
 
+// ============================================================================
+// JSON-RPC Handler Tests
+// ============================================================================
+
+TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
+                 "MoonrakerClientMock handles server.files.get_directory",
+                 "[mock][api][files]") {
+    std::atomic<bool> success_called{false};
+    json received_response;
+
+    client_.send_jsonrpc(
+        "server.files.get_directory", {{"path", "gcodes"}},
+        [&](json response) {
+            received_response = response;
+            success_called.store(true);
+        },
+        [](const MoonrakerError&) {});
+
+    REQUIRE(success_called.load());
+    REQUIRE(received_response.contains("result"));
+    // Result should be an array of files
+    REQUIRE(received_response["result"].is_array());
+}
+
 TEST_CASE_METHOD(MoonrakerAPIMockTestFixture,
                  "MoonrakerAPIMock set_active_spool updates is_active flag", "[mock][filament]") {
     auto& spools = api_->get_mock_spools();
