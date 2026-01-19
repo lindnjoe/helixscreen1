@@ -59,6 +59,17 @@ class PrinterTemperatureState {
     lv_subject_t* get_bed_target_subject() {
         return &bed_target_;
     }
+    lv_subject_t* get_chamber_temp_subject() {
+        return &chamber_temp_;
+    }
+
+    /**
+     * @brief Set the sensor name used to read chamber temperature
+     * @param name Klipper sensor name (e.g., "temperature_sensor chamber")
+     */
+    void set_chamber_sensor_name(const std::string& name) {
+        chamber_sensor_name_ = name;
+    }
 
   private:
     SubjectManager subjects_;
@@ -69,6 +80,10 @@ class PrinterTemperatureState {
     lv_subject_t extruder_target_{};
     lv_subject_t bed_temp_{};
     lv_subject_t bed_target_{};
+    lv_subject_t chamber_temp_{};
+
+    // Chamber sensor configuration
+    std::string chamber_sensor_name_;
 };
 
 } // namespace helix

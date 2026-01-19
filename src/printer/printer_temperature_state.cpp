@@ -29,12 +29,14 @@ void PrinterTemperatureState::init_subjects(bool register_xml) {
     lv_subject_init_int(&extruder_target_, 0);
     lv_subject_init_int(&bed_temp_, 0);
     lv_subject_init_int(&bed_target_, 0);
+    lv_subject_init_int(&chamber_temp_, 0);
 
     // Register with SubjectManager for automatic cleanup
     subjects_.register_subject(&extruder_temp_);
     subjects_.register_subject(&extruder_target_);
     subjects_.register_subject(&bed_temp_);
     subjects_.register_subject(&bed_target_);
+    subjects_.register_subject(&chamber_temp_);
 
     // Register with LVGL XML system for XML bindings
     if (register_xml) {
@@ -43,6 +45,7 @@ void PrinterTemperatureState::init_subjects(bool register_xml) {
         lv_xml_register_subject(NULL, "extruder_target", &extruder_target_);
         lv_xml_register_subject(NULL, "bed_temp", &bed_temp_);
         lv_xml_register_subject(NULL, "bed_target", &bed_target_);
+        lv_xml_register_subject(NULL, "chamber_temp", &chamber_temp_);
     } else {
         spdlog::debug("[PrinterTemperatureState] Skipping XML registration (tests mode)");
     }
@@ -95,6 +98,18 @@ void PrinterTemperatureState::update_from_status(const nlohmann::json& status) {
             lv_subject_set_int(&bed_target_, target_centi);
             spdlog::trace("[PrinterTemperatureState] Bed target: {}.{}C", target_centi / 10,
                           target_centi % 10);
+        }
+    }
+
+    // Update chamber temperature (if configured)
+    if (!chamber_sensor_name_.empty() && status.contains(chamber_sensor_name_)) {
+        const auto& chamber = status[chamber_sensor_name_];
+
+        if (chamber.contains("temperature") && chamber["temperature"].is_number()) {
+            int temp_centi = helix::units::json_to_centidegrees(chamber, "temperature");
+            lv_subject_set_int(&chamber_temp_, temp_centi);
+            spdlog::trace("[PrinterTemperatureState] Chamber temp: {}.{}C", temp_centi / 10,
+                          temp_centi % 10);
         }
     }
 }

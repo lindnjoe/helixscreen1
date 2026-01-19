@@ -96,6 +96,7 @@ class PrinterDiscovery {
                 std::string sensor_name = name.substr(19); // Remove "temperature_sensor " prefix
                 if (to_upper(sensor_name).find("CHAMBER") != std::string::npos) {
                     has_chamber_sensor_ = true;
+                    chamber_sensor_name_ = name;
                 }
             }
             // Temperature-controlled fans (also act as sensors)
@@ -331,6 +332,7 @@ class PrinterDiscovery {
         has_tool_changer_ = false;
         has_chamber_heater_ = false;
         has_chamber_sensor_ = false;
+        chamber_sensor_name_.clear();
         has_led_ = false;
         has_accelerometer_ = false;
         has_firmware_retraction_ = false;
@@ -414,6 +416,10 @@ class PrinterDiscovery {
 
     [[nodiscard]] bool has_chamber_sensor() const {
         return has_chamber_sensor_;
+    }
+
+    [[nodiscard]] const std::string& chamber_sensor_name() const {
+        return chamber_sensor_name_;
     }
 
     [[nodiscard]] bool has_led() const {
@@ -758,6 +764,7 @@ class PrinterDiscovery {
     bool has_tool_changer_ = false;
     bool has_chamber_heater_ = false;
     bool has_chamber_sensor_ = false;
+    std::string chamber_sensor_name_;
     bool has_led_ = false;
     bool has_accelerometer_ = false;
     bool has_firmware_retraction_ = false;

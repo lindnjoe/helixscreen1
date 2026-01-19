@@ -216,6 +216,15 @@
             <text_small name="bed_status"
                         width="90%" bind_text="controls_bed_status" style_text_color="#text_secondary"
                         style_text_align="right"/>
+            <!-- Chamber section (visible only if printer has chamber sensor) -->
+            <lv_obj name="chamber_section"
+                    width="90%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                    style_pad_top="#space_xs" hidden="true" flex_flow="row" style_flex_main_place="space_between"
+                    style_flex_cross_place="center">
+              <lv_obj-bind_flag_if_eq subject="printer_has_chamber_sensor" flag="hidden" ref_value="0"/>
+              <text_small text="Chamber" style_text_color="#text_secondary"/>
+              <temp_display name="chamber_temp_display" size="md" show_target="false" bind_current="chamber_temp"/>
+            </lv_obj>
           </ui_card>
           <!-- Card 3: Cooling (Multi-Fan) -->
           <ui_card name="card_cooling"

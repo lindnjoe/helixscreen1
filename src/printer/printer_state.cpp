@@ -456,6 +456,9 @@ void PrinterState::set_hardware_internal(const helix::PrinterDiscovery& hardware
     // Delegate capability subject updates to capabilities_state_ component
     capabilities_state_.set_hardware(hardware, capability_overrides_);
 
+    // Tell temperature state which sensor to use for chamber temperature
+    temperature_state_.set_chamber_sensor_name(hardware.chamber_sensor_name());
+
     // Update composite subjects for G-code modification options
     // (visibility depends on both plugin status and capability)
     update_gcode_modification_visibility();

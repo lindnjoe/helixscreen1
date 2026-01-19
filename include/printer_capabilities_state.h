@@ -161,6 +161,11 @@ class PrinterCapabilitiesState {
         return const_cast<lv_subject_t*>(&printer_bed_moves_);
     }
 
+    /// 1 if printer has chamber temperature sensor
+    lv_subject_t* get_printer_has_chamber_sensor_subject() const {
+        return const_cast<lv_subject_t*>(&printer_has_chamber_sensor_);
+    }
+
     // ========================================================================
     // Convenience methods
     // ========================================================================
@@ -193,6 +198,7 @@ class PrinterCapabilitiesState {
     lv_subject_t printer_has_purge_line_{};          // purge/priming capability
     lv_subject_t printer_has_firmware_retraction_{}; // firmware retraction (G10/G11)
     lv_subject_t printer_bed_moves_{};               // 0=gantry moves on Z, 1=bed moves on Z
+    lv_subject_t printer_has_chamber_sensor_{};      // chamber temperature sensor
 };
 
 } // namespace helix

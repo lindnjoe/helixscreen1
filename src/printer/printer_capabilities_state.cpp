@@ -40,6 +40,7 @@ void PrinterCapabilitiesState::init_subjects(bool register_xml) {
     lv_subject_init_int(&printer_has_purge_line_, 0);
     lv_subject_init_int(&printer_has_firmware_retraction_, 0);
     lv_subject_init_int(&printer_bed_moves_, 0); // 0=gantry moves, 1=bed moves (cartesian)
+    lv_subject_init_int(&printer_has_chamber_sensor_, 0);
 
     // Register with SubjectManager for automatic cleanup
     subjects_.register_subject(&printer_has_qgl_);
@@ -56,6 +57,7 @@ void PrinterCapabilitiesState::init_subjects(bool register_xml) {
     subjects_.register_subject(&printer_has_purge_line_);
     subjects_.register_subject(&printer_has_firmware_retraction_);
     subjects_.register_subject(&printer_bed_moves_);
+    subjects_.register_subject(&printer_has_chamber_sensor_);
 
     // Register with LVGL XML system for XML bindings
     if (register_xml) {
@@ -75,6 +77,7 @@ void PrinterCapabilitiesState::init_subjects(bool register_xml) {
         lv_xml_register_subject(NULL, "printer_has_firmware_retraction",
                                 &printer_has_firmware_retraction_);
         lv_xml_register_subject(NULL, "printer_bed_moves", &printer_bed_moves_);
+        lv_xml_register_subject(NULL, "printer_has_chamber_sensor", &printer_has_chamber_sensor_);
     } else {
         spdlog::debug("[PrinterCapabilitiesState] Skipping XML registration (tests mode)");
     }
@@ -135,13 +138,16 @@ void PrinterCapabilitiesState::set_hardware(const PrinterDiscovery& hardware,
     lv_subject_set_int(&printer_has_firmware_retraction_,
                        hardware.has_firmware_retraction() ? 1 : 0);
 
+    // Chamber temperature sensor capability
+    lv_subject_set_int(&printer_has_chamber_sensor_, hardware.has_chamber_sensor() ? 1 : 0);
+
     // Spoolman requires async check - default to 0, updated separately via set_spoolman_available()
 
     spdlog::info("[PrinterCapabilitiesState] Hardware set: probe={}, heater_bed={}, LED={}, "
-                 "accelerometer={}, speaker={}, timelapse={}, fw_retraction={}",
+                 "accelerometer={}, speaker={}, timelapse={}, fw_retraction={}, chamber_sensor={}",
                  hardware.has_probe(), hardware.has_heater_bed(), hardware.has_led(),
                  hardware.has_accelerometer(), hardware.has_speaker(), hardware.has_timelapse(),
-                 hardware.has_firmware_retraction());
+                 hardware.has_firmware_retraction(), hardware.has_chamber_sensor());
     spdlog::info("[PrinterCapabilitiesState] Hardware set (with overrides): {}",
                  overrides.summary());
 }
