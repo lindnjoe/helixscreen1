@@ -206,20 +206,94 @@ TEST_CASE("Geometry Builder: RibbonGeometry - memory usage", "[gcode][geometry][
 // ============================================================================
 
 TEST_CASE("Geometry Builder: Color computation - hex parsing", "[gcode][geometry][color]") {
-    GeometryBuilder builder;
+    // Helper to create minimal G-code for color testing
+    auto make_single_segment_gcode = []() {
+        ParsedGCodeFile gcode;
+        gcode.global_bounding_box.min = glm::vec3(0, 0, 0);
+        gcode.global_bounding_box.max = glm::vec3(100, 100, 10);
+
+        Layer layer;
+        layer.z_height = 0.2f;
+        ToolpathSegment seg;
+        seg.start = glm::vec3(0, 0, 0.2f);
+        seg.end = glm::vec3(10, 0, 0.2f);
+        seg.is_extrusion = true;
+        seg.extrusion_amount = 1.0f;
+        seg.width = 0.4f;
+        layer.segments.push_back(seg);
+        gcode.layers.push_back(layer);
+
+        return gcode;
+    };
+
+    SimplificationOptions options;
+    options.enable_merging = false;
 
     SECTION("Parse with # prefix") {
-        builder.set_filament_color("#26A69A");
-        // Internal state should be updated (can't directly test private members)
+        GeometryBuilder builder;
+        builder.set_filament_color("#26A69A"); // OrcaSlicer teal
+
+        auto gcode = make_single_segment_gcode();
+        RibbonGeometry geometry = builder.build(gcode, options);
+
+        REQUIRE(geometry.vertices.size() > 0);
+        REQUIRE(geometry.color_palette.size() >= 1);
+
+        // Verify the teal color (0x26A69A) is in the palette
+        uint32_t expected_color = 0x26A69A;
+        bool found_expected = false;
+        for (uint32_t color : geometry.color_palette) {
+            if (color == expected_color) {
+                found_expected = true;
+                break;
+            }
+        }
+        REQUIRE(found_expected);
     }
 
     SECTION("Parse without # prefix") {
-        builder.set_filament_color("FF0000");
-        // Internal state should be updated
+        GeometryBuilder builder;
+        builder.set_filament_color("FF0000"); // Red
+
+        auto gcode = make_single_segment_gcode();
+        RibbonGeometry geometry = builder.build(gcode, options);
+
+        REQUIRE(geometry.vertices.size() > 0);
+        REQUIRE(geometry.color_palette.size() >= 1);
+
+        // Verify red (0xFF0000) is in the palette
+        uint32_t expected_color = 0xFF0000;
+        bool found_expected = false;
+        for (uint32_t color : geometry.color_palette) {
+            if (color == expected_color) {
+                found_expected = true;
+                break;
+            }
+        }
+        REQUIRE(found_expected);
     }
 
-    SECTION("Invalid color string") {
-        builder.set_filament_color("XYZ"); // Should not crash
+    SECTION("Invalid color string defaults to black") {
+        GeometryBuilder builder;
+        builder.set_filament_color("XYZ"); // Invalid hex
+
+        auto gcode = make_single_segment_gcode();
+        RibbonGeometry geometry = builder.build(gcode, options);
+
+        // Should not crash and should produce geometry
+        REQUIRE(geometry.vertices.size() > 0);
+        REQUIRE(geometry.color_palette.size() >= 1);
+
+        // strtol("XYZ", nullptr, 16) returns 0, so expect black (0x000000)
+        uint32_t expected_color = 0x000000;
+        bool found_expected = false;
+        for (uint32_t color : geometry.color_palette) {
+            if (color == expected_color) {
+                found_expected = true;
+                break;
+            }
+        }
+        REQUIRE(found_expected);
     }
 }
 

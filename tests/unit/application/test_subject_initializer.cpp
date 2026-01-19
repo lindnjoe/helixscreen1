@@ -13,8 +13,13 @@
  * tests are done as integration tests with the actual application.
  */
 
+#include "ui_observer_guard.h"
+
+#include "../../lvgl_test_fixture.h"
+#include "observer_factory.h"
 #include "runtime_config.h"
 
+#include <atomic>
 #include <cstdio>
 #include <string>
 
@@ -144,13 +149,109 @@ TEST_CASE("SubjectInitializer initializes subjects in dependency order",
     REQUIRE(true); // Documentation placeholder
 }
 
+TEST_CASE_METHOD(LVGLTestFixture, "ObserverGuard RAII removes observer on destruction",
+                 "[application][subjects][observer]") {
+    // Test that ObserverGuard properly removes observers when going out of scope
+    // This verifies the RAII pattern used by SubjectInitializer
+
+    lv_subject_t subject;
+    lv_subject_init_int(&subject, 0);
+
+    std::atomic<int> callback_count{0};
+
+    // Helper struct to act as a "Panel" for the observer factory
+    struct TestReceiver {
+        std::atomic<int>* counter;
+    };
+    TestReceiver receiver{&callback_count};
+
+    {
+        // Create observer in inner scope
+        auto guard = helix::ui::observe_int_sync<TestReceiver>(
+            &subject, &receiver, [](TestReceiver* r, int /*value*/) { r->counter->fetch_add(1); });
+
+        REQUIRE(guard);                      // Guard should be valid
+        REQUIRE(callback_count.load() == 1); // Initial callback on subscription
+
+        // Value changes should trigger callback
+        lv_subject_set_int(&subject, 42);
+        REQUIRE(callback_count.load() == 2);
+
+        lv_subject_set_int(&subject, 100);
+        REQUIRE(callback_count.load() == 3);
+
+        // Guard goes out of scope here - observer should be removed
+    }
+
+    // After guard destroyed, observer should be removed
+    // Reset counter to verify no more callbacks
+    callback_count.store(0);
+    lv_subject_set_int(&subject, 200);
+    REQUIRE(callback_count.load() == 0); // No callback - observer was removed
+
+    lv_subject_set_int(&subject, 300);
+    REQUIRE(callback_count.load() == 0); // Still no callback
+
+    lv_subject_deinit(&subject);
+}
+
+TEST_CASE_METHOD(LVGLTestFixture, "ObserverGuard move semantics transfer ownership",
+                 "[application][subjects][observer]") {
+    // Test that move assignment properly transfers observer ownership
+    // Important for SubjectInitializer which stores guards in member variables
+
+    lv_subject_t subject;
+    lv_subject_init_int(&subject, 0);
+
+    std::atomic<int> callback_count{0};
+
+    struct TestReceiver {
+        std::atomic<int>* counter;
+    };
+    TestReceiver receiver{&callback_count};
+
+    ObserverGuard outer_guard; // Empty guard
+
+    {
+        auto inner_guard = helix::ui::observe_int_sync<TestReceiver>(
+            &subject, &receiver, [](TestReceiver* r, int /*value*/) { r->counter->fetch_add(1); });
+
+        REQUIRE(inner_guard);
+        REQUIRE(callback_count.load() == 1);
+
+        // Move to outer scope
+        outer_guard = std::move(inner_guard);
+
+        REQUIRE(outer_guard);       // Outer now owns it
+        REQUIRE_FALSE(inner_guard); // Inner is empty after move
+
+        // Inner scope ends - but observer should NOT be removed (ownership transferred)
+    }
+
+    // Observer should still be active via outer_guard
+    callback_count.store(0);
+    lv_subject_set_int(&subject, 42);
+    REQUIRE(callback_count.load() == 1); // Callback still works
+
+    // Explicitly reset to remove observer
+    outer_guard.reset();
+    REQUIRE_FALSE(outer_guard);
+
+    callback_count.store(0);
+    lv_subject_set_int(&subject, 100);
+    REQUIRE(callback_count.load() == 0); // No callback after reset
+
+    lv_subject_deinit(&subject);
+}
+
 TEST_CASE("SubjectInitializer manages observer guards for cleanup",
           "[application][subjects][.integration]") {
     // SubjectInitializer owns ObserverGuards for:
     // - Print completion notification observer
     // - Print start navigation observer
     // These are automatically cleaned up when SubjectInitializer is destroyed
-    REQUIRE(true); // Documentation placeholder
+    // (See the RAII tests above for verification of the underlying mechanism)
+    REQUIRE(true); // Documentation placeholder - full test requires application context
 }
 
 TEST_CASE("SubjectInitializer supports deferred API injection",

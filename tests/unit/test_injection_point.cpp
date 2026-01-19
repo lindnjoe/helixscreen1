@@ -160,10 +160,11 @@ TEST_CASE_METHOD(InjectionPointTestFixture, "InjectionPointManager widget inject
 TEST_CASE_METHOD(InjectionPointTestFixture, "InjectionPointManager plugin cleanup",
                  "[injection_point][cleanup]") {
     SECTION("Remove plugin widgets for nonexistent plugin is safe") {
-        // Should not crash and should complete without error
-        get_manager().remove_plugin_widgets("nonexistent_plugin");
-        // Success if no crash
-        SUCCEED();
+        // Verify removing a nonexistent plugin is truly a no-op
+        auto& manager = get_manager();
+        size_t count_before = manager.get_registered_points().size();
+        manager.remove_plugin_widgets("nonexistent_plugin");
+        REQUIRE(manager.get_registered_points().size() == count_before);
     }
 
     SECTION("Get plugin widgets returns empty for unknown plugin") {
@@ -207,12 +208,13 @@ TEST_CASE_METHOD(InjectionPointTestFixture, "InjectionPointManager callbacks",
         REQUIRE_FALSE(callbacks.on_create);
         REQUIRE_FALSE(callbacks.on_destroy);
 
-        // Can safely check before calling
+        // Verify empty callbacks are not invoked
+        bool was_called = false;
         if (callbacks.on_create) {
+            was_called = true;
             callbacks.on_create(nullptr);
         }
-        // Success if no crash
-        SUCCEED();
+        REQUIRE_FALSE(was_called); // Empty callback should not be invoked
     }
 }
 

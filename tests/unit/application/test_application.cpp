@@ -96,9 +96,24 @@ TEST_CASE_METHOD(ApplicationTestFixture, "LVGL is initialized in test fixture",
 // ============================================================================
 // Application Integration Tests (require full environment)
 // ============================================================================
-// These tests document expected behavior but require full LVGL + Moonraker
-// initialization to run. They are marked .integration and serve as
-// documentation for what Application::run() should do.
+/**
+ * @section integration_tests Integration Tests
+ *
+ * WHY INTEGRATION TESTS:
+ * These tests exercise Application::run() which requires the full CLI/app
+ * startup sequence including display initialization, Moonraker connection,
+ * and XML UI loading. The heavy dependencies cannot be easily mocked without
+ * significant scaffolding that would provide low ROI.
+ *
+ * MANUAL VERIFICATION:
+ *   ./build/bin/helix-screen --help              # Should exit 0, print usage
+ *   ./build/bin/helix-screen --test --timeout 2  # Should run 2s then exit
+ *   ./build/bin/helix-screen --test -p motion    # Should show motion overlay
+ *
+ * These tests document expected behavior and are marked .integration so they
+ * are excluded from unit test runs. The actual verification happens through
+ * manual testing and CI smoke tests.
+ */
 
 TEST_CASE("Application::run() handles --help gracefully", "[application][.integration]") {
     // Expected: Returns 0 without initializing display

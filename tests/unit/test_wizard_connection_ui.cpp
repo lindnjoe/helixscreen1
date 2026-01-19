@@ -346,16 +346,20 @@ TEST_CASE_METHOD(WizardConnectionUIFixture, "Connection UI: Responsive layout",
     // Verify responsive sizing
     lv_coord_t width = lv_obj_get_width(container);
     lv_coord_t height = lv_obj_get_height(container);
+    lv_coord_t screen_width = lv_obj_get_width(test_screen());
+    lv_coord_t screen_height = lv_obj_get_height(test_screen());
 
-    // Container should fill available space
-    REQUIRE(width > 0);
-    REQUIRE(height > 0);
+    // Container should fill most of the screen width (accounting for padding/margins)
+    REQUIRE(width >= screen_width * 0.8);
+    // Container should have substantial height
+    REQUIRE(height >= screen_height * 0.5);
 
     // Input fields should be responsive
     lv_obj_t* ip_input = UITest::find_by_name(test_screen(), "ip_input");
     lv_coord_t input_width = lv_obj_get_width(ip_input);
 
-    // Input should be reasonably sized
-    REQUIRE(input_width > 200);   // Minimum reasonable width
-    REQUIRE(input_width < width); // Should not exceed container
+    // Input should be substantial relative to container (not a tiny widget)
+    REQUIRE(input_width >= width * 0.7);
+    // Input should not exceed container
+    REQUIRE(input_width <= width);
 }

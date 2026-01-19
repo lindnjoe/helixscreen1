@@ -67,6 +67,30 @@ TEST_CASE("PanelFactory starts with null panels", "[application][panels]") {
 // ============================================================================
 // Integration Tests (require LVGL + XML)
 // ============================================================================
+/**
+ * @section integration_tests Integration Tests
+ *
+ * WHY INTEGRATION TESTS:
+ * PanelFactory's core functionality (find_panels, setup_panels, create_overlay)
+ * requires the full LVGL and XML infrastructure to be initialized. The panel
+ * discovery uses lv_obj_find_by_name() on a live widget tree, and setup_panels()
+ * invokes each panel's setup() method which may bind to subjects and register
+ * callbacks.
+ *
+ * Mocking this infrastructure would essentially recreate it, providing no
+ * additional confidence over running against the real system.
+ *
+ * MANUAL VERIFICATION:
+ *   ./build/bin/helix-screen --test --timeout 2 -vv
+ *   # Check logs for "Found panel: home_panel" etc.
+ *   # Verify all 6 panels are discovered and setup completes
+ *
+ *   ./build/bin/helix-screen --test -p print_status --timeout 2
+ *   # Verify overlay creation works
+ *
+ * The .integration tag keeps these out of fast unit test runs while
+ * documenting the expected PanelFactory behavior.
+ */
 
 TEST_CASE("PanelFactory finds all panels by name", "[application][panels][.integration]") {
     // Expected: find_panels() returns true when all 6 panels exist

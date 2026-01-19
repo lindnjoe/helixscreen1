@@ -87,12 +87,12 @@ TEST_CASE("GCodeStreamingConfig decision logic", "[gcode][streaming][config]") {
         // (threshold calculation: even on 47MB RAM, threshold would be ~0.9MB)
         bool should_stream = helix::should_use_gcode_streaming(100);
 
-        // In AUTO mode with reasonable RAM, small files should not stream
-        // Note: This test may vary based on actual system memory
-        INFO("should_stream for 100 bytes: " << should_stream);
-        // We don't assert a specific value since it depends on system memory
-        // but we verify the function doesn't crash
-        REQUIRE((should_stream == true || should_stream == false));
+        // 100 bytes is tiny - should never stream regardless of RAM
+        REQUIRE_FALSE(should_stream);
+
+        // Note: Large file threshold depends on system RAM and cannot be reliably
+        // tested without mocking memory info. Threshold scaling is tested separately
+        // in "threshold scales with available memory" section below.
     }
 
     SECTION("streaming config description is valid") {

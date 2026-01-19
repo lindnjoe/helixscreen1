@@ -16,6 +16,28 @@
 // ============================================================================
 // Application Design Documentation
 // ============================================================================
+/**
+ * @section integration_tests Integration Tests
+ *
+ * WHY INTEGRATION TESTS:
+ * The orchestrator logic coordinates initialization and shutdown of multiple
+ * heavy subsystems (DisplayManager, MoonrakerManager, PanelFactory, etc.).
+ * While this could theoretically be unit tested with extensive mocking of
+ * each subsystem, the ROI is low because:
+ * - The orchestration logic is straightforward (ordered init/shutdown)
+ * - Mocking all subsystems would require significant maintenance
+ * - The real value is verifying subsystems work together correctly
+ *
+ * These tests serve as executable documentation of the expected behavior.
+ * They are marked .integration and verified through manual testing:
+ *
+ * MANUAL VERIFICATION:
+ *   ./build/bin/helix-screen --test --timeout 2 -vv
+ *   # Watch logs for initialization order and clean shutdown
+ *
+ * The .integration tag ensures these don't run in fast unit test cycles
+ * but remain as documentation of orchestration requirements.
+ */
 
 TEST_CASE("Application orchestrates initialization phases",
           "[application][orchestrator][.integration]") {
