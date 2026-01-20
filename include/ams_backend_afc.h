@@ -104,6 +104,15 @@ class AmsBackendAfc : public AmsBackend {
     AmsError disable_bypass() override;
     [[nodiscard]] bool is_bypass_active() const override;
 
+    // Capability queries
+    /**
+     * @brief AFC automatically heats extruder using default_material_temps
+     * @return true - AFC handles preheat via its configuration
+     */
+    [[nodiscard]] bool supports_auto_heat_on_load() const override {
+        return true;
+    }
+
     /**
      * @brief Set discovered lane and hub names from PrinterCapabilities
      *

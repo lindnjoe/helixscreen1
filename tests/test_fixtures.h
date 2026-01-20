@@ -271,7 +271,7 @@ inline lv_obj_t* create_test_textarea(lv_obj_t* parent, const char* placeholder 
  * }
  * @endcode
  */
-class XMLTestFixture : public MoonrakerTestFixture {
+class XMLTestFixture : public LVGLTestFixture {
   public:
     XMLTestFixture();
     ~XMLTestFixture() override;
@@ -281,6 +281,34 @@ class XMLTestFixture : public MoonrakerTestFixture {
     XMLTestFixture& operator=(const XMLTestFixture&) = delete;
     XMLTestFixture(XMLTestFixture&&) = delete;
     XMLTestFixture& operator=(XMLTestFixture&&) = delete;
+
+    /**
+     * @brief Get the printer state for this test
+     * @return Reference to static PrinterState shared across all XMLTestFixture tests
+     *
+     * @note Uses static PrinterState to ensure XML subject bindings remain valid
+     * across test instances. The LVGL XML registry caches subject pointers globally,
+     * so using instance members would cause stale pointer issues between tests.
+     */
+    PrinterState& state() {
+        return *s_state;
+    }
+
+    /**
+     * @brief Get the Moonraker client (disconnected)
+     * @return Reference to MoonrakerClient
+     */
+    MoonrakerClient& client() {
+        return *s_client;
+    }
+
+    /**
+     * @brief Get the Moonraker API
+     * @return Reference to MoonrakerAPI
+     */
+    MoonrakerAPI& api() {
+        return *s_api;
+    }
 
     /**
      * @brief Register an XML component file for use in tests
@@ -327,6 +355,22 @@ class XMLTestFixture : public MoonrakerTestFixture {
     void register_subjects();
 
   protected:
+    /**
+     * @brief Reset subject VALUES to defaults without deinitializing
+     *
+     * This is critical for test isolation: we reset values but keep subjects
+     * initialized at stable memory addresses. LVGL XML registry caches subject
+     * pointers globally, so deinitializing would leave stale pointers.
+     */
+    void reset_subject_values();
+
+    // Static state shared across all XMLTestFixture instances
+    // This ensures LVGL XML subject bindings remain valid across tests
+    static PrinterState* s_state;
+    static std::unique_ptr<MoonrakerClient> s_client;
+    static std::unique_ptr<MoonrakerAPI> s_api;
+    static bool s_initialized;
+
     bool m_theme_initialized = false;
     bool m_subjects_registered = false;
 };

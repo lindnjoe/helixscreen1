@@ -46,6 +46,18 @@ class PrinterTemperatureState {
      */
     void reset_for_testing();
 
+    /**
+     * @brief Re-register subjects with LVGL XML system
+     *
+     * Call this to ensure subjects are registered in LVGL's global XML registry.
+     * Use when other code may have overwritten the registry (e.g., other tests
+     * calling init_subjects(true) on their own PrinterState instances).
+     *
+     * Does NOT reinitialize subjects - only updates LVGL XML registry mappings.
+     * Safe to call multiple times.
+     */
+    void register_xml_subjects();
+
     // Subject accessors (centidegrees: value * 10)
     lv_subject_t* get_extruder_temp_subject() {
         return &extruder_temp_;

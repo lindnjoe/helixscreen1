@@ -64,6 +64,20 @@ void PrinterTemperatureState::deinit_subjects() {
     subjects_initialized_ = false;
 }
 
+void PrinterTemperatureState::register_xml_subjects() {
+    if (!subjects_initialized_) {
+        spdlog::warn("[PrinterTemperatureState] Cannot register XML subjects - not initialized");
+        return;
+    }
+
+    spdlog::debug("[PrinterTemperatureState] Re-registering subjects with XML system");
+    lv_xml_register_subject(NULL, "extruder_temp", &extruder_temp_);
+    lv_xml_register_subject(NULL, "extruder_target", &extruder_target_);
+    lv_xml_register_subject(NULL, "bed_temp", &bed_temp_);
+    lv_xml_register_subject(NULL, "bed_target", &bed_target_);
+    lv_xml_register_subject(NULL, "chamber_temp", &chamber_temp_);
+}
+
 void PrinterTemperatureState::update_from_status(const nlohmann::json& status) {
     // Update extruder temperature (stored as centidegrees for 0.1C resolution)
     if (status.contains("extruder")) {

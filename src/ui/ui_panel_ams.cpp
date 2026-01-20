@@ -20,6 +20,7 @@
 #include "ams_backend.h"
 #include "ams_state.h"
 #include "ams_types.h"
+#include "app_constants.h"
 #include "app_globals.h"
 #include "color_utils.h"
 #include "config.h"
@@ -35,6 +36,7 @@
 #include <algorithm>
 #include <atomic>
 #include <memory>
+#include <sstream>
 #include <unordered_map>
 
 // Global instance pointer for XML callback access (atomic for safety during destruction)
@@ -216,6 +218,15 @@ void AmsPanel::init_subjects() {
                 return;
             auto action = static_cast<AmsAction>(action_int);
             spdlog::debug("[AmsPanel] Action changed: {}", ams_action_to_string(action));
+
+            // Detect LOADING -> IDLE or LOADING -> ERROR transition for post-load cooling
+            // Also turn off heater if load fails, to prevent leaving heater on indefinitely
+            if (self->prev_ams_action_ == AmsAction::LOADING &&
+                (action == AmsAction::IDLE || action == AmsAction::ERROR)) {
+                self->handle_load_complete();
+            }
+            self->prev_ams_action_ = action;
+
             self->update_action_display(action);
         });
 
@@ -236,6 +247,13 @@ void AmsPanel::init_subjects() {
                                            on_path_state_changed, this);
     path_topology_observer_ = ObserverGuard(AmsState::instance().get_path_topology_subject(),
                                             on_path_state_changed, this);
+
+    // Extruder temperature observer for preheat completion detection
+    extruder_temp_observer_ = observe_int_sync<AmsPanel>(
+        printer_state_.get_extruder_temp_subject(), this, [](AmsPanel* self, int /*temp_centi*/) {
+            // Check if a pending load can proceed now that temp has changed
+            self->check_pending_load();
+        });
 
     // UI module subjects are now encapsulated in their respective classes:
     // - helix::ui::AmsEditModal
@@ -342,6 +360,20 @@ void AmsPanel::clear_panel_reference() {
     slot_count_observer_.reset();
     path_segment_observer_.reset();
     path_topology_observer_.reset();
+    extruder_temp_observer_.reset();
+
+    // Turn off heater if we initiated heating and panel is closing during preheat
+    // This prevents leaving the heater on if user navigates away mid-preheat
+    if (ui_initiated_heat_ && pending_load_slot_ >= 0 && api_) {
+        api_->set_temperature("extruder", 0, []() {}, [](const MoonrakerError& /*err*/) {});
+        spdlog::info("[AmsPanel] Panel closing during preheat, turning off heater");
+    }
+
+    // Clear preheat state
+    pending_load_slot_ = -1;
+    pending_load_target_temp_ = 0;
+    ui_initiated_heat_ = false;
+    prev_ams_action_ = AmsAction::IDLE;
 
     // Now clear all widget references
     panel_ = nullptr;
@@ -1161,12 +1193,8 @@ void AmsPanel::show_context_menu(int slot_index, lv_obj_t* near_widget) {
                         return;
                     }
                 }
-                {
-                    AmsError error = backend->load_filament(slot);
-                    if (error.result != AmsResult::SUCCESS) {
-                        NOTIFY_ERROR("Load failed: {}", error.user_msg);
-                    }
-                }
+                // Use preheat-aware load instead of direct load
+                this->handle_load_with_preheat(slot);
                 break;
 
             case helix::ui::AmsContextMenu::MenuAction::UNLOAD:
@@ -1342,6 +1370,114 @@ void AmsPanel::show_edit_modal(int slot_index) {
 
     // Show the modal
     edit_modal_->show_for_slot(parent_screen_, slot_index, initial_info, api_);
+}
+
+// ============================================================================
+// Preheat Logic for Filament Loading
+// ============================================================================
+
+int AmsPanel::get_load_temp_for_slot(int slot_index) {
+    AmsBackend* backend = AmsState::instance().get_backend();
+    if (!backend) {
+        return AppConstants::Ams::DEFAULT_LOAD_PREHEAT_TEMP;
+    }
+
+    SlotInfo info = backend->get_slot_info(slot_index);
+
+    // Priority 1: Slot's nozzle_temp_min (from Spoolman or manual entry)
+    if (info.nozzle_temp_min > 0) {
+        return info.nozzle_temp_min;
+    }
+
+    // Priority 2: Lookup material in filament database
+    if (!info.material.empty()) {
+        auto mat = filament::find_material(info.material);
+        if (mat.has_value()) {
+            return mat->nozzle_min;
+        }
+    }
+
+    // Priority 3: Configurable fallback
+    return AppConstants::Ams::DEFAULT_LOAD_PREHEAT_TEMP;
+}
+
+void AmsPanel::handle_load_with_preheat(int slot_index) {
+    AmsBackend* backend = AmsState::instance().get_backend();
+    if (!backend) {
+        return;
+    }
+
+    // If backend handles heating automatically, just call load directly
+    // Backend will also handle cooling after load completes
+    if (backend->supports_auto_heat_on_load()) {
+        ui_initiated_heat_ = false; // Backend manages temp
+        backend->load_filament(slot_index);
+        return;
+    }
+
+    // Otherwise, UI handles preheat
+    int target = get_load_temp_for_slot(slot_index);
+
+    // Get current temp in centidegrees, convert to degrees
+    int current_centi = lv_subject_get_int(printer_state_.get_extruder_temp_subject());
+    int current = current_centi / 10;
+
+    // Check if within threshold (5 degrees C)
+    constexpr int TEMP_THRESHOLD = 5;
+    if (current >= (target - TEMP_THRESHOLD)) {
+        // Already hot enough - load immediately, no UI-initiated heat
+        ui_initiated_heat_ = false;
+        backend->load_filament(slot_index);
+        return;
+    }
+
+    // Start preheating, then load when ready
+    pending_load_slot_ = slot_index;
+    pending_load_target_temp_ = target;
+    ui_initiated_heat_ = true; // Flag so we can cool down after load if needed
+
+    // Send preheat command via API
+    if (api_) {
+        api_->set_temperature("extruder", target, []() {}, [](const MoonrakerError& /*err*/) {});
+    }
+
+    spdlog::info("[AmsPanel] Starting preheat to {}C for slot {} load", target, slot_index);
+}
+
+void AmsPanel::check_pending_load() {
+    if (pending_load_slot_ < 0) {
+        return;
+    }
+
+    // Get current temp in centidegrees, convert to degrees
+    int current_centi = lv_subject_get_int(printer_state_.get_extruder_temp_subject());
+    int current = current_centi / 10;
+
+    constexpr int TEMP_THRESHOLD = 5;
+
+    if (current >= (pending_load_target_temp_ - TEMP_THRESHOLD)) {
+        int slot = pending_load_slot_;
+        pending_load_slot_ = -1;
+        pending_load_target_temp_ = 0;
+
+        AmsBackend* backend = AmsState::instance().get_backend();
+        if (backend) {
+            spdlog::info("[AmsPanel] Preheat complete, loading slot {}", slot);
+            backend->load_filament(slot);
+        }
+    }
+}
+
+void AmsPanel::handle_load_complete() {
+    // Only turn off heater if we (the UI) initiated the heating
+    // If backend auto-heated or user was already printing, don't touch the heater
+    if (ui_initiated_heat_) {
+        if (api_) {
+            api_->set_temperature("extruder", 0, []() {}, [](const MoonrakerError& /*err*/) {});
+        }
+        spdlog::info("[AmsPanel] Load complete, turning off heater (UI-initiated heat)");
+        ui_initiated_heat_ = false;
+    }
 }
 
 // ============================================================================

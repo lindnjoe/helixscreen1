@@ -76,6 +76,14 @@ constexpr int CUSTOM_DEFAULT = 200;
 } // namespace MaterialPresets
 
 /**
+ * @brief AMS/Filament loading constants
+ */
+namespace Ams {
+/// Default preheat temperature when no material-specific temp is known (°C)
+constexpr int DEFAULT_LOAD_PREHEAT_TEMP = 220;
+} // namespace Ams
+
+/**
  * @brief Startup timing constants
  *
  * Grace periods for suppressing notifications during initial boot.

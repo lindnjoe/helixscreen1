@@ -34,6 +34,16 @@
 
 #include "../catch_amalgamated.hpp"
 
+// Helper to set values on the XML-registered subject (what temp_display actually reads)
+// This is critical for test isolation - other tests may have registered their own
+// subjects with the same names, so we must use lv_xml_get_subject to get the
+// subject that's ACTUALLY in the registry, not state().get_*_subject().
+static void set_xml_subject(const char* name, int value) {
+    lv_subject_t* subject = lv_xml_get_subject(NULL, name);
+    REQUIRE(subject != nullptr); // Fail fast if subject not registered
+    lv_subject_set_int(subject, value);
+}
+
 // =============================================================================
 // TEMPERATURE PANEL BINDING TESTS (NOZZLE + BED) - READY FOR IMPLEMENTATION
 // =============================================================================
@@ -48,10 +58,10 @@ TEST_CASE_METHOD(XMLTestFixture, "temp_display: binds to extruder temperature su
     // Test verifies the temp_display widget correctly binds to temperature subjects
     // and displays the expected values.
 
-    // 1. Set temperature values BEFORE creating component
+    // 1. Set temperature values BEFORE creating component using XML-registered subjects
     // Temperature is in centidegrees (200.0°C = 2000, 210.0°C = 2100)
-    lv_subject_set_int(state().get_extruder_temp_subject(), 2000);   // 200.0°C
-    lv_subject_set_int(state().get_extruder_target_subject(), 2100); // 210.0°C
+    set_xml_subject("extruder_temp", 2000);   // 200.0°C
+    set_xml_subject("extruder_target", 2100); // 210.0°C
 
     // 2. temp_display is already registered by XMLTestFixture (ui_temp_display_init)
     // Just need to create an instance with binding attributes
@@ -74,9 +84,9 @@ TEST_CASE_METHOD(XMLTestFixture, "temp_display: reactive update when subject cha
                  "[ui][temp_display][reactive]") {
     // Test verifies the temp_display widget updates reactively when subjects change
 
-    // 1. Set initial temperatures
-    lv_subject_set_int(state().get_extruder_temp_subject(), 1500);   // 150.0°C
-    lv_subject_set_int(state().get_extruder_target_subject(), 2000); // 200.0°C
+    // 1. Set initial temperatures using XML-registered subjects
+    set_xml_subject("extruder_temp", 1500);   // 150.0°C
+    set_xml_subject("extruder_target", 2000); // 200.0°C
 
     // 2. Create temp_display with bindings
     const char* attrs[] = {"bind_current", "extruder_temp", "bind_target", "extruder_target",
@@ -89,8 +99,8 @@ TEST_CASE_METHOD(XMLTestFixture, "temp_display: reactive update when subject cha
     REQUIRE(ui_temp_display_get_target(temp) == 200);
 
     // 4. Update subjects - this should trigger reactive update
-    lv_subject_set_int(state().get_extruder_temp_subject(), 1800);   // 180.0°C
-    lv_subject_set_int(state().get_extruder_target_subject(), 2200); // 220.0°C
+    set_xml_subject("extruder_temp", 1800);   // 180.0°C
+    set_xml_subject("extruder_target", 2200); // 220.0°C
 
     // 5. Verify values updated reactively
     REQUIRE(ui_temp_display_get_current(temp) == 180);
@@ -101,9 +111,9 @@ TEST_CASE_METHOD(XMLTestFixture, "temp_display: target shows -- when heater off 
                  "[ui][temp_display][heater_off]") {
     // Test verifies target displays "--" when heater is off (target=0)
 
-    // 1. Set current temp but target=0 (heater off)
-    lv_subject_set_int(state().get_extruder_temp_subject(), 250); // 25.0°C (ambient)
-    lv_subject_set_int(state().get_extruder_target_subject(), 0); // Off
+    // 1. Set current temp but target=0 (heater off) using XML-registered subjects
+    set_xml_subject("extruder_temp", 250); // 25.0°C (ambient)
+    set_xml_subject("extruder_target", 0); // Off
 
     // 2. Create temp_display with bindings
     const char* attrs[] = {"bind_current", "extruder_temp", "bind_target", "extruder_target",
@@ -141,9 +151,9 @@ TEST_CASE_METHOD(XMLTestFixture, "temp_display: binds to bed temperature subject
                  "[ui][temp_display][bind_current][bind_target]") {
     // Test verifies the temp_display widget works with bed temperature subjects
 
-    // 1. Set bed temperature values
-    lv_subject_set_int(state().get_bed_temp_subject(), 600);   // 60.0°C
-    lv_subject_set_int(state().get_bed_target_subject(), 700); // 70.0°C
+    // 1. Set bed temperature values using XML-registered subjects
+    set_xml_subject("bed_temp", 600);   // 60.0°C
+    set_xml_subject("bed_target", 700); // 70.0°C
 
     // 2. Create temp_display with bed bindings
     const char* attrs[] = {"bind_current", "bed_temp", "bind_target", "bed_target",

@@ -125,11 +125,19 @@ class AmsPanel : public PanelBase {
     ObserverGuard slot_count_observer_;
     ObserverGuard path_segment_observer_;
     ObserverGuard path_topology_observer_;
+    ObserverGuard extruder_temp_observer_; ///< For preheat completion detection
 
     // === Dynamic Slot State ===
 
     int current_slot_count_ = 0;    ///< Number of slots currently created
     lv_obj_t* slot_grid_ = nullptr; ///< Container for dynamically created slots
+
+    // === Preheat State for Filament Loading ===
+
+    int pending_load_slot_ = -1;                  ///< Slot awaiting preheat completion (-1 = none)
+    int pending_load_target_temp_ = 0;            ///< Target temp for pending load (°C)
+    bool ui_initiated_heat_ = false;              ///< True if UI heated for this load (for cooling)
+    AmsAction prev_ams_action_ = AmsAction::IDLE; ///< Previous action for transition detection
 
     // === Filament Path Canvas ===
 
@@ -185,6 +193,45 @@ class AmsPanel : public PanelBase {
     // === Spoolman Integration ===
 
     void sync_spoolman_active_spool();
+
+    // === Preheat Logic for Filament Loading ===
+
+    /**
+     * @brief Get the temperature to use for loading filament from a slot
+     *
+     * Priority: SlotInfo::nozzle_temp_min > FilamentDatabase lookup > DEFAULT_LOAD_PREHEAT_TEMP
+     *
+     * @param slot_index Slot index to get load temperature for
+     * @return Target temperature in degrees Celsius
+     */
+    int get_load_temp_for_slot(int slot_index);
+
+    /**
+     * @brief Handle load request with automatic preheat if needed
+     *
+     * If the extruder is already hot enough, loads immediately.
+     * Otherwise, starts preheating and defers load until temperature reached.
+     *
+     * @param slot_index Slot to load from
+     */
+    void handle_load_with_preheat(int slot_index);
+
+    /**
+     * @brief Check if pending load can proceed (called when temperature updates)
+     *
+     * Called by extruder temperature observer. If a load is pending and
+     * the extruder has reached target temperature, triggers the load.
+     */
+    void check_pending_load();
+
+    /**
+     * @brief Handle load completion - turn off heater if UI initiated it
+     *
+     * Called when AMS action transitions from LOADING to IDLE.
+     * If the UI initiated the preheat (ui_initiated_heat_), turns off the extruder
+     * heater to save energy and prevent filament damage.
+     */
+    void handle_load_complete();
 
     // === UI Module Helpers (internal, show modals with callbacks) ===
 

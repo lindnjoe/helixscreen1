@@ -443,6 +443,24 @@ class AmsBackend {
     }
 
     // ========================================================================
+    // Capability Queries
+    // ========================================================================
+
+    /**
+     * @brief Check if backend automatically heats extruder before loading
+     *
+     * Some backends (like AFC) use material-specific temperatures from their
+     * configuration (e.g., default_material_temps in AFC.cfg) to preheat the
+     * extruder before loading filament. This eliminates the need for the UI
+     * to manage preheating.
+     *
+     * @return true if backend handles preheat automatically, false if UI should manage it
+     */
+    [[nodiscard]] virtual bool supports_auto_heat_on_load() const {
+        return false;
+    }
+
+    // ========================================================================
     // Discovery Configuration (Optional - default implementations are no-ops)
     // ========================================================================
 
