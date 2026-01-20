@@ -29,6 +29,7 @@
 #include "helix_version.h"
 #include "moonraker_client.h"
 #include "printer_state.h"
+#include "runtime_config.h"
 #include "settings_manager.h"
 #include "sound_manager.h"
 #include "standard_macros.h"
@@ -233,6 +234,17 @@ void SettingsPanel::init_subjects() {
 
     UI_MANAGED_SUBJECT_STRING(printer_host_value_subject_, printer_host_value_buf_, "—",
                               "printer_host_value", subjects_);
+
+    // Initialize visibility subjects (controls which settings are shown)
+    // Touch calibration: show on touch displays (non-SDL) OR in test mode (for testing on desktop)
+#ifdef HELIX_DISPLAY_SDL
+    bool show_touch_cal = get_runtime_config()->is_test_mode();
+#else
+    bool show_touch_cal = true;
+#endif
+    lv_subject_init_int(&show_touch_calibration_subject_, show_touch_cal ? 1 : 0);
+    subjects_.register_subject(&show_touch_calibration_subject_);
+    lv_xml_register_subject(nullptr, "show_touch_calibration", &show_touch_calibration_subject_);
 
     // Register XML event callbacks for dropdowns (already in XML)
     lv_xml_register_event_cb(nullptr, "on_completion_alert_changed",

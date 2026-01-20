@@ -131,6 +131,9 @@ class SettingsPanel : public PanelBase {
     lv_subject_t printer_value_subject_;
     lv_subject_t printer_host_value_subject_;
 
+    // Visibility subjects (controls which settings are shown)
+    lv_subject_t show_touch_calibration_subject_;
+
     // Static buffers for string subjects (required for lv_subject_init_string)
     // Note: brightness_value_buf_ is now managed by DisplaySettingsOverlay
     char version_value_buf_[32];      // e.g., "1.2.3"
