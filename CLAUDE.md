@@ -5,13 +5,17 @@
 **HelixScreen**: LVGL 9.4 touchscreen UI for Klipper 3D printers. Pattern: XML → Subjects → C++.
 
 ```bash
-make -j                              # Build (auto-detects cores - NEVER -j4/-j8)
+make -j                              # Build (pure Makefile, NOT cmake/ninja)
 ./build/bin/helix-screen --test -vv  # Mock printer + DEBUG logs
 # ALWAYS use verbosity: -v=INFO, -vv=DEBUG, -vvv=TRACE (default=WARN)
 
 make test-run                        # Parallel tests
 ./build/bin/helix-tests "[tag]"      # Specific tests
 make pi-test                         # Build on thelio + deploy + run
+
+# Worktree setup (for multi-phase projects)
+git worktree add -b feature-name ../helixscreen-feature main
+./scripts/init-worktree.sh ../helixscreen-feature
 ```
 
 **Panels:** home, controls, motion, nozzle-temp, bed-temp, extrusion, filament, settings, advanced, print-select
@@ -43,6 +47,7 @@ make pi-test                         # Build on thelio + deploy + run
 | **Formatting** | Manual formatting | Let pre-commit hook (clang-format) fix |
 | **No auto-mock** | `if(!start()) return Mock()` | Check `RuntimeConfig::should_mock_*()` |
 | **JSON include** | `#include <nlohmann/json.hpp>` | `#include "hv/json.hpp"` (libhv's bundled version) |
+| **Build system** | `cmake`, `ninja` | `make -j` (pure Makefile) |
 
 **ALWAYS:** Search the SAME FILE you're editing for similar patterns before implementing.
 
