@@ -47,6 +47,7 @@ AmsSettingsOverlay::~AmsSettingsOverlay() {
     if (subjects_initialized_ && lv_is_initialized()) {
         lv_subject_deinit(&version_subject_);
         lv_subject_deinit(&slot_count_subject_);
+        lv_subject_deinit(&connection_status_subject_);
     }
     spdlog::debug("[{}] Destroyed", get_name());
 }
@@ -71,6 +72,10 @@ void AmsSettingsOverlay::init_subjects() {
     lv_subject_init_string(&slot_count_subject_, slot_count_buf_, nullptr, sizeof(slot_count_buf_),
                            slot_count_buf_);
     lv_xml_register_subject(nullptr, "ams_settings_slot_count", &slot_count_subject_);
+
+    // Initialize connection status subject (0=disconnected, 1=connected)
+    lv_subject_init_int(&connection_status_subject_, 0);
+    lv_xml_register_subject(nullptr, "ams_settings_connection", &connection_status_subject_);
 
     subjects_initialized_ = true;
     spdlog::debug("[{}] Subjects initialized", get_name());
@@ -158,11 +163,18 @@ void AmsSettingsOverlay::update_status_card() {
 
         snprintf(slot_count_buf_, sizeof(slot_count_buf_), "---");
         lv_subject_copy_string(&slot_count_subject_, slot_count_buf_);
+
+        // Set disconnected status
+        lv_subject_set_int(&connection_status_subject_, 0);
         return;
     }
 
     // Get backend system info
     AmsSystemInfo info = backend->get_system_info();
+
+    // Consider connected if backend type is valid AND has slot data
+    // (type alone could be set before full initialization completes)
+    bool is_connected = (info.type != AmsType::NONE && info.total_slots > 0);
 
     // Update version subject
     if (!info.version.empty()) {
@@ -175,6 +187,9 @@ void AmsSettingsOverlay::update_status_card() {
     // Update slot count subject
     snprintf(slot_count_buf_, sizeof(slot_count_buf_), "%d slots", info.total_slots);
     lv_subject_copy_string(&slot_count_subject_, slot_count_buf_);
+
+    // Update connection status subject
+    lv_subject_set_int(&connection_status_subject_, is_connected ? 1 : 0);
 
     // Update backend logo (same logic as AmsPanel)
     lv_obj_t* backend_logo = lv_obj_find_by_name(overlay_, "backend_logo");
@@ -192,8 +207,8 @@ void AmsSettingsOverlay::update_status_card() {
         }
     }
 
-    spdlog::debug("[{}] Status card updated: {} v{}, {} slots", get_name(), info.type_name,
-                  info.version, info.total_slots);
+    spdlog::debug("[{}] Status card updated: {} v{}, {} slots, connected={}", get_name(),
+                  info.type_name, info.version, info.total_slots, is_connected);
 }
 
 // ============================================================================

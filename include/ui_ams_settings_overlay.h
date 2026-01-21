@@ -145,6 +145,9 @@ class AmsSettingsOverlay : public OverlayBase {
 
     lv_subject_t slot_count_subject_;
     char slot_count_buf_[16];
+
+    /// Connection status subject (0=disconnected, 1=connected)
+    lv_subject_t connection_status_subject_;
 };
 
 /**
