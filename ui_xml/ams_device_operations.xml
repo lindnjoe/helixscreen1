@@ -1,0 +1,177 @@
+<?xml version="1.0"?>
+<!-- Copyright (C) 2025-2026 356C LLC -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- AMS Device Operations Overlay Panel -->
+<!-- Consolidated panel with Quick Actions, Calibration, and Speed Settings -->
+<component>
+  <view name="ams_device_operations"
+        extends="overlay_panel" width="#overlay_panel_width_full" title="Device Operations" bg_color="#app_bg_color">
+    <!-- Content Area (scrollable) -->
+    <lv_obj name="overlay_content"
+            width="100%" flex_grow="1" style_bg_opa="0" style_pad_all="#space_md" scrollable="true" scroll_dir="ver"
+            style_border_width="0" flex_flow="column" style_pad_gap="#space_md">
+
+      <!-- ================================================================== -->
+      <!-- Card 1: Quick Actions & Behavior                                    -->
+      <!-- ================================================================== -->
+      <ui_card name="quick_actions_card"
+               width="100%" height="content" style_radius="#border_radius" style_pad_all="#space_md" flex_flow="column"
+               style_pad_gap="#space_md">
+
+        <!-- Quick Actions Header -->
+        <lv_obj width="100%"
+                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+                style_flex_cross_place="center" style_pad_gap="#space_sm" scrollable="false">
+          <icon src="flash" size="sm" variant="accent"/>
+          <text_body text="Quick Actions" style_text_color="#text_primary"/>
+        </lv_obj>
+
+        <!-- Action Buttons Row: Home | Recover | Abort -->
+        <lv_obj name="action_buttons_row"
+                width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+                style_pad_gap="#space_sm" scrollable="false">
+          <!-- Home Button -->
+          <lv_button name="btn_home"
+                     height="44" flex_grow="1" style_radius="#border_radius" style_border_width="0"
+                     flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center">
+            <event_cb trigger="clicked" callback="on_ams_device_ops_home"/>
+            <icon src="home" size="sm"/>
+            <text_small text="Home" style_pad_top="#space_xxs"/>
+          </lv_button>
+          <!-- Recover Button -->
+          <lv_button name="btn_recover"
+                     height="44" flex_grow="1" style_radius="#border_radius" style_border_width="0"
+                     flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center">
+            <event_cb trigger="clicked" callback="on_ams_device_ops_recover"/>
+            <icon src="refresh" size="sm"/>
+            <text_small text="Recover" style_pad_top="#space_xxs"/>
+          </lv_button>
+          <!-- Abort Button -->
+          <lv_button name="btn_abort"
+                     height="44" flex_grow="1" style_radius="#border_radius" style_border_width="0"
+                     flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center">
+            <event_cb trigger="clicked" callback="on_ams_device_ops_abort"/>
+            <icon src="stop" size="sm"/>
+            <text_small text="Abort" style_pad_top="#space_xxs"/>
+          </lv_button>
+        </lv_obj>
+
+        <!-- Divider -->
+        <lv_obj width="100%" height="1" style_bg_color="#text_secondary" style_bg_opa="30" style_border_width="0"/>
+
+        <!-- Bypass Mode Row (hidden when not supported) -->
+        <lv_obj name="bypass_row"
+                width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+                style_flex_main_place="space_between" style_flex_cross_place="center">
+          <bind_flag_if_eq subject="ams_device_ops_supports_bypass" flag="hidden" ref_value="0"/>
+          <!-- Left side: Icon + Label/Description -->
+          <lv_obj width="content"
+                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+                  style_flex_cross_place="center" style_pad_gap="#space_sm" scrollable="false" flex_grow="1">
+            <icon src="arrow_left_right" size="sm" variant="secondary"/>
+            <lv_obj width="content"
+                    height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
+                    style_pad_gap="#space_xs" scrollable="false">
+              <text_body text="Bypass Mode" style_text_color="#text_primary"/>
+              <text_small text="Feed filament directly to extruder" style_text_color="#text_secondary"/>
+            </lv_obj>
+          </lv_obj>
+          <!-- Right side: Switch toggle -->
+          <lv_switch name="bypass_toggle" width="50" height="28">
+            <bind_state_if_eq subject="ams_device_ops_bypass_active" state="checked" ref_value="1"/>
+            <event_cb trigger="value_changed" callback="on_ams_device_ops_bypass_toggled"/>
+          </lv_switch>
+        </lv_obj>
+
+        <!-- Auto-Heat Info Row (shown when supported) -->
+        <lv_obj name="auto_heat_row"
+                width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+                style_flex_main_place="start" style_flex_cross_place="center" style_pad_gap="#space_sm">
+          <bind_flag_if_eq subject="ams_device_ops_supports_auto_heat" flag="hidden" ref_value="0"/>
+          <!-- Left side: Icon -->
+          <icon src="fire" size="sm" variant="secondary"/>
+          <!-- Middle: Label/Description -->
+          <lv_obj width="content"
+                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
+                  style_pad_gap="#space_xs" scrollable="false" flex_grow="1">
+            <text_body text="Auto-Heat on Load" style_text_color="#text_primary"/>
+            <text_small text="Extruder heats automatically based on material" style_text_color="#text_secondary"/>
+          </lv_obj>
+          <!-- Right side: Status indicator -->
+          <icon src="check_circle" size="sm" variant="primary"/>
+        </lv_obj>
+
+        <!-- Status Row -->
+        <lv_obj name="status_row"
+                width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+                style_flex_main_place="start" style_flex_cross_place="center" style_pad_gap="#space_sm">
+          <icon src="info" size="sm" variant="secondary"/>
+          <lv_obj width="content"
+                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
+                  style_pad_gap="#space_xs" scrollable="false" flex_grow="1">
+            <text_body text="Status" style_text_color="#text_primary"/>
+            <text_small name="status_label" bind_text="ams_device_ops_status" style_text_color="#text_secondary"/>
+          </lv_obj>
+        </lv_obj>
+      </ui_card>
+
+      <!-- ================================================================== -->
+      <!-- Card 2: Calibration (dynamic actions)                              -->
+      <!-- ================================================================== -->
+      <ui_card name="calibration_card"
+               width="100%" height="content" style_radius="#border_radius" style_pad_all="#space_md" flex_flow="column"
+               style_pad_gap="#space_sm">
+        <bind_flag_if_eq subject="ams_device_ops_has_calibration" flag="hidden" ref_value="0"/>
+        <!-- Header -->
+        <lv_obj width="100%"
+                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+                style_flex_cross_place="center" style_pad_gap="#space_sm" scrollable="false">
+          <icon src="target" size="sm" variant="accent"/>
+          <text_body text="Calibration" style_text_color="#text_primary"/>
+        </lv_obj>
+        <!-- Dynamic actions container (populated in C++) -->
+        <lv_obj name="calibration_actions_container"
+                width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
+                style_pad_gap="#space_sm" scrollable="false">
+          <!-- Dynamic calibration actions will be added here by C++ -->
+        </lv_obj>
+      </ui_card>
+
+      <!-- ================================================================== -->
+      <!-- Card 3: Speed Settings (dynamic actions)                           -->
+      <!-- ================================================================== -->
+      <ui_card name="speed_card"
+               width="100%" height="content" style_radius="#border_radius" style_pad_all="#space_md" flex_flow="column"
+               style_pad_gap="#space_sm">
+        <bind_flag_if_eq subject="ams_device_ops_has_speed" flag="hidden" ref_value="0"/>
+        <!-- Header -->
+        <lv_obj width="100%"
+                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
+                style_flex_cross_place="center" style_pad_gap="#space_sm" scrollable="false">
+          <icon src="speedometer" size="sm" variant="accent"/>
+          <text_body text="Speed Settings" style_text_color="#text_primary"/>
+        </lv_obj>
+        <!-- Dynamic actions container (populated in C++) -->
+        <lv_obj name="speed_actions_container"
+                width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
+                style_pad_gap="#space_sm" scrollable="false">
+          <!-- Dynamic speed actions will be added here by C++ -->
+        </lv_obj>
+      </ui_card>
+
+      <!-- ================================================================== -->
+      <!-- No Backend Message (shown when no AMS connected)                   -->
+      <!-- ================================================================== -->
+      <ui_card name="no_backend_card"
+               width="100%" height="content" style_radius="#border_radius" style_pad_all="#space_lg" flex_flow="column"
+               style_flex_cross_place="center" style_pad_gap="#space_sm">
+        <bind_flag_if_eq subject="ams_device_ops_has_backend" flag="hidden" ref_value="1"/>
+        <icon src="info" size="lg" variant="secondary"/>
+        <text_body name="no_backend_text"
+                   width="100%" text="No AMS system connected."
+                   style_text_color="#text_secondary" style_text_align="center"/>
+      </ui_card>
+
+    </lv_obj>
+  </view>
+</component>
