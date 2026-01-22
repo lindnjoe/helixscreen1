@@ -3,14 +3,14 @@
 
 #pragma once
 
+#include "filament_database.h"
+
 #include <any>
 #include <cmath>
 #include <cstdint>
 #include <string>
 #include <string_view>
 #include <vector>
-
-#include "filament_database.h"
 
 /**
  * @file ams_types.h
