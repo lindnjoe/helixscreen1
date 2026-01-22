@@ -57,12 +57,16 @@ struct MaterialInfo {
     /**
      * @brief Check if material requires an enclosure
      */
-    [[nodiscard]] constexpr bool needs_enclosure() const { return chamber_temp_c > 0; }
+    [[nodiscard]] constexpr bool needs_enclosure() const {
+        return chamber_temp_c > 0;
+    }
 
     /**
      * @brief Check if material needs drying before use
      */
-    [[nodiscard]] constexpr bool needs_drying() const { return dry_temp_c > 0; }
+    [[nodiscard]] constexpr bool needs_drying() const {
+        return dry_temp_c > 0;
+    }
 };
 
 /**
@@ -91,13 +95,20 @@ inline constexpr MaterialInfo MATERIALS[] = {
     {"PETG",        230, 260, 80,  "Standard",      55, 360,  1.27f,  0,  "PETG"},
     {"PETG-CF",     240, 270, 80,  "Standard",      55, 360,  1.27f,  0,  "PETG"},      // Carbon fiber PETG
     {"PETG-GF",     240, 270, 80,  "Standard",      55, 360,  1.27f,  0,  "PETG"},      // Glass fiber PETG
+    {"PCTG",        240, 270, 80,  "Standard",      55, 360,  1.23f,  0,  "PETG"},      // PETG variant, clearer
 
     // === Engineering Materials (Enclosure recommended) ===
     {"ABS",         240, 270, 100, "Engineering",   60, 240,  1.04f,  50, "ABS_ASA"},
     {"ABS+",        240, 270, 100, "Engineering",   60, 240,  1.04f,  50, "ABS_ASA"},
     {"ASA",         240, 270, 100, "Engineering",   60, 240,  1.07f,  50, "ABS_ASA"},   // UV-resistant ABS alternative
+    {"ASA+",        240, 270, 100, "Engineering",   60, 240,  1.07f,  50, "ABS_ASA"},   // Enhanced ASA
+    {"ABS-CF",      240, 270, 100, "Engineering",   60, 240,  1.10f,  50, "ABS_ASA"},   // Carbon fiber ABS
+    {"ABS-GF",      240, 270, 100, "Engineering",   60, 240,  1.15f,  50, "ABS_ASA"},   // Glass fiber ABS
+    {"ASA-CF",      250, 280, 100, "Engineering",   60, 240,  1.12f,  50, "ABS_ASA"},   // Carbon fiber ASA
+    {"ASA-GF",      250, 280, 100, "Engineering",   60, 240,  1.18f,  50, "ABS_ASA"},   // Glass fiber ASA
     {"PC",          260, 300, 110, "Engineering",   80, 480,  1.20f,  55, "PC"},        // Polycarbonate
     {"PC-CF",       270, 300, 110, "Engineering",   80, 480,  1.20f,  55, "PC"},        // Carbon fiber PC
+    {"PC-GF",       270, 300, 110, "Engineering",   80, 480,  1.35f,  55, "PC"},        // Glass fiber PC
     {"PC-ABS",      250, 280, 100, "Engineering",   60, 240,  1.12f,  50, "ABS_ASA"},   // PC/ABS blend
 
     // === Nylon/Polyamide (Enclosure required, dry storage) ===
@@ -106,11 +117,15 @@ inline constexpr MaterialInfo MATERIALS[] = {
     {"PA12",        250, 280, 80,  "Engineering",   70, 480,  1.14f,  50, "PA"},
     {"PA-CF",       260, 290, 80,  "Engineering",   70, 480,  1.14f,  50, "PA"},        // Carbon fiber nylon
     {"PA-GF",       260, 290, 80,  "Engineering",   70, 480,  1.14f,  50, "PA"},        // Glass fiber nylon
+    {"PA66",        260, 290, 90,  "Engineering",   80, 480,  1.14f,  55, "PA"},        // Nylon 66
+    {"PPA",         280, 320, 100, "Engineering",   80, 480,  1.18f,  60, "PA"},        // Polyphthalamide
 
     // === Flexible Materials ===
     {"TPU",         210, 240, 50,  "Flexible",      55, 240,  1.21f,  0,  "TPU"},       // Shore 95A typical
     {"TPU-Soft",    200, 230, 50,  "Flexible",      55, 240,  1.21f,  0,  "TPU"},       // Shore 85A or softer
     {"TPE",         200, 230, 50,  "Flexible",      55, 240,  1.21f,  0,  "TPU"},
+    {"TPU-95A",     210, 240, 50,  "Flexible",      55, 240,  1.21f,  0,  "TPU"},       // Shore 95A hardness
+    {"TPU-85A",     200, 230, 50,  "Flexible",      55, 240,  1.19f,  0,  "TPU"},       // Shore 85A hardness (softer)
 
     // === Support Materials ===
     {"PVA",         180, 210, 60,  "Support",       45, 240,  1.23f,  0,  "PLA"},       // Water-soluble
@@ -123,6 +138,10 @@ inline constexpr MaterialInfo MATERIALS[] = {
     {"Metal PLA",   200, 230, 60,  "Specialty",     45, 240,  1.24f,  0,  "PLA"},       // Metal powder fill
     {"Glow PLA",    200, 230, 60,  "Specialty",     45, 240,  1.24f,  0,  "PLA"},       // Glow-in-the-dark
     {"Color-Change",200, 230, 60,  "Specialty",     45, 240,  1.24f,  0,  "PLA"},       // Temperature reactive
+
+    // === Recycled Materials ===
+    {"rPLA",        190, 220, 60,  "Recycled",      45, 240,  1.24f,  0,  "PLA"},       // Recycled PLA
+    {"rPETG",       230, 260, 80,  "Recycled",      55, 360,  1.27f,  0,  "PETG"},      // Recycled PETG
 
     // === High-Temperature Industrial ===
     {"PEEK",        370, 420, 120, "High-Temp",     100, 720, 1.30f,  80, "HIGH_TEMP"}, // Requires all-metal hotend

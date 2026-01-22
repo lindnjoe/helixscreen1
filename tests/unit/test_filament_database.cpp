@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#include "../catch_amalgamated.hpp"
 #include "filament_database.h"
+
+#include <set>
+
+#include "../catch_amalgamated.hpp"
 
 using namespace filament;
 using Catch::Approx;
@@ -137,18 +140,20 @@ TEST_CASE("are_materials_compatible - same group PLA variants", "[filament][data
 
 TEST_CASE("are_materials_compatible - same group ABS and ASA", "[filament][database][compat]") {
     CHECK(are_materials_compatible("ABS", "ASA"));
-    CHECK(are_materials_compatible("ABS", "HIPS")); // HIPS is in ABS_ASA group
+    CHECK(are_materials_compatible("ABS", "HIPS"));   // HIPS is in ABS_ASA group
     CHECK(are_materials_compatible("PC-ABS", "ASA")); // PC-ABS blend is ABS_ASA group
 }
 
-TEST_CASE("are_materials_compatible - different groups incompatible", "[filament][database][compat]") {
+TEST_CASE("are_materials_compatible - different groups incompatible",
+          "[filament][database][compat]") {
     CHECK_FALSE(are_materials_compatible("PLA", "PETG"));
     CHECK_FALSE(are_materials_compatible("PLA", "ABS"));
     CHECK_FALSE(are_materials_compatible("PETG", "ABS"));
     CHECK_FALSE(are_materials_compatible("PC", "PA")); // Different engineering groups
 }
 
-TEST_CASE("are_materials_compatible - unknown material compatible with everything", "[filament][database][compat]") {
+TEST_CASE("are_materials_compatible - unknown material compatible with everything",
+          "[filament][database][compat]") {
     CHECK(are_materials_compatible("FooBar", "PLA"));
     CHECK(are_materials_compatible("PLA", "FooBar"));
     CHECK(are_materials_compatible("FooBar", "ABS"));
@@ -162,7 +167,8 @@ TEST_CASE("are_materials_compatible - both unknown returns true", "[filament][da
 // get_compatibility_group tests
 // ============================================================================
 
-TEST_CASE("get_compatibility_group - known material returns group", "[filament][database][compat]") {
+TEST_CASE("get_compatibility_group - known material returns group",
+          "[filament][database][compat]") {
     CHECK(std::string_view(get_compatibility_group("PLA")) == "PLA");
     CHECK(std::string_view(get_compatibility_group("PETG")) == "PETG");
     CHECK(std::string_view(get_compatibility_group("ABS")) == "ABS_ASA");
@@ -172,7 +178,8 @@ TEST_CASE("get_compatibility_group - known material returns group", "[filament][
     CHECK(std::string_view(get_compatibility_group("PEEK")) == "HIGH_TEMP");
 }
 
-TEST_CASE("get_compatibility_group - unknown material returns nullptr", "[filament][database][compat]") {
+TEST_CASE("get_compatibility_group - unknown material returns nullptr",
+          "[filament][database][compat]") {
     CHECK(get_compatibility_group("FooBar") == nullptr);
     CHECK(get_compatibility_group("UnknownMaterial") == nullptr);
 }
@@ -181,12 +188,14 @@ TEST_CASE("get_compatibility_group - unknown material returns nullptr", "[filame
 // get_drying_presets_by_group tests
 // ============================================================================
 
-TEST_CASE("get_drying_presets_by_group - returns non-empty vector", "[filament][database][drying]") {
+TEST_CASE("get_drying_presets_by_group - returns non-empty vector",
+          "[filament][database][drying]") {
     auto presets = get_drying_presets_by_group();
     CHECK_FALSE(presets.empty());
 }
 
-TEST_CASE("get_drying_presets_by_group - contains expected groups", "[filament][database][drying]") {
+TEST_CASE("get_drying_presets_by_group - contains expected groups",
+          "[filament][database][drying]") {
     auto presets = get_drying_presets_by_group();
 
     auto has_group = [&presets](std::string_view name) {
@@ -207,7 +216,8 @@ TEST_CASE("get_drying_presets_by_group - contains expected groups", "[filament][
     CHECK(has_group("HIGH_TEMP"));
 }
 
-TEST_CASE("get_drying_presets_by_group - each preset has reasonable values", "[filament][database][drying]") {
+TEST_CASE("get_drying_presets_by_group - each preset has reasonable values",
+          "[filament][database][drying]") {
     auto presets = get_drying_presets_by_group();
 
     for (const auto& preset : presets) {
@@ -219,7 +229,8 @@ TEST_CASE("get_drying_presets_by_group - each preset has reasonable values", "[f
     }
 }
 
-TEST_CASE("get_drying_presets_by_group - presets have unique groups", "[filament][database][drying]") {
+TEST_CASE("get_drying_presets_by_group - presets have unique groups",
+          "[filament][database][drying]") {
     auto presets = get_drying_presets_by_group();
 
     for (size_t i = 0; i < presets.size(); i++) {
@@ -269,7 +280,8 @@ TEST_CASE("weight_to_length_m - different densities", "[filament][database][weig
 // MaterialInfo helper method tests
 // ============================================================================
 
-TEST_CASE("MaterialInfo::needs_enclosure - PLA does not need enclosure", "[filament][database][helpers]") {
+TEST_CASE("MaterialInfo::needs_enclosure - PLA does not need enclosure",
+          "[filament][database][helpers]") {
     auto pla = find_material("PLA");
     REQUIRE(pla.has_value());
     CHECK(pla->chamber_temp_c == 0);
@@ -283,7 +295,8 @@ TEST_CASE("MaterialInfo::needs_enclosure - ABS needs enclosure", "[filament][dat
     CHECK(abs->needs_enclosure());
 }
 
-TEST_CASE("MaterialInfo::needs_enclosure - PETG does not need enclosure", "[filament][database][helpers]") {
+TEST_CASE("MaterialInfo::needs_enclosure - PETG does not need enclosure",
+          "[filament][database][helpers]") {
     auto petg = find_material("PETG");
     REQUIRE(petg.has_value());
     CHECK_FALSE(petg->needs_enclosure());
@@ -302,7 +315,8 @@ TEST_CASE("MaterialInfo::needs_drying - PLA needs drying", "[filament][database]
     CHECK(pla->needs_drying());
 }
 
-TEST_CASE("MaterialInfo::needs_drying - all materials need drying", "[filament][database][helpers]") {
+TEST_CASE("MaterialInfo::needs_drying - all materials need drying",
+          "[filament][database][helpers]") {
     // All materials in our database have dry_temp_c > 0
     for (const auto& mat : MATERIALS) {
         INFO("Checking material: " << mat.name);
@@ -348,8 +362,10 @@ TEST_CASE("get_materials_by_category - Standard category", "[filament][database]
     bool has_pla = false;
     bool has_petg = false;
     for (const auto& mat : materials) {
-        if (std::string_view(mat.name) == "PLA") has_pla = true;
-        if (std::string_view(mat.name) == "PETG") has_petg = true;
+        if (std::string_view(mat.name) == "PLA")
+            has_pla = true;
+        if (std::string_view(mat.name) == "PETG")
+            has_petg = true;
     }
     CHECK(has_pla);
     CHECK(has_petg);
@@ -361,7 +377,8 @@ TEST_CASE("get_categories - returns all categories", "[filament][database]") {
 
     auto has_category = [&categories](std::string_view name) {
         for (const auto* cat : categories) {
-            if (std::string_view(cat) == name) return true;
+            if (std::string_view(cat) == name)
+                return true;
         }
         return false;
     };
@@ -372,6 +389,7 @@ TEST_CASE("get_categories - returns all categories", "[filament][database]") {
     CHECK(has_category("Support"));
     CHECK(has_category("Specialty"));
     CHECK(has_category("High-Temp"));
+    CHECK(has_category("Recycled"));
 }
 
 TEST_CASE("get_all_material_names - returns all materials", "[filament][database]") {
@@ -386,4 +404,104 @@ TEST_CASE("MATERIAL_COUNT matches array size", "[filament][database]") {
         count++;
     }
     CHECK(count == MATERIAL_COUNT);
+}
+
+// ============================================================================
+// Phase 1: New materials tests (composites, nylon variants, TPU variants, recycled)
+// ============================================================================
+
+TEST_CASE("Phase 1 - ABS composites exist", "[filament][database][phase1]") {
+    // Carbon and glass fiber ABS variants
+    auto abs_cf = find_material("ABS-CF");
+    REQUIRE(abs_cf.has_value());
+    CHECK(std::string_view(abs_cf->compat_group) == "ABS_ASA");
+    CHECK(abs_cf->chamber_temp_c > 0); // Needs enclosure
+
+    auto abs_gf = find_material("ABS-GF");
+    REQUIRE(abs_gf.has_value());
+    CHECK(std::string_view(abs_gf->compat_group) == "ABS_ASA");
+}
+
+TEST_CASE("Phase 1 - ASA composites exist", "[filament][database][phase1]") {
+    // Carbon and glass fiber ASA variants
+    auto asa_cf = find_material("ASA-CF");
+    REQUIRE(asa_cf.has_value());
+    CHECK(std::string_view(asa_cf->compat_group) == "ABS_ASA");
+
+    auto asa_gf = find_material("ASA-GF");
+    REQUIRE(asa_gf.has_value());
+    CHECK(std::string_view(asa_gf->compat_group) == "ABS_ASA");
+}
+
+TEST_CASE("Phase 1 - Nylon variants exist", "[filament][database][phase1]") {
+    // PA66 and PPA (polyphthalamide)
+    auto pa66 = find_material("PA66");
+    REQUIRE(pa66.has_value());
+    CHECK(std::string_view(pa66->compat_group) == "PA");
+    CHECK(pa66->chamber_temp_c > 0); // Needs enclosure
+
+    auto ppa = find_material("PPA");
+    REQUIRE(ppa.has_value());
+    CHECK(std::string_view(ppa->compat_group) == "PA");
+}
+
+TEST_CASE("Phase 1 - TPU Shore hardness variants exist", "[filament][database][phase1]") {
+    // Specific Shore hardness variants
+    auto tpu_95a = find_material("TPU-95A");
+    REQUIRE(tpu_95a.has_value());
+    CHECK(std::string_view(tpu_95a->compat_group) == "TPU");
+
+    auto tpu_85a = find_material("TPU-85A");
+    REQUIRE(tpu_85a.has_value());
+    CHECK(std::string_view(tpu_85a->compat_group) == "TPU");
+}
+
+TEST_CASE("Phase 1 - PCTG exists in PETG group", "[filament][database][phase1]") {
+    auto pctg = find_material("PCTG");
+    REQUIRE(pctg.has_value());
+    CHECK(std::string_view(pctg->compat_group) == "PETG");
+    CHECK(pctg->chamber_temp_c == 0); // No enclosure needed
+}
+
+TEST_CASE("Phase 1 - Recycled materials exist", "[filament][database][phase1]") {
+    // Recycled PLA and PETG
+    auto rpla = find_material("rPLA");
+    REQUIRE(rpla.has_value());
+    CHECK(std::string_view(rpla->compat_group) == "PLA");
+
+    auto rpetg = find_material("rPETG");
+    REQUIRE(rpetg.has_value());
+    CHECK(std::string_view(rpetg->compat_group) == "PETG");
+}
+
+TEST_CASE("Phase 1 - PC-GF exists", "[filament][database][phase1]") {
+    auto pc_gf = find_material("PC-GF");
+    REQUIRE(pc_gf.has_value());
+    CHECK(std::string_view(pc_gf->compat_group) == "PC");
+    CHECK(pc_gf->chamber_temp_c > 0); // Needs enclosure
+}
+
+TEST_CASE("Phase 1 - Material count increased", "[filament][database][phase1]") {
+    // After Phase 1, should have ~50 materials (35 original + ~15 new)
+    CHECK(MATERIAL_COUNT >= 48);
+}
+
+TEST_CASE("Phase 1 - All compat groups have representatives", "[filament][database][phase1]") {
+    // Verify each compatibility group has at least one material
+    std::set<std::string_view> groups_found;
+
+    for (const auto& mat : MATERIALS) {
+        if (mat.compat_group != nullptr) {
+            groups_found.insert(mat.compat_group);
+        }
+    }
+
+    // All 7 groups should be represented
+    CHECK(groups_found.count("PLA") == 1);
+    CHECK(groups_found.count("PETG") == 1);
+    CHECK(groups_found.count("ABS_ASA") == 1);
+    CHECK(groups_found.count("PA") == 1);
+    CHECK(groups_found.count("TPU") == 1);
+    CHECK(groups_found.count("PC") == 1);
+    CHECK(groups_found.count("HIGH_TEMP") == 1);
 }
