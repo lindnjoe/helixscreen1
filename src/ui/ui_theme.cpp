@@ -12,6 +12,7 @@
 #include "lvgl/src/libs/expat/expat.h"
 #include "lvgl/src/xml/lv_xml.h"
 #include "settings_manager.h"
+#include "theme_loader.h"
 
 #include <spdlog/spdlog.h>
 
@@ -32,30 +33,9 @@ static lv_theme_t* current_theme = nullptr;
 static bool use_dark_mode = true;
 static lv_display_t* theme_display = nullptr;
 
-static int ui_theme_get_preset_index() {
-    Config* config = Config::get_instance();
-    int preset = config ? config->get<int>("/theme/preset", 0) : 0;
-    int max_preset = SettingsManager::theme_preset_count() - 1;
-    return std::clamp(preset, 0, max_preset);
-}
+static helix::ThemeData active_theme;
 
-static std::unordered_map<std::string, std::string>
-ui_theme_get_theme_preset_overrides(const std::unordered_map<std::string, std::string>& colors) {
-    std::unordered_map<std::string, std::string> overrides;
-    int preset = ui_theme_get_preset_index();
-    const char* token = SettingsManager::get_theme_preset_color_token(preset);
-    const char* name = SettingsManager::get_theme_preset_name(preset);
-    auto color_it = colors.find(token ? token : "");
-    if (color_it != colors.end()) {
-        overrides.emplace("primary_color", color_it->second);
-        overrides.emplace("secondary_color", color_it->second);
-        overrides.emplace("tertiary_color", color_it->second);
-        spdlog::info("[Theme] Applying theme preset {} ({})", name, token);
-    } else {
-        spdlog::warn("[Theme] Missing theme preset color token: {}", token ? token : "(null)");
-    }
-    return overrides;
-}
+// Theme preset overrides removed - colors now come from theme JSON files via ThemeData
 
 // Parse hex color string "#FF4444" -> lv_color_hex(0xFF4444)
 lv_color_t ui_theme_parse_hex_color(const char* hex_str) {
@@ -65,6 +45,25 @@ lv_color_t ui_theme_parse_hex_color(const char* hex_str) {
     }
     uint32_t hex = static_cast<uint32_t>(strtoul(hex_str + 1, NULL, 16));
     return lv_color_hex(hex);
+}
+
+/**
+ * @brief Darken a hex color string by a percentage
+ * @param hex_str Color in "#RRGGBB" format
+ * @param percent Percentage to keep (0.0-1.0), e.g., 0.7 = 70% brightness
+ * @return New hex string (static buffer, not thread-safe)
+ */
+static const char* darken_hex_color(const char* hex_str, float percent) {
+    static char result[8];
+    if (!hex_str || hex_str[0] != '#' || strlen(hex_str) < 7) {
+        return hex_str; // Return original on error
+    }
+    uint32_t hex = static_cast<uint32_t>(strtoul(hex_str + 1, NULL, 16));
+    uint8_t r = static_cast<uint8_t>(((hex >> 16) & 0xFF) * percent);
+    uint8_t g = static_cast<uint8_t>(((hex >> 8) & 0xFF) * percent);
+    uint8_t b = static_cast<uint8_t>((hex & 0xFF) * percent);
+    snprintf(result, sizeof(result), "#%02x%02x%02x", r, g, b);
+    return result;
 }
 
 // No longer needed - helix_theme.c handles all color patching and input widget styling
@@ -121,14 +120,16 @@ static void ui_theme_register_static_constants(lv_xml_component_scope_t* scope) 
     int color_count = 0, px_count = 0, string_count = 0;
 
     auto color_tokens = ui_theme_parse_all_xml_for_element("ui_xml", "color");
-    auto color_overrides = ui_theme_get_theme_preset_overrides(color_tokens);
+
+    // Merge palette colors from active theme JSON - these override any XML definitions
+    auto& names = helix::ThemePalette::color_names();
+    for (size_t i = 0; i < 16; ++i) {
+        color_tokens[names[i]] = active_theme.colors.at(i);
+    }
 
     for (const auto& [name, value] : color_tokens) {
         if (!has_dynamic_suffix(name)) {
-            auto override_it = color_overrides.find(name);
-            const std::string& resolved =
-                override_it != color_overrides.end() ? override_it->second : value;
-            lv_xml_register_const(scope, name.c_str(), resolved.c_str());
+            lv_xml_register_const(scope, name.c_str(), value.c_str());
             color_count++;
         }
     }
@@ -322,6 +323,133 @@ void ui_theme_register_responsive_fonts(lv_display_t* display) {
                   greater_res, registered);
 }
 
+/**
+ * @brief Register theme palette colors as LVGL constants
+ *
+ * Registers all 16 palette colors from the active theme.
+ * Must be called BEFORE ui_theme_register_static_constants() so
+ * palette colors are available for semantic mapping.
+ */
+static void ui_theme_register_palette_colors(lv_xml_component_scope_t* scope,
+                                             const helix::ThemeData& theme) {
+    auto& names = helix::ThemePalette::color_names();
+    for (size_t i = 0; i < 16; ++i) {
+        lv_xml_register_const(scope, names[i], theme.colors.at(i).c_str());
+    }
+    spdlog::debug("[Theme] Registered 16 palette colors from theme '{}'", theme.name);
+}
+
+/**
+ * @brief Register semantic colors derived from palette
+ *
+ * Maps palette colors to semantic colors (app_bg_color, text_primary, etc.)
+ * with _light and _dark variants for theme mode switching.
+ * Also registers the base name with the appropriate value for the current mode.
+ *
+ * @param scope LVGL XML scope to register constants in
+ * @param theme Theme data with palette colors
+ * @param dark_mode Whether to use dark mode values for base names
+ */
+static void ui_theme_register_semantic_colors(lv_xml_component_scope_t* scope,
+                                              const helix::ThemeData& theme, bool dark_mode) {
+    const auto& c = theme.colors;
+
+    // Helper to register a themed color pair and its base name
+    auto register_themed = [&](const char* base_name, const char* dark_value,
+                               const char* light_value) {
+        char dark_name[128];
+        char light_name[128];
+        snprintf(dark_name, sizeof(dark_name), "%s_dark", base_name);
+        snprintf(light_name, sizeof(light_name), "%s_light", base_name);
+
+        lv_xml_register_const(scope, dark_name, dark_value);
+        lv_xml_register_const(scope, light_name, light_value);
+        lv_xml_register_const(scope, base_name, dark_mode ? dark_value : light_value);
+    };
+
+    // Background colors (mode-dependent)
+    register_themed("app_bg_color", c.bg_darkest.c_str(), c.bg_lightest.c_str());
+    register_themed("card_bg", c.bg_dark.c_str(), c.bg_light.c_str());
+    register_themed("selection_highlight", c.bg_dark_highlight.c_str(), c.text_light.c_str());
+
+    // Text colors (mode-dependent)
+    register_themed("text_primary", c.bg_lightest.c_str(), c.bg_darkest.c_str());
+    register_themed("text_secondary", c.text_light.c_str(), c.border_muted.c_str());
+    register_themed("header_text", c.bg_light.c_str(), c.bg_dark.c_str());
+
+    // Border/muted (mode-dependent)
+    register_themed("theme_grey", c.border_muted.c_str(), c.text_light.c_str());
+
+    // Keyboard colors (mode-dependent)
+    register_themed("keyboard_key", c.bg_dark_highlight.c_str(), c.bg_lightest.c_str());
+    register_themed("keyboard_key_special", c.bg_dark.c_str(), c.text_light.c_str());
+
+    // Accent colors (same in both modes)
+    lv_xml_register_const(scope, "primary_color", c.accent_primary.c_str());
+    lv_xml_register_const(scope, "secondary_color", c.accent_secondary.c_str());
+    lv_xml_register_const(scope, "tertiary_color", c.accent_tertiary.c_str());
+    lv_xml_register_const(scope, "highlight_color", c.accent_highlight.c_str());
+
+    // Status colors (same in both modes)
+    lv_xml_register_const(scope, "error_color", c.status_error.c_str());
+    lv_xml_register_const(scope, "danger_color", c.status_danger.c_str());
+    lv_xml_register_const(scope, "warning_color", c.status_danger.c_str());
+    lv_xml_register_const(scope, "attention_color", c.status_warning.c_str());
+    lv_xml_register_const(scope, "success_color", c.status_success.c_str());
+    lv_xml_register_const(scope, "special_color", c.status_special.c_str());
+    lv_xml_register_const(scope, "info_color", c.accent_primary.c_str());
+
+    // Theme editor swatch descriptions (mode-dependent for background/text colors)
+    register_themed("swatch_0_desc", "App background", "Primary text");
+    register_themed("swatch_1_desc", "Card surfaces", "Header text");
+    register_themed("swatch_2_desc", "Selection highlight", "Selection highlight");
+    register_themed("swatch_3_desc", "Borders and dividers", "Secondary text");
+    register_themed("swatch_4_desc", "Secondary text", "Borders and dividers");
+    register_themed("swatch_5_desc", "Header text", "Card surfaces");
+    register_themed("swatch_6_desc", "Primary text", "App background");
+    // Accent/status colors - same in both modes
+    lv_xml_register_const(scope, "swatch_7_desc", "Subtle accents and highlights");
+    lv_xml_register_const(scope, "swatch_8_desc", "Primary accents and links");
+    lv_xml_register_const(scope, "swatch_9_desc", "Secondary accents");
+    lv_xml_register_const(scope, "swatch_10_desc", "Tertiary accents and icons");
+    lv_xml_register_const(scope, "swatch_11_desc", "Error states and alerts");
+    lv_xml_register_const(scope, "swatch_12_desc", "Warning banners");
+    lv_xml_register_const(scope, "swatch_13_desc", "Attention highlights");
+    lv_xml_register_const(scope, "swatch_14_desc", "Success confirmations");
+    lv_xml_register_const(scope, "swatch_15_desc", "Special accents");
+
+    spdlog::debug("[Theme] Registered semantic colors from palette");
+}
+
+/**
+ * @brief Load active theme from config
+ *
+ * Reads /display/theme from config, loads corresponding JSON file.
+ * Falls back to Nord if not found.
+ */
+static helix::ThemeData ui_theme_load_active_theme() {
+    std::string themes_dir = helix::get_themes_directory();
+
+    // Ensure themes directory exists with default theme
+    helix::ensure_themes_directory(themes_dir);
+
+    // Read theme name from config
+    Config* config = Config::get_instance();
+    std::string theme_name = config ? config->get<std::string>("/display/theme", "nord") : "nord";
+
+    // Load theme file
+    std::string theme_path = themes_dir + "/" + theme_name + ".json";
+    auto theme = helix::load_theme_from_file(theme_path);
+
+    if (!theme.is_valid()) {
+        spdlog::warn("[Theme] Theme '{}' not found or invalid, using Nord", theme_name);
+        theme = helix::get_default_nord_theme();
+    }
+
+    spdlog::info("[Theme] Loaded theme: {} ({})", theme.name, theme.filename);
+    return theme;
+}
+
 void ui_theme_init(lv_display_t* display, bool use_dark_mode_param) {
     theme_display = display;
     use_dark_mode = use_dark_mode_param;
@@ -333,6 +461,15 @@ void ui_theme_init(lv_display_t* display, bool use_dark_mode_param) {
             "[Theme] FATAL: Failed to get globals scope for runtime constant registration");
         std::exit(EXIT_FAILURE);
     }
+
+    // Load active theme from config/themes directory
+    active_theme = ui_theme_load_active_theme();
+
+    // Register palette colors FIRST (before static constants)
+    ui_theme_register_palette_colors(scope, active_theme);
+
+    // Register semantic colors derived from palette (includes _light/_dark variants and base names)
+    ui_theme_register_semantic_colors(scope, active_theme, use_dark_mode);
 
     // Register static constants first (colors, px, strings without dynamic suffixes)
     ui_theme_register_static_constants(scope);
@@ -504,6 +641,27 @@ void ui_theme_toggle_dark_mode() {
 
 bool ui_theme_is_dark_mode() {
     return use_dark_mode;
+}
+
+const helix::ThemeData& ui_theme_get_active_theme() {
+    return active_theme;
+}
+
+void ui_theme_preview(const helix::ThemeData& theme) {
+    const char* colors[16];
+    for (size_t i = 0; i < 16; ++i) {
+        colors[i] = theme.colors.at(i).c_str();
+    }
+
+    helix_theme_preview_colors(use_dark_mode, colors, theme.properties.border_radius);
+    ui_theme_refresh_widget_tree(lv_screen_active());
+
+    spdlog::debug("[Theme] Previewing theme: {}", theme.name);
+}
+
+void ui_theme_revert_preview() {
+    ui_theme_preview(active_theme);
+    spdlog::debug("[Theme] Reverted to active theme: {}", active_theme.name);
 }
 
 /**

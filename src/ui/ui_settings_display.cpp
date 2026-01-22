@@ -10,6 +10,7 @@
 
 #include "ui_event_safety.h"
 #include "ui_nav_manager.h"
+#include "ui_theme_editor_overlay.h"
 #include "ui_utils.h"
 
 #include "settings_manager.h"
@@ -247,16 +248,16 @@ void DisplaySettingsOverlay::init_theme_preset_dropdown(lv_obj_t* root) {
     lv_obj_t* theme_preset_dropdown =
         theme_preset_row ? lv_obj_find_by_name(theme_preset_row, "dropdown") : nullptr;
     if (theme_preset_dropdown) {
-        // Set dropdown options
-        lv_dropdown_set_options(theme_preset_dropdown, SettingsManager::get_theme_preset_options());
+        // Set dropdown options from discovered theme files
+        std::string options = SettingsManager::instance().get_theme_options();
+        lv_dropdown_set_options(theme_preset_dropdown, options.c_str());
 
-        // Set initial selection based on current setting
-        auto current_preset = SettingsManager::instance().get_theme_preset();
-        lv_dropdown_set_selected(theme_preset_dropdown, static_cast<uint32_t>(current_preset));
+        // Set initial selection based on current theme
+        int current_index = SettingsManager::instance().get_theme_index();
+        lv_dropdown_set_selected(theme_preset_dropdown, static_cast<uint32_t>(current_index));
 
-        spdlog::debug("[{}] Theme preset dropdown initialized to {} ({})", get_name(),
-                      static_cast<int>(current_preset),
-                      SettingsManager::get_theme_preset_name(static_cast<int>(current_preset)));
+        spdlog::debug("[{}] Theme dropdown initialized to index {} ({})", get_name(), current_index,
+                      SettingsManager::instance().get_theme_name());
     }
 }
 
@@ -294,12 +295,10 @@ void DisplaySettingsOverlay::handle_brightness_changed(int value) {
 }
 
 void DisplaySettingsOverlay::handle_theme_preset_changed(int index) {
-    SettingsManager::instance().set_theme_preset(static_cast<ThemePreset>(index));
+    SettingsManager::instance().set_theme_by_index(index);
 
-    int preset = static_cast<int>(SettingsManager::instance().get_theme_preset());
-
-    spdlog::info("[{}] Theme preset changed to {} ({})", get_name(), preset,
-                 SettingsManager::get_theme_preset_name(preset));
+    spdlog::info("[{}] Theme changed to index {} ({})", get_name(), index,
+                 SettingsManager::instance().get_theme_name());
 }
 
 void DisplaySettingsOverlay::handle_theme_preview_clicked() {
@@ -331,22 +330,34 @@ void DisplaySettingsOverlay::handle_theme_settings_clicked() {
         return;
     }
 
+    // Create theme editor overlay on first access (lazy initialization)
     if (!theme_settings_overlay_) {
-        spdlog::debug("[{}] Creating theme settings overlay...", get_name());
-        theme_settings_overlay_ = static_cast<lv_obj_t*>(
-            lv_xml_create(parent_screen_, "theme_settings_overlay", nullptr));
+        spdlog::debug("[{}] Creating theme editor overlay...", get_name());
+        auto& overlay = get_theme_editor_overlay();
+
+        // Initialize subjects and callbacks if not already done
+        if (!overlay.are_subjects_initialized()) {
+            overlay.init_subjects();
+        }
+        overlay.register_callbacks();
+
+        // Create overlay UI
+        theme_settings_overlay_ = overlay.create(parent_screen_);
         if (!theme_settings_overlay_) {
-            spdlog::error("[{}] Failed to create theme settings overlay", get_name());
+            spdlog::error("[{}] Failed to create theme editor overlay", get_name());
             return;
         }
 
-        lv_obj_add_flag(theme_settings_overlay_, LV_OBJ_FLAG_HIDDEN);
-        NavigationManager::instance().register_overlay_close_callback(
-            theme_settings_overlay_, [this]() { lv_obj_safe_delete(theme_settings_overlay_); });
+        // Register with NavigationManager for lifecycle callbacks
+        NavigationManager::instance().register_overlay_instance(theme_settings_overlay_, &overlay);
     }
 
-    init_theme_preset_dropdown(theme_settings_overlay_);
-    ui_nav_push_overlay(theme_settings_overlay_);
+    if (theme_settings_overlay_) {
+        // Load current theme for editing
+        auto theme_name = SettingsManager::instance().get_theme_name();
+        get_theme_editor_overlay().load_theme(theme_name);
+        ui_nav_push_overlay(theme_settings_overlay_);
+    }
 }
 
 // ============================================================================

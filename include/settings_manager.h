@@ -19,9 +19,6 @@ enum class CompletionAlertMode { OFF = 0, NOTIFICATION = 1, ALERT = 2 };
 /** @brief Time display format (12-hour with AM/PM or 24-hour) */
 enum class TimeFormat { HOUR_12 = 0, HOUR_24 = 1 };
 
-/** @brief Theme preset selection for accent colors (0=Nord) */
-enum class ThemePreset { NORD = 0 };
-
 /**
  * @brief Application settings manager with reactive UI binding
  *
@@ -138,32 +135,20 @@ class SettingsManager {
      */
     void set_dark_mode(bool enabled);
 
-    /**
-     * @brief Get theme preset selection
-     * @return Current theme preset
-     */
-    ThemePreset get_theme_preset() const;
+    /** @brief Get current theme filename (without .json) */
+    std::string get_theme_name() const;
 
-    /**
-     * @brief Set theme preset selection
-     *
-     * Updates subject and persists. Theme changes require restart to apply.
-     *
-     * @param preset Theme preset selection
-     */
-    void set_theme_preset(ThemePreset preset);
+    /** @brief Set theme by filename, marks restart pending */
+    void set_theme_name(const std::string& name);
 
-    /** @brief Number of available theme presets */
-    static int theme_preset_count();
+    /** @brief Get dropdown options string for discovered themes */
+    std::string get_theme_options() const;
 
-    /** @brief Get display name for theme preset index */
-    static const char* get_theme_preset_name(int preset);
+    /** @brief Get index of current theme in options list */
+    int get_theme_index() const;
 
-    /** @brief Get dropdown options string for theme presets */
-    static const char* get_theme_preset_options();
-
-    /** @brief Get color token name for theme preset index */
-    static const char* get_theme_preset_color_token(int preset);
+    /** @brief Set theme by dropdown index */
+    void set_theme_by_index(int index);
 
     /**
      * @brief Get display sleep timeout in seconds
