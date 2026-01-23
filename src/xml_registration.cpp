@@ -55,24 +55,29 @@ static void register_color_picker_responsive_constants() {
     // Preview swatch size and text height scale with screen
     const char* preview_size;
     const char* text_height;
+    const char* theme_swatch_size;
     if (greater_res <= UI_BREAKPOINT_SMALL_MAX) {
         preview_size = "40";
         text_height = "52";
+        theme_swatch_size = "24";
     } else if (greater_res <= UI_BREAKPOINT_MEDIUM_MAX) {
         preview_size = "48";
         text_height = "60";
+        theme_swatch_size = "28";
     } else {
         preview_size = "56";
         text_height = "68";
+        theme_swatch_size = "32";
     }
 
     lv_xml_component_scope_t* scope = lv_xml_component_get_scope("globals");
     if (scope) {
         lv_xml_register_const(scope, "color_preview_size", preview_size);
         lv_xml_register_const(scope, "color_text_height", text_height);
+        lv_xml_register_const(scope, "theme_swatch_size", theme_swatch_size);
         spdlog::debug(
-            "[Color Picker] Registered color_preview_size={}, color_text_height={} for screen {}px",
-            preview_size, text_height, greater_res);
+            "[Color Picker] Registered color_preview_size={}, theme_swatch_size={} for screen {}px",
+            preview_size, theme_swatch_size, greater_res);
     }
 }
 

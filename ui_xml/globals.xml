@@ -162,6 +162,10 @@
     <px name="color_preview_size_small" value="40"/>
     <px name="color_preview_size_medium" value="48"/>
     <px name="color_preview_size_large" value="56"/>
+    <!-- Theme editor swatch size (smaller to fit more on screen) -->
+    <px name="theme_swatch_size_small" value="24"/>
+    <px name="theme_swatch_size_medium" value="28"/>
+    <px name="theme_swatch_size_large" value="32"/>
     <!-- Color picker text area height (hex + 2-line name, responsive) -->
     <px name="color_text_height_small" value="52"/>
     <px name="color_text_height_medium" value="60"/>

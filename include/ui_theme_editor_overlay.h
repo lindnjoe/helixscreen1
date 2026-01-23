@@ -128,6 +128,9 @@ class ThemeEditorOverlay : public OverlayBase {
     static void on_restart_now(lv_event_t* e);
     static void on_restart_later(lv_event_t* e);
 
+    // Theme preset dropdown callback
+    static void on_theme_preset_changed(lv_event_t* e);
+
     // Instance handlers for slider property changes
     void handle_border_radius_changed(int value);
     void handle_border_width_changed(int value);
@@ -151,6 +154,10 @@ class ThemeEditorOverlay : public OverlayBase {
 
     // Save As dialog handlers
     void handle_save_as_confirm();
+
+    // Theme preset handlers
+    void init_theme_preset_dropdown();
+    void handle_theme_preset_changed(int index);
 
     // Filename helpers
     static std::string sanitize_filename(const std::string& name);
