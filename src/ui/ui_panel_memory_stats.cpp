@@ -154,7 +154,9 @@ void MemoryStatsOverlay::shutdown() {
 }
 
 void MemoryStatsOverlay::update() {
-    if (!overlay_ || !is_visible())
+    // Guard against shutdown race: timer may fire after LVGL objects destroyed
+    // but before shutdown() clears our pointers
+    if (!lv_is_initialized() || !overlay_ || !is_visible())
         return;
 
     int64_t rss_kb = 0, hwm_kb = 0, private_kb = 0;
