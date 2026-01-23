@@ -20,6 +20,7 @@ typedef struct {
     lv_style_t button_style;             // Default button style (grey background)
     lv_style_t dropdown_indicator_style; // Dropdown indicator font (MDI icons)
     lv_style_t checkbox_indicator_style; // Checkbox checkmark font (MDI icons)
+    lv_style_t switch_indicator_style;   // Switch checked state (accent color)
     bool is_dark_mode;                   // Track theme mode for context
 } helix_theme_t;
 
@@ -130,6 +131,14 @@ static void helix_theme_apply(lv_theme_t* theme, lv_obj_t* obj) {
                          LV_PART_INDICATOR | LV_STATE_CHECKED);
     }
 #endif
+
+#if LV_USE_SWITCH
+    // Apply accent color to switch indicator when checked
+    // LVGL defaults to cyan - we want the theme's primary/accent color
+    if (lv_obj_check_type(obj, &lv_switch_class)) {
+        lv_obj_add_style(obj, &helix->switch_indicator_style, LV_PART_INDICATOR | LV_STATE_CHECKED);
+    }
+#endif
 }
 
 lv_theme_t* helix_theme_init(lv_display_t* display, lv_color_t primary_color,
@@ -144,6 +153,7 @@ lv_theme_t* helix_theme_init(lv_display_t* display, lv_color_t primary_color,
         lv_style_reset(&helix_theme_instance->button_style);
         lv_style_reset(&helix_theme_instance->dropdown_indicator_style);
         lv_style_reset(&helix_theme_instance->checkbox_indicator_style);
+        lv_style_reset(&helix_theme_instance->switch_indicator_style);
         free(helix_theme_instance);
         helix_theme_instance = NULL;
     }
@@ -227,6 +237,11 @@ lv_theme_t* helix_theme_init(lv_display_t* display, lv_color_t primary_color,
     // Override to use MDI check icon (same fix used in ui_step_progress.cpp)
     lv_style_init(&helix_theme_instance->checkbox_indicator_style);
     lv_style_set_text_font(&helix_theme_instance->checkbox_indicator_style, &mdi_icons_16);
+
+    // Initialize switch indicator style with theme accent color
+    // LVGL defaults to cyan for switch - use our primary/accent color instead
+    lv_style_init(&helix_theme_instance->switch_indicator_style);
+    lv_style_set_bg_color(&helix_theme_instance->switch_indicator_style, primary_color);
 
     // CRITICAL: Now we need to patch the default theme's color fields
     // This is necessary because LVGL's default theme bakes colors into pre-computed
@@ -385,6 +400,10 @@ void helix_theme_preview_colors(bool is_dark, const char* colors[16], int32_t bo
     lv_style_set_text_color(&helix_theme_instance->button_style, text_primary);
     lv_style_set_radius(&helix_theme_instance->button_style, border_radius);
     lv_style_set_radius(&helix_theme_instance->pressed_style, border_radius);
+
+    // Update switch indicator with accent color (colors[8] is primary accent)
+    lv_color_t accent_color = lv_color_hex(strtoul(colors[8] + 1, NULL, 16));
+    lv_style_set_bg_color(&helix_theme_instance->switch_indicator_style, accent_color);
 
     // Update default theme internal styles (private API access)
     typedef struct {

@@ -14,8 +14,8 @@
 > 
 
 
-### [L008] [***--|-----] Design tokens mandatory
-- **Uses**: 7 | **Velocity**: 0.01 | **Learned**: 2025-12-14 | **Last**: 2025-12-31 | **Category**: pattern | **Type**: informational
+### [L008] [***--|+----] Design tokens mandatory
+- **Uses**: 8 | **Velocity**: 0.51 | **Learned**: 2025-12-14 | **Last**: 2026-01-22 | **Category**: pattern | **Type**: informational
 > No hardcoded colors or spacing. Use #card_bg, #space_md, text_body etc. Check globals.xml for available tokens
 
 
@@ -59,8 +59,8 @@
 > LVGL observer callbacks use C-style function signatures (lv_observer_t*, lv_subject_t*) - NOT lambdas. Must pass user_data via lv_observer_get_user_data(observer). Also: lv_subject_set_*() from non-main threads must use ui_async_call() to avoid render-phase assertions.
 
 
-### [L031] [****-|-----] XML no recompile
-- **Uses**: 16 | **Velocity**: 0.01 | **Learned**: 2025-12-27 | **Last**: 2026-01-21 | **Category**: gotcha | **Type**: constraint
+### [L031] [****-|+----] XML no recompile
+- **Uses**: 17 | **Velocity**: 0.51 | **Learned**: 2025-12-27 | **Last**: 2026-01-22 | **Category**: gotcha | **Type**: constraint
 > 
 
 
@@ -95,7 +95,7 @@
 
 
 ### [L045] [*----|-----] LVGL dropdown options
-- **Uses**: 1 | **Velocity**: 0.0 | **Learned**: 2026-01-06 | **Last**: 2026-01-06 | **Category**: correction | **Type**: constraint
+- **Uses**: 2 | **Velocity**: 0.25 | **Learned**: 2026-01-06 | **Last**: 2026-01-22 | **Category**: correction | **Type**: constraint
 > LVGL dropdowns do NOT support bind_options in XML. Always use lv_dropdown_set_options() directly in C++ code to set dropdown options dynamically. All other dropdowns in the codebase follow this pattern.
 
 
