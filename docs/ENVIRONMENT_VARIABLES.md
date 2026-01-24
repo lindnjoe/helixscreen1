@@ -6,7 +6,7 @@ This document provides a comprehensive reference for all environment variables u
 
 | Category | Count | Prefix |
 |----------|-------|--------|
-| [Display & Backend](#display--backend-configuration) | 7 | `HELIX_` |
+| [Display & Backend](#display--backend-configuration) | 8 | `HELIX_` |
 | [Touch Calibration](#touch-calibration) | 5 | `HELIX_TOUCH_*` |
 | [G-Code Viewer](#g-code-viewer) | 3 | `HELIX_` |
 | [Bed Mesh](#bed-mesh) | 1 | `HELIX_` |
@@ -21,6 +21,26 @@ This document provides a comprehensive reference for all environment variables u
 ## Display & Backend Configuration
 
 These variables control how HelixScreen connects to displays and input devices.
+
+### `HELIX_THEME`
+
+Override the theme loaded from config. Useful for testing themes or taking screenshots without changing settings.
+
+| Property | Value |
+|----------|-------|
+| **Values** | Theme filename without `.json` extension (e.g., `gruvbox`, `dracula`, `nord`) |
+| **Default** | Read from config (`/display/theme`) |
+| **File** | `src/ui/theme_manager.cpp` |
+
+```bash
+# Test Gruvbox theme
+HELIX_THEME=gruvbox ./build/bin/helix-screen --test
+
+# Take screenshot with Dracula theme
+HELIX_THEME=dracula ./scripts/screenshot.sh helix-screen dracula-home home
+```
+
+**Available themes:** `ayu`, `catppuccin`, `chatgpt`, `chatgpt-classic`, `dracula`, `everforest`, `google-drive`, `google-notebooklm`, `gruvbox`, `kanagawa`, `nord`, `onedark`, `rose-pine`, `solarized`, `tokyonight`
 
 ### `HELIX_DISPLAY_BACKEND`
 

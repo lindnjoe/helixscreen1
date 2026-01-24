@@ -428,6 +428,8 @@ static void theme_manager_register_semantic_colors(lv_xml_component_scope_t* sco
  *
  * Reads /display/theme from config, loads corresponding JSON file.
  * Falls back to Nord if not found.
+ *
+ * HELIX_THEME env var overrides config (useful for testing/screenshots).
  */
 static helix::ThemeData theme_manager_load_active_theme() {
     std::string themes_dir = helix::get_themes_directory();
@@ -435,9 +437,17 @@ static helix::ThemeData theme_manager_load_active_theme() {
     // Ensure themes directory exists with default theme
     helix::ensure_themes_directory(themes_dir);
 
-    // Read theme name from config
-    Config* config = Config::get_instance();
-    std::string theme_name = config ? config->get<std::string>("/display/theme", "nord") : "nord";
+    // Check for HELIX_THEME env var override (useful for testing/screenshots)
+    std::string theme_name;
+    const char* env_theme = std::getenv("HELIX_THEME");
+    if (env_theme && env_theme[0] != '\0') {
+        theme_name = env_theme;
+        spdlog::info("[Theme] Using HELIX_THEME override: {}", theme_name);
+    } else {
+        // Read theme name from config
+        Config* config = Config::get_instance();
+        theme_name = config ? config->get<std::string>("/display/theme", "nord") : "nord";
+    }
 
     // Load theme file
     std::string theme_path = themes_dir + "/" + theme_name + ".json";
