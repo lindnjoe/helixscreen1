@@ -19,7 +19,9 @@ class MockSensorManager : public ISensorManager {
 
     explicit MockSensorManager(std::string name) : name_(std::move(name)) {}
 
-    std::string category_name() const override { return name_; }
+    std::string category_name() const override {
+        return name_;
+    }
 
     void discover(const std::vector<std::string>& objects) override {
         discovered_ = true;
@@ -36,7 +38,9 @@ class MockSensorManager : public ISensorManager {
         last_config_ = config;
     }
 
-    nlohmann::json save_config() const override { return saved_config_; }
+    nlohmann::json save_config() const override {
+        return saved_config_;
+    }
 };
 
 TEST_CASE("SensorRegistry registers managers", "[sensors]") {
@@ -143,8 +147,7 @@ TEST_CASE("SensorRegistry load_config routes to correct managers", "[sensors]") 
     registry.register_manager("humidity", std::move(mock2));
 
     nlohmann::json config = {
-        {"sensors",
-         {{"switch", {{"master_enabled", true}}}, {"humidity", {{"threshold", 60}}}}}};
+        {"sensors", {{"switch", {{"master_enabled", true}}}, {"humidity", {{"threshold", 60}}}}}};
 
     registry.load_config(config);
 
