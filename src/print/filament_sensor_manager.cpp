@@ -231,7 +231,13 @@ void FilamentSensorManager::load_config() {
     }
 
     update_subjects();
+
+    // Log final state of all sensors at INFO for debugging
     spdlog::info("[FilamentSensorManager] Config loaded, master_enabled={}", master_enabled_);
+    for (const auto& sensor : sensors_) {
+        spdlog::info("[FilamentSensorManager]   {} -> role={}, enabled={}", sensor.klipper_name,
+                     role_to_config_string(sensor.role), sensor.enabled);
+    }
 }
 
 void FilamentSensorManager::save_config() {
@@ -391,11 +397,16 @@ bool FilamentSensorManager::has_any_runout() const {
 
     for (const auto& sensor : sensors_) {
         if (!sensor.enabled || sensor.role == FilamentSensorRole::NONE) {
+            spdlog::trace(
+                "[FilamentSensorManager] has_any_runout: skipping {} (enabled={}, role={})",
+                sensor.sensor_name, sensor.enabled, role_to_config_string(sensor.role));
             continue;
         }
 
         auto it = states_.find(sensor.klipper_name);
         if (it != states_.end() && it->second.available && !it->second.filament_detected) {
+            spdlog::warn("[FilamentSensorManager] has_any_runout: TRUE - {} ({}) has no filament",
+                         sensor.sensor_name, role_to_config_string(sensor.role));
             return true;
         }
     }
@@ -492,9 +503,17 @@ void FilamentSensorManager::update_from_status(const json& status) {
             if (state.filament_detected != old_state.filament_detected) {
                 any_changed = true;
 
-                spdlog::info("[FilamentSensorManager] Sensor {} state changed: {} -> {}",
-                             sensor.sensor_name, old_state.filament_detected ? "detected" : "empty",
-                             state.filament_detected ? "detected" : "empty");
+                // Log at WARN if this is a runout (filament gone) on an active sensor
+                if (!state.filament_detected && sensor.role != FilamentSensorRole::NONE &&
+                    sensor.enabled) {
+                    spdlog::warn("[FilamentSensorManager] RUNOUT: {} ({}) filament gone",
+                                 sensor.sensor_name, role_to_config_string(sensor.role));
+                } else {
+                    spdlog::info("[FilamentSensorManager] Sensor {} state changed: {} -> {}",
+                                 sensor.sensor_name,
+                                 old_state.filament_detected ? "detected" : "empty",
+                                 state.filament_detected ? "detected" : "empty");
+                }
 
                 // Queue notification for after lock release
                 Notification notif;
@@ -676,7 +695,15 @@ void FilamentSensorManager::update_subjects() {
     lv_subject_set_int(&entry_detected_, get_role_value(FilamentSensorRole::ENTRY));
 
     // Update aggregate subjects
-    lv_subject_set_int(&any_runout_, has_any_runout() ? 1 : 0);
+    // Suppress any_runout during startup grace period to avoid false modal triggers
+    // (Moonraker may report sensors as "empty" before Klipper fully initializes)
+    bool in_grace = is_in_startup_grace_period();
+    int any_runout_value = (in_grace || !has_any_runout()) ? 0 : 1;
+    if (in_grace && has_any_runout()) {
+        spdlog::info(
+            "[FilamentSensorManager] Suppressing runout modal during startup grace period");
+    }
+    lv_subject_set_int(&any_runout_, any_runout_value);
     lv_subject_set_int(&motion_active_, is_motion_active() ? 1 : 0);
 
     spdlog::trace(
