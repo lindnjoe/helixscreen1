@@ -157,7 +157,17 @@ Trust debug output. Impossible values = bug is UPSTREAM. Ask "what ELSE?" not "d
 
 ---
 
-## MAJOR Criteria
+## Work Classification
 
-Paths: PrinterState, WebSocket/threading, shutdown, DisplayManager, XML processing
-Worktree: `git worktree add ../helixscreen-<feature> origin/main`
+| MAJOR (any = yes) | MINOR |
+|-------------------|-------|
+| New feature, 4+ files, architectural, refactoring | Single-file fix, config, docs |
+
+**MAJOR**: `/writing-plans` → worktree → test-first → delegate → `/review` → commit
+**MINOR**: No plan, no worktree, tests if behavior changes, single commit
+
+**Critical paths (always MAJOR):** PrinterState, WebSocket/threading, shutdown, DisplayManager, XML processing
+
+**Worktree:** `git worktree add ../helixscreen-<feature> origin/main`
+
+**If uncertain whether MAJOR → it is. Plan first.**
