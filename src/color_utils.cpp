@@ -75,7 +75,7 @@ std::string describe_color(uint32_t rgb) {
         hue_name = "Teal";
     } else if (h < 210.0f) {
         hue_name = "Cyan";
-    } else if (h < 240.0f) {
+    } else if (h <= 240.0f) {
         hue_name = "Blue";
     } else if (h < 260.0f) {
         hue_name = "Indigo";
