@@ -328,6 +328,9 @@ void DisplaySettingsOverlay::handle_explorer_theme_changed(int index) {
         return;
     }
 
+    // Store for passing to editor
+    preview_theme_name_ = theme_name;
+
     // Preview the theme with current dark mode setting
     theme_manager_preview(theme);
 
@@ -379,8 +382,9 @@ void DisplaySettingsOverlay::handle_theme_settings_clicked() {
     // Initialize theme preset dropdown
     init_theme_preset_dropdown(theme_explorer_overlay_);
 
-    // Remember original theme for Apply button state
+    // Remember original theme for Apply button state and preview
     original_theme_index_ = SettingsManager::instance().get_theme_index();
+    preview_theme_name_ = SettingsManager::instance().get_theme_name();
 
     // Initialize dark mode toggle to current global state
     preview_is_dark_ = theme_manager_is_dark_mode();
@@ -462,8 +466,10 @@ void DisplaySettingsOverlay::handle_edit_colors_clicked() {
     }
 
     if (theme_settings_overlay_) {
-        // Load current theme for editing
-        auto theme_name = SettingsManager::instance().get_theme_name();
+        // Load currently previewed theme for editing (or fallback to saved theme)
+        std::string theme_name =
+            !preview_theme_name_.empty() ? preview_theme_name_
+                                         : SettingsManager::instance().get_theme_name();
         get_theme_editor_overlay().load_theme(theme_name);
         ui_nav_push_overlay(theme_settings_overlay_);
     }
@@ -553,16 +559,15 @@ void DisplaySettingsOverlay::handle_preview_dark_mode_toggled(bool is_dark) {
 
     int selected_index = lv_dropdown_get_selected(dropdown);
 
-    // Load theme colors
-    std::string themes_dir = helix::get_themes_directory();
-    auto themes = helix::discover_themes(themes_dir);
+    // Load theme colors - use theme name, let loader find correct path (user or defaults)
+    auto themes = helix::discover_themes(helix::get_themes_directory());
 
     if (selected_index < 0 || selected_index >= static_cast<int>(themes.size())) {
         return;
     }
 
-    std::string filepath = themes_dir + "/" + themes[selected_index].filename + ".json";
-    helix::ThemeData theme = helix::load_theme_from_file(filepath);
+    // Pass just the theme name - load_theme_from_file() handles path resolution
+    helix::ThemeData theme = helix::load_theme_from_file(themes[selected_index].filename);
 
     if (!theme.is_valid()) {
         return;

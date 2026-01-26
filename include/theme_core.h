@@ -70,13 +70,14 @@ lv_theme_t* theme_core_init(lv_display_t* display, lv_color_t primary_color,
  * @param surface_control Control surface color for buttons/inputs
  * @param text_primary_color Primary text color
  * @param focus_color Focus ring color for accessibility
- * @param primary_color Primary/accent color for slider indicators
+ * @param primary_color Primary accent color for slider/switch knobs
+ * @param secondary_color Secondary accent color for slider/switch indicators
  * @param border_color Border color for slider tracks
  */
 void theme_core_update_colors(bool is_dark, lv_color_t screen_bg, lv_color_t card_bg,
                               lv_color_t surface_control, lv_color_t text_primary_color,
                               lv_color_t focus_color, lv_color_t primary_color,
-                              lv_color_t border_color);
+                              lv_color_t secondary_color, lv_color_t border_color);
 
 /**
  * @brief Update all theme colors for live preview

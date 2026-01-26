@@ -199,12 +199,10 @@ void ThemeEditorOverlay::cleanup() {
 // ============================================================================
 
 void ThemeEditorOverlay::load_theme(const std::string& filename) {
-    std::string themes_dir = helix::get_themes_directory();
-    std::string filepath = themes_dir + "/" + filename + ".json";
-
-    helix::ThemeData loaded = helix::load_theme_from_file(filepath);
+    // Pass just the theme name - load_theme_from_file() handles path resolution
+    helix::ThemeData loaded = helix::load_theme_from_file(filename);
     if (!loaded.is_valid()) {
-        spdlog::error("[{}] Failed to load theme from '{}'", get_name(), filepath);
+        spdlog::error("[{}] Failed to load theme '{}'", get_name(), filename);
         return;
     }
 

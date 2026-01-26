@@ -35,7 +35,7 @@
             <lv_obj width="0"
                     height="content" flex_grow="1" flex_flow="column" style_pad_all="0" style_pad_gap="#space_xs"
                     style_bg_opa="0" style_border_width="0" scrollable="false">
-              <text_small bind_text="swatch_0_desc" style_text_color="#text_muted"/>
+              <text_small text="#swatch_0_desc" style_text_color="#text_muted"/>
             </lv_obj>
           </lv_obj>
           <lv_obj width="0"
@@ -52,7 +52,7 @@
             <lv_obj width="0"
                     height="content" flex_grow="1" flex_flow="column" style_pad_all="0" style_pad_gap="#space_xs"
                     style_bg_opa="0" style_border_width="0" scrollable="false">
-              <text_small bind_text="swatch_1_desc" style_text_color="#text_muted"/>
+              <text_small text="#swatch_1_desc" style_text_color="#text_muted"/>
             </lv_obj>
           </lv_obj>
         </lv_obj>
@@ -73,7 +73,7 @@
             <lv_obj width="0"
                     height="content" flex_grow="1" flex_flow="column" style_pad_all="0" style_pad_gap="#space_xs"
                     style_bg_opa="0" style_border_width="0" scrollable="false">
-              <text_small bind_text="swatch_2_desc" style_text_color="#text_muted"/>
+              <text_small text="#swatch_2_desc" style_text_color="#text_muted"/>
             </lv_obj>
           </lv_obj>
           <lv_obj width="0"
@@ -90,7 +90,7 @@
             <lv_obj width="0"
                     height="content" flex_grow="1" flex_flow="column" style_pad_all="0" style_pad_gap="#space_xs"
                     style_bg_opa="0" style_border_width="0" scrollable="false">
-              <text_small bind_text="swatch_3_desc" style_text_color="#text_muted"/>
+              <text_small text="#swatch_3_desc" style_text_color="#text_muted"/>
             </lv_obj>
           </lv_obj>
         </lv_obj>
@@ -111,7 +111,7 @@
             <lv_obj width="0"
                     height="content" flex_grow="1" flex_flow="column" style_pad_all="0" style_pad_gap="#space_xs"
                     style_bg_opa="0" style_border_width="0" scrollable="false">
-              <text_small bind_text="swatch_4_desc" style_text_color="#text_muted"/>
+              <text_small text="#swatch_4_desc" style_text_color="#text_muted"/>
             </lv_obj>
           </lv_obj>
           <lv_obj width="0"
@@ -128,7 +128,7 @@
             <lv_obj width="0"
                     height="content" flex_grow="1" flex_flow="column" style_pad_all="0" style_pad_gap="#space_xs"
                     style_bg_opa="0" style_border_width="0" scrollable="false">
-              <text_small bind_text="swatch_5_desc" style_text_color="#text_muted"/>
+              <text_small text="#swatch_5_desc" style_text_color="#text_muted"/>
             </lv_obj>
           </lv_obj>
         </lv_obj>
@@ -149,7 +149,7 @@
             <lv_obj width="0"
                     height="content" flex_grow="1" flex_flow="column" style_pad_all="0" style_pad_gap="#space_xs"
                     style_bg_opa="0" style_border_width="0" scrollable="false">
-              <text_small bind_text="swatch_6_desc" style_text_color="#text_muted"/>
+              <text_small text="#swatch_6_desc" style_text_color="#text_muted"/>
             </lv_obj>
           </lv_obj>
           <lv_obj width="0"
@@ -166,7 +166,7 @@
             <lv_obj width="0"
                     height="content" flex_grow="1" flex_flow="column" style_pad_all="0" style_pad_gap="#space_xs"
                     style_bg_opa="0" style_border_width="0" scrollable="false">
-              <text_small bind_text="swatch_7_desc" style_text_color="#text_muted"/>
+              <text_small text="#swatch_7_desc" style_text_color="#text_muted"/>
             </lv_obj>
           </lv_obj>
         </lv_obj>
@@ -187,7 +187,7 @@
             <lv_obj width="0"
                     height="content" flex_grow="1" flex_flow="column" style_pad_all="0" style_pad_gap="#space_xs"
                     style_bg_opa="0" style_border_width="0" scrollable="false">
-              <text_small bind_text="swatch_8_desc" style_text_color="#text_muted"/>
+              <text_small text="#swatch_8_desc" style_text_color="#text_muted"/>
             </lv_obj>
           </lv_obj>
           <lv_obj width="0"
@@ -204,7 +204,7 @@
             <lv_obj width="0"
                     height="content" flex_grow="1" flex_flow="column" style_pad_all="0" style_pad_gap="#space_xs"
                     style_bg_opa="0" style_border_width="0" scrollable="false">
-              <text_small bind_text="swatch_9_desc" style_text_color="#text_muted"/>
+              <text_small text="#swatch_9_desc" style_text_color="#text_muted"/>
             </lv_obj>
           </lv_obj>
         </lv_obj>
@@ -225,7 +225,7 @@
             <lv_obj width="0"
                     height="content" flex_grow="1" flex_flow="column" style_pad_all="0" style_pad_gap="#space_xs"
                     style_bg_opa="0" style_border_width="0" scrollable="false">
-              <text_small bind_text="swatch_10_desc" style_text_color="#text_muted"/>
+              <text_small text="#swatch_10_desc" style_text_color="#text_muted"/>
             </lv_obj>
           </lv_obj>
           <lv_obj width="0"
@@ -242,7 +242,7 @@
             <lv_obj width="0"
                     height="content" flex_grow="1" flex_flow="column" style_pad_all="0" style_pad_gap="#space_xs"
                     style_bg_opa="0" style_border_width="0" scrollable="false">
-              <text_small bind_text="swatch_11_desc" style_text_color="#text_muted"/>
+              <text_small text="#swatch_11_desc" style_text_color="#text_muted"/>
             </lv_obj>
           </lv_obj>
         </lv_obj>
@@ -263,7 +263,7 @@
             <lv_obj width="0"
                     height="content" flex_grow="1" flex_flow="column" style_pad_all="0" style_pad_gap="#space_xs"
                     style_bg_opa="0" style_border_width="0" scrollable="false">
-              <text_small bind_text="swatch_12_desc" style_text_color="#text_muted"/>
+              <text_small text="#swatch_12_desc" style_text_color="#text_muted"/>
             </lv_obj>
           </lv_obj>
           <lv_obj width="0"
@@ -280,7 +280,7 @@
             <lv_obj width="0"
                     height="content" flex_grow="1" flex_flow="column" style_pad_all="0" style_pad_gap="#space_xs"
                     style_bg_opa="0" style_border_width="0" scrollable="false">
-              <text_small bind_text="swatch_13_desc" style_text_color="#text_muted"/>
+              <text_small text="#swatch_13_desc" style_text_color="#text_muted"/>
             </lv_obj>
           </lv_obj>
         </lv_obj>
@@ -301,7 +301,7 @@
             <lv_obj width="0"
                     height="content" flex_grow="1" flex_flow="column" style_pad_all="0" style_pad_gap="#space_xs"
                     style_bg_opa="0" style_border_width="0" scrollable="false">
-              <text_small bind_text="swatch_14_desc" style_text_color="#text_muted"/>
+              <text_small text="#swatch_14_desc" style_text_color="#text_muted"/>
             </lv_obj>
           </lv_obj>
           <lv_obj width="0"
@@ -318,7 +318,7 @@
             <lv_obj width="0"
                     height="content" flex_grow="1" flex_flow="column" style_pad_all="0" style_pad_gap="#space_xs"
                     style_bg_opa="0" style_border_width="0" scrollable="false">
-              <text_small bind_text="swatch_15_desc" style_text_color="#text_muted"/>
+              <text_small text="#swatch_15_desc" style_text_color="#text_muted"/>
             </lv_obj>
           </lv_obj>
         </lv_obj>

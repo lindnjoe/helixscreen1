@@ -226,6 +226,14 @@ void lvgl_log_callback(lv_log_level_t level, const char* buf) {
         msg.pop_back();
     }
 
+    // Downgrade noisy scroll coordinate warnings to debug level
+    // These fire when touch/scroll goes past screen edge - not actionable
+    bool is_scroll_boundary_warning =
+        (level == LV_LOG_LEVEL_WARN &&
+         (msg.find("which is greater than") != std::string::npos ||
+          msg.find("which is less than") != std::string::npos) &&
+         (msg.find("ver. res") != std::string::npos || msg.find("hor. res") != std::string::npos));
+
     // Route to appropriate spdlog level
     switch (level) {
     case LV_LOG_LEVEL_TRACE:
@@ -235,7 +243,11 @@ void lvgl_log_callback(lv_log_level_t level, const char* buf) {
         spdlog::info("[LVGL] {}", msg);
         break;
     case LV_LOG_LEVEL_WARN:
-        spdlog::warn("[LVGL] {}", msg);
+        if (is_scroll_boundary_warning) {
+            spdlog::debug("[LVGL] {}", msg);
+        } else {
+            spdlog::warn("[LVGL] {}", msg);
+        }
         break;
     case LV_LOG_LEVEL_ERROR:
         spdlog::error("[LVGL] {}", msg);

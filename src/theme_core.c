@@ -20,6 +20,7 @@ typedef struct {
     lv_style_t button_style;             // Default button style (grey background)
     lv_style_t dropdown_indicator_style; // Dropdown indicator font (MDI icons)
     lv_style_t checkbox_indicator_style; // Checkbox checkmark font (MDI icons)
+    lv_style_t switch_track_style;       // Switch track (OFF state background)
     lv_style_t switch_indicator_style;   // Switch checked state (accent color)
     lv_style_t switch_knob_style;        // Switch knob (handle) color
     lv_style_t focus_ring_style;         // Focus ring for accessibility (outline)
@@ -133,11 +134,13 @@ static void helix_theme_apply(lv_theme_t* theme, lv_obj_t* obj) {
 #endif
 
 #if LV_USE_SWITCH
-    // Apply accent color to switch indicator when checked
-    // LVGL defaults to cyan - we want the theme's primary/accent color
+    // Switch theming: track (OFF state), indicator (ON state), and knob
     if (lv_obj_check_type(obj, &lv_switch_class)) {
+        // Track background (OFF state) - uses border color for visibility
+        lv_obj_add_style(obj, &helix->switch_track_style, LV_PART_MAIN);
+        // Indicator (ON state) - uses secondary accent color
         lv_obj_add_style(obj, &helix->switch_indicator_style, LV_PART_INDICATOR | LV_STATE_CHECKED);
-        // Apply text_subtle color to switch knob for visibility against track
+        // Knob - uses primary accent color
         lv_obj_add_style(obj, &helix->switch_knob_style, LV_PART_KNOB);
         // Focus ring for accessibility
         lv_obj_add_style(obj, &helix->focus_ring_style, LV_STATE_FOCUSED);
@@ -176,6 +179,7 @@ lv_theme_t* theme_core_init(lv_display_t* display, lv_color_t primary_color,
         lv_style_reset(&helix_theme_instance->button_style);
         lv_style_reset(&helix_theme_instance->dropdown_indicator_style);
         lv_style_reset(&helix_theme_instance->checkbox_indicator_style);
+        lv_style_reset(&helix_theme_instance->switch_track_style);
         lv_style_reset(&helix_theme_instance->switch_indicator_style);
         lv_style_reset(&helix_theme_instance->switch_knob_style);
         lv_style_reset(&helix_theme_instance->focus_ring_style);
@@ -269,14 +273,18 @@ lv_theme_t* theme_core_init(lv_display_t* display, lv_color_t primary_color,
     lv_style_init(&helix_theme_instance->checkbox_indicator_style);
     lv_style_set_text_font(&helix_theme_instance->checkbox_indicator_style, &mdi_icons_16);
 
-    // Initialize switch indicator style with theme accent color
-    // LVGL defaults to cyan for switch - use our primary/accent color instead
-    lv_style_init(&helix_theme_instance->switch_indicator_style);
-    lv_style_set_bg_color(&helix_theme_instance->switch_indicator_style, primary_color);
+    // Initialize switch track style (OFF state background) - uses border color for visibility
+    lv_style_init(&helix_theme_instance->switch_track_style);
+    lv_style_set_bg_color(&helix_theme_instance->switch_track_style, border_color);
+    lv_style_set_bg_opa(&helix_theme_instance->switch_track_style, LV_OPA_COVER);
 
-    // Initialize switch knob style with text_primary for visibility
+    // Initialize switch indicator style (ON state) - uses secondary accent color
+    lv_style_init(&helix_theme_instance->switch_indicator_style);
+    lv_style_set_bg_color(&helix_theme_instance->switch_indicator_style, secondary_color);
+
+    // Initialize switch knob style - uses primary accent color for visibility
     lv_style_init(&helix_theme_instance->switch_knob_style);
-    lv_style_set_bg_color(&helix_theme_instance->switch_knob_style, text_primary_color);
+    lv_style_set_bg_color(&helix_theme_instance->switch_knob_style, primary_color);
 
     // Initialize focus ring style for accessibility
     // Uses outline (not border) to avoid layout shift
@@ -291,14 +299,14 @@ lv_theme_t* theme_core_init(lv_display_t* display, lv_color_t primary_color,
     lv_style_set_bg_color(&helix_theme_instance->slider_track_style, border_color);
     lv_style_set_bg_opa(&helix_theme_instance->slider_track_style, LV_OPA_COVER);
 
-    // Initialize slider indicator style (filled portion) - uses primary color
+    // Initialize slider indicator style (filled portion) - uses secondary accent color
     lv_style_init(&helix_theme_instance->slider_indicator_style);
-    lv_style_set_bg_color(&helix_theme_instance->slider_indicator_style, primary_color);
+    lv_style_set_bg_color(&helix_theme_instance->slider_indicator_style, secondary_color);
     lv_style_set_bg_opa(&helix_theme_instance->slider_indicator_style, LV_OPA_COVER);
 
-    // Initialize slider knob style - card_bg with shadow using screen_bg
+    // Initialize slider knob style - primary accent with shadow using screen_bg
     lv_style_init(&helix_theme_instance->slider_knob_style);
-    lv_style_set_bg_color(&helix_theme_instance->slider_knob_style, card_bg);
+    lv_style_set_bg_color(&helix_theme_instance->slider_knob_style, primary_color);
     lv_style_set_bg_opa(&helix_theme_instance->slider_knob_style, LV_OPA_COVER);
     lv_style_set_shadow_color(&helix_theme_instance->slider_knob_style, screen_bg);
     lv_style_set_shadow_width(&helix_theme_instance->slider_knob_style, 4);
@@ -373,7 +381,7 @@ lv_theme_t* theme_core_init(lv_display_t* display, lv_color_t primary_color,
 void theme_core_update_colors(bool is_dark, lv_color_t screen_bg, lv_color_t card_bg,
                               lv_color_t surface_control, lv_color_t text_primary_color,
                               lv_color_t focus_color, lv_color_t primary_color,
-                              lv_color_t border_color) {
+                              lv_color_t secondary_color, lv_color_t border_color) {
     if (!helix_theme_instance) {
         return;
     }
@@ -389,16 +397,18 @@ void theme_core_update_colors(bool is_dark, lv_color_t screen_bg, lv_color_t car
     lv_style_set_bg_color(&helix_theme_instance->button_style, surface_control);
     lv_style_set_text_color(&helix_theme_instance->button_style, text_primary_color);
 
-    // Update switch knob color
-    lv_style_set_bg_color(&helix_theme_instance->switch_knob_style, text_primary_color);
+    // Update switch colors (track=border, indicator=secondary, knob=primary)
+    lv_style_set_bg_color(&helix_theme_instance->switch_track_style, border_color);
+    lv_style_set_bg_color(&helix_theme_instance->switch_indicator_style, secondary_color);
+    lv_style_set_bg_color(&helix_theme_instance->switch_knob_style, primary_color);
 
     // Update focus ring color
     lv_style_set_outline_color(&helix_theme_instance->focus_ring_style, focus_color);
 
-    // Update slider styles
+    // Update slider styles (indicator=secondary, knob=primary)
     lv_style_set_bg_color(&helix_theme_instance->slider_track_style, border_color);
-    lv_style_set_bg_color(&helix_theme_instance->slider_indicator_style, primary_color);
-    lv_style_set_bg_color(&helix_theme_instance->slider_knob_style, card_bg);
+    lv_style_set_bg_color(&helix_theme_instance->slider_indicator_style, secondary_color);
+    lv_style_set_bg_color(&helix_theme_instance->slider_knob_style, primary_color);
     lv_style_set_shadow_color(&helix_theme_instance->slider_knob_style, screen_bg);
 
     // Update dropdown selected item style
@@ -487,23 +497,26 @@ void theme_core_preview_colors(bool is_dark, const char* colors[16], int32_t bor
     lv_style_set_radius(&helix_theme_instance->button_style, border_radius);
     lv_style_set_radius(&helix_theme_instance->pressed_style, border_radius);
 
-    // Update switch knob color
-    lv_style_set_bg_color(&helix_theme_instance->switch_knob_style, text_primary);
+    // Parse accent colors: colors[8]=primary, colors[9]=secondary
+    lv_color_t primary_accent = lv_color_hex(strtoul(colors[8] + 1, NULL, 16));
+    lv_color_t secondary_accent = lv_color_hex(strtoul(colors[9] + 1, NULL, 16));
 
-    // Update switch indicator with accent color (colors[8] is primary accent)
-    lv_color_t accent_color = lv_color_hex(strtoul(colors[8] + 1, NULL, 16));
-    lv_style_set_bg_color(&helix_theme_instance->switch_indicator_style, accent_color);
+    // For switch/slider track: use text_subtle (4) as approximate border color
+    lv_color_t border_approx = lv_color_hex(strtoul(colors[4] + 1, NULL, 16));
+
+    // Update switch colors (track=border, indicator=secondary, knob=primary)
+    lv_style_set_bg_color(&helix_theme_instance->switch_track_style, border_approx);
+    lv_style_set_bg_color(&helix_theme_instance->switch_indicator_style, secondary_accent);
+    lv_style_set_bg_color(&helix_theme_instance->switch_knob_style, primary_accent);
 
     // Update focus ring color (colors[15] is focus)
     lv_color_t focus_color = lv_color_hex(strtoul(colors[15] + 1, NULL, 16));
     lv_style_set_outline_color(&helix_theme_instance->focus_ring_style, focus_color);
 
-    // Update slider styles
-    // For legacy palette: use text_light (4) as approximate border color
-    lv_color_t border_approx = lv_color_hex(strtoul(colors[4] + 1, NULL, 16));
+    // Update slider styles (track=border, indicator=secondary, knob=primary)
     lv_style_set_bg_color(&helix_theme_instance->slider_track_style, border_approx);
-    lv_style_set_bg_color(&helix_theme_instance->slider_indicator_style, accent_color);
-    lv_style_set_bg_color(&helix_theme_instance->slider_knob_style, card_bg);
+    lv_style_set_bg_color(&helix_theme_instance->slider_indicator_style, secondary_accent);
+    lv_style_set_bg_color(&helix_theme_instance->slider_knob_style, primary_accent);
     lv_style_set_shadow_color(&helix_theme_instance->slider_knob_style, screen_bg);
 
     // Update dropdown selected item style

@@ -24,6 +24,8 @@
 #include "lvgl/lvgl.h"
 #include "overlay_base.h"
 
+#include <string>
+
 namespace helix::settings {
 
 /**
@@ -230,6 +232,8 @@ class DisplaySettingsOverlay : public OverlayBase {
     int original_theme_index_{-1};
     /// Current preview dark mode state
     bool preview_is_dark_{true};
+    /// Currently previewed theme name (for passing to editor)
+    std::string preview_theme_name_;
 
     /// Subject for brightness value label binding
     lv_subject_t brightness_value_subject_;

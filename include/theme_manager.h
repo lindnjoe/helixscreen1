@@ -183,6 +183,27 @@ void theme_manager_preview(const helix::ThemeData& theme);
 void theme_manager_revert_preview();
 
 /**
+ * @brief Refresh example preview elements after theme color change
+ *
+ * Updates named preview widgets (buttons, aurora dots, etc.) to reflect
+ * current theme colors. This is needed because XML inline styles like
+ * `style_bg_color="#primary"` are resolved at parse time and don't
+ * automatically update when theme colors change.
+ *
+ * Called automatically by theme_manager_preview() to update any visible
+ * preview overlays on the active screen.
+ *
+ * Named widgets updated:
+ * - example_btn_primary, example_btn_success, example_btn_warning, example_btn_danger
+ * - aurora_0, aurora_1 (danger), aurora_2 (warning), aurora_3 (success), aurora_4 (info)
+ * - preview_typography_card, preview_actions_card, preview_background (card_bg, app_bg)
+ *
+ * @param root Widget tree root to search (typically lv_screen_active())
+ * @param theme Theme data with colors to apply
+ */
+void theme_manager_refresh_preview_elements(lv_obj_t* root, const helix::ThemeData& theme);
+
+/**
  * @brief Parse hex color string to lv_color_t
  *
  * Supports both "#RRGGBB" and "RRGGBB" formats.
