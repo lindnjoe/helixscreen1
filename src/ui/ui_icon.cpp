@@ -28,7 +28,7 @@ enum class IconSize { XS, SM, MD, LG, XL };
 /**
  * Variant mapping: semantic name -> color styling
  */
-enum class IconVariant { NONE, PRIMARY, SECONDARY, ACCENT, DISABLED, SUCCESS, WARNING, ERROR };
+enum class IconVariant { NONE, PRIMARY, SECONDARY, ACCENT, DISABLED, SUCCESS, WARNING, ERROR, INFO };
 
 /**
  * Parse size string to IconSize enum
@@ -93,6 +93,8 @@ static IconVariant parse_variant(const char* variant_str) {
         return IconVariant::WARNING;
     } else if (strcmp(variant_str, "error") == 0) {
         return IconVariant::ERROR;
+    } else if (strcmp(variant_str, "info") == 0) {
+        return IconVariant::INFO;
     } else if (strcmp(variant_str, "none") == 0) {
         return IconVariant::NONE;
     }
@@ -152,6 +154,10 @@ static void apply_variant(lv_obj_t* obj, IconVariant variant) {
     case IconVariant::ERROR:
         // Error color (red) from globals.xml
         color = theme_manager_get_color("danger");
+        break;
+    case IconVariant::INFO:
+        // Info color (blue) from globals.xml
+        color = theme_manager_get_color("info");
         break;
     case IconVariant::NONE:
     default:

@@ -321,8 +321,7 @@ void DisplaySettingsOverlay::handle_explorer_theme_changed(int index) {
     }
 
     std::string theme_name = themes[index].filename;
-    std::string filepath = themes_dir + "/" + theme_name + ".json";
-    helix::ThemeData theme = helix::load_theme_from_file(filepath);
+    helix::ThemeData theme = helix::load_theme_from_file(theme_name);
 
     if (!theme.is_valid()) {
         spdlog::error("[{}] Failed to load theme '{}' for preview", get_name(), theme_name);
@@ -365,6 +364,10 @@ void DisplaySettingsOverlay::handle_theme_settings_clicked() {
         }
 
         lv_obj_add_flag(theme_explorer_overlay_, LV_OBJ_FLAG_HIDDEN);
+
+        // Register with nullptr - this overlay has no lifecycle object but we
+        // register to suppress the "pushed without lifecycle registration" warning
+        NavigationManager::instance().register_overlay_instance(theme_explorer_overlay_, nullptr);
         NavigationManager::instance().register_overlay_close_callback(
             theme_explorer_overlay_, [this]() {
                 // Revert preview to current theme on close

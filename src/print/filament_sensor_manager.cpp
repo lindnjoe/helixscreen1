@@ -391,6 +391,11 @@ FilamentSensorManager::get_sensor_state(FilamentSensorRole role) const {
 bool FilamentSensorManager::has_any_runout() const {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
 
+    // During startup grace period, state is unreliable - don't report runout
+    if (is_in_startup_grace_period()) {
+        return false;
+    }
+
     if (!master_enabled_) {
         return false;
     }

@@ -754,13 +754,18 @@ void NavigationManager::activate_initial_panel() {
 }
 
 void NavigationManager::register_overlay_instance(lv_obj_t* widget, IPanelLifecycle* overlay) {
-    if (!widget || !overlay) {
-        spdlog::error("[NavigationManager] Cannot register NULL overlay instance");
+    if (!widget) {
+        spdlog::error("[NavigationManager] Cannot register overlay with NULL widget");
         return;
     }
     overlay_instances_[widget] = overlay;
-    spdlog::debug("[NavigationManager] Registered overlay instance {} for widget {}",
-                  overlay->get_name(), (void*)widget);
+    if (overlay) {
+        spdlog::debug("[NavigationManager] Registered overlay instance {} for widget {}",
+                      overlay->get_name(), (void*)widget);
+    } else {
+        spdlog::debug("[NavigationManager] Registered overlay widget {} (no lifecycle)",
+                      (void*)widget);
+    }
 }
 
 void NavigationManager::unregister_overlay_instance(lv_obj_t* widget) {
