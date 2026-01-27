@@ -21,6 +21,19 @@ LVGL_PATCHED_FILES := \
 LIBHV_PATCHED_FILES := \
 	http/client/requests.h
 
+# ============================================================================
+# PATCH STAMP FILE - Skip checking if patches haven't changed
+# ============================================================================
+# The stamp file tracks when patches were last verified/applied.
+# Re-check only when: patch files change, submodule HEAD changes, or stamp missing.
+PATCHES_STAMP := $(BUILD_DIR)/.patches-applied
+PATCH_FILES := $(wildcard patches/*.patch)
+
+# Submodule HEAD files - changes when submodule is updated
+# Note: submodules use .git files pointing to .git/modules/<name>/
+LVGL_HEAD := .git/modules/lvgl/HEAD
+LIBHV_HEAD := .git/modules/libhv/HEAD
+
 # Reset all patched files in LVGL submodule to upstream state
 reset-patches:
 	$(ECHO) "$(YELLOW)Resetting LVGL patches to upstream state...$(RESET)"
@@ -35,11 +48,22 @@ reset-patches:
 	$(ECHO) "$(GREEN)✓ All LVGL patches reset$(RESET)"
 
 # Force reapply all patches (reset first, then apply)
-reapply-patches: reset-patches apply-patches
+reapply-patches: reset-patches force-apply-patches
 	$(ECHO) "$(GREEN)✓ All patches reapplied$(RESET)"
 
-# Apply LVGL patches if not already applied
-apply-patches:
+# apply-patches: File-based target that skips if stamp is current
+# Dependencies: patch files + submodule HEADs (re-run if submodule updated)
+apply-patches: $(PATCHES_STAMP)
+
+# Force patch application (used by reapply-patches)
+.PHONY: force-apply-patches
+force-apply-patches:
+	@rm -f $(PATCHES_STAMP)
+	@$(MAKE) $(PATCHES_STAMP)
+
+# The actual stamp file - only rebuilt when patches or submodules change
+$(PATCHES_STAMP): $(PATCH_FILES) $(LVGL_HEAD) $(LIBHV_HEAD)
+	@mkdir -p $(BUILD_DIR)
 	$(ECHO) "$(CYAN)Checking LVGL patches...$(RESET)"
 	$(Q)if git -C $(LVGL_DIR) diff --quiet src/drivers/sdl/lv_sdl_window.c 2>/dev/null; then \
 		echo "$(YELLOW)→ Applying LVGL SDL window patch...$(RESET)"; \
@@ -148,3 +172,4 @@ apply-patches:
 			echo "$(GREEN)✓ Patched header synced$(RESET)"; \
 		fi \
 	fi
+	@touch $@

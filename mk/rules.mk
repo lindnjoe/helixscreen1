@@ -95,13 +95,13 @@ all: apply-patches generate-fonts splash watchdog $(TARGET)
 	$(ECHO) "$(GREEN)$(BOLD)✓ Build complete!$(RESET)"
 	$(ECHO) "$(CYAN)Run with: $(YELLOW)./$(TARGET)$(RESET)"
 ifndef SKIP_COMPILE_COMMANDS
-	@# Auto-generate compile_commands.json from fragments (fast, ~1-2s)
+	@# Auto-generate compile_commands.json from fragments (fast, <1s)
 	@# Skip with SKIP_COMPILE_COMMANDS=1 (used by pre-commit to avoid LSP churn)
 	@if [ -d "$(BUILD_DIR)" ]; then \
 		CCJ_COUNT=$$(find $(BUILD_DIR) -name '*.ccj' 2>/dev/null | wc -l | tr -d ' '); \
 		if [ "$$CCJ_COUNT" -gt 0 ]; then \
 			echo "[" > compile_commands.json; \
-			find $(BUILD_DIR) -name '*.ccj' -exec cat {} \; 2>/dev/null | \
+			find $(BUILD_DIR) -name '*.ccj' -print0 2>/dev/null | xargs -0 cat | \
 				sed 's/}$$/},/' | sed '$$ s/,$$//' >> compile_commands.json; \
 			echo "]" >> compile_commands.json; \
 			echo "$(CYAN)→ compile_commands.json updated ($$CCJ_COUNT entries)$(RESET)"; \
@@ -245,30 +245,31 @@ endif
 	$(call emit-compile-command,$(CXX),$(CXXFLAGS) $(PCH_FLAGS) $(INCLUDES) $(LV_CONF),$<,$@)
 
 # Compile LVGL sources (use SUBMODULE_CFLAGS to suppress third-party warnings)
-# CRITICAL: Uses DEPFLAGS to track lv_conf.h and LVGL header changes
+# NOTE: No DEPFLAGS - LVGL is a submodule with 600+ files whose deps bloat make startup.
+# If lv_conf.h changes, do 'make clean && make' rather than tracking each header.
 # Emits .ccj fragment for incremental compile_commands.json generation
 $(OBJ_DIR)/lvgl/%.o: $(LVGL_DIR)/%.c
 	$(Q)mkdir -p $(dir $@)
 	$(ECHO) "$(CYAN)[CC]$(RESET) $<"
 ifeq ($(V),1)
-	$(Q)echo "$(YELLOW)Command:$(RESET) $(CC) $(SUBMODULE_CFLAGS) $(DEPFLAGS) $(INCLUDES) $(LV_CONF) -c $< -o $@"
+	$(Q)echo "$(YELLOW)Command:$(RESET) $(CC) $(SUBMODULE_CFLAGS) $(INCLUDES) $(LV_CONF) -c $< -o $@"
 endif
-	$(Q)$(CC) $(SUBMODULE_CFLAGS) $(DEPFLAGS) $(INCLUDES) $(LV_CONF) -c $< -o $@ || { \
+	$(Q)$(CC) $(SUBMODULE_CFLAGS) $(INCLUDES) $(LV_CONF) -c $< -o $@ || { \
 		echo "$(RED)$(BOLD)✗ Compilation failed:$(RESET) $<"; \
 		exit 1; \
 	}
 	$(call emit-compile-command,$(CC),$(SUBMODULE_CFLAGS) $(INCLUDES) $(LV_CONF),$<,$@)
 
 # Compile LVGL C++ sources (ThorVG) - use SUBMODULE_CXXFLAGS and PCH
-# CRITICAL: Uses DEPFLAGS to track lv_conf.h and LVGL header changes
+# NOTE: No DEPFLAGS - see C rule above for rationale
 # Emits .ccj fragment for incremental compile_commands.json generation
 $(OBJ_DIR)/lvgl/%.o: $(LVGL_DIR)/%.cpp $(PCH)
 	$(Q)mkdir -p $(dir $@)
 	$(ECHO) "$(CYAN)[CXX]$(RESET) $<"
 ifeq ($(V),1)
-	$(Q)echo "$(YELLOW)Command:$(RESET) $(CXX) $(SUBMODULE_CXXFLAGS) $(DEPFLAGS) $(PCH_FLAGS) $(INCLUDES) $(LV_CONF) -c $< -o $@"
+	$(Q)echo "$(YELLOW)Command:$(RESET) $(CXX) $(SUBMODULE_CXXFLAGS) $(PCH_FLAGS) $(INCLUDES) $(LV_CONF) -c $< -o $@"
 endif
-	$(Q)$(CXX) $(SUBMODULE_CXXFLAGS) $(DEPFLAGS) $(PCH_FLAGS) $(INCLUDES) $(LV_CONF) -c $< -o $@ || { \
+	$(Q)$(CXX) $(SUBMODULE_CXXFLAGS) $(PCH_FLAGS) $(INCLUDES) $(LV_CONF) -c $< -o $@ || { \
 		echo "$(RED)$(BOLD)✗ Compilation failed:$(RESET) $<"; \
 		exit 1; \
 	}
@@ -407,7 +408,7 @@ compile_commands:
 		$(MAKE) all test-build; \
 	fi
 	@echo "[" > compile_commands.json
-	@find $(BUILD_DIR) -name '*.ccj' -exec cat {} \; 2>/dev/null | \
+	@find $(BUILD_DIR) -name '*.ccj' -print0 2>/dev/null | xargs -0 cat | \
 		sed 's/}$$/},/' | \
 		sed '$$ s/,$$//' >> compile_commands.json
 	@echo "]" >> compile_commands.json
@@ -458,7 +459,5 @@ compile_commands_full:
 -include $(wildcard $(OBJ_DIR)/*/*.d)
 -include $(wildcard $(OBJ_DIR)/tests/*.d)
 -include $(wildcard $(OBJ_DIR)/tests/*/*.d)
--include $(wildcard $(OBJ_DIR)/lvgl/*.d)
--include $(wildcard $(OBJ_DIR)/lvgl/*/*.d)
--include $(wildcard $(OBJ_DIR)/lvgl/*/*/*.d)
--include $(wildcard $(OBJ_DIR)/lvgl/*/*/*/*.d)
+# NOTE: LVGL .d files intentionally NOT included - they add 150k+ lines of deps
+# that slow make startup by 4+ seconds. LVGL rarely changes; do clean build if needed.
