@@ -176,7 +176,8 @@ const TouchCalibration* TouchCalibrationPanel::get_calibration() const {
 void TouchCalibrationPanel::start_countdown_timer() {
     countdown_remaining_ = verify_timeout_seconds_;
     countdown_timer_ = lv_timer_create(countdown_timer_cb, 1000, this);
-    spdlog::debug("[TouchCalibrationPanel] Started countdown timer: {} seconds", countdown_remaining_);
+    spdlog::debug("[TouchCalibrationPanel] Started countdown timer: {} seconds",
+                  countdown_remaining_);
 
     // Immediately notify with initial value
     if (countdown_callback_) {

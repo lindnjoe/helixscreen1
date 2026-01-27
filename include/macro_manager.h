@@ -25,7 +25,7 @@
  *
  * | Macro | Purpose |
  * |-------|---------|
- * | HELIX_BED_LEVEL_IF_NEEDED | Conditional bed mesh based on mesh age |
+ * | HELIX_BED_MESH_IF_NEEDED | Conditional bed mesh based on mesh age |
  * | HELIX_CLEAN_NOZZLE | Standardized nozzle cleaning sequence |
  * | HELIX_START_PRINT | Unified start print with all pre-print options |
  *

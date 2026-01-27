@@ -96,7 +96,8 @@ WizardTouchCalibrationStep::WizardTouchCalibrationStep() {
     // Set up countdown callback to update subtitle
     panel_->set_countdown_callback([this](int remaining) {
         char buf[128];
-        snprintf(buf, sizeof(buf), "Test calibration - reverting in %ds if not accepted", remaining);
+        snprintf(buf, sizeof(buf), "Test calibration - reverting in %ds if not accepted",
+                 remaining);
         lv_subject_copy_string(&wizard_subtitle, buf);
         spdlog::debug("[{}] Countdown: {} seconds remaining", get_name(), remaining);
     });
