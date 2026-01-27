@@ -591,17 +591,21 @@ void DisplaySettingsOverlay::handle_preview_dark_mode_toggled(bool is_dark) {
         return;
     }
 
-    // Apply colors to preview cards only (not global theme)
-    // Theme color indices: 0=bg_darkest, 1=bg_dark, 4=text_light, 5=bg_light, 6=bg_lightest
-    lv_color_t card_bg =
-        is_dark ? theme_manager_parse_hex_color(theme.colors.at(1).c_str())  // bg_dark
-                : theme_manager_parse_hex_color(theme.colors.at(5).c_str()); // bg_light
-    lv_color_t app_bg =
-        is_dark ? theme_manager_parse_hex_color(theme.colors.at(0).c_str())  // bg_darkest
-                : theme_manager_parse_hex_color(theme.colors.at(6).c_str()); // bg_lightest
-    lv_color_t text_primary =
-        is_dark ? theme_manager_parse_hex_color(theme.colors.at(4).c_str())  // text_light
-                : theme_manager_parse_hex_color(theme.colors.at(0).c_str()); // bg_darkest
+    // Apply colors to preview cards using dual-palette system
+    // Select palette based on mode toggle (fall back if mode not supported)
+    const helix::ModePalette* palette = nullptr;
+    if (is_dark && theme.supports_dark()) {
+        palette = &theme.dark;
+    } else if (!is_dark && theme.supports_light()) {
+        palette = &theme.light;
+    } else {
+        // Fall back to whatever is available
+        palette = theme.supports_dark() ? &theme.dark : &theme.light;
+    }
+
+    lv_color_t card_bg = theme_manager_parse_hex_color(palette->card_bg.c_str());
+    lv_color_t app_bg = theme_manager_parse_hex_color(palette->app_bg.c_str());
+    lv_color_t text_primary = theme_manager_parse_hex_color(palette->text.c_str());
     // Update overlay background color
     lv_obj_set_style_bg_color(theme_explorer_overlay_, app_bg, LV_PART_MAIN);
 
@@ -663,6 +667,59 @@ void DisplaySettingsOverlay::handle_preview_dark_mode_toggled(bool is_dark) {
         lv_obj_t* action_btn = lv_obj_find_by_name(header, "action_button");
         if (action_btn && !lv_obj_has_flag(action_btn, LV_OBJ_FLAG_HIDDEN)) {
             update_text_colors_recursive(action_btn, text_primary);
+        }
+    }
+
+    // Update input widgets (dropdowns, textarea) - use card_alt for input backgrounds
+    lv_color_t card_alt = theme_manager_parse_hex_color(palette->card_alt.c_str());
+    lv_color_t border_color = theme_manager_parse_hex_color(palette->border.c_str());
+
+    lv_obj_t* preset_dropdown = lv_obj_find_by_name(theme_explorer_overlay_, "theme_preset_dropdown");
+    if (preset_dropdown) {
+        lv_obj_set_style_bg_color(preset_dropdown, card_alt, LV_PART_MAIN);
+        lv_obj_set_style_border_color(preset_dropdown, border_color, LV_PART_MAIN);
+        lv_obj_set_style_text_color(preset_dropdown, text_primary, LV_PART_MAIN);
+    }
+
+    lv_obj_t* preview_dropdown = lv_obj_find_by_name(theme_explorer_overlay_, "preview_dropdown");
+    if (preview_dropdown) {
+        lv_obj_set_style_bg_color(preview_dropdown, card_alt, LV_PART_MAIN);
+        lv_obj_set_style_text_color(preview_dropdown, text_primary, LV_PART_MAIN);
+    }
+
+    lv_obj_t* textarea = lv_obj_find_by_name(theme_explorer_overlay_, "preview_text_input");
+    if (textarea) {
+        lv_obj_set_style_bg_color(textarea, card_alt, LV_PART_MAIN);
+        lv_obj_set_style_text_color(textarea, text_primary, LV_PART_MAIN);
+    }
+
+    // Update slider and switch colors
+    lv_color_t primary = theme_manager_parse_hex_color(palette->primary.c_str());
+    lv_color_t secondary = theme_manager_parse_hex_color(palette->secondary.c_str());
+
+    lv_obj_t* slider = lv_obj_find_by_name(theme_explorer_overlay_, "preview_intensity_slider");
+    if (slider) {
+        lv_obj_set_style_bg_color(slider, border_color, LV_PART_MAIN);
+        lv_obj_set_style_bg_color(slider, secondary, LV_PART_INDICATOR);
+        lv_obj_set_style_bg_color(slider, primary, LV_PART_KNOB);
+        lv_obj_set_style_shadow_color(slider, app_bg, LV_PART_KNOB);
+    }
+
+    lv_obj_t* preview_switch = lv_obj_find_by_name(theme_explorer_overlay_, "preview_switch");
+    if (preview_switch) {
+        lv_obj_set_style_bg_color(preview_switch, border_color, LV_PART_MAIN);
+        lv_obj_set_style_bg_color(preview_switch, secondary, LV_PART_INDICATOR | LV_STATE_CHECKED);
+        lv_obj_set_style_bg_color(preview_switch, primary, LV_PART_KNOB);
+    }
+
+    // Update the dark mode toggle switch itself
+    lv_obj_t* dark_mode_toggle = lv_obj_find_by_name(theme_explorer_overlay_, "preview_dark_mode_toggle");
+    if (dark_mode_toggle) {
+        lv_obj_t* inner_switch = lv_obj_find_by_name(dark_mode_toggle, "switch");
+        if (inner_switch) {
+            lv_obj_set_style_bg_color(inner_switch, border_color, LV_PART_MAIN);
+            lv_obj_set_style_bg_color(inner_switch, secondary, LV_PART_INDICATOR | LV_STATE_CHECKED);
+            lv_obj_set_style_bg_color(inner_switch, primary, LV_PART_KNOB);
         }
     }
 

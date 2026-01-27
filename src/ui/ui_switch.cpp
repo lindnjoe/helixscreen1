@@ -23,7 +23,8 @@ struct SwitchSizePreset {
     int32_t width;
     int32_t height;
     int32_t knob_pad;
-    int32_t vert_margin; // Vertical margin to reserve space for knob overflow
+    int32_t vert_margin;  // Vertical margin to reserve space for knob overflow
+    int32_t horiz_margin; // Horizontal margin for knob extending past track edges
 };
 
 // Presets populated by ui_switch_init_size_presets() based on screen dimensions
@@ -43,25 +44,26 @@ static void ui_switch_init_size_presets() {
     int32_t ver_res = lv_display_get_vertical_resolution(display);
     int32_t greater_res = LV_MAX(hor_res, ver_res);
 
-    // Vertical margin calculation: knob extends ~25% beyond track on each side
-    // Formula: vert_margin = height * 0.25 (rounded up)
+    // Margin calculation: knob extends ~25% beyond track on each side
+    // vert_margin = height * 0.25 (rounded up)
+    // horiz_margin = similar, but knob extends horizontally too
     if (greater_res <= UI_BREAKPOINT_SMALL_MAX) { // ≤480: 480x320
-        SIZE_TINY = {32, 16, 1, 4};
-        SIZE_SMALL = {40, 20, 1, 5};
-        SIZE_MEDIUM = {48, 24, 2, 6};
-        SIZE_LARGE = {56, 28, 2, 7};
+        SIZE_TINY = {32, 16, 1, 4, 4};
+        SIZE_SMALL = {40, 20, 1, 5, 5};
+        SIZE_MEDIUM = {48, 24, 2, 6, 6};
+        SIZE_LARGE = {56, 28, 2, 7, 7};
         spdlog::debug("[Switch] Initialized SMALL screen presets (greater_res={}px)", greater_res);
     } else if (greater_res <= UI_BREAKPOINT_MEDIUM_MAX) { // 481-800: 800x480
-        SIZE_TINY = {48, 24, 2, 6};
-        SIZE_SMALL = {64, 32, 2, 8};
-        SIZE_MEDIUM = {80, 40, 3, 10};
-        SIZE_LARGE = {88, 44, 3, 11};
+        SIZE_TINY = {48, 24, 2, 6, 6};
+        SIZE_SMALL = {64, 32, 2, 8, 8};
+        SIZE_MEDIUM = {80, 40, 3, 10, 10};
+        SIZE_LARGE = {88, 44, 3, 11, 11};
         spdlog::debug("[Switch] Initialized MEDIUM screen presets (greater_res={}px)", greater_res);
     } else { // >800: 1024x600+
-        SIZE_TINY = {64, 32, 2, 8};
-        SIZE_SMALL = {88, 40, 3, 10};
-        SIZE_MEDIUM = {112, 48, 4, 12};
-        SIZE_LARGE = {128, 56, 4, 14};
+        SIZE_TINY = {64, 32, 2, 8, 8};
+        SIZE_SMALL = {88, 40, 3, 10, 10};
+        SIZE_MEDIUM = {112, 48, 4, 12, 12};
+        SIZE_LARGE = {128, 56, 4, 14, 14};
         spdlog::debug("[Switch] Initialized LARGE screen presets (greater_res={}px)", greater_res);
     }
 }
@@ -97,18 +99,20 @@ static void apply_size_preset(lv_obj_t* obj, const SwitchSizePreset& preset) {
     lv_obj_set_size(obj, preset.width, preset.height);
     lv_obj_set_style_pad_all(obj, preset.knob_pad, LV_PART_KNOB);
 
-    // Add vertical margin to reserve space for knob overflow
-    // This ensures parent containers with height="content" allocate enough space
+    // Add margins to reserve space for knob overflow
+    // The knob extends beyond the track on all sides
     lv_obj_set_style_margin_top(obj, preset.vert_margin, LV_PART_MAIN);
     lv_obj_set_style_margin_bottom(obj, preset.vert_margin, LV_PART_MAIN);
+    lv_obj_set_style_margin_left(obj, preset.horiz_margin, LV_PART_MAIN);
+    lv_obj_set_style_margin_right(obj, preset.horiz_margin, LV_PART_MAIN);
 
-    // Allow knob to overflow container bounds (prevents vertical clipping)
+    // Allow knob to overflow container bounds (prevents clipping)
     // NOTE: LV_OBJ_FLAG_OVERFLOW_VISIBLE when SET means "clip overflow"
     //       We need to CLEAR this flag to allow overflow
     lv_obj_remove_flag(obj, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
 
-    spdlog::trace("[Switch] Applied size preset: {}x{}, knob_pad={}, vert_margin={}", preset.width,
-                  preset.height, preset.knob_pad, preset.vert_margin);
+    spdlog::trace("[Switch] Applied size preset: {}x{}, knob_pad={}, margins=v{}/h{}", preset.width,
+                  preset.height, preset.knob_pad, preset.vert_margin, preset.horiz_margin);
 }
 
 /**
