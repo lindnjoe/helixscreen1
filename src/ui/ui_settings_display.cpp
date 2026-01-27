@@ -352,7 +352,50 @@ void DisplaySettingsOverlay::handle_explorer_theme_changed(int index) {
     // Store for passing to editor
     preview_theme_name_ = theme_name;
 
-    // Preview the theme with current dark mode setting
+    // Check theme's mode support and update toggle accordingly
+    bool supports_dark = theme.supports_dark();
+    bool supports_light = theme.supports_light();
+
+    if (theme_explorer_overlay_) {
+        lv_obj_t* dark_toggle =
+            lv_obj_find_by_name(theme_explorer_overlay_, "preview_dark_mode_toggle");
+        lv_obj_t* toggle_container =
+            lv_obj_find_by_name(theme_explorer_overlay_, "dark_mode_toggle_container");
+
+        if (dark_toggle) {
+            if (supports_dark && supports_light) {
+                // Dual-mode theme - enable toggle
+                lv_obj_remove_state(dark_toggle, LV_STATE_DISABLED);
+                if (toggle_container) {
+                    lv_obj_remove_flag(toggle_container, LV_OBJ_FLAG_HIDDEN);
+                }
+                spdlog::debug("[{}] Theme '{}' supports both modes, toggle enabled", get_name(),
+                              theme_name);
+            } else if (supports_dark) {
+                // Dark-only theme - disable toggle, force to dark
+                lv_obj_add_state(dark_toggle, LV_STATE_DISABLED);
+                lv_obj_add_state(dark_toggle, LV_STATE_CHECKED);
+                preview_is_dark_ = true;
+                if (toggle_container) {
+                    lv_obj_remove_flag(toggle_container, LV_OBJ_FLAG_HIDDEN);
+                }
+                spdlog::debug("[{}] Theme '{}' is dark-only, forcing dark mode", get_name(),
+                              theme_name);
+            } else if (supports_light) {
+                // Light-only theme - disable toggle, force to light
+                lv_obj_add_state(dark_toggle, LV_STATE_DISABLED);
+                lv_obj_remove_state(dark_toggle, LV_STATE_CHECKED);
+                preview_is_dark_ = false;
+                if (toggle_container) {
+                    lv_obj_remove_flag(toggle_container, LV_OBJ_FLAG_HIDDEN);
+                }
+                spdlog::debug("[{}] Theme '{}' is light-only, forcing light mode", get_name(),
+                              theme_name);
+            }
+        }
+    }
+
+    // Preview the theme with the (possibly forced) dark mode setting
     theme_manager_preview(theme);
 
     // Update Apply button state - enable if different from original
@@ -425,6 +468,15 @@ void DisplaySettingsOverlay::handle_theme_settings_clicked() {
             lv_obj_add_state(dark_toggle, LV_STATE_CHECKED);
         } else {
             lv_obj_remove_state(dark_toggle, LV_STATE_CHECKED);
+        }
+
+        // Set toggle enabled/disabled based on current theme's mode support
+        bool supports_dark = theme_manager_supports_dark_mode();
+        bool supports_light = theme_manager_supports_light_mode();
+        if (supports_dark && supports_light) {
+            lv_obj_remove_state(dark_toggle, LV_STATE_DISABLED);
+        } else {
+            lv_obj_add_state(dark_toggle, LV_STATE_DISABLED);
         }
     }
 
