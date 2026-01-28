@@ -47,6 +47,8 @@ def escape_attr_value(value: str) -> str:
     result = result.replace("<", "&lt;")
     result = result.replace(">", "&gt;")
     result = result.replace('"', "&quot;")
+    # Preserve newlines as &#10; (LVGL XML requires this for dropdown options)
+    result = result.replace("\n", "&#10;")
     return result
 
 
