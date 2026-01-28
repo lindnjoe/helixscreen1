@@ -51,8 +51,52 @@ std::string ColorSensorManager::category_name() const {
     return "color";
 }
 
-void ColorSensorManager::discover(const std::vector<std::string>& device_ids) {
+void ColorSensorManager::discover_from_moonraker(const nlohmann::json& moonraker_info) {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
+
+    // Extract device IDs from Moonraker TD-1 API response
+    // Expected format from /machine/td1/data:
+    // {
+    //   "result": {
+    //     "status": "ok",
+    //     "devices": {
+    //       "E6625877D318C430": { "td": null, "color": null, "scan_time": null }
+    //     }
+    //   }
+    // }
+    // OR direct devices object if already unwrapped:
+    // { "E6625877D318C430": { "td": null, "color": null, "scan_time": null } }
+    std::vector<std::string> device_ids;
+
+    // Handle nested result.devices format
+    const nlohmann::json* devices_obj = nullptr;
+    if (moonraker_info.contains("result") && moonraker_info["result"].contains("devices") &&
+        moonraker_info["result"]["devices"].is_object()) {
+        devices_obj = &moonraker_info["result"]["devices"];
+    } else if (moonraker_info.contains("devices") && moonraker_info["devices"].is_object()) {
+        // Already at result level
+        devices_obj = &moonraker_info["devices"];
+    } else if (moonraker_info.is_object() && !moonraker_info.empty()) {
+        // Check if this IS the devices object (keys are device IDs)
+        bool looks_like_devices = true;
+        for (auto it = moonraker_info.begin(); it != moonraker_info.end(); ++it) {
+            // Device entries should have td/color/scan_time fields
+            if (!it.value().is_object() ||
+                (!it.value().contains("td") && !it.value().contains("color"))) {
+                looks_like_devices = false;
+                break;
+            }
+        }
+        if (looks_like_devices) {
+            devices_obj = &moonraker_info;
+        }
+    }
+
+    if (devices_obj) {
+        for (auto it = devices_obj->begin(); it != devices_obj->end(); ++it) {
+            device_ids.push_back(it.key()); // Device ID is the key (e.g., "E6625877D318C430")
+        }
+    }
 
     spdlog::info("[ColorSensorManager] Discovering color sensors from {} device IDs",
                  device_ids.size());
@@ -158,6 +202,19 @@ void ColorSensorManager::update_from_status(const nlohmann::json& status) {
             }
         }
     }
+}
+
+void ColorSensorManager::inject_mock_sensors(std::vector<std::string>& /*objects*/,
+                                              nlohmann::json& /*config_keys*/,
+                                              nlohmann::json& moonraker_info) {
+    // Color sensors (TD-1) are discovered from Moonraker info
+    moonraker_info["components"]["td1_sensor"] = nlohmann::json::array({"default"});
+    spdlog::debug("[ColorSensorManager] Injected mock sensors: td1_sensor default");
+}
+
+void ColorSensorManager::inject_mock_status(nlohmann::json& status) {
+    // TD-1 sensor reports color and transmission distance
+    status["td1_sensor default"] = {{"color", {255, 200, 150}}, {"detected", true}};
 }
 
 void ColorSensorManager::load_config(const nlohmann::json& config) {

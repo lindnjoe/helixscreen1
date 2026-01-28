@@ -47,37 +47,39 @@ std::string AccelSensorManager::category_name() const {
     return "accelerometer";
 }
 
-void AccelSensorManager::discover(const std::vector<std::string>& klipper_objects) {
+void AccelSensorManager::discover_from_config(const nlohmann::json& config_keys) {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
 
-    spdlog::info("[AccelSensorManager] Discovering accelerometer sensors from {} objects",
-                 klipper_objects.size());
+    spdlog::info("[AccelSensorManager] Discovering accelerometer sensors from {} config keys",
+                 config_keys.size());
 
     // Clear existing sensors
     sensors_.clear();
 
-    for (const auto& klipper_name : klipper_objects) {
+    // Iterate over config keys (section names like "adxl345", "adxl345 bed", "lis2dw hotend")
+    for (auto it = config_keys.begin(); it != config_keys.end(); ++it) {
+        const std::string& config_key = it.key();
         std::string sensor_name;
         AccelSensorType type = AccelSensorType::ADXL345;
 
-        if (!parse_klipper_name(klipper_name, sensor_name, type)) {
+        if (!parse_klipper_name(config_key, sensor_name, type)) {
             continue;
         }
 
-        AccelSensorConfig config(klipper_name, sensor_name, type);
+        AccelSensorConfig config(config_key, sensor_name, type);
         sensors_.push_back(config);
 
         // Initialize state if not already present
-        if (states_.find(klipper_name) == states_.end()) {
+        if (states_.find(config_key) == states_.end()) {
             AccelSensorState state;
             state.available = true;
-            states_[klipper_name] = state;
+            states_[config_key] = state;
         } else {
-            states_[klipper_name].available = true;
+            states_[config_key].available = true;
         }
 
-        spdlog::debug("[AccelSensorManager] Discovered sensor: {} (type: {})", sensor_name,
-                      accel_type_to_string(type));
+        spdlog::debug("[AccelSensorManager] Discovered sensor from config: {} (type: {})",
+                      sensor_name, accel_type_to_string(type));
     }
 
     // Mark sensors that disappeared as unavailable
@@ -108,7 +110,8 @@ void AccelSensorManager::discover(const std::vector<std::string>& klipper_object
         lv_subject_set_int(&sensor_count_, static_cast<int>(sensors_.size()));
     }
 
-    spdlog::info("[AccelSensorManager] Discovered {} accelerometer sensors", sensors_.size());
+    spdlog::info("[AccelSensorManager] Discovered {} accelerometer sensors from config",
+                 sensors_.size());
 
     // Update subjects to reflect new state
     update_subjects();
@@ -154,6 +157,19 @@ void AccelSensorManager::update_from_status(const nlohmann::json& status) {
             }
         }
     }
+}
+
+void AccelSensorManager::inject_mock_sensors(std::vector<std::string>& /*objects*/,
+                                              nlohmann::json& config_keys,
+                                              nlohmann::json& /*moonraker_info*/) {
+    // Accelerometers are discovered from config keys (configfile.config)
+    config_keys["adxl345 bed"] = nlohmann::json::object();
+    spdlog::debug("[AccelSensorManager] Injected mock sensors: adxl345 bed");
+}
+
+void AccelSensorManager::inject_mock_status(nlohmann::json& /*status*/) {
+    // Accelerometers don't have continuous status updates
+    // They only report connected state when queried
 }
 
 void AccelSensorManager::load_config(const nlohmann::json& config) {

@@ -250,7 +250,7 @@ void SensorSettingsOverlay::populate_switch_sensors() {
 
                     auto& mgr = helix::FilamentSensorManager::instance();
                     mgr.set_sensor_enabled(klipper_name_ptr, enabled);
-                    mgr.save_config();
+                    mgr.save_config_to_file();
                     spdlog::info("[SensorSettingsOverlay] Switch sensor {} enabled: {}",
                                  klipper_name_ptr, enabled ? "ON" : "OFF");
                 },
@@ -277,7 +277,7 @@ void SensorSettingsOverlay::populate_switch_sensors() {
 
                     auto& mgr = helix::FilamentSensorManager::instance();
                     mgr.set_sensor_role(klipper_name_ptr, role);
-                    mgr.save_config();
+                    mgr.save_config_to_file();
                     spdlog::info("[SensorSettingsOverlay] Switch sensor {} role changed to {}",
                                  klipper_name_ptr, helix::role_to_config_string(role));
 
@@ -670,7 +670,7 @@ void SensorSettingsOverlay::update_all_sensor_counts() {
 void SensorSettingsOverlay::handle_switch_master_toggle_changed(bool enabled) {
     auto& mgr = helix::FilamentSensorManager::instance();
     mgr.set_master_enabled(enabled);
-    mgr.save_config();
+    mgr.save_config_to_file();
     spdlog::info("[{}] Switch sensor master enabled: {}", get_name(), enabled ? "ON" : "OFF");
 }
 

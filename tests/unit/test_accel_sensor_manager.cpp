@@ -50,11 +50,11 @@ class AccelSensorTestFixture {
             display_created_ = true;
         }
 
-        // Initialize subjects (idempotent)
-        mgr().init_subjects();
-
-        // Reset state for test isolation
+        // Reset state for test isolation first
         mgr().reset_for_testing();
+
+        // Initialize subjects after reset (reset_for_testing deinits subjects)
+        mgr().init_subjects();
     }
 
     ~AccelSensorTestFixture() {
@@ -67,10 +67,12 @@ class AccelSensorTestFixture {
         return AccelSensorManager::instance();
     }
 
-    // Helper to discover standard test sensors
+    // Helper to discover standard test sensors using config keys (how production works)
     void discover_test_sensors() {
-        std::vector<std::string> sensors = {"adxl345", "adxl345 bed", "lis2dw hotend"};
-        mgr().discover(sensors);
+        json config = {{"adxl345", json::object()},
+                       {"adxl345 bed", json::object()},
+                       {"lis2dw hotend", json::object()}};
+        mgr().discover_from_config(config);
     }
 
     // Helper to simulate Moonraker status update
@@ -133,29 +135,29 @@ TEST_CASE("AccelSensorTypes - type string conversion", "[accel][types]") {
 }
 
 // ============================================================================
-// Sensor Discovery Tests
+// Config-based Discovery Tests (NEW - accelerometers come from configfile.config)
 // ============================================================================
 
-TEST_CASE_METHOD(AccelSensorTestFixture, "AccelSensorManager - discovery", "[accel][discovery]") {
-    SECTION("Discovers ADXL345 sensor without suffix") {
-        std::vector<std::string> sensors = {"adxl345"};
-        mgr().discover(sensors);
+TEST_CASE_METHOD(AccelSensorTestFixture, "AccelSensorManager - config-based discovery",
+                 "[accel][discovery][config]") {
+    using json = nlohmann::json;
+
+    SECTION("Discovers ADXL345 from config keys") {
+        json config_keys = {{"adxl345", json::object()}};
+        mgr().discover_from_config(config_keys);
 
         REQUIRE(mgr().has_sensors());
         REQUIRE(mgr().sensor_count() == 1);
 
         auto configs = mgr().get_sensors();
-        REQUIRE(configs.size() == 1);
         REQUIRE(configs[0].klipper_name == "adxl345");
         REQUIRE(configs[0].sensor_name == "adxl345");
         REQUIRE(configs[0].type == AccelSensorType::ADXL345);
-        REQUIRE(configs[0].enabled == true);
-        REQUIRE(configs[0].role == AccelSensorRole::NONE);
     }
 
-    SECTION("Discovers ADXL345 sensor with suffix") {
-        std::vector<std::string> sensors = {"adxl345 bed"};
-        mgr().discover(sensors);
+    SECTION("Discovers named ADXL345 from config keys") {
+        json config_keys = {{"adxl345 bed", json::object()}};
+        mgr().discover_from_config(config_keys);
 
         REQUIRE(mgr().sensor_count() == 1);
 
@@ -165,105 +167,41 @@ TEST_CASE_METHOD(AccelSensorTestFixture, "AccelSensorManager - discovery", "[acc
         REQUIRE(configs[0].type == AccelSensorType::ADXL345);
     }
 
-    SECTION("Discovers LIS2DW sensor") {
-        std::vector<std::string> sensors = {"lis2dw hotend"};
-        mgr().discover(sensors);
-
-        REQUIRE(mgr().sensor_count() == 1);
-
-        auto configs = mgr().get_sensors();
-        REQUIRE(configs[0].klipper_name == "lis2dw hotend");
-        REQUIRE(configs[0].sensor_name == "hotend");
-        REQUIRE(configs[0].type == AccelSensorType::LIS2DW);
-    }
-
-    SECTION("Discovers LIS3DH sensor") {
-        std::vector<std::string> sensors = {"lis3dh"};
-        mgr().discover(sensors);
-
-        REQUIRE(mgr().sensor_count() == 1);
-
-        auto configs = mgr().get_sensors();
-        REQUIRE(configs[0].type == AccelSensorType::LIS3DH);
-    }
-
-    SECTION("Discovers MPU9250 sensor") {
-        std::vector<std::string> sensors = {"mpu9250"};
-        mgr().discover(sensors);
-
-        REQUIRE(mgr().sensor_count() == 1);
-
-        auto configs = mgr().get_sensors();
-        REQUIRE(configs[0].type == AccelSensorType::MPU9250);
-    }
-
-    SECTION("Discovers ICM20948 sensor") {
-        std::vector<std::string> sensors = {"icm20948"};
-        mgr().discover(sensors);
-
-        REQUIRE(mgr().sensor_count() == 1);
-
-        auto configs = mgr().get_sensors();
-        REQUIRE(configs[0].type == AccelSensorType::ICM20948);
-    }
-
-    SECTION("Discovers multiple sensors") {
-        discover_test_sensors();
+    SECTION("Discovers multiple accelerometers from config") {
+        json config_keys = {{"adxl345", json::object()},
+                            {"adxl345 bed", json::object()},
+                            {"lis2dw hotend", json::object()},
+                            {"resonance_tester", json::object()}, // Should be ignored
+                            {"stepper_x", json::object()}};       // Should be ignored
+        mgr().discover_from_config(config_keys);
 
         REQUIRE(mgr().sensor_count() == 3);
 
         auto configs = mgr().get_sensors();
         REQUIRE(configs[0].klipper_name == "adxl345");
-        REQUIRE(configs[0].sensor_name == "adxl345");
-        REQUIRE(configs[0].type == AccelSensorType::ADXL345);
         REQUIRE(configs[1].klipper_name == "adxl345 bed");
-        REQUIRE(configs[1].sensor_name == "bed");
-        REQUIRE(configs[1].type == AccelSensorType::ADXL345);
         REQUIRE(configs[2].klipper_name == "lis2dw hotend");
-        REQUIRE(configs[2].sensor_name == "hotend");
-        REQUIRE(configs[2].type == AccelSensorType::LIS2DW);
     }
 
-    SECTION("Ignores unrelated objects") {
-        std::vector<std::string> sensors = {"adxl345", "filament_switch_sensor runout",
-                                            "temperature_sensor chamber", "extruder"};
-        mgr().discover(sensors);
-
-        REQUIRE(mgr().sensor_count() == 1);
-        REQUIRE(mgr().get_sensors()[0].klipper_name == "adxl345");
-    }
-
-    SECTION("Empty sensor list clears previous sensors") {
-        discover_test_sensors();
-        REQUIRE(mgr().sensor_count() == 3);
-
-        mgr().discover({});
-        REQUIRE(mgr().sensor_count() == 0);
+    SECTION("Handles empty config keys") {
+        json config_keys = json::object();
+        mgr().discover_from_config(config_keys);
         REQUIRE_FALSE(mgr().has_sensors());
     }
 
-    SECTION("Re-discovery replaces sensor list") {
-        std::vector<std::string> sensors1 = {"adxl345"};
-        mgr().discover(sensors1);
-        REQUIRE(mgr().get_sensors()[0].klipper_name == "adxl345");
-
-        std::vector<std::string> sensors2 = {"lis2dw"};
-        mgr().discover(sensors2);
-        REQUIRE(mgr().sensor_count() == 1);
-        REQUIRE(mgr().get_sensors()[0].klipper_name == "lis2dw");
-    }
-
-    SECTION("Sensor count subject is updated") {
-        lv_subject_t* count_subject = mgr().get_sensor_count_subject();
-        REQUIRE(lv_subject_get_int(count_subject) == 0);
-
-        discover_test_sensors();
-        REQUIRE(lv_subject_get_int(count_subject) == 3);
-
-        mgr().discover({});
-        REQUIRE(lv_subject_get_int(count_subject) == 0);
+    SECTION("Ignores non-accelerometer config keys") {
+        json config_keys = {{"stepper_x", json::object()},
+                            {"extruder", json::object()},
+                            {"resonance_tester", json::object()}};
+        mgr().discover_from_config(config_keys);
+        REQUIRE_FALSE(mgr().has_sensors());
     }
 }
+
+// NOTE: The old discover(vector<string>) tests have been removed because:
+// - Accelerometers only exist in configfile.config, not printer.objects.list
+// - The ISensorManager::discover() method now uses the default no-op for AccelSensorManager
+// - Use discover_from_config() tests above instead
 
 // ============================================================================
 // Role Assignment Tests

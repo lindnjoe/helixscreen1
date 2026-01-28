@@ -44,6 +44,55 @@ FilamentSensorManager::FilamentSensorManager() : startup_time_(std::chrono::stea
 FilamentSensorManager::~FilamentSensorManager() = default;
 
 // ============================================================================
+// ISensorManager Interface
+// ============================================================================
+
+std::string FilamentSensorManager::category_name() const {
+    return "filament_switch";
+}
+
+void FilamentSensorManager::discover(const std::vector<std::string>& klipper_objects) {
+    // Filter to only filament sensor objects and delegate to discover_sensors
+    std::vector<std::string> sensor_names;
+    for (const auto& obj : klipper_objects) {
+        // Match filament_switch_sensor and filament_motion_sensor prefixes
+        if (obj.rfind("filament_switch_sensor ", 0) == 0 ||
+            obj.rfind("filament_motion_sensor ", 0) == 0) {
+            sensor_names.push_back(obj);
+        }
+    }
+    discover_sensors(sensor_names);
+}
+
+void FilamentSensorManager::load_config(const nlohmann::json& /*config*/) {
+    // This manager uses legacy Config-based persistence
+    // Delegate to the file-based config loader
+    load_config_from_file();
+}
+
+nlohmann::json FilamentSensorManager::save_config() const {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
+
+    // Build and return the config JSON
+    // Also save to file for legacy compatibility
+    nlohmann::json config;
+    config["master_enabled"] = master_enabled_;
+
+    nlohmann::json sensors_array = nlohmann::json::array();
+    for (const auto& sensor : sensors_) {
+        nlohmann::json sensor_json;
+        sensor_json["klipper_name"] = sensor.klipper_name;
+        sensor_json["role"] = role_to_config_string(sensor.role);
+        sensor_json["enabled"] = sensor.enabled;
+        sensor_json["type"] = type_to_config_string(sensor.type);
+        sensors_array.push_back(sensor_json);
+    }
+    config["sensors"] = sensors_array;
+
+    return config;
+}
+
+// ============================================================================
 // Initialization
 // ============================================================================
 
@@ -184,10 +233,10 @@ size_t FilamentSensorManager::sensor_count() const {
 // Configuration
 // ============================================================================
 
-void FilamentSensorManager::load_config() {
+void FilamentSensorManager::load_config_from_file() {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
 
-    spdlog::debug("[FilamentSensorManager] Loading config");
+    spdlog::debug("[FilamentSensorManager] Loading config from file");
 
     Config* config = Config::get_instance();
     if (!config) {
@@ -245,10 +294,10 @@ void FilamentSensorManager::load_config() {
     }
 }
 
-void FilamentSensorManager::save_config() {
+void FilamentSensorManager::save_config_to_file() {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
 
-    spdlog::debug("[FilamentSensorManager] Saving config");
+    spdlog::debug("[FilamentSensorManager] Saving config to file");
 
     Config* config = Config::get_instance();
     if (!config) {
@@ -278,7 +327,7 @@ void FilamentSensorManager::save_config() {
     config->get_json(base_path) = fs_config;
     config->save();
 
-    spdlog::info("[FilamentSensorManager] Config saved");
+    spdlog::info("[FilamentSensorManager] Config saved to file");
 }
 
 void FilamentSensorManager::set_sensor_role(const std::string& klipper_name,
@@ -579,6 +628,22 @@ void FilamentSensorManager::update_from_status(const json& status) {
     }
 }
 
+void FilamentSensorManager::inject_mock_sensors(std::vector<std::string>& objects,
+                                                 nlohmann::json& /*config_keys*/,
+                                                 nlohmann::json& /*moonraker_info*/) {
+    // Filament sensors are discovered from Klipper objects
+    objects.emplace_back("filament_switch_sensor runout");
+    objects.emplace_back("filament_switch_sensor toolhead");
+    spdlog::debug(
+        "[FilamentSensorManager] Injected mock sensors: filament_switch_sensor runout, toolhead");
+}
+
+void FilamentSensorManager::inject_mock_status(nlohmann::json& status) {
+    // Filament switch sensors report filament_detected and enabled state
+    status["filament_switch_sensor runout"] = {{"filament_detected", true}, {"enabled", true}};
+    status["filament_switch_sensor toolhead"] = {{"filament_detected", true}, {"enabled", true}};
+}
+
 void FilamentSensorManager::set_state_change_callback(StateChangeCallback callback) {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
     state_change_callback_ = std::move(callback);
@@ -764,8 +829,9 @@ void FilamentSensorManager::reset_for_testing() {
     // Enable sync mode for testing (avoids lv_async_call)
     sync_mode_ = true;
 
-    // Reset startup time so tests can verify toast suppression behavior
-    startup_time_ = std::chrono::steady_clock::now();
+    // Reset startup time to 10 seconds in the past so the 2-second grace period
+    // is already expired in tests (avoids flaky timing-dependent failures)
+    startup_time_ = std::chrono::steady_clock::now() - std::chrono::seconds(10);
 
     // Reset subjects if initialized
     if (subjects_initialized_) {

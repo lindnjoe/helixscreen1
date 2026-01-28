@@ -66,13 +66,25 @@ class AccelSensorManager : public ISensorManager {
     [[nodiscard]] std::string category_name() const override;
 
     /**
-     * @brief Discover sensors from Klipper objects list
+     * @brief Discover sensors from Klipper config keys (configfile.config)
+     *
+     * Accelerometers don't appear in printer.objects.list - they only exist
+     * in configfile.config because they have no get_status() method.
+     *
+     * @param config_keys JSON object where keys are config section names
      * @note MUST be called from main LVGL thread (updates subjects directly)
      */
-    void discover(const std::vector<std::string>& klipper_objects) override;
+    void discover_from_config(const nlohmann::json& config_keys) override;
 
     /// @brief Update state from Moonraker status JSON
     void update_from_status(const nlohmann::json& status) override;
+
+    /// @brief Inject mock sensor objects for testing UI
+    void inject_mock_sensors(std::vector<std::string>& objects, nlohmann::json& config_keys,
+                             nlohmann::json& moonraker_info) override;
+
+    /// @brief Inject mock status data for testing UI
+    void inject_mock_status(nlohmann::json& status) override;
 
     /**
      * @brief Load sensor configuration from JSON

@@ -366,7 +366,7 @@ void WizardFilamentSensorSelectStep::auto_configure_single_sensor() {
             spdlog::info("[{}] Auto-configuring single sensor '{}' as RUNOUT", get_name(),
                          sensor.sensor_name);
             sensor_mgr.set_sensor_role(sensor.klipper_name, helix::FilamentSensorRole::RUNOUT);
-            sensor_mgr.save_config();
+            sensor_mgr.save_config_to_file();
             return;
         }
     }
@@ -398,7 +398,7 @@ void WizardFilamentSensorSelectStep::cleanup() {
     }
 
     // Persist to disk
-    sensor_mgr.save_config();
+    sensor_mgr.save_config_to_file();
 
     // Reset UI references
     screen_root_ = nullptr;

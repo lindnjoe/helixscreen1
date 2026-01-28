@@ -10,12 +10,16 @@ class MockSensorManager : public ISensorManager {
   public:
     std::string name_;
     bool discovered_ = false;
+    bool discovered_from_config_ = false;
+    bool discovered_from_moonraker_ = false;
     bool status_updated_ = false;
     bool config_loaded_ = false;
     nlohmann::json last_status_;
     nlohmann::json last_config_;
     nlohmann::json saved_config_;
     std::vector<std::string> discovered_objects_;
+    nlohmann::json last_config_keys_;
+    nlohmann::json last_moonraker_info_;
 
     explicit MockSensorManager(std::string name) : name_(std::move(name)) {}
 
@@ -26,6 +30,16 @@ class MockSensorManager : public ISensorManager {
     void discover(const std::vector<std::string>& objects) override {
         discovered_ = true;
         discovered_objects_ = objects;
+    }
+
+    void discover_from_config(const nlohmann::json& config_keys) override {
+        discovered_from_config_ = true;
+        last_config_keys_ = config_keys;
+    }
+
+    void discover_from_moonraker(const nlohmann::json& moonraker_info) override {
+        discovered_from_moonraker_ = true;
+        last_moonraker_info_ = moonraker_info;
     }
 
     void update_from_status(const nlohmann::json& status) override {
@@ -213,4 +227,79 @@ TEST_CASE("SensorRegistry save_config handles empty registry", "[sensors]") {
 
     REQUIRE(result.contains("sensors"));
     REQUIRE(result["sensors"].empty());
+}
+
+// ============================================================================
+// Multi-Source Discovery Tests
+// ============================================================================
+
+TEST_CASE("SensorRegistry discover_all calls all three discovery methods",
+          "[sensors][multi-source]") {
+    SensorRegistry registry;
+
+    auto mock = std::make_unique<MockSensorManager>("test");
+    auto* mock_ptr = mock.get();
+    registry.register_manager("test", std::move(mock));
+
+    std::vector<std::string> objects = {"filament_switch_sensor foo"};
+    nlohmann::json config_keys = {{"adxl345", {}}, {"adxl345 bed", {}}};
+    nlohmann::json moonraker_info = {{"td1_devices", {"td1_lane0", "td1_lane1"}}};
+
+    registry.discover_all(objects, config_keys, moonraker_info);
+
+    REQUIRE(mock_ptr->discovered_);
+    REQUIRE(mock_ptr->discovered_from_config_);
+    REQUIRE(mock_ptr->discovered_from_moonraker_);
+    REQUIRE(mock_ptr->discovered_objects_ == objects);
+    REQUIRE(mock_ptr->last_config_keys_ == config_keys);
+    REQUIRE(mock_ptr->last_moonraker_info_ == moonraker_info);
+}
+
+TEST_CASE("SensorRegistry discover_all with optional moonraker_info", "[sensors][multi-source]") {
+    SensorRegistry registry;
+
+    auto mock = std::make_unique<MockSensorManager>("test");
+    auto* mock_ptr = mock.get();
+    registry.register_manager("test", std::move(mock));
+
+    std::vector<std::string> objects = {"probe"};
+    nlohmann::json config_keys = {{"resonance_tester", {}}};
+
+    // Call without moonraker_info (uses default empty object)
+    registry.discover_all(objects, config_keys);
+
+    REQUIRE(mock_ptr->discovered_);
+    REQUIRE(mock_ptr->discovered_from_config_);
+    REQUIRE(mock_ptr->discovered_from_moonraker_);
+    REQUIRE(mock_ptr->last_moonraker_info_.empty());
+}
+
+TEST_CASE("ISensorManager default discover methods are no-ops", "[sensors][interface]") {
+    // This tests that managers not implementing new methods still work
+    // The default implementations should be empty no-ops
+
+    class MinimalManager : public ISensorManager {
+      public:
+        std::string category_name() const override {
+            return "minimal";
+        }
+        // Note: NOT overriding discover_from_config or discover_from_moonraker
+        void discover(const std::vector<std::string>& /*objects*/) override {}
+        void update_from_status(const nlohmann::json& /*status*/) override {}
+        void load_config(const nlohmann::json& /*config*/) override {}
+        nlohmann::json save_config() const override {
+            return {};
+        }
+    };
+
+    SensorRegistry registry;
+    auto manager = std::make_unique<MinimalManager>();
+    registry.register_manager("minimal", std::move(manager));
+
+    // Should not crash - default implementations are no-ops
+    std::vector<std::string> objects;
+    nlohmann::json config_keys = {{"some_key", {}}};
+    nlohmann::json moonraker_info = {{"some_data", 42}};
+
+    REQUIRE_NOTHROW(registry.discover_all(objects, config_keys, moonraker_info));
 }

@@ -7,7 +7,7 @@
  *
  * Tests cover:
  * - Type helpers (role string conversion)
- * - Sensor discovery from device IDs (td1_lane0, td1_lane1)
+ * - Sensor discovery from device IDs (TD1_DEVICE_001, TD1_DEVICE_002)
  * - Role assignment (FILAMENT_COLOR)
  * - State updates from Moonraker TD-1 status JSON
  * - Subject value correctness for UI binding
@@ -50,11 +50,11 @@ class ColorSensorTestFixture {
             display_created_ = true;
         }
 
-        // Initialize subjects (idempotent)
-        mgr().init_subjects();
-
-        // Reset state for test isolation
+        // Reset state for test isolation first
         mgr().reset_for_testing();
+
+        // Initialize subjects after reset
+        mgr().init_subjects();
     }
 
     ~ColorSensorTestFixture() {
@@ -67,10 +67,17 @@ class ColorSensorTestFixture {
         return ColorSensorManager::instance();
     }
 
-    // Helper to discover standard test sensors
+    // Helper to discover standard test sensors using Moonraker API format
+    // Real device IDs are serial numbers like "E6625877D318C430"
     void discover_test_sensors() {
-        std::vector<std::string> devices = {"td1_lane0", "td1_lane1"};
-        mgr().discover(devices);
+        json moonraker_response = {
+            {"result",
+             {{"status", "ok"},
+              {"devices",
+               {{"TD1_DEVICE_001", {{"td", nullptr}, {"color", nullptr}, {"scan_time", nullptr}}},
+                {"TD1_DEVICE_002",
+                 {{"td", nullptr}, {"color", nullptr}, {"scan_time", nullptr}}}}}}}};
+        mgr().discover_from_moonraker(moonraker_response);
     }
 
     // Helper to simulate Moonraker status update
@@ -115,21 +122,27 @@ TEST_CASE("ColorSensorTypes - role string conversion", "[color][types]") {
 }
 
 // ============================================================================
-// Sensor Discovery Tests
+// Moonraker-based Discovery Tests
 // ============================================================================
 
 TEST_CASE_METHOD(ColorSensorTestFixture, "ColorSensorManager - discovery", "[color][discovery]") {
-    SECTION("Discovers TD-1 device") {
-        std::vector<std::string> devices = {"td1_lane0"};
-        mgr().discover(devices);
+    SECTION("Discovers TD-1 device from Moonraker API response") {
+        // Real Moonraker /machine/td1/data response format
+        json moonraker_response = {
+            {"result",
+             {{"status", "ok"},
+              {"devices",
+               {{"E6625877D318C430",
+                 {{"td", nullptr}, {"color", nullptr}, {"scan_time", nullptr}}}}}}}};
+
+        mgr().discover_from_moonraker(moonraker_response);
 
         REQUIRE(mgr().has_sensors());
         REQUIRE(mgr().sensor_count() == 1);
 
         auto configs = mgr().get_sensors();
         REQUIRE(configs.size() == 1);
-        REQUIRE(configs[0].device_id == "td1_lane0");
-        REQUIRE(configs[0].sensor_name == "TD-1 Lane 0");
+        REQUIRE(configs[0].device_id == "E6625877D318C430");
         REQUIRE(configs[0].enabled == true);
         REQUIRE(configs[0].role == ColorSensorRole::NONE);
     }
@@ -140,28 +153,47 @@ TEST_CASE_METHOD(ColorSensorTestFixture, "ColorSensorManager - discovery", "[col
         REQUIRE(mgr().sensor_count() == 2);
 
         auto configs = mgr().get_sensors();
-        REQUIRE(configs[0].device_id == "td1_lane0");
-        REQUIRE(configs[1].device_id == "td1_lane1");
+        // Device IDs are the serial numbers from the test helper
+        REQUIRE(configs[0].device_id == "TD1_DEVICE_001");
+        REQUIRE(configs[1].device_id == "TD1_DEVICE_002");
     }
 
-    SECTION("Empty device list clears previous sensors") {
+    SECTION("Handles direct devices object format") {
+        // Some callers may already unwrap the result
+        json devices_only = {
+            {"E6625877D318C430", {{"td", 1.5f}, {"color", "#FF5733"}, {"scan_time", 12345}}}};
+
+        mgr().discover_from_moonraker(devices_only);
+
+        REQUIRE(mgr().sensor_count() == 1);
+        REQUIRE(mgr().get_sensors()[0].device_id == "E6625877D318C430");
+    }
+
+    SECTION("Empty devices clears previous sensors") {
         discover_test_sensors();
         REQUIRE(mgr().sensor_count() == 2);
 
-        mgr().discover({});
+        json empty_response = {{"result", {{"status", "ok"}, {"devices", json::object()}}}};
+        mgr().discover_from_moonraker(empty_response);
+
         REQUIRE(mgr().sensor_count() == 0);
         REQUIRE_FALSE(mgr().has_sensors());
     }
 
     SECTION("Re-discovery replaces sensor list") {
-        std::vector<std::string> devices1 = {"td1_lane0"};
-        mgr().discover(devices1);
-        REQUIRE(mgr().get_sensors()[0].device_id == "td1_lane0");
+        json response1 = {{"result",
+                           {{"status", "ok"},
+                            {"devices", {{"DEVICE_A", {{"td", nullptr}, {"color", nullptr}}}}}}}};
+        mgr().discover_from_moonraker(response1);
+        REQUIRE(mgr().get_sensors()[0].device_id == "DEVICE_A");
 
-        std::vector<std::string> devices2 = {"td1_lane1"};
-        mgr().discover(devices2);
+        json response2 = {{"result",
+                           {{"status", "ok"},
+                            {"devices", {{"DEVICE_B", {{"td", nullptr}, {"color", nullptr}}}}}}}};
+        mgr().discover_from_moonraker(response2);
+
         REQUIRE(mgr().sensor_count() == 1);
-        REQUIRE(mgr().get_sensors()[0].device_id == "td1_lane1");
+        REQUIRE(mgr().get_sensors()[0].device_id == "DEVICE_B");
     }
 
     SECTION("Sensor count subject is updated") {
@@ -171,8 +203,19 @@ TEST_CASE_METHOD(ColorSensorTestFixture, "ColorSensorManager - discovery", "[col
         discover_test_sensors();
         REQUIRE(lv_subject_get_int(count_subject) == 2);
 
-        mgr().discover({});
+        json empty_response = {{"result", {{"status", "ok"}, {"devices", json::object()}}}};
+        mgr().discover_from_moonraker(empty_response);
         REQUIRE(lv_subject_get_int(count_subject) == 0);
+    }
+
+    SECTION("Handles empty/invalid moonraker_info gracefully") {
+        // Empty object
+        mgr().discover_from_moonraker(json::object());
+        REQUIRE_FALSE(mgr().has_sensors());
+
+        // Missing devices key
+        mgr().discover_from_moonraker({{"result", {{"status", "ok"}}}});
+        REQUIRE_FALSE(mgr().has_sensors());
     }
 }
 
@@ -184,38 +227,38 @@ TEST_CASE_METHOD(ColorSensorTestFixture, "ColorSensorManager - role assignment",
     discover_test_sensors();
 
     SECTION("Can set FILAMENT_COLOR role") {
-        mgr().set_sensor_role("td1_lane0", ColorSensorRole::FILAMENT_COLOR);
+        mgr().set_sensor_role("TD1_DEVICE_001", ColorSensorRole::FILAMENT_COLOR);
 
         auto configs = mgr().get_sensors();
         auto it = std::find_if(configs.begin(), configs.end(),
-                               [](const auto& c) { return c.device_id == "td1_lane0"; });
+                               [](const auto& c) { return c.device_id == "TD1_DEVICE_001"; });
         REQUIRE(it != configs.end());
         REQUIRE(it->role == ColorSensorRole::FILAMENT_COLOR);
     }
 
     SECTION("Role assignment is unique - assigning same role clears previous") {
-        mgr().set_sensor_role("td1_lane0", ColorSensorRole::FILAMENT_COLOR);
-        mgr().set_sensor_role("td1_lane1", ColorSensorRole::FILAMENT_COLOR);
+        mgr().set_sensor_role("TD1_DEVICE_001", ColorSensorRole::FILAMENT_COLOR);
+        mgr().set_sensor_role("TD1_DEVICE_002", ColorSensorRole::FILAMENT_COLOR);
 
         auto configs = mgr().get_sensors();
 
         auto lane0_it = std::find_if(configs.begin(), configs.end(),
-                                     [](const auto& c) { return c.device_id == "td1_lane0"; });
+                                     [](const auto& c) { return c.device_id == "TD1_DEVICE_001"; });
         REQUIRE(lane0_it->role == ColorSensorRole::NONE);
 
         auto lane1_it = std::find_if(configs.begin(), configs.end(),
-                                     [](const auto& c) { return c.device_id == "td1_lane1"; });
+                                     [](const auto& c) { return c.device_id == "TD1_DEVICE_002"; });
         REQUIRE(lane1_it->role == ColorSensorRole::FILAMENT_COLOR);
     }
 
     SECTION("Can assign NONE without affecting other sensors") {
-        mgr().set_sensor_role("td1_lane0", ColorSensorRole::FILAMENT_COLOR);
+        mgr().set_sensor_role("TD1_DEVICE_001", ColorSensorRole::FILAMENT_COLOR);
 
-        mgr().set_sensor_role("td1_lane0", ColorSensorRole::NONE);
+        mgr().set_sensor_role("TD1_DEVICE_001", ColorSensorRole::NONE);
 
         auto configs = mgr().get_sensors();
         auto it = std::find_if(configs.begin(), configs.end(),
-                               [](const auto& c) { return c.device_id == "td1_lane0"; });
+                               [](const auto& c) { return c.device_id == "TD1_DEVICE_001"; });
         REQUIRE(it->role == ColorSensorRole::NONE);
     }
 
@@ -234,7 +277,7 @@ TEST_CASE_METHOD(ColorSensorTestFixture, "ColorSensorManager - role assignment",
 
 TEST_CASE_METHOD(ColorSensorTestFixture, "ColorSensorManager - state updates", "[color][state]") {
     discover_test_sensors();
-    mgr().set_sensor_role("td1_lane0", ColorSensorRole::FILAMENT_COLOR);
+    mgr().set_sensor_role("TD1_DEVICE_001", ColorSensorRole::FILAMENT_COLOR);
 
     SECTION("Parses color_hex and transmission_distance from status JSON") {
         auto state = mgr().get_sensor_state(ColorSensorRole::FILAMENT_COLOR);
@@ -243,8 +286,8 @@ TEST_CASE_METHOD(ColorSensorTestFixture, "ColorSensorManager - state updates", "
         REQUIRE(state->transmission_distance == 0.0f);
 
         json status;
-        status["td1_lane0"]["color"] = "#FF5733";
-        status["td1_lane0"]["td"] = 1.25f;
+        status["TD1_DEVICE_001"]["color"] = "#FF5733";
+        status["TD1_DEVICE_001"]["td"] = 1.25f;
         mgr().update_from_status(status);
 
         state = mgr().get_sensor_state(ColorSensorRole::FILAMENT_COLOR);
@@ -285,40 +328,40 @@ TEST_CASE_METHOD(ColorSensorTestFixture, "ColorSensorManager - subject values",
     }
 
     SECTION("Color hex subject updates correctly") {
-        mgr().set_sensor_role("td1_lane0", ColorSensorRole::FILAMENT_COLOR);
+        mgr().set_sensor_role("TD1_DEVICE_001", ColorSensorRole::FILAMENT_COLOR);
 
         // After assignment, should show empty since state defaults to empty
         REQUIRE(std::string(lv_subject_get_string(mgr().get_color_hex_subject())) == "");
 
         // Update state with color
-        update_sensor_state("td1_lane0", "#FF5733", 1.25f);
+        update_sensor_state("TD1_DEVICE_001", "#FF5733", 1.25f);
         REQUIRE(std::string(lv_subject_get_string(mgr().get_color_hex_subject())) == "#FF5733");
 
         // Update with different color
-        update_sensor_state("td1_lane0", "#00FF00", 2.5f);
+        update_sensor_state("TD1_DEVICE_001", "#00FF00", 2.5f);
         REQUIRE(std::string(lv_subject_get_string(mgr().get_color_hex_subject())) == "#00FF00");
     }
 
     SECTION("TD value subject updates correctly (TD x 100)") {
-        mgr().set_sensor_role("td1_lane0", ColorSensorRole::FILAMENT_COLOR);
+        mgr().set_sensor_role("TD1_DEVICE_001", ColorSensorRole::FILAMENT_COLOR);
 
         // After assignment, should show 0 since TD defaults to 0.0
         REQUIRE(lv_subject_get_int(mgr().get_td_value_subject()) == 0);
 
         // Update state with TD value 1.25
-        update_sensor_state("td1_lane0", "#FF5733", 1.25f);
+        update_sensor_state("TD1_DEVICE_001", "#FF5733", 1.25f);
         REQUIRE(lv_subject_get_int(mgr().get_td_value_subject()) == 125);
 
         // Update with different TD value
-        update_sensor_state("td1_lane0", "#00FF00", 2.75f);
+        update_sensor_state("TD1_DEVICE_001", "#00FF00", 2.75f);
         REQUIRE(lv_subject_get_int(mgr().get_td_value_subject()) == 275);
     }
 
     SECTION("Subjects show empty/-1 when sensor disabled") {
-        mgr().set_sensor_role("td1_lane0", ColorSensorRole::FILAMENT_COLOR);
-        update_sensor_state("td1_lane0", "#FF5733", 1.25f);
+        mgr().set_sensor_role("TD1_DEVICE_001", ColorSensorRole::FILAMENT_COLOR);
+        update_sensor_state("TD1_DEVICE_001", "#FF5733", 1.25f);
 
-        mgr().set_sensor_enabled("td1_lane0", false);
+        mgr().set_sensor_enabled("TD1_DEVICE_001", false);
         REQUIRE(std::string(lv_subject_get_string(mgr().get_color_hex_subject())) == "");
         REQUIRE(lv_subject_get_int(mgr().get_td_value_subject()) == -1);
     }
@@ -333,7 +376,7 @@ TEST_CASE_METHOD(ColorSensorTestFixture, "ColorSensorManager - config persistenc
     discover_test_sensors();
 
     SECTION("save_config returns JSON with role assignments") {
-        mgr().set_sensor_role("td1_lane0", ColorSensorRole::FILAMENT_COLOR);
+        mgr().set_sensor_role("TD1_DEVICE_001", ColorSensorRole::FILAMENT_COLOR);
 
         json config = mgr().save_config();
 
@@ -344,7 +387,7 @@ TEST_CASE_METHOD(ColorSensorTestFixture, "ColorSensorManager - config persistenc
 
         bool found_lane0 = false;
         for (const auto& sensor : config["sensors"]) {
-            if (sensor["device_id"] == "td1_lane0") {
+            if (sensor["device_id"] == "TD1_DEVICE_001") {
                 REQUIRE(sensor["role"] == "filament_color");
                 found_lane0 = true;
             }
@@ -357,7 +400,7 @@ TEST_CASE_METHOD(ColorSensorTestFixture, "ColorSensorManager - config persistenc
         json config;
         json sensors_array = json::array();
         json sensor1;
-        sensor1["device_id"] = "td1_lane0";
+        sensor1["device_id"] = "TD1_DEVICE_001";
         sensor1["role"] = "filament_color";
         sensor1["enabled"] = true;
         sensors_array.push_back(sensor1);
@@ -367,7 +410,7 @@ TEST_CASE_METHOD(ColorSensorTestFixture, "ColorSensorManager - config persistenc
 
         auto configs = mgr().get_sensors();
         auto it = std::find_if(configs.begin(), configs.end(),
-                               [](const auto& c) { return c.device_id == "td1_lane0"; });
+                               [](const auto& c) { return c.device_id == "TD1_DEVICE_001"; });
         REQUIRE(it != configs.end());
         REQUIRE(it->role == ColorSensorRole::FILAMENT_COLOR);
     }
@@ -412,10 +455,10 @@ TEST_CASE_METHOD(ColorSensorTestFixture, "ColorSensorManager - edge cases", "[co
         discover_test_sensors();
         REQUIRE_FALSE(mgr().is_sensor_available(ColorSensorRole::FILAMENT_COLOR));
 
-        mgr().set_sensor_role("td1_lane0", ColorSensorRole::FILAMENT_COLOR);
+        mgr().set_sensor_role("TD1_DEVICE_001", ColorSensorRole::FILAMENT_COLOR);
         REQUIRE(mgr().is_sensor_available(ColorSensorRole::FILAMENT_COLOR));
 
-        mgr().set_sensor_enabled("td1_lane0", false);
+        mgr().set_sensor_enabled("TD1_DEVICE_001", false);
         REQUIRE_FALSE(mgr().is_sensor_available(ColorSensorRole::FILAMENT_COLOR));
     }
 

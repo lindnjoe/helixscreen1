@@ -324,7 +324,7 @@ void WizardProbeSensorSelectStep::cleanup() {
     }
 
     // Persist to disk
-    sensor_mgr.save_config();
+    sensor_mgr.save_config_to_file();
 
     // Reset UI references
     screen_root_ = nullptr;

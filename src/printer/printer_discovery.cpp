@@ -91,7 +91,7 @@ void init_subsystems_from_hardware(const PrinterDiscovery& hardware, ::Moonraker
     if (hardware.has_filament_sensors()) {
         auto& fsm = FilamentSensorManager::instance();
         fsm.discover_sensors(hardware.filament_sensor_names());
-        fsm.load_config();
+        fsm.load_config_from_file();
         spdlog::debug("[PrinterDiscovery] Discovered {} filament sensors",
                       hardware.filament_sensor_names().size());
     }

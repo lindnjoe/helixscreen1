@@ -51,11 +51,11 @@ class FilamentSensorTestFixture {
             display_created_ = true;
         }
 
-        // Initialize subjects (idempotent)
-        mgr().init_subjects();
-
-        // Reset state for test isolation
+        // Reset state for test isolation first (clears subjects)
         mgr().reset_for_testing();
+
+        // Initialize subjects after reset
+        mgr().init_subjects();
     }
 
     ~FilamentSensorTestFixture() {

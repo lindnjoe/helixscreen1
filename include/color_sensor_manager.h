@@ -60,14 +60,25 @@ class ColorSensorManager : public ISensorManager {
     [[nodiscard]] std::string category_name() const override;
 
     /**
-     * @brief Discover sensors from device ID list
+     * @brief Discover sensors from Moonraker API info
+     *
+     * Color sensors (TD-1) come from Moonraker, not Klipper. The Moonraker
+     * info should contain a "td1_devices" array with device IDs.
+     *
+     * @param moonraker_info JSON object with "td1_devices" array
      * @note MUST be called from main LVGL thread (updates subjects directly)
-     * @note Unlike other sensors, color sensors use device IDs, not Klipper objects
      */
-    void discover(const std::vector<std::string>& device_ids) override;
+    void discover_from_moonraker(const nlohmann::json& moonraker_info) override;
 
     /// @brief Update state from Moonraker TD-1 status JSON
     void update_from_status(const nlohmann::json& status) override;
+
+    /// @brief Inject mock sensor objects for testing UI
+    void inject_mock_sensors(std::vector<std::string>& objects, nlohmann::json& config_keys,
+                             nlohmann::json& moonraker_info) override;
+
+    /// @brief Inject mock status data for testing UI
+    void inject_mock_status(nlohmann::json& status) override;
 
     /**
      * @brief Load sensor configuration from JSON
