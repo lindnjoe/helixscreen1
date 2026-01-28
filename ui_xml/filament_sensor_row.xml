@@ -4,7 +4,7 @@
 <!-- Filament Sensor Row Component -->
 <!-- A single row in the filament sensors settings list -->
 <!-- Shows sensor name, role dropdown, and enable toggle -->
-<!-- Usage: Created dynamically by C++ in filament_sensors_overlay -->
+<!-- Usage: Created dynamically by C++ in sensors_overlay -->
 <component>
   <api>
     <prop name="sensor_name" type="string" default="Sensor"/>

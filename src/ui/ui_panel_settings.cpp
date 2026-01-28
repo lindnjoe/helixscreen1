@@ -12,11 +12,11 @@
 #include "ui_overlay_network_settings.h"
 #include "ui_panel_memory_stats.h"
 #include "ui_settings_display.h"
-#include "ui_settings_filament_sensors.h"
 #include "ui_settings_hardware_health.h"
 #include "ui_settings_machine_limits.h"
 #include "ui_settings_macro_buttons.h"
 #include "ui_settings_plugins.h"
+#include "ui_settings_sensors.h"
 #include "ui_severity_card.h"
 #include "ui_toast.h"
 #include "ui_touch_calibration_overlay.h"
@@ -177,8 +177,8 @@ static void on_version_clicked(lv_event_t*) {
     }
 }
 
-// Note: Filament Sensors overlay callbacks are now in FilamentSensorSettingsOverlay class
-// See ui_settings_filament_sensors.cpp
+// Note: Sensors overlay callbacks are now in SensorSettingsOverlay class
+// See ui_settings_sensors.cpp
 // Note: Macro Buttons overlay callbacks are now in MacroButtonsOverlay class
 // See ui_settings_macro_buttons.cpp
 
@@ -283,9 +283,9 @@ void SettingsPanel::init_subjects() {
     lv_xml_register_event_cb(nullptr, "on_display_settings_clicked", on_display_settings_clicked);
     lv_xml_register_event_cb(nullptr, "on_filament_sensors_clicked", on_filament_sensors_clicked);
 
-    // Note: Filament Sensors overlay callbacks are now handled by FilamentSensorSettingsOverlay
-    // See ui_settings_filament_sensors.h
-    helix::settings::get_filament_sensor_settings_overlay().register_callbacks();
+    // Note: Sensors overlay callbacks are now handled by SensorSettingsOverlay
+    // See ui_settings_sensors.h
+    helix::settings::get_sensor_settings_overlay().register_callbacks();
 
     // Note: Display Settings overlay callbacks are now handled by DisplaySettingsOverlay
     // See ui_settings_display.h
@@ -710,10 +710,9 @@ void SettingsPanel::handle_display_settings_clicked() {
 }
 
 void SettingsPanel::handle_filament_sensors_clicked() {
-    spdlog::debug("[{}] Filament Sensors clicked - delegating to FilamentSensorSettingsOverlay",
-                  get_name());
+    spdlog::debug("[{}] Sensors clicked - delegating to SensorSettingsOverlay", get_name());
 
-    auto& overlay = helix::settings::get_filament_sensor_settings_overlay();
+    auto& overlay = helix::settings::get_sensor_settings_overlay();
     overlay.show(parent_screen_);
 }
 
@@ -733,8 +732,8 @@ void SettingsPanel::handle_macro_buttons_clicked() {
 
 // Note: populate_macro_dropdowns() moved to MacroButtonsOverlay::populate_dropdowns()
 // See ui_settings_macro_buttons.cpp
-// Note: populate_sensor_list() moved to FilamentSensorSettingsOverlay::populate_sensor_list()
-// See ui_settings_filament_sensors.cpp
+// Note: populate_sensor_list() moved to SensorSettingsOverlay::populate_switch_sensors()
+// See ui_settings_sensors.cpp
 
 void SettingsPanel::handle_machine_limits_clicked() {
     spdlog::debug("[{}] Machine Limits clicked - delegating to MachineLimitsOverlay", get_name());

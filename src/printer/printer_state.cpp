@@ -15,17 +15,22 @@
 
 #include "ui_update_queue.h"
 
+#include "accel_sensor_manager.h"
 #include "async_helpers.h"
 #include "capability_overrides.h"
+#include "color_sensor_manager.h"
 #include "device_display_name.h"
 #include "filament_sensor_manager.h"
 #include "hardware_validator.h"
+#include "humidity_sensor_manager.h"
 #include "lvgl.h"
 #include "lvgl/src/display/lv_display_private.h" // For rendering_in_progress check
 #include "lvgl_debug_invalidate.h"
 #include "moonraker_client.h" // For ConnectionState enum
+#include "probe_sensor_manager.h"
 #include "runtime_config.h"
 #include "unit_conversions.h"
+#include "width_sensor_manager.h"
 
 #include <algorithm>
 #include <cctype>
@@ -388,6 +393,13 @@ void PrinterState::update_from_status(const json& state) {
     // Forward filament sensor updates to FilamentSensorManager
     // The manager handles all sensor types: filament_switch_sensor and filament_motion_sensor
     helix::FilamentSensorManager::instance().update_from_status(state);
+
+    // Forward updates to all other sensor managers
+    helix::sensors::HumiditySensorManager::instance().update_from_status(state);
+    helix::sensors::WidthSensorManager::instance().update_from_status(state);
+    helix::sensors::ProbeSensorManager::instance().update_from_status(state);
+    helix::sensors::AccelSensorManager::instance().update_from_status(state);
+    helix::sensors::ColorSensorManager::instance().update_from_status(state);
 
     // Cache full state for complex queries
     json_state_.merge_patch(state);

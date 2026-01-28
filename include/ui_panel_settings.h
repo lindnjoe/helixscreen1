@@ -146,8 +146,8 @@ class SettingsPanel : public PanelBase {
 
     // Note: Display Settings overlay is now managed by DisplaySettingsOverlay class
     // See ui_settings_display.h
-    // Note: Filament Sensors overlay is now managed by FilamentSensorSettingsOverlay class
-    // See ui_settings_filament_sensors.h
+    // Note: Sensors overlay is now managed by SensorSettingsOverlay class
+    // See ui_settings_sensors.h
     // Note: Macro Buttons overlay is now managed by MacroButtonsOverlay class
     // See ui_settings_macro_buttons.h
     // Note: Hardware Health overlay is now managed by HardwareHealthOverlay class
@@ -191,7 +191,7 @@ class SettingsPanel : public PanelBase {
     void handle_touch_calibration_clicked();
     void handle_factory_reset_clicked();
     void show_theme_restart_dialog();
-    // Note: populate_sensor_list() moved to FilamentSensorSettingsOverlay
+    // Note: populate_sensor_list() moved to SensorSettingsOverlay
     // Note: populate_macro_dropdowns() moved to MacroButtonsOverlay
     // Note: populate_hardware_issues() moved to HardwareHealthOverlay
 
