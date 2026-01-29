@@ -171,6 +171,10 @@
     <setting_info_row name="row_moonraker" label="Moonraker" icon="toy_brick_outline">
       <text_body name="value" text="—" style_text_color="#text_muted"/>
     </setting_info_row>
+    <!-- Total Print Hours -->
+    <setting_info_row name="row_print_hours" label="Print Hours" icon="clock">
+      <text_body name="value" bind_text="print_hours_value" style_text_color="#text_muted"/>
+    </setting_info_row>
     <!-- Bottom padding for scroll -->
     <lv_obj width="100%" height="#space_lg" style_bg_opa="0" style_border_width="0" scrollable="false"/>
   </view>

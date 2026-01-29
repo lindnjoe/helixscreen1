@@ -27,8 +27,10 @@
 #include "app_globals.h"
 #include "config.h"
 #include "filament_sensor_manager.h"
+#include "format_utils.h"
 #include "hardware_validator.h"
 #include "helix_version.h"
+#include "moonraker_api.h"
 #include "moonraker_client.h"
 #include "printer_state.h"
 #include "runtime_config.h"
@@ -241,6 +243,9 @@ void SettingsPanel::init_subjects() {
 
     UI_MANAGED_SUBJECT_STRING(printer_host_value_subject_, printer_host_value_buf_, "—",
                               "printer_host_value", subjects_);
+
+    UI_MANAGED_SUBJECT_STRING(print_hours_value_subject_, print_hours_value_buf_, "—",
+                              "print_hours_value", subjects_);
 
     // Initialize visibility subjects (controls which settings are shown)
     // Touch calibration: show on touch displays (non-SDL) OR in test mode (for testing on desktop)
@@ -590,6 +595,24 @@ void SettingsPanel::populate_info_rows() {
                 moonraker_value_, printer_state_.get_moonraker_version_subject(), "%s");
             spdlog::debug("[{}]   ✓ Moonraker version bound to subject", get_name());
         }
+    }
+
+    // === Total Print Hours (from Moonraker history totals) ===
+    if (api_) {
+        api_->get_history_totals(
+            [this](const PrintHistoryTotals& totals) {
+                // Format total_time (seconds) as hours
+                std::string formatted = helix::fmt::duration(static_cast<int>(totals.total_time));
+                ui_queue_update([this, formatted]() {
+                    if (subjects_initialized_) {
+                        lv_subject_copy_string(&print_hours_value_subject_, formatted.c_str());
+                        spdlog::debug("[{}]   ✓ Print hours: {}", get_name(), formatted);
+                    }
+                });
+            },
+            [this](const MoonrakerError& err) {
+                spdlog::warn("[{}] Failed to fetch print hours: {}", get_name(), err.message);
+            });
     }
 }
 
