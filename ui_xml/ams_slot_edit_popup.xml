@@ -39,7 +39,7 @@
               width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
               style_pad_top="#space_xs" flex_flow="row" style_flex_main_place="space_between"
               style_flex_cross_place="center" scrollable="false" hidden="true">
-        <text_small text="Tool" style_text_color="#text_muted"/>
+        <text_small text="Tool"/>
         <lv_dropdown name="tool_dropdown"
                      width="#dropdown_width" height="32" style_radius="#border_radius" style_border_width="0">
           <event_cb trigger="value_changed" callback="slot_edit_popup_tool_changed_cb"/>
@@ -49,7 +49,7 @@
       <lv_obj name="backup_row"
               width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
               style_flex_main_place="space_between" style_flex_cross_place="center" scrollable="false" hidden="true">
-        <text_small text="Backup" style_text_color="#text_muted"/>
+        <text_small text="Backup"/>
         <lv_dropdown name="backup_dropdown"
                      width="#dropdown_width" height="32" style_radius="#border_radius" style_border_width="0">
           <event_cb trigger="value_changed" callback="slot_edit_popup_backup_changed_cb"/>

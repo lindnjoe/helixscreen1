@@ -18,9 +18,7 @@
       <!-- Title -->
       <text_heading width="100%" text="Save Configuration?" style_text_align="center"/>
       <!-- Message -->
-      <text_small width="100%"
-                  text="Save changes to persist them across restarts?" style_text_align="center"
-                  style_text_color="#text_muted"/>
+      <text_small width="100%" text="Save changes to persist them across restarts?" style_text_align="center"/>
       <!-- Warning about restart -->
       <text_small width="100%" text="This will restart Klipper." style_text_align="center" style_text_color="#warning"/>
     </lv_obj>

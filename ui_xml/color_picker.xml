@@ -72,10 +72,10 @@
                 <event_cb trigger="value_changed" callback="hex_input_changed_cb"/>
                 <event_cb trigger="defocused" callback="hex_input_defocused_cb"/>
               </text_input>
-              <lv_label name="selected_name_label" width="content" text="Gray" style_text_color="#text_muted"/>
+              <lv_label name="selected_name_label" width="content" text="Gray"/>
             </lv_obj>
             <!-- Presets label -->
-            <text_small text="Presets" style_text_color="#text_muted"/>
+            <text_small text="Presets"/>
           </lv_obj>
           <!-- BOTTOM: Presets grid (pushed to bottom via space_between) -->
           <!-- Preset grid: 6 columns x 4 rows -->

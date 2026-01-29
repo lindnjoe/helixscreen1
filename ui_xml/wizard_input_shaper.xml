@@ -50,7 +50,7 @@
         <lv_button name="skip_calibration_btn"
                    width="#wizard_button_width" height="#button_height" style_bg_color="#card_bg"
                    style_radius="#border_radius">
-          <text_body text="Skip for now" style_text_color="#text"/>
+          <text_body text="Skip for now"/>
           <event_cb trigger="clicked" callback="on_skip_is_calibration"/>
         </lv_button>
 
@@ -58,7 +58,7 @@
         <lv_button name="start_calibration_btn"
                    width="#wizard_button_width" height="#button_height" style_bg_color="#primary"
                    style_radius="#border_radius">
-          <text_body text="Start Calibration" style_text_color="#text"/>
+          <text_body text="Start Calibration"/>
           <event_cb trigger="clicked" callback="on_start_is_calibration"/>
         </lv_button>
 

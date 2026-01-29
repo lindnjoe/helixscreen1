@@ -38,7 +38,7 @@
             </lv_button>
           </lv_obj>
           <text_heading text="Reduce Ringing" style_text_align="center"/>
-          <text_small text="Calibrate resonance compensation" style_text_align="center" style_text_color="#text_muted"/>
+          <text_small text="Calibrate resonance compensation" style_text_align="center"/>
         </lv_obj>
         <!-- Calibration buttons - side by side -->
         <lv_obj width="100%"
@@ -50,7 +50,7 @@
                      style_bg_color="#primary" flex_flow="column" style_flex_main_place="center"
                      style_flex_cross_place="center" style_pad_gap="#space_xs">
             <icon src="axis_x_arrow" size="md" color="#text"/>
-            <text_body text="Calibrate X" style_text_color="#text"/>
+            <text_body text="Calibrate X"/>
             <event_cb trigger="clicked" callback="input_shaper_calibrate_x_cb"/>
           </lv_button>
           <!-- Calibrate Y Button -->
@@ -59,7 +59,7 @@
                      style_bg_color="#primary" flex_flow="column" style_flex_main_place="center"
                      style_flex_cross_place="center" style_pad_gap="#space_xs">
             <icon src="axis_y_arrow" size="md" color="#text"/>
-            <text_body text="Calibrate Y" style_text_color="#text"/>
+            <text_body text="Calibrate Y"/>
             <event_cb trigger="clicked" callback="input_shaper_calibrate_y_cb"/>
           </lv_button>
         </lv_obj>
@@ -68,8 +68,8 @@
                    width="100%" height="#button_height_normal" style_radius="#border_radius" style_border_width="1"
                    style_border_color="#text_muted" style_bg_color="#app_bg" flex_flow="row"
                    style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_sm">
-          <icon src="vibrate" size="sm" color="#text_muted"/>
-          <text_body text="Measure Noise" style_text_color="#text_muted"/>
+          <icon src="vibrate" size="sm" variant="text"/>
+          <text_body text="Measure Noise"/>
           <event_cb trigger="clicked" callback="input_shaper_measure_noise_cb"/>
         </lv_button>
       </lv_obj>
@@ -89,7 +89,7 @@
           <!-- Animated spinner -->
           <spinner size="lg"/>
           <text_heading name="status_label" text="Calibrating..." style_text_align="center"/>
-          <text_small text="This may take 1-2 minutes" style_text_align="center" style_text_color="#text_muted"/>
+          <text_small text="This may take 1-2 minutes" style_text_align="center"/>
         </lv_obj>
         <!-- Cancel button -->
         <lv_button name="btn_cancel"
@@ -97,7 +97,7 @@
                    style_border_color="#text_muted" style_bg_color="#app_bg" flex_flow="row"
                    style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_sm">
           <icon src="close" size="sm" color="#danger"/>
-          <text_body text="Cancel" style_text_color="#text_muted"/>
+          <text_body text="Cancel"/>
           <event_cb trigger="clicked" callback="input_shaper_cancel_cb"/>
         </lv_button>
       </lv_obj>
@@ -131,9 +131,9 @@
         <lv_obj width="100%"
                 height="content" style_bg_opa="0" style_border_width="0" style_pad_left="#space_md"
                 style_pad_right="#space_md" style_pad_top="0" style_pad_bottom="0" flex_flow="row" scrollable="false">
-          <text_small width="40%" text="Shaper" style_text_color="#text_muted"/>
-          <text_small width="30%" text="Freq" style_text_color="#text_muted"/>
-          <text_small width="30%" text="Vibration" style_text_color="#text_muted"/>
+          <text_small width="40%" text="Shaper"/>
+          <text_small width="30%" text="Freq"/>
+          <text_small width="30%" text="Vibration"/>
         </lv_obj>
         <!-- Results rows container -->
         <lv_obj width="100%"
@@ -145,15 +145,9 @@
                   style_pad_right="#space_md" style_pad_top="#space_xs" style_pad_bottom="#space_xs" flex_flow="row"
                   style_flex_cross_place="center" scrollable="false">
             <bind_flag_if_eq subject="shaper_0_visible" flag="hidden" ref_value="0"/>
-            <lv_label width="40%" style_text_font="#font_body" style_text_color="#text">
-              <lv_label-bind_text subject="shaper_0_type"/>
-            </lv_label>
-            <lv_label width="30%" style_text_font="#font_small" style_text_color="#text_muted">
-              <lv_label-bind_text subject="shaper_0_freq"/>
-            </lv_label>
-            <lv_label width="30%" style_text_font="#font_small" style_text_color="#text_muted">
-              <lv_label-bind_text subject="shaper_0_vib"/>
-            </lv_label>
+            <text_body width="40%" bind_text="shaper_0_type"/>
+            <text_small width="30%" bind_text="shaper_0_freq"/>
+            <text_small width="30%" bind_text="shaper_0_vib"/>
           </lv_obj>
           <!-- Row 1 -->
           <lv_obj name="shaper_row_1"
@@ -161,15 +155,9 @@
                   style_pad_right="#space_md" style_pad_top="#space_xs" style_pad_bottom="#space_xs" flex_flow="row"
                   style_flex_cross_place="center" scrollable="false">
             <bind_flag_if_eq subject="shaper_1_visible" flag="hidden" ref_value="0"/>
-            <lv_label width="40%" style_text_font="#font_body" style_text_color="#text">
-              <lv_label-bind_text subject="shaper_1_type"/>
-            </lv_label>
-            <lv_label width="30%" style_text_font="#font_small" style_text_color="#text_muted">
-              <lv_label-bind_text subject="shaper_1_freq"/>
-            </lv_label>
-            <lv_label width="30%" style_text_font="#font_small" style_text_color="#text_muted">
-              <lv_label-bind_text subject="shaper_1_vib"/>
-            </lv_label>
+            <text_body width="40%" bind_text="shaper_1_type"/>
+            <text_small width="30%" bind_text="shaper_1_freq"/>
+            <text_small width="30%" bind_text="shaper_1_vib"/>
           </lv_obj>
           <!-- Row 2 -->
           <lv_obj name="shaper_row_2"
@@ -177,15 +165,9 @@
                   style_pad_right="#space_md" style_pad_top="#space_xs" style_pad_bottom="#space_xs" flex_flow="row"
                   style_flex_cross_place="center" scrollable="false">
             <bind_flag_if_eq subject="shaper_2_visible" flag="hidden" ref_value="0"/>
-            <lv_label width="40%" style_text_font="#font_body" style_text_color="#text">
-              <lv_label-bind_text subject="shaper_2_type"/>
-            </lv_label>
-            <lv_label width="30%" style_text_font="#font_small" style_text_color="#text_muted">
-              <lv_label-bind_text subject="shaper_2_freq"/>
-            </lv_label>
-            <lv_label width="30%" style_text_font="#font_small" style_text_color="#text_muted">
-              <lv_label-bind_text subject="shaper_2_vib"/>
-            </lv_label>
+            <text_body width="40%" bind_text="shaper_2_type"/>
+            <text_small width="30%" bind_text="shaper_2_freq"/>
+            <text_small width="30%" bind_text="shaper_2_vib"/>
           </lv_obj>
           <!-- Row 3 -->
           <lv_obj name="shaper_row_3"
@@ -193,15 +175,9 @@
                   style_pad_right="#space_md" style_pad_top="#space_xs" style_pad_bottom="#space_xs" flex_flow="row"
                   style_flex_cross_place="center" scrollable="false">
             <bind_flag_if_eq subject="shaper_3_visible" flag="hidden" ref_value="0"/>
-            <lv_label width="40%" style_text_font="#font_body" style_text_color="#text">
-              <lv_label-bind_text subject="shaper_3_type"/>
-            </lv_label>
-            <lv_label width="30%" style_text_font="#font_small" style_text_color="#text_muted">
-              <lv_label-bind_text subject="shaper_3_freq"/>
-            </lv_label>
-            <lv_label width="30%" style_text_font="#font_small" style_text_color="#text_muted">
-              <lv_label-bind_text subject="shaper_3_vib"/>
-            </lv_label>
+            <text_body width="40%" bind_text="shaper_3_type"/>
+            <text_small width="30%" bind_text="shaper_3_freq"/>
+            <text_small width="30%" bind_text="shaper_3_vib"/>
           </lv_obj>
           <!-- Row 4 -->
           <lv_obj name="shaper_row_4"
@@ -209,15 +185,9 @@
                   style_pad_right="#space_md" style_pad_top="#space_xs" style_pad_bottom="#space_xs" flex_flow="row"
                   style_flex_cross_place="center" scrollable="false">
             <bind_flag_if_eq subject="shaper_4_visible" flag="hidden" ref_value="0"/>
-            <lv_label width="40%" style_text_font="#font_body" style_text_color="#text">
-              <lv_label-bind_text subject="shaper_4_type"/>
-            </lv_label>
-            <lv_label width="30%" style_text_font="#font_small" style_text_color="#text_muted">
-              <lv_label-bind_text subject="shaper_4_freq"/>
-            </lv_label>
-            <lv_label width="30%" style_text_font="#font_small" style_text_color="#text_muted">
-              <lv_label-bind_text subject="shaper_4_vib"/>
-            </lv_label>
+            <text_body width="40%" bind_text="shaper_4_type"/>
+            <text_small width="30%" bind_text="shaper_4_freq"/>
+            <text_small width="30%" bind_text="shaper_4_vib"/>
           </lv_obj>
         </lv_obj>
         <!-- Action buttons -->
@@ -229,7 +199,7 @@
                      height="#button_height_normal" flex_grow="1" style_radius="#border_radius" style_border_width="1"
                      style_border_color="#text_muted" style_bg_color="#app_bg" flex_flow="row"
                      style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_sm">
-            <text_body text="Close" style_text_color="#text_muted"/>
+            <text_body text="Close"/>
             <event_cb trigger="clicked" callback="input_shaper_close_cb"/>
           </lv_button>
           <!-- Apply button (primary) -->
@@ -238,7 +208,7 @@
                      style_bg_color="#success" flex_flow="row" style_flex_main_place="center"
                      style_flex_cross_place="center" style_pad_gap="#space_sm">
             <icon src="check" size="sm" color="#text"/>
-            <text_body text="Apply" style_text_color="#text"/>
+            <text_body text="Apply"/>
             <event_cb trigger="clicked" callback="input_shaper_apply_cb"/>
           </lv_button>
         </lv_obj>
@@ -262,8 +232,8 @@
                    width="100%" height="#button_height_normal" style_radius="#border_radius" style_border_width="1"
                    style_border_color="#text_muted" style_bg_color="#app_bg" flex_flow="row"
                    style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_sm">
-          <icon src="printer_3d" size="sm" color="#text_muted"/>
-          <text_body text="Test Print" style_text_color="#text_muted"/>
+          <icon src="printer_3d" size="sm" variant="text"/>
+          <text_body text="Test Print"/>
           <event_cb trigger="clicked" callback="input_shaper_print_test_cb"/>
         </lv_button>
       </lv_obj>
@@ -292,9 +262,9 @@
                 style_border_width="0" style_pad_all="#space_md" flex_flow="column" style_pad_gap="#space_xs"
                 scrollable="false">
           <text_small text="Troubleshooting:" style_text_color="#text"/>
-          <text_small text="- Ensure ADXL345 is connected" style_text_color="#text_muted"/>
-          <text_small text="- Check [resonance_tester] in printer.cfg" style_text_color="#text_muted"/>
-          <text_small text="- Try Measure Noise first" style_text_color="#text_muted"/>
+          <text_small text="- Ensure ADXL345 is connected"/>
+          <text_small text="- Check [resonance_tester] in printer.cfg"/>
+          <text_small text="- Try Measure Noise first"/>
         </lv_obj>
         <!-- Action buttons -->
         <lv_obj width="100%"
@@ -305,7 +275,7 @@
                      height="#button_height_normal" flex_grow="1" style_radius="#border_radius" style_border_width="1"
                      style_border_color="#text_muted" style_bg_color="#app_bg" flex_flow="row"
                      style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_sm">
-            <text_body text="Back" style_text_color="#text_muted"/>
+            <text_body text="Back"/>
             <event_cb trigger="clicked" callback="input_shaper_close_cb"/>
           </lv_button>
           <!-- Retry button -->
@@ -314,7 +284,7 @@
                      style_bg_color="#primary" flex_flow="row" style_flex_main_place="center"
                      style_flex_cross_place="center" style_pad_gap="#space_sm">
             <icon src="refresh" size="sm" color="#text"/>
-            <text_body text="Retry" style_text_color="#text"/>
+            <text_body text="Retry"/>
             <event_cb trigger="clicked" callback="input_shaper_retry_cb"/>
           </lv_button>
         </lv_obj>

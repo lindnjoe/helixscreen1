@@ -58,14 +58,62 @@ typedef struct {
     lv_style_t button_secondary_style; // Secondary button (surface color bg)
     lv_style_t button_danger_style;    // Danger button (danger color bg)
     lv_style_t button_ghost_style;     // Ghost button (transparent bg)
-    // Contrast text colors (Phase 2.6a) - for button text based on bg luminance
-    lv_color_t contrast_text_for_dark_bg_;  // Light text for dark backgrounds
-    lv_color_t contrast_text_for_light_bg_; // Dark text for light backgrounds
-    bool is_dark_mode;                      // Track theme mode for context
+    lv_style_t button_success_style;   // Success button (success color bg)
+    lv_style_t button_tertiary_style;  // Tertiary button (tertiary color bg)
+    lv_style_t button_warning_style;   // Warning button (warning color bg)
+    lv_color_t dropdown_accent_color;  // Accent color for dropdown selection (stored for apply callback)
+    bool is_dark_mode;                 // Track theme mode for context
 } helix_theme_t;
 
 // Static theme instance (singleton pattern matching LVGL's approach)
 static helix_theme_t* helix_theme_instance = NULL;
+
+/**
+ * Compute saturation of a color (0-255 scale)
+ *
+ * Uses the HSL saturation formula: S = (max - min) / (max + min) for L <= 0.5
+ * or S = (max - min) / (2 - max - min) for L > 0.5
+ *
+ * @param color The color to compute saturation for
+ * @return Saturation value 0-255
+ */
+static uint8_t compute_color_saturation(lv_color_t color) {
+    uint8_t r = color.red;
+    uint8_t g = color.green;
+    uint8_t b = color.blue;
+
+    uint8_t max_val = (r > g) ? ((r > b) ? r : b) : ((g > b) ? g : b);
+    uint8_t min_val = (r < g) ? ((r < b) ? r : b) : ((g < b) ? g : b);
+
+    if (max_val == min_val) {
+        return 0; // Achromatic (gray)
+    }
+
+    uint16_t delta = max_val - min_val;
+    uint16_t sum = max_val + min_val;
+
+    // HSL saturation: scale by lightness
+    // For L <= 0.5: S = delta / sum
+    // For L > 0.5: S = delta / (510 - sum)
+    uint16_t divisor = (sum <= 255) ? sum : (510 - sum);
+    if (divisor == 0) divisor = 1; // Avoid division by zero
+
+    return (uint8_t)((delta * 255) / divisor);
+}
+
+/**
+ * Pick the more saturated of two colors
+ *
+ * Useful for accent colors where you want the more vivid/colorful option.
+ * This fixes issues like gray knobs in themes with desaturated primary colors.
+ *
+ * @param a First color
+ * @param b Second color
+ * @return Whichever color has higher saturation
+ */
+static lv_color_t pick_more_saturated(lv_color_t a, lv_color_t b) {
+    return compute_color_saturation(a) >= compute_color_saturation(b) ? a : b;
+}
 
 // Button press transition descriptor (scale transform)
 // Properties to animate when transitioning to/from pressed state
@@ -235,14 +283,32 @@ static void helix_theme_apply(lv_theme_t* theme, lv_obj_t* obj) {
 #endif
 }
 
-lv_theme_t* theme_core_init(lv_display_t* display, lv_color_t primary_color,
-                            lv_color_t secondary_color, lv_color_t text_primary_color,
-                            lv_color_t text_muted_color, lv_color_t text_subtle_color, bool is_dark,
-                            const lv_font_t* base_font, lv_color_t screen_bg, lv_color_t card_bg,
-                            lv_color_t surface_control, lv_color_t focus_color,
-                            lv_color_t border_color, int32_t border_radius, int32_t border_width,
-                            int32_t border_opacity, lv_color_t knob_color,
-                            lv_color_t accent_color) {
+lv_theme_t* theme_core_init(lv_display_t* display, const theme_palette_t* palette, bool is_dark,
+                            const lv_font_t* base_font, int32_t border_radius, int32_t border_width,
+                            int32_t border_opacity) {
+    // Extract colors from palette for readability
+    lv_color_t screen_bg = palette->screen_bg;
+    lv_color_t card_bg = palette->card_bg;
+    lv_color_t surface_control = palette->surface_control;
+    lv_color_t border_color = palette->border;
+    lv_color_t text_primary_color = palette->text;
+    lv_color_t text_muted_color = palette->text_muted;
+    lv_color_t text_subtle_color = palette->text_subtle;
+    lv_color_t primary_color = palette->primary;
+    lv_color_t secondary_color = palette->secondary;
+    lv_color_t tertiary_color = palette->tertiary;
+    lv_color_t info_color = palette->info;
+    lv_color_t success_color = palette->success;
+    lv_color_t warning_color = palette->warning;
+    lv_color_t danger_color = palette->danger;
+    lv_color_t focus_color = palette->focus;
+
+    // Derive accent colors from palette (fixes gray knobs in themes like ChatGPT)
+    // knob_color: more saturated of primary vs tertiary (for switch/slider knobs)
+    // accent_color: more saturated of primary vs secondary (for checkboxes, dropdowns)
+    lv_color_t knob_color = pick_more_saturated(primary_color, tertiary_color);
+    lv_color_t accent_color = pick_more_saturated(primary_color, secondary_color);
+
     // Clean up previous theme instance if exists
     if (helix_theme_instance) {
         lv_style_reset(&helix_theme_instance->input_bg_style);
@@ -288,6 +354,9 @@ lv_theme_t* theme_core_init(lv_display_t* display, lv_color_t primary_color,
         lv_style_reset(&helix_theme_instance->button_secondary_style);
         lv_style_reset(&helix_theme_instance->button_danger_style);
         lv_style_reset(&helix_theme_instance->button_ghost_style);
+        lv_style_reset(&helix_theme_instance->button_success_style);
+        lv_style_reset(&helix_theme_instance->button_tertiary_style);
+        lv_style_reset(&helix_theme_instance->button_warning_style);
         free(helix_theme_instance);
         helix_theme_instance = NULL;
     }
@@ -449,8 +518,8 @@ lv_theme_t* theme_core_init(lv_display_t* display, lv_color_t primary_color,
     lv_style_set_bg_color(&helix_theme_instance->card_style, card_bg);
     lv_style_set_bg_opa(&helix_theme_instance->card_style, LV_OPA_COVER);
     lv_style_set_border_color(&helix_theme_instance->card_style, border_color);
-    lv_style_set_border_width(&helix_theme_instance->card_style, 1);
-    lv_style_set_border_opa(&helix_theme_instance->card_style, LV_OPA_40);
+    lv_style_set_border_width(&helix_theme_instance->card_style, border_width);
+    lv_style_set_border_opa(&helix_theme_instance->card_style, (lv_opa_t)border_opacity);
     lv_style_set_radius(&helix_theme_instance->card_style, border_radius);
 
     // Initialize shared dialog style - for ui_dialog and modal backgrounds
@@ -494,24 +563,23 @@ lv_theme_t* theme_core_init(lv_display_t* display, lv_color_t primary_color,
     lv_style_init(&helix_theme_instance->icon_tertiary_style);
     lv_style_set_text_color(&helix_theme_instance->icon_tertiary_style, text_subtle_color);
 
-    // Semantic icon styles - using placeholder colors for now
-    // Task 3 will add proper severity color infrastructure
+    // Semantic icon styles - using palette colors
 
-    // icon_success_style - green
+    // icon_success_style - uses success color from palette
     lv_style_init(&helix_theme_instance->icon_success_style);
-    lv_style_set_text_color(&helix_theme_instance->icon_success_style, lv_color_hex(0x4CAF50));
+    lv_style_set_text_color(&helix_theme_instance->icon_success_style, success_color);
 
-    // icon_warning_style - amber/orange
+    // icon_warning_style - uses warning color from palette
     lv_style_init(&helix_theme_instance->icon_warning_style);
-    lv_style_set_text_color(&helix_theme_instance->icon_warning_style, lv_color_hex(0xFFA726));
+    lv_style_set_text_color(&helix_theme_instance->icon_warning_style, warning_color);
 
-    // icon_danger_style - red
+    // icon_danger_style - uses danger color from palette
     lv_style_init(&helix_theme_instance->icon_danger_style);
-    lv_style_set_text_color(&helix_theme_instance->icon_danger_style, lv_color_hex(0xEF5350));
+    lv_style_set_text_color(&helix_theme_instance->icon_danger_style, danger_color);
 
-    // icon_info_style - blue
+    // icon_info_style - uses info color from palette
     lv_style_init(&helix_theme_instance->icon_info_style);
-    lv_style_set_text_color(&helix_theme_instance->icon_info_style, lv_color_hex(0x42A5F5));
+    lv_style_set_text_color(&helix_theme_instance->icon_info_style, info_color);
 
     // Initialize spinner style (Phase 2.3)
     // Spinner uses arc_color for the indicator arc (uses primary_color)
@@ -520,20 +588,18 @@ lv_theme_t* theme_core_init(lv_display_t* display, lv_color_t primary_color,
 
     // Initialize severity styles (Phase 2.3)
     // Severity styles use border_color for severity_card borders
-    // Using same colors as icon semantic colors for consistency
+    // Using palette colors for consistency with icon semantic colors
     lv_style_init(&helix_theme_instance->severity_info_style);
-    lv_style_set_border_color(&helix_theme_instance->severity_info_style, lv_color_hex(0x42A5F5));
+    lv_style_set_border_color(&helix_theme_instance->severity_info_style, info_color);
 
     lv_style_init(&helix_theme_instance->severity_success_style);
-    lv_style_set_border_color(&helix_theme_instance->severity_success_style,
-                              lv_color_hex(0x4CAF50));
+    lv_style_set_border_color(&helix_theme_instance->severity_success_style, success_color);
 
     lv_style_init(&helix_theme_instance->severity_warning_style);
-    lv_style_set_border_color(&helix_theme_instance->severity_warning_style,
-                              lv_color_hex(0xFFA726));
+    lv_style_set_border_color(&helix_theme_instance->severity_warning_style, warning_color);
 
     lv_style_init(&helix_theme_instance->severity_danger_style);
-    lv_style_set_border_color(&helix_theme_instance->severity_danger_style, lv_color_hex(0xEF5350));
+    lv_style_set_border_color(&helix_theme_instance->severity_danger_style, danger_color);
 
     // Initialize button styles (Phase 2.6a)
     // Button styles set bg_color only - text color handled by button widget
@@ -548,20 +614,29 @@ lv_theme_t* theme_core_init(lv_display_t* display, lv_color_t primary_color,
     lv_style_set_bg_color(&helix_theme_instance->button_secondary_style, surface_control);
     lv_style_set_bg_opa(&helix_theme_instance->button_secondary_style, LV_OPA_COVER);
 
-    // button_danger_style - uses danger color (0xEF5350) as background
+    // button_danger_style - uses danger color from palette
     lv_style_init(&helix_theme_instance->button_danger_style);
-    lv_style_set_bg_color(&helix_theme_instance->button_danger_style, lv_color_hex(0xEF5350));
+    lv_style_set_bg_color(&helix_theme_instance->button_danger_style, danger_color);
     lv_style_set_bg_opa(&helix_theme_instance->button_danger_style, LV_OPA_COVER);
 
     // button_ghost_style - transparent background
     lv_style_init(&helix_theme_instance->button_ghost_style);
     lv_style_set_bg_opa(&helix_theme_instance->button_ghost_style, LV_OPA_0);
 
-    // Initialize contrast text colors (Phase 2.6a)
-    // These are static colors for text on dark/light backgrounds
-    // Using sensible defaults based on typical theme conventions
-    helix_theme_instance->contrast_text_for_dark_bg_ = lv_color_hex(0xE0E0E0);  // Light text
-    helix_theme_instance->contrast_text_for_light_bg_ = lv_color_hex(0x212121); // Dark text
+    // button_success_style - uses success color from palette
+    lv_style_init(&helix_theme_instance->button_success_style);
+    lv_style_set_bg_color(&helix_theme_instance->button_success_style, success_color);
+    lv_style_set_bg_opa(&helix_theme_instance->button_success_style, LV_OPA_COVER);
+
+    // button_tertiary_style - uses tertiary color from palette
+    lv_style_init(&helix_theme_instance->button_tertiary_style);
+    lv_style_set_bg_color(&helix_theme_instance->button_tertiary_style, tertiary_color);
+    lv_style_set_bg_opa(&helix_theme_instance->button_tertiary_style, LV_OPA_COVER);
+
+    // button_warning_style - uses warning color from palette
+    lv_style_init(&helix_theme_instance->button_warning_style);
+    lv_style_set_bg_color(&helix_theme_instance->button_warning_style, warning_color);
+    lv_style_set_bg_opa(&helix_theme_instance->button_warning_style, LV_OPA_COVER);
 
     // CRITICAL: Now we need to patch the default theme's color fields
     // This is necessary because LVGL's default theme bakes colors into pre-computed
@@ -620,16 +695,32 @@ lv_theme_t* theme_core_init(lv_display_t* display, lv_color_t primary_color,
     return (lv_theme_t*)helix_theme_instance;
 }
 
-void theme_core_update_colors(bool is_dark, lv_color_t screen_bg, lv_color_t card_bg,
-                              lv_color_t surface_control, lv_color_t text_primary_color,
-                              lv_color_t text_muted_color, lv_color_t text_subtle_color,
-                              lv_color_t focus_color, lv_color_t primary_color,
-                              lv_color_t secondary_color, lv_color_t border_color,
-                              int32_t border_opacity, lv_color_t knob_color,
-                              lv_color_t accent_color) {
-    if (!helix_theme_instance) {
+void theme_core_update_colors(bool is_dark, const theme_palette_t* palette,
+                              int32_t border_opacity) {
+    if (!helix_theme_instance || !palette) {
         return;
     }
+
+    // Extract colors from palette for readability
+    lv_color_t screen_bg = palette->screen_bg;
+    lv_color_t card_bg = palette->card_bg;
+    lv_color_t surface_control = palette->surface_control;
+    lv_color_t border_color = palette->border;
+    lv_color_t text_primary_color = palette->text;
+    lv_color_t text_muted_color = palette->text_muted;
+    lv_color_t text_subtle_color = palette->text_subtle;
+    lv_color_t primary_color = palette->primary;
+    lv_color_t secondary_color = palette->secondary;
+    lv_color_t tertiary_color = palette->tertiary;
+    lv_color_t info_color = palette->info;
+    lv_color_t success_color = palette->success;
+    lv_color_t warning_color = palette->warning;
+    lv_color_t danger_color = palette->danger;
+    lv_color_t focus_color = palette->focus;
+
+    // Derive accent colors from palette (same logic as theme_core_init)
+    lv_color_t knob_color = pick_more_saturated(primary_color, tertiary_color);
+    lv_color_t accent_color = pick_more_saturated(primary_color, secondary_color);
 
     // Update our custom styles in-place
     helix_theme_instance->is_dark_mode = is_dark;
@@ -645,16 +736,16 @@ void theme_core_update_colors(bool is_dark, lv_color_t screen_bg, lv_color_t car
     lv_style_set_border_color(&helix_theme_instance->button_style, border_color);
     lv_style_set_border_opa(&helix_theme_instance->button_style, border_opacity);
 
-    // Update checkbox styles
-    lv_style_set_text_color(&helix_theme_instance->checkbox_text_style, text_primary_color);
-    lv_style_set_border_color(&helix_theme_instance->checkbox_box_style, border_color);
-    lv_style_set_bg_color(&helix_theme_instance->checkbox_box_style, text_primary_color);
-    lv_style_set_text_color(&helix_theme_instance->checkbox_indicator_style, accent_color);
-
-    // Update switch colors (track=border, indicator=secondary, knob=computed brighter color)
+    // Update switch track, indicator, and knob colors
     lv_style_set_bg_color(&helix_theme_instance->switch_track_style, border_color);
     lv_style_set_bg_color(&helix_theme_instance->switch_indicator_style, secondary_color);
     lv_style_set_bg_color(&helix_theme_instance->switch_knob_style, knob_color);
+
+    // Update checkbox styles
+    lv_style_set_border_color(&helix_theme_instance->checkbox_box_style, border_color);
+    lv_style_set_bg_color(&helix_theme_instance->checkbox_box_style, text_primary_color);
+    lv_style_set_text_color(&helix_theme_instance->checkbox_indicator_style, accent_color);
+    lv_style_set_text_color(&helix_theme_instance->checkbox_text_style, text_primary_color);
 
     // Update focus ring color
     lv_style_set_outline_color(&helix_theme_instance->focus_ring_style, focus_color);
@@ -672,6 +763,7 @@ void theme_core_update_colors(bool is_dark, lv_color_t screen_bg, lv_color_t car
     // Update shared card style
     lv_style_set_bg_color(&helix_theme_instance->card_style, card_bg);
     lv_style_set_border_color(&helix_theme_instance->card_style, border_color);
+    lv_style_set_border_opa(&helix_theme_instance->card_style, (lv_opa_t)border_opacity);
 
     // Update shared dialog style
     lv_style_set_bg_color(&helix_theme_instance->dialog_style, surface_control);
@@ -685,20 +777,31 @@ void theme_core_update_colors(bool is_dark, lv_color_t screen_bg, lv_color_t car
     lv_style_set_text_color(&helix_theme_instance->icon_text_style, text_primary_color);
     lv_style_set_text_color(&helix_theme_instance->icon_muted_style, text_muted_color);
     lv_style_set_text_color(&helix_theme_instance->icon_primary_style, primary_color);
-    // Note: secondary_color is not passed to theme_core_update_colors()
-    // For now, keep it unchanged; Task 3 will add proper color parameters
+    lv_style_set_text_color(&helix_theme_instance->icon_secondary_style, secondary_color);
     lv_style_set_text_color(&helix_theme_instance->icon_tertiary_style, text_subtle_color);
-    // Semantic icon colors (success/warning/danger/info) are not updated here
-    // They use static semantic colors; Task 3 will add proper severity color infrastructure
+
+    // Update semantic icon colors
+    lv_style_set_text_color(&helix_theme_instance->icon_info_style, info_color);
+    lv_style_set_text_color(&helix_theme_instance->icon_success_style, success_color);
+    lv_style_set_text_color(&helix_theme_instance->icon_warning_style, warning_color);
+    lv_style_set_text_color(&helix_theme_instance->icon_danger_style, danger_color);
 
     // Update spinner style (Phase 2.3) - uses primary_color
     lv_style_set_arc_color(&helix_theme_instance->spinner_style, primary_color);
-    // Note: severity styles use static semantic colors, no update needed here
+
+    // Update severity styles
+    lv_style_set_border_color(&helix_theme_instance->severity_info_style, info_color);
+    lv_style_set_border_color(&helix_theme_instance->severity_success_style, success_color);
+    lv_style_set_border_color(&helix_theme_instance->severity_warning_style, warning_color);
+    lv_style_set_border_color(&helix_theme_instance->severity_danger_style, danger_color);
 
     // Update button styles (Phase 2.6a)
     lv_style_set_bg_color(&helix_theme_instance->button_primary_style, primary_color);
     lv_style_set_bg_color(&helix_theme_instance->button_secondary_style, surface_control);
-    // Note: button_danger_style uses static danger color, no update needed
+    lv_style_set_bg_color(&helix_theme_instance->button_tertiary_style, tertiary_color);
+    lv_style_set_bg_color(&helix_theme_instance->button_success_style, success_color);
+    lv_style_set_bg_color(&helix_theme_instance->button_warning_style, warning_color);
+    lv_style_set_bg_color(&helix_theme_instance->button_danger_style, danger_color);
     // Note: button_ghost_style has transparent bg, no update needed
 
     // Update LVGL default theme's internal styles
@@ -748,122 +851,72 @@ void theme_core_update_colors(bool is_dark, lv_color_t screen_bg, lv_color_t car
     lv_obj_report_style_change(NULL);
 }
 
-void theme_core_preview_colors(bool is_dark, const char* colors[16], int32_t border_radius,
+void theme_core_preview_colors(bool is_dark, const theme_palette_t* palette, int32_t border_radius,
                                int32_t border_opacity) {
-    if (!helix_theme_instance) {
+    if (!helix_theme_instance || !palette) {
         return;
     }
 
-    // Parse palette colors
-    // 0: bg_darkest, 1: bg_dark, 2: bg_dark_highlight, 3: card_alt
-    // 4: text_subtle, 5: bg_light, 6: bg_lightest, 7: accent_highlight
-    // 8-10: accents, 11-15: status
-
-    lv_color_t screen_bg = is_dark ? lv_color_hex(strtoul(colors[0] + 1, NULL, 16)) : // bg_darkest
-                               lv_color_hex(strtoul(colors[6] + 1, NULL, 16));        // bg_lightest
-
-    lv_color_t card_bg = is_dark ? lv_color_hex(strtoul(colors[1] + 1, NULL, 16)) : // bg_dark
-                             lv_color_hex(strtoul(colors[5] + 1, NULL, 16));        // bg_light
-
-    // card_alt used for both light and dark (consistent input field backgrounds)
-    lv_color_t card_alt = lv_color_hex(strtoul(colors[3] + 1, NULL, 16));
-
-    lv_color_t text_primary = is_dark ? lv_color_hex(strtoul(colors[6] + 1, NULL, 16))
-                                      :                                           // bg_lightest
-                                  lv_color_hex(strtoul(colors[0] + 1, NULL, 16)); // bg_darkest
+    // Extract colors from palette for readability
+    lv_color_t screen_bg = palette->screen_bg;
+    lv_color_t card_bg = palette->card_bg;
+    lv_color_t surface_control = palette->surface_control;
+    lv_color_t border_color = palette->border;
+    lv_color_t text_primary = palette->text;
+    lv_color_t text_muted = palette->text_muted;
+    lv_color_t text_subtle = palette->text_subtle;
+    lv_color_t primary_color = palette->primary;
+    lv_color_t secondary_color = palette->secondary;
+    lv_color_t tertiary_color = palette->tertiary;
+    lv_color_t info_color = palette->info;
+    lv_color_t success_color = palette->success;
+    lv_color_t warning_color = palette->warning;
+    lv_color_t danger_color = palette->danger;
+    lv_color_t focus_color = palette->focus;
 
     // Update the helix_theme instance
     helix_theme_instance->is_dark_mode = is_dark;
 
-    // Input widgets use card_alt color and text_primary for text
-    lv_style_set_bg_color(&helix_theme_instance->input_bg_style, card_alt);
+    // Input widgets use surface_control color and text_primary for text
+    lv_style_set_bg_color(&helix_theme_instance->input_bg_style, surface_control);
     lv_style_set_text_color(&helix_theme_instance->input_bg_style, text_primary);
     lv_style_set_radius(&helix_theme_instance->input_bg_style, border_radius);
     lv_style_set_border_opa(&helix_theme_instance->input_bg_style, border_opacity);
 
-    // Update button style (text_color handled by text_button auto-contrast)
-    lv_style_set_bg_color(&helix_theme_instance->button_style, card_alt);
+    // Update button style
+    lv_style_set_bg_color(&helix_theme_instance->button_style, surface_control);
+    lv_style_set_text_color(&helix_theme_instance->button_style, text_primary);
     lv_style_set_radius(&helix_theme_instance->button_style, border_radius);
     lv_style_set_radius(&helix_theme_instance->pressed_style, border_radius);
     lv_style_set_border_opa(&helix_theme_instance->button_style, border_opacity);
 
-    // Parse accent colors: colors[8]=primary, colors[9]=secondary, colors[10]=tertiary
-    lv_color_t primary_accent = lv_color_hex(strtoul(colors[8] + 1, NULL, 16));
-    lv_color_t secondary_accent = lv_color_hex(strtoul(colors[9] + 1, NULL, 16));
-    lv_color_t tertiary_accent = lv_color_hex(strtoul(colors[10] + 1, NULL, 16));
+    // Update switch indicator and knob colors
+    lv_style_set_bg_color(&helix_theme_instance->switch_indicator_style, primary_color);
+    lv_style_set_bg_color(&helix_theme_instance->switch_knob_style, text_primary);
 
-    // Compute knob color: brighter of secondary vs tertiary
-    // Brightness = 0.299*R + 0.587*G + 0.114*B
-    uint32_t sec_rgb = strtoul(colors[9] + 1, NULL, 16);
-    uint32_t ter_rgb = strtoul(colors[10] + 1, NULL, 16);
-    int sec_bright =
-        (299 * ((sec_rgb >> 16) & 0xFF) + 587 * ((sec_rgb >> 8) & 0xFF) + 114 * (sec_rgb & 0xFF)) /
-        1000;
-    int ter_bright =
-        (299 * ((ter_rgb >> 16) & 0xFF) + 587 * ((ter_rgb >> 8) & 0xFF) + 114 * (ter_rgb & 0xFF)) /
-        1000;
-    lv_color_t knob_accent = (ter_bright > sec_bright) ? tertiary_accent : secondary_accent;
-
-    // For switch/slider track: use text_subtle (4) as approximate border color
-    lv_color_t border_approx = lv_color_hex(strtoul(colors[4] + 1, NULL, 16));
-
-    // Update switch colors (track=border, indicator=secondary, knob=brighter accent)
-    lv_style_set_bg_color(&helix_theme_instance->switch_track_style, border_approx);
-    lv_style_set_bg_color(&helix_theme_instance->switch_indicator_style, secondary_accent);
-    lv_style_set_bg_color(&helix_theme_instance->switch_knob_style, knob_accent);
-
-    // Update focus ring color (colors[15] is focus)
-    lv_color_t focus_color = lv_color_hex(strtoul(colors[15] + 1, NULL, 16));
+    // Update focus ring color
     lv_style_set_outline_color(&helix_theme_instance->focus_ring_style, focus_color);
 
-    // Update slider styles (track=border, indicator=secondary, knob=brighter accent)
-    lv_style_set_bg_color(&helix_theme_instance->slider_track_style, border_approx);
-    lv_style_set_bg_color(&helix_theme_instance->slider_indicator_style, secondary_accent);
-    lv_style_set_bg_color(&helix_theme_instance->slider_knob_style, knob_accent);
+    // Update slider styles
+    lv_style_set_bg_color(&helix_theme_instance->slider_track_style, border_color);
+    lv_style_set_bg_color(&helix_theme_instance->slider_indicator_style, primary_color);
+    lv_style_set_bg_color(&helix_theme_instance->slider_knob_style, card_bg);
     lv_style_set_shadow_color(&helix_theme_instance->slider_knob_style, screen_bg);
 
-    // Update dropdown selected item style - uses more saturated of primary/secondary for highlight
-    // Compute saturation for both colors to pick the more vivid one
-    int pri_sat =
-        (primary_accent.red > primary_accent.green)
-            ? (primary_accent.red > primary_accent.blue ? primary_accent.red : primary_accent.blue)
-            : (primary_accent.green > primary_accent.blue ? primary_accent.green
-                                                          : primary_accent.blue);
-    int pri_min =
-        (primary_accent.red < primary_accent.green)
-            ? (primary_accent.red < primary_accent.blue ? primary_accent.red : primary_accent.blue)
-            : (primary_accent.green < primary_accent.blue ? primary_accent.green
-                                                          : primary_accent.blue);
-    int sec_sat = (secondary_accent.red > secondary_accent.green)
-                      ? (secondary_accent.red > secondary_accent.blue ? secondary_accent.red
-                                                                      : secondary_accent.blue)
-                      : (secondary_accent.green > secondary_accent.blue ? secondary_accent.green
-                                                                        : secondary_accent.blue);
-    int sec_min = (secondary_accent.red < secondary_accent.green)
-                      ? (secondary_accent.red < secondary_accent.blue ? secondary_accent.red
-                                                                      : secondary_accent.blue)
-                      : (secondary_accent.green < secondary_accent.blue ? secondary_accent.green
-                                                                        : secondary_accent.blue);
-    int pri_range = pri_sat - pri_min;
-    int sec_range = sec_sat - sec_min;
-    lv_color_t dropdown_accent = (pri_range >= sec_range) ? primary_accent : secondary_accent;
-    lv_style_set_bg_color(&helix_theme_instance->dropdown_selected_style, dropdown_accent);
-    helix_theme_instance->dropdown_accent_color = dropdown_accent;
+    // Update dropdown selected item style
+    lv_style_set_bg_color(&helix_theme_instance->dropdown_selected_style, surface_control);
 
     // Update shared card style
     lv_style_set_bg_color(&helix_theme_instance->card_style, card_bg);
-    lv_style_set_border_color(&helix_theme_instance->card_style, border_approx);
+    lv_style_set_border_color(&helix_theme_instance->card_style, border_color);
+    lv_style_set_border_opa(&helix_theme_instance->card_style, (lv_opa_t)border_opacity);
     lv_style_set_radius(&helix_theme_instance->card_style, border_radius);
 
     // Update shared dialog style
-    lv_style_set_bg_color(&helix_theme_instance->dialog_style, card_alt);
+    lv_style_set_bg_color(&helix_theme_instance->dialog_style, surface_control);
     lv_style_set_radius(&helix_theme_instance->dialog_style, border_radius);
 
     // Update shared text styles
-    // text_subtle (index 4) serves as approximate muted text in legacy palette
-    lv_color_t text_muted = lv_color_hex(strtoul(colors[4] + 1, NULL, 16));
-    // For subtle, use the same as muted in preview mode (actual themes will differ)
-    lv_color_t text_subtle = text_muted;
     lv_style_set_text_color(&helix_theme_instance->text_primary_style, text_primary);
     lv_style_set_text_color(&helix_theme_instance->text_muted_style, text_muted);
     lv_style_set_text_color(&helix_theme_instance->text_subtle_style, text_subtle);
@@ -871,34 +924,32 @@ void theme_core_preview_colors(bool is_dark, const char* colors[16], int32_t bor
     // Update icon styles (Phase 2.1)
     lv_style_set_text_color(&helix_theme_instance->icon_text_style, text_primary);
     lv_style_set_text_color(&helix_theme_instance->icon_muted_style, text_muted);
-    lv_style_set_text_color(&helix_theme_instance->icon_primary_style, accent_color);
-    // secondary uses accent_highlight (colors[7]) as approximation
-    lv_color_t secondary_approx = lv_color_hex(strtoul(colors[7] + 1, NULL, 16));
-    lv_style_set_text_color(&helix_theme_instance->icon_secondary_style, secondary_approx);
+    lv_style_set_text_color(&helix_theme_instance->icon_primary_style, primary_color);
+    lv_style_set_text_color(&helix_theme_instance->icon_secondary_style, secondary_color);
     lv_style_set_text_color(&helix_theme_instance->icon_tertiary_style, text_subtle);
-    // Semantic icon colors from palette: 11=success, 12=warning, 13=danger, 14=info
-    lv_color_t success = lv_color_hex(strtoul(colors[11] + 1, NULL, 16));
-    lv_color_t warning = lv_color_hex(strtoul(colors[12] + 1, NULL, 16));
-    lv_color_t danger = lv_color_hex(strtoul(colors[13] + 1, NULL, 16));
-    lv_color_t info = lv_color_hex(strtoul(colors[14] + 1, NULL, 16));
-    lv_style_set_text_color(&helix_theme_instance->icon_success_style, success);
-    lv_style_set_text_color(&helix_theme_instance->icon_warning_style, warning);
-    lv_style_set_text_color(&helix_theme_instance->icon_danger_style, danger);
-    lv_style_set_text_color(&helix_theme_instance->icon_info_style, info);
 
-    // Update spinner style (Phase 2.3) - uses accent/primary color
-    lv_style_set_arc_color(&helix_theme_instance->spinner_style, accent_color);
+    // Update semantic icon colors
+    lv_style_set_text_color(&helix_theme_instance->icon_info_style, info_color);
+    lv_style_set_text_color(&helix_theme_instance->icon_success_style, success_color);
+    lv_style_set_text_color(&helix_theme_instance->icon_warning_style, warning_color);
+    lv_style_set_text_color(&helix_theme_instance->icon_danger_style, danger_color);
+
+    // Update spinner style (Phase 2.3) - uses primary color
+    lv_style_set_arc_color(&helix_theme_instance->spinner_style, primary_color);
 
     // Update severity styles (Phase 2.3) - use palette semantic colors
-    lv_style_set_border_color(&helix_theme_instance->severity_info_style, info);
-    lv_style_set_border_color(&helix_theme_instance->severity_success_style, success);
-    lv_style_set_border_color(&helix_theme_instance->severity_warning_style, warning);
-    lv_style_set_border_color(&helix_theme_instance->severity_danger_style, danger);
+    lv_style_set_border_color(&helix_theme_instance->severity_info_style, info_color);
+    lv_style_set_border_color(&helix_theme_instance->severity_success_style, success_color);
+    lv_style_set_border_color(&helix_theme_instance->severity_warning_style, warning_color);
+    lv_style_set_border_color(&helix_theme_instance->severity_danger_style, danger_color);
 
     // Update button styles (Phase 2.6a) - use palette colors
-    lv_style_set_bg_color(&helix_theme_instance->button_primary_style, accent_color);
-    lv_style_set_bg_color(&helix_theme_instance->button_secondary_style, card_alt);
-    lv_style_set_bg_color(&helix_theme_instance->button_danger_style, danger);
+    lv_style_set_bg_color(&helix_theme_instance->button_primary_style, primary_color);
+    lv_style_set_bg_color(&helix_theme_instance->button_secondary_style, surface_control);
+    lv_style_set_bg_color(&helix_theme_instance->button_tertiary_style, tertiary_color);
+    lv_style_set_bg_color(&helix_theme_instance->button_success_style, success_color);
+    lv_style_set_bg_color(&helix_theme_instance->button_warning_style, warning_color);
+    lv_style_set_bg_color(&helix_theme_instance->button_danger_style, danger_color);
     // Note: button_ghost_style has transparent bg, no update needed
 
     // Update default theme internal styles (private API access)
@@ -926,13 +977,13 @@ void theme_core_preview_colors(bool is_dark, const char* colors[16], int32_t bor
 
     def_theme->color_scr = screen_bg;
     def_theme->color_card = card_bg;
-    def_theme->color_grey = card_alt;
+    def_theme->color_grey = surface_control;
     def_theme->color_text = text_primary;
 
     lv_style_set_bg_color(&def_theme->styles.scr, screen_bg);
     lv_style_set_text_color(&def_theme->styles.scr, text_primary);
     lv_style_set_bg_color(&def_theme->styles.card, card_bg);
-    lv_style_set_bg_color(&def_theme->styles.btn, card_alt);
+    lv_style_set_bg_color(&def_theme->styles.btn, surface_control);
     lv_style_set_radius(&def_theme->styles.btn, border_radius);
 
     // Trigger style refresh
@@ -1116,22 +1167,49 @@ lv_style_t* theme_core_get_button_ghost_style(void) {
     return &helix_theme_instance->button_ghost_style;
 }
 
+lv_style_t* theme_core_get_button_success_style(void) {
+    if (!helix_theme_instance) {
+        return NULL;
+    }
+    return &helix_theme_instance->button_success_style;
+}
+
+lv_style_t* theme_core_get_button_tertiary_style(void) {
+    if (!helix_theme_instance) {
+        return NULL;
+    }
+    return &helix_theme_instance->button_tertiary_style;
+}
+
+lv_style_t* theme_core_get_button_warning_style(void) {
+    if (!helix_theme_instance) {
+        return NULL;
+    }
+    return &helix_theme_instance->button_warning_style;
+}
+
 // ============================================================================
 // Contrast Text Color Getters (Phase 2.6a)
 // ============================================================================
 
 lv_color_t theme_core_get_text_for_dark_bg(void) {
-    if (!helix_theme_instance) {
-        // Fallback: white for dark backgrounds
-        return lv_color_hex(0xFFFFFF);
+    // Look up text_dark token directly from XML constant system
+    // This is the dark mode's text color (light) - used on dark backgrounds
+    const char* text_dark_str = lv_xml_get_const(NULL, "text_dark");
+    if (text_dark_str && text_dark_str[0] == '#') {
+        return lv_color_hex(strtoul(text_dark_str + 1, NULL, 16));
     }
-    return helix_theme_instance->contrast_text_for_dark_bg_;
+    // Fallback for themes without dark mode defined
+    return lv_color_hex(0xE0E0E0);
 }
 
 lv_color_t theme_core_get_text_for_light_bg(void) {
-    if (!helix_theme_instance) {
-        // Fallback: dark gray for light backgrounds
-        return lv_color_hex(0x212121);
+    // Look up text_light token directly from XML constant system
+    // This is the light mode's text color (dark) - used on light backgrounds
+    const char* text_light_str = lv_xml_get_const(NULL, "text_light");
+    if (text_light_str && text_light_str[0] == '#') {
+        return lv_color_hex(strtoul(text_light_str + 1, NULL, 16));
     }
-    return helix_theme_instance->contrast_text_for_light_bg_;
+    // Fallback for themes without light mode defined
+    return lv_color_hex(0x212121);
 }

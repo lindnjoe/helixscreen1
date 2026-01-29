@@ -31,12 +31,12 @@
     <lv_obj width="content"
             height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
             style_pad_gap="#space_xs" flex_grow="1" scrollable="false">
-      <text_body name="label" text="$label" style_text_color="#text">
+      <text_body name="label" text="$label">
         <bind_style name="label_enabled" subject="$disabled" ref_value="0"/>
         <bind_style name="label_disabled" subject="$disabled" ref_value="1"/>
       </text_body>
       <!-- Description shown only if provided -->
-      <text_small name="description" text="$description" style_text_color="#text_muted"/>
+      <text_small name="description" text="$description"/>
     </lv_obj>
     <!-- Right side: Dropdown -->
     <lv_dropdown name="dropdown"

@@ -75,7 +75,7 @@
               style_pad_right="#space_lg" style_pad_top="#space_md" style_pad_bottom="#space_lg" flex_flow="row"
               style_flex_cross_place="center" style_pad_gap="#space_sm">
         <icon src="info" size="xs" variant="secondary"/>
-        <text_small text="Empty slots disable the associated functionality" style_text_color="#text_muted"/>
+        <text_small text="Empty slots disable the associated functionality"/>
       </lv_obj>
     </lv_obj>
   </view>

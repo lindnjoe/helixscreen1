@@ -33,7 +33,7 @@
             style_pad_right="#space_lg" style_pad_top="#space_lg" style_pad_bottom="#space_sm" flex_flow="row"
             style_flex_main_place="space_between" style_flex_cross_place="center">
       <text_heading name="step_title" bind_text="macro_enhance_step_title"/>
-      <text_small name="step_progress" bind_text="macro_enhance_step_progress" style_text_color="#text_muted"/>
+      <text_small name="step_progress" bind_text="macro_enhance_step_progress"/>
     </lv_obj>
     <!-- ============================================================ -->
     <!-- STATE 0: Operation confirmation -->
@@ -45,8 +45,7 @@
       <!-- Only visible when show_operation == 1 (hide when 0) -->
       <bind_flag_if_eq subject="macro_enhance_show_operation" flag="hidden" ref_value="0"/>
       <!-- Description of what this operation does -->
-      <text_body name="operation_description"
-                 width="100%" bind_text="macro_enhance_description" long_mode="wrap" style_text_color="#text_muted"/>
+      <text_body name="operation_description" width="100%" bind_text="macro_enhance_description" long_mode="wrap"/>
     </lv_obj>
     <!-- ============================================================ -->
     <!-- STATE 1: Summary of approved changes -->
@@ -111,8 +110,7 @@
       <icon src="check_circle" size="xl" color="#success"/>
       <text_heading text="Enhancement Complete!" style_text_align="center"/>
       <text_body name="success_message"
-                 width="100%" bind_text="macro_enhance_description" long_mode="wrap" style_text_align="center"
-                 style_text_color="#text_muted"/>
+                 width="100%" bind_text="macro_enhance_description" long_mode="wrap" style_text_align="center"/>
     </lv_obj>
     <!-- ============================================================ -->
     <!-- STATE 4: Error -->
@@ -126,8 +124,7 @@
       <icon src="alert_circle" size="xl" color="#danger"/>
       <text_heading text="Enhancement Failed" style_text_align="center"/>
       <text_body name="error_message"
-                 width="100%" bind_text="macro_enhance_description" long_mode="wrap" style_text_align="center"
-                 style_text_color="#text_muted"/>
+                 width="100%" bind_text="macro_enhance_description" long_mode="wrap" style_text_align="center"/>
     </lv_obj>
     <!-- ============================================================ -->
     <!-- Divider above buttons -->

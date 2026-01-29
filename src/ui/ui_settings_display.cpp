@@ -579,6 +579,26 @@ void DisplaySettingsOverlay::on_edit_colors_clicked(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_END();
 }
 
+void DisplaySettingsOverlay::on_preview_open_modal(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[DisplaySettingsOverlay] on_preview_open_modal");
+    LV_UNUSED(e);
+
+    // Show a sample modal with lorem ipsum
+    ui_modal_show_confirmation(
+        "Sample Dialog",
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod "
+        "tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim "
+        "veniam, quis nostrud exercitation ullamco laboris.",
+        ModalSeverity::Info, "OK", nullptr, nullptr, nullptr);
+
+    // Apply preview palette to the newly created modal
+    // (modal is created with global theme colors, need to update for preview)
+    auto& overlay = get_display_settings_overlay();
+    overlay.apply_preview_palette_to_screen_popups();
+
+    LVGL_SAFE_EVENT_CB_END();
+}
+
 void DisplaySettingsOverlay::on_preview_dark_mode_toggled(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[DisplaySettingsOverlay] on_preview_dark_mode_toggled");
     auto* target = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
@@ -619,12 +639,40 @@ void DisplaySettingsOverlay::handle_preview_dark_mode_toggled(bool is_dark) {
         return;
     }
 
-    // Use reactive theme system: update shared styles, LVGL auto-refreshes widgets
-    const char* colors[16];
-    for (size_t i = 0; i < 16; ++i) {
-        colors[i] = theme.colors.at(i).c_str();
+    // Select appropriate mode palette based on is_dark toggle
+    const helix::ModePalette* mode_palette = nullptr;
+    if (is_dark && theme.supports_dark()) {
+        mode_palette = &theme.dark;
+    } else if (!is_dark && theme.supports_light()) {
+        mode_palette = &theme.light;
+    } else if (theme.supports_dark()) {
+        mode_palette = &theme.dark;
+    } else {
+        mode_palette = &theme.light;
     }
-    theme_core_preview_colors(is_dark, colors, theme.properties.border_radius);
+
+    // Build palette from the mode palette
+    theme_palette_t palette = {};
+    palette.screen_bg = theme_manager_parse_hex_color(mode_palette->app_bg.c_str());
+    palette.panel_bg = theme_manager_parse_hex_color(mode_palette->panel_bg.c_str());
+    palette.card_bg = theme_manager_parse_hex_color(mode_palette->card_bg.c_str());
+    palette.surface_control = theme_manager_parse_hex_color(mode_palette->card_alt.c_str());
+    palette.border = theme_manager_parse_hex_color(mode_palette->border.c_str());
+    palette.text = theme_manager_parse_hex_color(mode_palette->text.c_str());
+    palette.text_muted = theme_manager_parse_hex_color(mode_palette->text_muted.c_str());
+    palette.text_subtle = theme_manager_parse_hex_color(mode_palette->text_subtle.c_str());
+    palette.primary = theme_manager_parse_hex_color(mode_palette->primary.c_str());
+    palette.secondary = theme_manager_parse_hex_color(mode_palette->secondary.c_str());
+    palette.tertiary = theme_manager_parse_hex_color(mode_palette->tertiary.c_str());
+    palette.info = theme_manager_parse_hex_color(mode_palette->info.c_str());
+    palette.success = theme_manager_parse_hex_color(mode_palette->success.c_str());
+    palette.warning = theme_manager_parse_hex_color(mode_palette->warning.c_str());
+    palette.danger = theme_manager_parse_hex_color(mode_palette->danger.c_str());
+    palette.focus = theme_manager_parse_hex_color(mode_palette->focus.c_str());
+
+    // Use reactive theme system: update shared styles, LVGL auto-refreshes widgets
+    theme_core_preview_colors(is_dark, &palette, theme.properties.border_radius,
+                              theme.properties.border_opacity);
 
     // Refresh widget tree for any local/inline styles
     theme_manager_refresh_widget_tree(lv_screen_active());

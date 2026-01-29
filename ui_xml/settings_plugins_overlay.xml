@@ -29,7 +29,7 @@
                 height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
                 flex_flow="column" style_pad_gap="#space_xs" flex_grow="1">
           <text_heading name="status_title" bind_text="plugins_status_title"/>
-          <text_small name="status_detail" bind_text="plugins_status_detail" style_text_color="#text_muted"/>
+          <text_small name="status_detail" bind_text="plugins_status_detail"/>
         </lv_obj>
       </lv_obj>
       <!-- ================================================================== -->
@@ -83,7 +83,7 @@
               style_pad_gap="#space_md">
         <bind_flag_if_not_eq subject="plugins_total_count" flag="hidden" ref_value="0"/>
         <icon src="puzzle_outline" size="lg" variant="secondary"/>
-        <text_body text="No plugins found" style_text_color="#text_muted"/>
+        <text_body text="No plugins found"/>
         <text_small text="Place plugins in the plugins directory to extend HelixScreen"
                     style_text_color="#text_muted" style_text_align="center"/>
       </lv_obj>

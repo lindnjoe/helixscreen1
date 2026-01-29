@@ -41,12 +41,12 @@
                   height="content" flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_sm"
                   style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false">
             <icon src="light" size="sm" variant="secondary"/>
-            <text_body text="Brightness" style_text_color="#text"/>
+            <text_body text="Brightness"/>
           </lv_obj>
-          <text_body name="brightness_value_label" bind_text="brightness_value" style_text_color="#text_muted"/>
+          <text_body name="brightness_value_label" bind_text="brightness_value"/>
         </lv_obj>
         <!-- Description -->
-        <text_small text="Adjust screen brightness level" style_text_color="#text_muted"/>
+        <text_small text="Adjust screen brightness level"/>
         <!-- Slider with min/max icons -->
         <lv_obj width="100%"
                 height="content" flex_flow="row" style_flex_cross_place="center" style_bg_opa="0" style_border_width="0"
@@ -65,7 +65,9 @@
       <setting_dropdown_row name="row_bed_mesh_mode"
                             label="Bed Mesh Render" icon="grid_large"
                             description="Choose rendering mode for bed mesh visualization"
-                            options="Auto&#10;3D View&#10;2D Heatmap" callback="on_bed_mesh_mode_changed"/>
+                            options="Auto
+3D View
+2D Heatmap" callback="on_bed_mesh_mode_changed"/>
       <!-- ================================================================== -->
       <!-- G-CODE RENDER MODE (hidden until hardware-accelerated 3D is ready) -->
       <!-- ================================================================== -->
@@ -73,7 +75,9 @@
         <setting_dropdown_row name="row_gcode_mode"
                               label="G-code Preview" icon="printer_3d"
                               description="Choose rendering mode for G-code visualization"
-                              options="Auto&#10;3D View&#10;2D Layers" callback="on_gcode_mode_changed"/>
+                              options="Auto
+3D View
+2D Layers" callback="on_gcode_mode_changed"/>
       </lv_obj>
       <!-- ================================================================== -->
       <!-- DISPLAY DIM -->
@@ -87,16 +91,20 @@
       <!-- DISPLAY SLEEP -->
       <!-- ================================================================== -->
       <setting_dropdown_row name="row_display_sleep"
-                            label="Display Sleep" icon="power"
-                            description="Screen turns off completely after period of inactivity"
-                            options="Never&#10;1 minute&#10;5 minutes&#10;10 minutes&#10;30 minutes"
-                            callback="on_display_sleep_changed"/>
+                            label="Display Sleep" icon="clock"
+                            description="Screen will dim after the selected period of inactivity"
+                            options="Never
+1 minute
+5 minutes
+10 minutes
+30 minutes" callback="on_display_sleep_changed"/>
       <!-- ================================================================== -->
       <!-- TIME FORMAT -->
       <!-- ================================================================== -->
       <setting_dropdown_row name="row_time_format"
                             label="Time Format" icon="clock" description="Choose 12-hour or 24-hour time display"
-                            options="12 Hour&#10;24 Hour" callback="on_time_format_changed"/>
+                            options="12 Hour
+24 Hour" callback="on_time_format_changed"/>
       <!-- ================================================================== -->
       <!-- INFO NOTE -->
       <!-- ================================================================== -->

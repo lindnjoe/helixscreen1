@@ -190,6 +190,35 @@ TEST_CASE("strip_legacy_prefix handles empty string", "[ui_icon][legacy][error]"
 #include "../lvgl_ui_test_fixture.h"
 #include "theme_core.h"
 
+// Helper: Create a dark mode test palette with distinct colors
+static theme_palette_t make_dark_test_palette() {
+    theme_palette_t p = {};
+    p.screen_bg = lv_color_hex(0x121212);
+    p.panel_bg = lv_color_hex(0x1A1A1A);
+    p.card_bg = lv_color_hex(0x1E1E1E);
+    p.surface_control = lv_color_hex(0x2D2D2D);
+    p.border = lv_color_hex(0x424242);
+    p.text = lv_color_hex(0xE0E0E0);
+    p.text_muted = lv_color_hex(0xA0A0A0);
+    p.text_subtle = lv_color_hex(0x808080);
+    p.primary = lv_color_hex(0x2196F3);
+    p.secondary = lv_color_hex(0x03DAC6);
+    p.tertiary = lv_color_hex(0x6C757D);
+    p.info = lv_color_hex(0x42A5F5);
+    p.success = lv_color_hex(0x4CAF50);
+    p.warning = lv_color_hex(0xFFA726);
+    p.danger = lv_color_hex(0xEF5350);
+    p.focus = lv_color_hex(0x4FC3F7);
+    return p;
+}
+
+// Helper: Create a dark mode test palette with configurable primary color
+static theme_palette_t make_dark_test_palette_with_primary(lv_color_t primary) {
+    theme_palette_t p = make_dark_test_palette();
+    p.primary = primary;
+    return p;
+}
+
 // ============================================================================
 // New Variant Name Tests
 // ============================================================================
@@ -321,19 +350,8 @@ TEST_CASE_METHOD(LVGLUITestFixture, "ui_icon: text variant color updates on them
     INFO("Initial icon text color: 0x" << std::hex << before_rgb);
 
     // Update theme colors to dark mode (significantly different colors)
-    lv_color_t dark_screen_bg = lv_color_hex(0x121212);
-    lv_color_t dark_card_bg = lv_color_hex(0x1E1E1E);
-    lv_color_t dark_surface = lv_color_hex(0x2D2D2D);
-    lv_color_t dark_text = lv_color_hex(0xE0E0E0); // Light text for dark mode
-    lv_color_t dark_text_muted = lv_color_hex(0xA0A0A0);
-    lv_color_t dark_text_subtle = lv_color_hex(0x808080);
-    lv_color_t dark_focus = lv_color_hex(0x4FC3F7);
-    lv_color_t dark_primary = lv_color_hex(0x2196F3);
-    lv_color_t dark_border = lv_color_hex(0x424242);
-
-    theme_core_update_colors(true, // is_dark
-                             dark_screen_bg, dark_card_bg, dark_surface, dark_text, dark_text_muted,
-                             dark_text_subtle, dark_focus, dark_primary, dark_border);
+    theme_palette_t dark_palette = make_dark_test_palette();
+    theme_core_update_colors(true, &dark_palette, 40);
 
     // Force LVGL style refresh cascade
     lv_obj_report_style_change(nullptr);
@@ -360,19 +378,8 @@ TEST_CASE_METHOD(LVGLUITestFixture, "ui_icon: muted variant color updates on the
     lv_color_t before = lv_obj_get_style_text_color(icon, LV_PART_MAIN);
 
     // Update to dark mode
-    lv_color_t dark_screen_bg = lv_color_hex(0x121212);
-    lv_color_t dark_card_bg = lv_color_hex(0x1E1E1E);
-    lv_color_t dark_surface = lv_color_hex(0x2D2D2D);
-    lv_color_t dark_text = lv_color_hex(0xE0E0E0);
-    lv_color_t dark_text_muted = lv_color_hex(0xA0A0A0);
-    lv_color_t dark_text_subtle = lv_color_hex(0x808080);
-    lv_color_t dark_focus = lv_color_hex(0x4FC3F7);
-    lv_color_t dark_primary = lv_color_hex(0x2196F3);
-    lv_color_t dark_border = lv_color_hex(0x424242);
-
-    theme_core_update_colors(true, dark_screen_bg, dark_card_bg, dark_surface, dark_text,
-                             dark_text_muted, dark_text_subtle, dark_focus, dark_primary,
-                             dark_border);
+    theme_palette_t dark_palette = make_dark_test_palette();
+    theme_core_update_colors(true, &dark_palette, 40);
 
     lv_obj_report_style_change(nullptr);
 
@@ -392,19 +399,8 @@ TEST_CASE_METHOD(LVGLUITestFixture, "ui_icon: primary variant color updates on t
     lv_color_t before = lv_obj_get_style_text_color(icon, LV_PART_MAIN);
 
     // Update to dark mode with DIFFERENT primary color
-    lv_color_t dark_screen_bg = lv_color_hex(0x121212);
-    lv_color_t dark_card_bg = lv_color_hex(0x1E1E1E);
-    lv_color_t dark_surface = lv_color_hex(0x2D2D2D);
-    lv_color_t dark_text = lv_color_hex(0xE0E0E0);
-    lv_color_t dark_text_muted = lv_color_hex(0xA0A0A0);
-    lv_color_t dark_text_subtle = lv_color_hex(0x808080);
-    lv_color_t dark_focus = lv_color_hex(0x4FC3F7);
-    lv_color_t dark_primary = lv_color_hex(0xFF5722); // Different primary color
-    lv_color_t dark_border = lv_color_hex(0x424242);
-
-    theme_core_update_colors(true, dark_screen_bg, dark_card_bg, dark_surface, dark_text,
-                             dark_text_muted, dark_text_subtle, dark_focus, dark_primary,
-                             dark_border);
+    theme_palette_t dark_palette = make_dark_test_palette_with_primary(lv_color_hex(0xFF5722));
+    theme_core_update_colors(true, &dark_palette, 40);
 
     lv_obj_report_style_change(nullptr);
 
@@ -519,19 +515,8 @@ TEST_CASE_METHOD(LVGLUITestFixture, "ui_icon: multiple icons update together on 
     REQUIRE(lv_color_eq(before2, before3));
 
     // Update to dark mode
-    lv_color_t dark_screen_bg = lv_color_hex(0x121212);
-    lv_color_t dark_card_bg = lv_color_hex(0x1E1E1E);
-    lv_color_t dark_surface = lv_color_hex(0x2D2D2D);
-    lv_color_t dark_text = lv_color_hex(0xE0E0E0);
-    lv_color_t dark_text_muted = lv_color_hex(0xA0A0A0);
-    lv_color_t dark_text_subtle = lv_color_hex(0x808080);
-    lv_color_t dark_focus = lv_color_hex(0x4FC3F7);
-    lv_color_t dark_primary = lv_color_hex(0x2196F3);
-    lv_color_t dark_border = lv_color_hex(0x424242);
-
-    theme_core_update_colors(true, dark_screen_bg, dark_card_bg, dark_surface, dark_text,
-                             dark_text_muted, dark_text_subtle, dark_focus, dark_primary,
-                             dark_border);
+    theme_palette_t dark_palette = make_dark_test_palette();
+    theme_core_update_colors(true, &dark_palette, 40);
 
     lv_obj_report_style_change(nullptr);
 
@@ -564,19 +549,8 @@ TEST_CASE_METHOD(LVGLUITestFixture, "ui_icon: style matches shared style after t
     REQUIRE(shared_style != nullptr);
 
     // Update to dark mode
-    lv_color_t dark_screen_bg = lv_color_hex(0x121212);
-    lv_color_t dark_card_bg = lv_color_hex(0x1E1E1E);
-    lv_color_t dark_surface = lv_color_hex(0x2D2D2D);
-    lv_color_t dark_text = lv_color_hex(0xE0E0E0);
-    lv_color_t dark_text_muted = lv_color_hex(0xA0A0A0);
-    lv_color_t dark_text_subtle = lv_color_hex(0x808080);
-    lv_color_t dark_focus = lv_color_hex(0x4FC3F7);
-    lv_color_t dark_primary = lv_color_hex(0x2196F3);
-    lv_color_t dark_border = lv_color_hex(0x424242);
-
-    theme_core_update_colors(true, dark_screen_bg, dark_card_bg, dark_surface, dark_text,
-                             dark_text_muted, dark_text_subtle, dark_focus, dark_primary,
-                             dark_border);
+    theme_palette_t dark_palette = make_dark_test_palette();
+    theme_core_update_colors(true, &dark_palette, 40);
 
     lv_obj_report_style_change(nullptr);
 

@@ -35,6 +35,54 @@ static lv_display_t* theme_display = nullptr;
 
 static helix::ThemeData active_theme;
 
+/**
+ * @brief Build theme_palette_t from ModePalette
+ *
+ * Converts the C++ ModePalette struct (hex strings) to C theme_palette_t (lv_color_t).
+ * Used to pass colors to theme_core functions.
+ *
+ * @param mode_palette ModePalette with hex color strings
+ * @return theme_palette_t with parsed lv_color_t values
+ */
+static theme_palette_t build_palette_from_mode(const helix::ModePalette& mode_palette) {
+    theme_palette_t palette = {};
+    palette.screen_bg = theme_manager_parse_hex_color(mode_palette.app_bg.c_str());
+    palette.panel_bg = theme_manager_parse_hex_color(mode_palette.panel_bg.c_str());
+    palette.card_bg = theme_manager_parse_hex_color(mode_palette.card_bg.c_str());
+    palette.surface_control = theme_manager_parse_hex_color(mode_palette.card_alt.c_str());
+    palette.border = theme_manager_parse_hex_color(mode_palette.border.c_str());
+    palette.text = theme_manager_parse_hex_color(mode_palette.text.c_str());
+    palette.text_muted = theme_manager_parse_hex_color(mode_palette.text_muted.c_str());
+    palette.text_subtle = theme_manager_parse_hex_color(mode_palette.text_subtle.c_str());
+    palette.primary = theme_manager_parse_hex_color(mode_palette.primary.c_str());
+    palette.secondary = theme_manager_parse_hex_color(mode_palette.secondary.c_str());
+    palette.tertiary = theme_manager_parse_hex_color(mode_palette.tertiary.c_str());
+    palette.info = theme_manager_parse_hex_color(mode_palette.info.c_str());
+    palette.success = theme_manager_parse_hex_color(mode_palette.success.c_str());
+    palette.warning = theme_manager_parse_hex_color(mode_palette.warning.c_str());
+    palette.danger = theme_manager_parse_hex_color(mode_palette.danger.c_str());
+    palette.focus = theme_manager_parse_hex_color(mode_palette.focus.c_str());
+    return palette;
+}
+
+/**
+ * @brief Get the current mode palette based on dark/light mode
+ *
+ * Returns reference to appropriate ModePalette from active_theme.
+ * Falls back to the available palette if the requested mode is not supported.
+ */
+static const helix::ModePalette& get_current_mode_palette() {
+    if (use_dark_mode && active_theme.supports_dark()) {
+        return active_theme.dark;
+    } else if (!use_dark_mode && active_theme.supports_light()) {
+        return active_theme.light;
+    } else if (active_theme.supports_dark()) {
+        return active_theme.dark;
+    } else {
+        return active_theme.light;
+    }
+}
+
 // Theme preset overrides removed - colors now come from theme JSON files via ThemeData
 
 // Parse hex color string "#FF4444" -> lv_color_hex(0xFF4444)
@@ -598,7 +646,9 @@ void theme_manager_init(lv_display_t* display, bool use_dark_mode_param) {
     // Load active theme from config/themes directory
     active_theme = theme_manager_load_active_theme();
 
-    // Register semantic colors from theme (includes _light/_dark variants and base names)
+    // Register semantic colors from dual-palette system (includes _light/_dark variants and base
+    // names) NOTE: Legacy palette registration removed - was causing token collisions (text_light
+    // conflict)
     theme_manager_register_semantic_colors(scope, active_theme, use_dark_mode);
 
     // Register theme properties (border_radius, etc.) - must be before static constants
@@ -629,18 +679,6 @@ void theme_manager_init(lv_display_t* display, bool use_dark_mode_param) {
 
     spdlog::debug("[Theme] Runtime constants set for {} mode", use_dark_mode ? "dark" : "light");
 
-    // Read colors from globals.xml
-    const char* primary_str = lv_xml_get_const(NULL, "primary");
-    const char* secondary_str = lv_xml_get_const(NULL, "secondary");
-
-    if (!primary_str || !secondary_str) {
-        spdlog::error("[Theme] Failed to read color constants from globals.xml");
-        return;
-    }
-
-    lv_color_t primary_color = theme_manager_parse_hex_color(primary_str);
-    lv_color_t secondary_color = theme_manager_parse_hex_color(secondary_str);
-
     // Read responsive font based on current breakpoint
     // NOTE: We read the variant directly because base constants are removed to enable
     // responsive overrides (LVGL ignores lv_xml_register_const for existing constants)
@@ -658,73 +696,26 @@ void theme_manager_init(lv_display_t* display, bool use_dark_mode_param) {
         base_font = &noto_sans_16;
     }
 
-    // Read color values from auto-registered constants
-    const char* screen_bg_str = lv_xml_get_const(nullptr, "app_bg");
-    const char* card_bg_str = lv_xml_get_const(nullptr, "card_bg");
-    const char* card_alt_str = lv_xml_get_const(nullptr, "card_alt");
-    const char* text_str = lv_xml_get_const(nullptr, "text");
-    const char* text_muted_str = lv_xml_get_const(nullptr, "text_muted");
-    const char* text_subtle_str = lv_xml_get_const(nullptr, "text_subtle");
-    const char* focus_str = lv_xml_get_const(nullptr, "focus");
-    const char* border_str = lv_xml_get_const(nullptr, "border");
+    // Build palette from current mode
+    const helix::ModePalette& mode_palette = get_current_mode_palette();
+    theme_palette_t palette = build_palette_from_mode(mode_palette);
 
-    if (!screen_bg_str || !card_bg_str || !card_alt_str || !text_str || !text_muted_str) {
-        spdlog::error("[Theme] Failed to read auto-registered color constants");
-        return;
-    }
-
-    lv_color_t screen_bg = theme_manager_parse_hex_color(screen_bg_str);
-    lv_color_t card_bg = theme_manager_parse_hex_color(card_bg_str);
-    lv_color_t card_alt = theme_manager_parse_hex_color(card_alt_str);
-    lv_color_t text_color = theme_manager_parse_hex_color(text_str);
-    lv_color_t text_muted_color = theme_manager_parse_hex_color(text_muted_str);
-    // Default to text_muted if text_subtle token not available
-    lv_color_t text_subtle_color =
-        text_subtle_str ? theme_manager_parse_hex_color(text_subtle_str) : text_muted_color;
-    // Default to primary color if focus token not available
-    lv_color_t focus_color = focus_str ? theme_manager_parse_hex_color(focus_str) : primary_color;
-    // Default to card_alt if border token not available
-    lv_color_t border_color = border_str ? theme_manager_parse_hex_color(border_str) : card_alt;
-
-    // Read border radius and width from theme (registered in
-    // theme_manager_register_theme_properties)
-    const char* border_radius_str = lv_xml_get_const(nullptr, "button_radius");
-    if (!border_radius_str) {
-        border_radius_str = lv_xml_get_const(nullptr, "border_radius");
-    }
-    if (!border_radius_str) {
-        spdlog::error("[Theme] Failed to read button_radius from globals.xml");
-        return;
-    }
-    int32_t border_radius = atoi(border_radius_str);
-
-    const char* border_width_str = lv_xml_get_const(nullptr, "border_width");
-    int32_t border_width = border_width_str ? atoi(border_width_str) : 1;
-
-    const char* border_opacity_str = lv_xml_get_const(nullptr, "border_opacity");
-    int32_t border_opacity = border_opacity_str ? atoi(border_opacity_str) : 255;
-
-    // Compute knob color: more saturated of primary vs tertiary for slider/switch handles
-    const char* tertiary_str = lv_xml_get_const(nullptr, "tertiary");
-    lv_color_t tertiary_color =
-        tertiary_str ? theme_manager_parse_hex_color(tertiary_str) : primary_color;
-    lv_color_t knob_color = more_saturated_color(primary_color, tertiary_color);
-
-    // Compute accent color: more saturated of primary vs secondary for checkbox checkmarks
-    lv_color_t accent_color = more_saturated_color(primary_color, secondary_color);
+    // Get theme properties
+    int32_t border_radius = active_theme.properties.border_radius;
+    int32_t border_width = active_theme.properties.border_width;
+    int32_t border_opacity = active_theme.properties.border_opacity;
 
     // Initialize custom HelixScreen theme (wraps LVGL default theme)
-    current_theme =
-        theme_core_init(display, primary_color, secondary_color, text_color, text_muted_color,
-                        text_subtle_color, use_dark_mode, base_font, screen_bg, card_bg, card_alt,
-                        focus_color, border_color, border_radius);
+    // Note: knob_color and accent_color are computed internally by theme_core from palette
+    current_theme = theme_core_init(display, &palette, use_dark_mode, base_font, border_radius,
+                                    border_width, border_opacity);
 
     if (current_theme) {
         lv_display_set_theme(display, current_theme);
         spdlog::info("[Theme] Initialized HelixScreen theme: {} mode",
                      use_dark_mode ? "dark" : "light");
-        spdlog::debug("[Theme] Colors: primary={}, secondary={}, screen={}, card={}, card_alt={}",
-                      primary_str, secondary_str, screen_bg_str, card_bg_str, card_alt_str);
+        spdlog::debug("[Theme] Colors: primary={}, screen={}, card={}", mode_palette.primary,
+                      mode_palette.app_bg, mode_palette.card_bg);
     } else {
         spdlog::error("[Theme] Failed to initialize HelixScreen theme");
     }
@@ -762,82 +753,15 @@ void theme_manager_toggle_dark_mode() {
     use_dark_mode = new_use_dark_mode;
     spdlog::info("[Theme] Switching to {} mode", new_use_dark_mode ? "dark" : "light");
 
-    // Read color values directly from _light/_dark variants
-    // Note: We can't update lv_xml_register_const() values at runtime (LVGL limitation),
-    // so we read the appropriate variant directly based on the new theme mode.
-    const char* suffix = new_use_dark_mode ? "_dark" : "_light";
+    // Build palette from the new mode
+    const helix::ModePalette& mode_palette = get_current_mode_palette();
+    theme_palette_t palette = build_palette_from_mode(mode_palette);
 
-    auto get_themed_color = [suffix](const char* base_name,
-                                     const char* fallback_name) -> const char* {
-        char full_name[128];
-        snprintf(full_name, sizeof(full_name), "%s%s", base_name, suffix);
-        const char* val = lv_xml_get_const(nullptr, full_name);
-        if (!val && fallback_name) {
-            // Try legacy name as fallback
-            snprintf(full_name, sizeof(full_name), "%s%s", fallback_name, suffix);
-            val = lv_xml_get_const(nullptr, full_name);
-        }
-        return val;
-    };
-
-    // Use semantic token names (no legacy fallbacks)
-    const char* screen_bg_str = get_themed_color("app_bg", nullptr);
-    const char* card_bg_str = get_themed_color("card_bg", nullptr);
-    const char* card_alt_str = get_themed_color("card_alt", nullptr);
-    const char* text_str = get_themed_color("text", nullptr);
-    const char* text_muted_str = get_themed_color("text_muted", nullptr);
-    const char* text_subtle_str = get_themed_color("text_subtle", nullptr);
-    const char* focus_str = get_themed_color("focus", nullptr);
-    const char* primary_str = get_themed_color("primary", nullptr);
-    const char* secondary_str = get_themed_color("secondary", nullptr);
-    const char* tertiary_str = get_themed_color("tertiary", nullptr);
-    const char* border_str = get_themed_color("border", nullptr);
-
-    if (!screen_bg_str || !card_bg_str || !card_alt_str || !text_str || !text_muted_str) {
-        spdlog::error("[Theme] Failed to read color constants for {} mode",
-                      new_use_dark_mode ? "dark" : "light");
-        return;
-    }
-
-    lv_color_t screen_bg = theme_manager_parse_hex_color(screen_bg_str);
-    lv_color_t card_bg = theme_manager_parse_hex_color(card_bg_str);
-    lv_color_t card_alt = theme_manager_parse_hex_color(card_alt_str);
-    lv_color_t text_color = theme_manager_parse_hex_color(text_str);
-    lv_color_t text_muted_color = theme_manager_parse_hex_color(text_muted_str);
-    // Default to text_muted if text_subtle token not available
-    lv_color_t text_subtle_color =
-        text_subtle_str ? theme_manager_parse_hex_color(text_subtle_str) : text_muted_color;
-    // Default to primary accent color (#5e81ac) if focus token not available
-    lv_color_t focus_color =
-        focus_str ? theme_manager_parse_hex_color(focus_str) : lv_color_hex(0x5e81ac);
-    // Default to primary accent color if primary token not available
-    lv_color_t primary_color =
-        primary_str ? theme_manager_parse_hex_color(primary_str) : lv_color_hex(0x5e81ac);
-    // Default to secondary accent color (#88c0d0) if secondary token not available
-    lv_color_t secondary_color =
-        secondary_str ? theme_manager_parse_hex_color(secondary_str) : lv_color_hex(0x88c0d0);
-    // Default to card_alt if border token not available
-    lv_color_t border_color = border_str ? theme_manager_parse_hex_color(border_str) : card_alt;
-
-    // Compute knob color: more saturated of primary vs tertiary
-    lv_color_t tertiary_color =
-        tertiary_str ? theme_manager_parse_hex_color(tertiary_str) : primary_color;
-    lv_color_t knob_color = more_saturated_color(primary_color, tertiary_color);
-
-    // Compute accent color: more saturated of primary vs secondary for checkbox checkmarks
-    lv_color_t accent_color = more_saturated_color(primary_color, secondary_color);
-
-    // Get border_opacity from theme (already registered as XML constant)
-    const char* border_opacity_str = lv_xml_get_const(nullptr, "border_opacity");
-    int32_t border_opacity = border_opacity_str ? atoi(border_opacity_str) : 255;
-
-    spdlog::debug("[Theme] New colors: screen={}, card={}, card_alt={}, text={}", screen_bg_str,
-                  card_bg_str, card_alt_str, text_str);
+    spdlog::debug("[Theme] New colors: screen={}, card={}, text={}", mode_palette.app_bg,
+                  mode_palette.card_bg, mode_palette.text);
 
     // Update helix theme styles in-place (triggers lv_obj_report_style_change)
-    theme_core_update_colors(new_use_dark_mode, screen_bg, card_bg, card_alt, text_color,
-                             text_muted_color, text_subtle_color, focus_color, primary_color,
-                             border_color);
+    theme_core_update_colors(new_use_dark_mode, &palette, active_theme.properties.border_opacity);
 
     // Force style refresh on entire widget tree for local/inline styles
     theme_manager_refresh_widget_tree(lv_screen_active());
@@ -869,11 +793,24 @@ bool theme_manager_supports_light_mode() {
 }
 
 void theme_manager_preview(const helix::ThemeData& theme) {
-    // Only update the named preview elements in the theme preview overlay
-    // Does NOT modify global theme - that happens on Apply (with restart required)
-    theme_manager_refresh_preview_elements(lv_screen_active(), theme);
+    // Select the appropriate mode palette for preview
+    const helix::ModePalette* mode_palette = nullptr;
+    if (use_dark_mode && theme.supports_dark()) {
+        mode_palette = &theme.dark;
+    } else if (!use_dark_mode && theme.supports_light()) {
+        mode_palette = &theme.light;
+    } else if (theme.supports_dark()) {
+        mode_palette = &theme.dark;
+    } else {
+        mode_palette = &theme.light;
+    }
 
-    spdlog::debug("[Theme] Previewing theme in preview panel: {}", theme.name);
+    theme_palette_t palette = build_palette_from_mode(*mode_palette);
+    theme_core_preview_colors(use_dark_mode, &palette, theme.properties.border_radius,
+                              theme.properties.border_opacity);
+    theme_manager_refresh_widget_tree(lv_screen_active());
+
+    spdlog::debug("[Theme] Previewing theme: {}", theme.name);
 }
 
 void theme_manager_revert_preview() {

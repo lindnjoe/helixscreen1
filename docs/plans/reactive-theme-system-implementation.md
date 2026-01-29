@@ -133,6 +133,18 @@
 
 **CRITICAL RULE:** When in doubt, STOP AND DISCUSS before changing anything.
 
+### Section 4.0: theme_core Palette Struct Refactor (IMMEDIATE PRIORITY)
+**Must complete before any other 4.x work.**
+
+Refactor theme_core_init() from 14+ individual color parameters to a single palette struct:
+- [ ] **DESIGN**: Define `theme_palette_t` struct with all color tokens (primary, secondary, tertiary, text variants, surfaces, status colors, etc.)
+- [ ] **IMPLEMENT**: Replace `theme_core_init()` signature to accept `const theme_palette_t* palette`
+- [ ] **IMPLEMENT**: Update `theme_core_update_colors()` similarly
+- [ ] **IMPLEMENT**: Update `theme_core_preview_colors()` similarly
+- [ ] **IMPLEMENT**: Update theme_manager.cpp call sites
+- [ ] **TEST**: Verify build, visual verification
+- [ ] **REVIEW**: Code review
+
 ### Section 4.1: Text Widget Cleanup
 - [ ] **IMPLEMENT**: Remove redundant `style_text_color="#text"` from `<text_body>` elements
 - [ ] **IMPLEMENT**: Remove redundant `style_text_color="#text_muted"` from `<text_heading>`, `<text_small>`, `<text_xs>` elements
@@ -164,9 +176,13 @@
 - [ ] **REVIEW**: Code review of label conversions
 
 ### Section 4.6: Button Cleanup (after 2.6)
-- [ ] **IMPLEMENT**: Convert `<lv_button style_bg_color="#primary">` to `<ui_button variant="primary">`
-- [ ] **IMPLEMENT**: Convert danger, secondary, ghost button patterns
-- [ ] **VERIFY**: Visual check - buttons unchanged
+- [ ] **AUDIT**: Find all `<lv_button>...<text_button>` patterns (~30+ files)
+- [ ] **IMPLEMENT**: Convert standard `<lv_button><text_button text="X"/></lv_button>` to `<ui_button text="X"/>`
+- [ ] **IMPLEMENT**: Convert `style_bg_color="#primary"` to `variant="primary"` (default, can omit)
+- [ ] **IMPLEMENT**: Convert `style_bg_color="#danger"` to `variant="danger"`
+- [ ] **IMPLEMENT**: Handle `style_text_color` on text_button → rely on ui_button auto-contrast
+- [ ] **DISCUSS**: Interactive review of non-standard button patterns (multi-line, icons, special cases)
+- [ ] **VERIFY**: Visual check - button text contrast correct on all themes
 - [ ] **REVIEW**: Code review of button cleanup
 
 ### Section 4.7: Final Audit
@@ -175,6 +191,16 @@
 - [ ] **IMPLEMENT**: Clean up any remaining tech debt
 - [ ] **VERIFY**: Full visual verification
 - [ ] **REVIEW**: Final code review
+
+### Section 4.8: Theme System Cleanup
+Consolidate theme_core/theme_manager usage patterns:
+- [ ] **AUDIT**: Find remaining `lv_color_hex()` calls in UI code (~60) - classify as (a) dynamic data, (b) fallbacks, (c) tech debt
+- [ ] **AUDIT**: Find remaining `lv_obj_set_style_*` imperative calls in C++ (~62) - classify as (a) necessary runtime, (b) should be XML bind_style
+- [ ] **IMPLEMENT**: Remove hardcoded fallback colors - use theme tokens
+- [ ] **IMPLEMENT**: Convert imperative styling to declarative XML where feasible
+- [ ] **IMPLEMENT**: Ensure all component defaults use `theme_manager_get_spacing()` (not hardcoded values)
+- [ ] **DOCUMENT**: Clarify theme_core vs theme_manager in code comments or docs (style objects vs token system)
+- [ ] **REVIEW**: Code review of theme system cleanup
 
 ### Phase 4 Completion
 - [ ] **FULL TEST SUITE**: `make test-run` passes

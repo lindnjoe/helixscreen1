@@ -38,13 +38,11 @@
                 style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_sm"
                 scrollable="false" clickable="false">
           <icon src="alert_octagon" size="md" color="#text"/>
-          <text_body text="EMERGENCY STOP" style_text_color="#text"/>
+          <text_body text="EMERGENCY STOP"/>
         </lv_obj>
       </lv_button>
       <!-- Warning text -->
-      <text_small width="100%"
-                  text="Stops all motion. Requires firmware restart." style_text_align="center"
-                  style_text_color="#text_muted"/>
+      <text_small width="100%" text="Stops all motion. Requires firmware restart." style_text_align="center"/>
     </lv_obj>
     <!-- ============================================================ -->
     <!-- STATE: NAMING (state=2) - Success + Profile name input -->
@@ -61,8 +59,7 @@
       <!-- Title -->
       <text_heading width="100%" text="Mesh Complete" style_text_align="center"/>
       <!-- Instructions -->
-      <text_small width="100%"
-                  text="Enter a name to save this profile" style_text_align="center" style_text_color="#text_muted"/>
+      <text_small width="100%" text="Enter a name to save this profile" style_text_align="center"/>
       <!-- Profile name input -->
       <lv_textarea name="calibrate_profile_name_input"
                    width="100%" height="#input_height" placeholder="Profile name (e.g., default)" max_length="32"

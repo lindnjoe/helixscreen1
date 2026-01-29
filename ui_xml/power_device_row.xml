@@ -17,8 +17,8 @@
     <lv_obj height="content"
             flex_grow="1" flex_flow="column" style_pad_gap="#space_xs" style_bg_opa="0" style_border_width="0"
             scrollable="false">
-      <text_body name="device_label" text="$device_name" style_text_color="#text"/>
-      <text_small name="device_status" text="" style_text_color="#text_muted" hidden="true"/>
+      <text_body name="device_label" text="$device_name"/>
+      <text_small name="device_status" text="" hidden="true"/>
     </lv_obj>
     <!-- Right: Lock icon + toggle switch -->
     <lv_obj width="content"

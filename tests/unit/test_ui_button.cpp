@@ -23,6 +23,35 @@
 
 #include "../catch_amalgamated.hpp"
 
+// Helper: Create a dark mode test palette with configurable primary color
+static theme_palette_t make_dark_test_palette_with_primary(lv_color_t primary) {
+    theme_palette_t p = {};
+    p.screen_bg = lv_color_hex(0x121212);
+    p.panel_bg = lv_color_hex(0x1A1A1A);
+    p.card_bg = lv_color_hex(0x1E1E1E);
+    p.surface_control = lv_color_hex(0x2D2D2D);
+    p.border = lv_color_hex(0x424242);
+    p.text = lv_color_hex(0xE0E0E0);
+    p.text_muted = lv_color_hex(0xA0A0A0);
+    p.text_subtle = lv_color_hex(0x808080);
+    p.primary = primary;
+    p.secondary = lv_color_hex(0x03DAC6);
+    p.tertiary = lv_color_hex(0x6C757D);
+    p.info = lv_color_hex(0x42A5F5);
+    p.success = lv_color_hex(0x4CAF50);
+    p.warning = lv_color_hex(0xFFA726);
+    p.danger = lv_color_hex(0xEF5350);
+    p.focus = lv_color_hex(0x4FC3F7);
+    return p;
+}
+
+// Helper: Create a dark mode test palette with configurable primary and surface
+static theme_palette_t make_dark_test_palette_custom(lv_color_t primary, lv_color_t surface) {
+    theme_palette_t p = make_dark_test_palette_with_primary(primary);
+    p.surface_control = surface;
+    return p;
+}
+
 // ============================================================================
 // Basic Creation Tests
 // ============================================================================
@@ -147,6 +176,69 @@ TEST_CASE_METHOD(LVGLUITestFixture, "ui_button: ghost variant applies correct st
     REQUIRE(res == LV_STYLE_RES_FOUND);
 
     REQUIRE(btn_bg_opa == value.num);
+
+    lv_obj_delete(btn);
+}
+
+TEST_CASE_METHOD(LVGLUITestFixture, "ui_button: success variant applies correct style",
+                 "[ui-button]") {
+    const char* attrs[] = {"variant", "success", "text", "Save", nullptr};
+    lv_obj_t* btn = static_cast<lv_obj_t*>(lv_xml_create(test_screen(), "ui_button", attrs));
+    REQUIRE(btn != nullptr);
+
+    lv_color_t btn_bg = lv_obj_get_style_bg_color(btn, LV_PART_MAIN);
+
+    lv_style_t* success_style = theme_core_get_button_success_style();
+    REQUIRE(success_style != nullptr);
+    lv_style_value_t value;
+    lv_style_res_t res = lv_style_get_prop(success_style, LV_STYLE_BG_COLOR, &value);
+    REQUIRE(res == LV_STYLE_RES_FOUND);
+
+    REQUIRE(btn_bg.red == value.color.red);
+    REQUIRE(btn_bg.green == value.color.green);
+    REQUIRE(btn_bg.blue == value.color.blue);
+
+    lv_obj_delete(btn);
+}
+
+TEST_CASE_METHOD(LVGLUITestFixture, "ui_button: tertiary variant applies correct style",
+                 "[ui-button]") {
+    const char* attrs[] = {"variant", "tertiary", "text", "More", nullptr};
+    lv_obj_t* btn = static_cast<lv_obj_t*>(lv_xml_create(test_screen(), "ui_button", attrs));
+    REQUIRE(btn != nullptr);
+
+    lv_color_t btn_bg = lv_obj_get_style_bg_color(btn, LV_PART_MAIN);
+
+    lv_style_t* tertiary_style = theme_core_get_button_tertiary_style();
+    REQUIRE(tertiary_style != nullptr);
+    lv_style_value_t value;
+    lv_style_res_t res = lv_style_get_prop(tertiary_style, LV_STYLE_BG_COLOR, &value);
+    REQUIRE(res == LV_STYLE_RES_FOUND);
+
+    REQUIRE(btn_bg.red == value.color.red);
+    REQUIRE(btn_bg.green == value.color.green);
+    REQUIRE(btn_bg.blue == value.color.blue);
+
+    lv_obj_delete(btn);
+}
+
+TEST_CASE_METHOD(LVGLUITestFixture, "ui_button: warning variant applies correct style",
+                 "[ui-button]") {
+    const char* attrs[] = {"variant", "warning", "text", "Caution", nullptr};
+    lv_obj_t* btn = static_cast<lv_obj_t*>(lv_xml_create(test_screen(), "ui_button", attrs));
+    REQUIRE(btn != nullptr);
+
+    lv_color_t btn_bg = lv_obj_get_style_bg_color(btn, LV_PART_MAIN);
+
+    lv_style_t* warning_style = theme_core_get_button_warning_style();
+    REQUIRE(warning_style != nullptr);
+    lv_style_value_t value;
+    lv_style_res_t res = lv_style_get_prop(warning_style, LV_STYLE_BG_COLOR, &value);
+    REQUIRE(res == LV_STYLE_RES_FOUND);
+
+    REQUIRE(btn_bg.red == value.color.red);
+    REQUIRE(btn_bg.green == value.color.green);
+    REQUIRE(btn_bg.blue == value.color.blue);
 
     lv_obj_delete(btn);
 }
@@ -296,20 +388,9 @@ TEST_CASE_METHOD(LVGLUITestFixture, "ui_button: bg color updates on theme change
     uint32_t before_rgb = lv_color_to_u32(before) & 0x00FFFFFF;
     INFO("Initial button bg color: 0x" << std::hex << before_rgb);
 
-    // Update theme colors with DIFFERENT primary color
-    lv_color_t dark_screen_bg = lv_color_hex(0x121212);
-    lv_color_t dark_card_bg = lv_color_hex(0x1E1E1E);
-    lv_color_t dark_surface = lv_color_hex(0x2D2D2D);
-    lv_color_t dark_text = lv_color_hex(0xE0E0E0);
-    lv_color_t dark_text_muted = lv_color_hex(0xA0A0A0);
-    lv_color_t dark_text_subtle = lv_color_hex(0x808080);
-    lv_color_t dark_focus = lv_color_hex(0x4FC3F7);
-    lv_color_t dark_primary = lv_color_hex(0xFF5722); // DIFFERENT primary color (orange)
-    lv_color_t dark_border = lv_color_hex(0x424242);
-
-    theme_core_update_colors(true, // is_dark
-                             dark_screen_bg, dark_card_bg, dark_surface, dark_text, dark_text_muted,
-                             dark_text_subtle, dark_focus, dark_primary, dark_border);
+    // Update theme colors with DIFFERENT primary color (orange)
+    theme_palette_t palette = make_dark_test_palette_with_primary(lv_color_hex(0xFF5722));
+    theme_core_update_colors(true, &palette, 40);
 
     // Force LVGL style refresh cascade
     lv_obj_report_style_change(nullptr);
@@ -335,21 +416,10 @@ TEST_CASE_METHOD(LVGLUITestFixture, "ui_button: text contrast updates on theme c
     lv_obj_t* label = lv_obj_get_child(btn, 0);
     REQUIRE(label != nullptr);
 
-    // Update theme colors with a significantly different primary color
-    // that would change the luminance threshold
-    lv_color_t dark_screen_bg = lv_color_hex(0x121212);
-    lv_color_t dark_card_bg = lv_color_hex(0x1E1E1E);
-    lv_color_t dark_surface = lv_color_hex(0x2D2D2D);
-    lv_color_t dark_text = lv_color_hex(0xE0E0E0);
-    lv_color_t dark_text_muted = lv_color_hex(0xA0A0A0);
-    lv_color_t dark_text_subtle = lv_color_hex(0x808080);
-    lv_color_t dark_focus = lv_color_hex(0x4FC3F7);
-    lv_color_t dark_primary = lv_color_hex(0xFFEB3B); // Yellow (light bg, will need dark text)
-    lv_color_t dark_border = lv_color_hex(0x424242);
-
-    theme_core_update_colors(true, dark_screen_bg, dark_card_bg, dark_surface, dark_text,
-                             dark_text_muted, dark_text_subtle, dark_focus, dark_primary,
-                             dark_border);
+    // Update theme colors with a significantly different primary color (yellow)
+    // that would change the luminance threshold - light bg will need dark text
+    theme_palette_t palette = make_dark_test_palette_with_primary(lv_color_hex(0xFFEB3B));
+    theme_core_update_colors(true, &palette, 40);
 
     lv_obj_report_style_change(nullptr);
 
@@ -392,20 +462,10 @@ TEST_CASE_METHOD(LVGLUITestFixture, "ui_button: multiple buttons update together
     lv_color_t before1 = lv_obj_get_style_bg_color(btn1, LV_PART_MAIN);
     lv_color_t before2 = lv_obj_get_style_bg_color(btn2, LV_PART_MAIN);
 
-    // Update theme with different primary and surface colors
-    lv_color_t dark_screen_bg = lv_color_hex(0x121212);
-    lv_color_t dark_card_bg = lv_color_hex(0x1E1E1E);
-    lv_color_t dark_surface = lv_color_hex(0x3D3D3D); // Different surface
-    lv_color_t dark_text = lv_color_hex(0xE0E0E0);
-    lv_color_t dark_text_muted = lv_color_hex(0xA0A0A0);
-    lv_color_t dark_text_subtle = lv_color_hex(0x808080);
-    lv_color_t dark_focus = lv_color_hex(0x4FC3F7);
-    lv_color_t dark_primary = lv_color_hex(0x9C27B0); // Purple
-    lv_color_t dark_border = lv_color_hex(0x424242);
-
-    theme_core_update_colors(true, dark_screen_bg, dark_card_bg, dark_surface, dark_text,
-                             dark_text_muted, dark_text_subtle, dark_focus, dark_primary,
-                             dark_border);
+    // Update theme with different primary (purple) and surface colors
+    theme_palette_t palette =
+        make_dark_test_palette_custom(lv_color_hex(0x9C27B0), lv_color_hex(0x3D3D3D));
+    theme_core_update_colors(true, &palette, 40);
 
     lv_obj_report_style_change(nullptr);
 

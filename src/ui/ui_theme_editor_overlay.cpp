@@ -78,9 +78,8 @@ void ThemeEditorOverlay::init_subjects() {
 }
 
 lv_obj_t* ThemeEditorOverlay::create(lv_obj_t* parent) {
-    // Create overlay root from XML (uses theme_settings_overlay component)
-    overlay_root_ =
-        static_cast<lv_obj_t*>(lv_xml_create(parent, "theme_settings_overlay", nullptr));
+    // Create overlay root from XML (uses theme_editor_overlay component)
+    overlay_root_ = static_cast<lv_obj_t*>(lv_xml_create(parent, "theme_editor_overlay", nullptr));
     if (!overlay_root_) {
         spdlog::error("[{}] Failed to create overlay from XML", get_name());
         return nullptr;

@@ -37,8 +37,7 @@
             flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_right="#space_md"
             scrollable="false" flex_flow="column" style_pad_gap="#space_xxs">
       <text_body name="hardware_name" width="100%" text="Hardware Name" style_text_color="#text" long_mode="wrap"/>
-      <text_small name="issue_message"
-                  width="100%" text="Issue description" style_text_color="#text_muted" long_mode="wrap"/>
+      <text_small name="issue_message" width="100%" text="Issue description" long_mode="wrap"/>
     </lv_obj>
     <!-- Action buttons container (hidden by default, shown by C++ for non-critical issues) -->
     <lv_obj name="action_buttons"
@@ -49,7 +48,7 @@
                  width="content" height="#button_height" style_min_width="64" style_radius="#border_radius_small"
                  style_border_width="1" style_border_color="#text_muted" style_bg_opa="0" style_pad_left="#space_md"
                  style_pad_right="#space_md" style_pad_top="0" style_pad_bottom="0">
-        <text_small name="ignore_label" text="Ignore" style_text_color="#text_muted" align="center"/>
+        <text_small name="ignore_label" text="Ignore" align="center"/>
       </lv_button>
       <!-- Save button (add to expected list) - only for INFO severity -->
       <lv_button name="save_btn"

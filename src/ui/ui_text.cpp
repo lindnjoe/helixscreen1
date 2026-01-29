@@ -233,6 +233,41 @@ static void* ui_text_button_create(lv_xml_parser_state_t* state, const char** at
     return label;
 }
 
+/**
+ * Apply callback for text_button - recalculates contrast AFTER parent is styled
+ *
+ * This handles the legacy pattern of `<lv_button><text_button text="..."/></lv_button>`.
+ * For new code, prefer using `<ui_button text="..."/>` which handles contrast internally.
+ *
+ * Uses the same contrast logic as ui_button for consistency.
+ */
+static void ui_text_button_apply(lv_xml_parser_state_t* state, const char** attrs) {
+    // First apply standard label properties
+    lv_xml_label_apply(state, attrs);
+
+    lv_obj_t* label = static_cast<lv_obj_t*>(lv_xml_state_get_item(state));
+    lv_obj_t* parent = lv_obj_get_parent(label);
+
+    if (!parent) {
+        return;
+    }
+
+    // Get parent's background color (now that XML attrs have been applied)
+    lv_color_t bg_color = lv_obj_get_style_bg_color(parent, LV_PART_MAIN);
+    lv_opa_t bg_opa = lv_obj_get_style_bg_opa(parent, LV_PART_MAIN);
+
+    // Only apply auto-contrast if parent has a visible background
+    if (bg_opa > LV_OPA_50) {
+        // Use standard luminance formula (matches ui_button)
+        uint8_t lum = lv_color_luminance(bg_color);
+
+        // Use the same theme_core helpers as ui_button for consistency
+        lv_color_t text_color =
+            (lum < 128) ? theme_core_get_text_for_dark_bg() : theme_core_get_text_for_light_bg();
+        lv_obj_set_style_text_color(label, text_color, LV_PART_MAIN);
+    }
+}
+
 void ui_text_init() {
     // Register custom text widgets for XML usage
     // All widgets share the same apply function (ui_text_apply) which handles

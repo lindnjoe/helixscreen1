@@ -107,13 +107,11 @@
                 height="content" style_bg_color="#section_bg_color" style_radius="#border_radius"
                 style_pad_all="#space_lg" style_border_width="0" flex_flow="column" style_flex_cross_place="center"
                 style_pad_gap="#space_xs">
-          <text_small text="Current Temperature" style_text_color="#text_muted"/>
+          <text_small text="Current Temperature"/>
           <lv_label name="current_temp_display"
                     text="25°C / 200°C" style_text_font="#font_heading" bind_text="pid_current_temp"/>
         </lv_obj>
-        <text_small width="80%"
-                    text="The heater will cycle on and off several times." style_text_align="center"
-                    style_text_color="#text_muted"/>
+        <text_small width="80%" text="The heater will cycle on and off several times." style_text_align="center"/>
         <!-- Abort Button -->
         <lv_button name="btn_abort"
                    width="120" height="#button_height_normal" style_radius="#border_radius" style_bg_color="#danger">
@@ -131,9 +129,7 @@
         <bind_flag_if_not_eq subject="pid_cal_state" flag="hidden" ref_value="2"/>
         <spinner size="lg"/>
         <text_heading text="Saving Configuration..." style_text_align="center"/>
-        <text_small width="80%"
-                    text="Klipper will restart to apply new PID values." style_text_align="center"
-                    style_text_color="#text_muted"/>
+        <text_small width="80%" text="Klipper will restart to apply new PID values." style_text_align="center"/>
       </lv_obj>
       <!-- ================================================================== -->
       <!-- STATE: COMPLETE - Results display -->
@@ -169,9 +165,7 @@
             <text_body name="pid_kd" text="0.000" style_text_color="#text_muted" bind_text="pid_kd"/>
           </lv_obj>
         </lv_obj>
-        <text_small width="80%"
-                    text="Values have been saved to printer configuration." style_text_align="center"
-                    style_text_color="#text_muted"/>
+        <text_small width="80%" text="Values have been saved to printer configuration." style_text_align="center"/>
         <lv_button name="btn_done" width="140" height="56" style_radius="#border_radius">
           <text_button text="Done"/>
           <event_cb trigger="clicked" callback="on_pid_done"/>

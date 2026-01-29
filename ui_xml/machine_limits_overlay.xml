@@ -39,25 +39,25 @@
             <lv_obj width="content"
                     height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
                     flex_flow="column" style_pad_gap="#space_xxs">
-              <text_body text="Max Velocity" style_text_color="#text"/>
-              <text_small text="Maximum toolhead speed (mm/s)" style_text_color="#text_muted"/>
+              <text_body text="Max Velocity"/>
+              <text_small text="Maximum toolhead speed (mm/s)"/>
             </lv_obj>
           </lv_obj>
           <!-- Current value display -->
-          <text_body name="max_velocity_label" bind_text="max_velocity_display" style_text_color="#text_muted"/>
+          <text_body name="max_velocity_label" bind_text="max_velocity_display"/>
         </lv_obj>
         <!-- Slider -->
         <lv_obj width="100%"
                 height="50" style_bg_opa="0" style_border_width="0" style_pad_left="#space_md"
                 style_pad_right="#space_md" style_pad_top="#space_md" style_pad_bottom="#space_md" scrollable="false"
                 flex_flow="row" style_flex_cross_place="center">
-          <text_small width="40" text="50" style_text_color="#text_muted"/>
+          <text_small width="40" text="50"/>
           <lv_slider name="max_velocity_slider"
                      flex_grow="1" min_value="50" max_value="1000" value="300" style_margin_left="#space_sm"
                      style_margin_right="#space_sm">
             <event_cb trigger="released" callback="on_max_velocity_changed"/>
           </lv_slider>
-          <text_small width="50" text="1000" style_text_color="#text_muted"/>
+          <text_small width="50" text="1000"/>
         </lv_obj>
       </lv_obj>
       <!-- Divider -->
@@ -80,25 +80,25 @@
             <lv_obj width="content"
                     height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
                     flex_flow="column" style_pad_gap="#space_xxs">
-              <text_body text="Max Acceleration" style_text_color="#text"/>
-              <text_small text="Maximum acceleration (mm/s²)" style_text_color="#text_muted"/>
+              <text_body text="Max Acceleration"/>
+              <text_small text="Maximum acceleration (mm/s²)"/>
             </lv_obj>
           </lv_obj>
           <!-- Current value display -->
-          <text_body name="max_accel_label" bind_text="max_accel_display" style_text_color="#text_muted"/>
+          <text_body name="max_accel_label" bind_text="max_accel_display"/>
         </lv_obj>
         <!-- Slider -->
         <lv_obj width="100%"
                 height="50" style_bg_opa="0" style_border_width="0" style_pad_left="#space_md"
                 style_pad_right="#space_md" style_pad_top="#space_md" style_pad_bottom="#space_md" scrollable="false"
                 flex_flow="row" style_flex_cross_place="center">
-          <text_small width="40" text="500" style_text_color="#text_muted"/>
+          <text_small width="40" text="500"/>
           <lv_slider name="max_accel_slider"
                      flex_grow="1" min_value="500" max_value="50000" value="3000" style_margin_left="#space_sm"
                      style_margin_right="#space_sm">
             <event_cb trigger="released" callback="on_max_accel_changed"/>
           </lv_slider>
-          <text_small width="55" text="50000" style_text_color="#text_muted"/>
+          <text_small width="55" text="50000"/>
         </lv_obj>
       </lv_obj>
       <!-- Divider -->
@@ -121,25 +121,25 @@
             <lv_obj width="content"
                     height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
                     flex_flow="column" style_pad_gap="#space_xxs">
-              <text_body text="Accel to Decel" style_text_color="#text"/>
-              <text_small text="Acceleration to deceleration limit (mm/s²)" style_text_color="#text_muted"/>
+              <text_body text="Accel to Decel"/>
+              <text_small text="Acceleration to deceleration limit (mm/s²)"/>
             </lv_obj>
           </lv_obj>
           <!-- Current value display -->
-          <text_body name="accel_to_decel_label" bind_text="accel_to_decel_display" style_text_color="#text_muted"/>
+          <text_body name="accel_to_decel_label" bind_text="accel_to_decel_display"/>
         </lv_obj>
         <!-- Slider -->
         <lv_obj width="100%"
                 height="50" style_bg_opa="0" style_border_width="0" style_pad_left="#space_md"
                 style_pad_right="#space_md" style_pad_top="#space_md" style_pad_bottom="#space_md" scrollable="false"
                 flex_flow="row" style_flex_cross_place="center">
-          <text_small width="40" text="500" style_text_color="#text_muted"/>
+          <text_small width="40" text="500"/>
           <lv_slider name="accel_to_decel_slider"
                      flex_grow="1" min_value="500" max_value="50000" value="1500" style_margin_left="#space_sm"
                      style_margin_right="#space_sm">
             <event_cb trigger="released" callback="on_accel_to_decel_changed"/>
           </lv_slider>
-          <text_small width="55" text="50000" style_text_color="#text_muted"/>
+          <text_small width="55" text="50000"/>
         </lv_obj>
       </lv_obj>
       <!-- Divider -->
@@ -162,26 +162,25 @@
             <lv_obj width="content"
                     height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
                     flex_flow="column" style_pad_gap="#space_xxs">
-              <text_body text="Square Corner Velocity" style_text_color="#text"/>
-              <text_small text="Max speed through corners (mm/s)" style_text_color="#text_muted"/>
+              <text_body text="Square Corner Velocity"/>
+              <text_small text="Max speed through corners (mm/s)"/>
             </lv_obj>
           </lv_obj>
           <!-- Current value display -->
-          <text_body name="square_corner_velocity_label"
-                     bind_text="square_corner_velocity_display" style_text_color="#text_muted"/>
+          <text_body name="square_corner_velocity_label" bind_text="square_corner_velocity_display"/>
         </lv_obj>
         <!-- Slider -->
         <lv_obj width="100%"
                 height="50" style_bg_opa="0" style_border_width="0" style_pad_left="#space_md"
                 style_pad_right="#space_md" style_pad_top="#space_md" style_pad_bottom="#space_md" scrollable="false"
                 flex_flow="row" style_flex_cross_place="center">
-          <text_small width="30" text="1" style_text_color="#text_muted"/>
+          <text_small width="30" text="1"/>
           <lv_slider name="square_corner_velocity_slider"
                      flex_grow="1" min_value="1" max_value="20" value="5" style_margin_left="#space_sm"
                      style_margin_right="#space_sm">
             <event_cb trigger="released" callback="on_square_corner_velocity_changed"/>
           </lv_slider>
-          <text_small width="30" text="20" style_text_color="#text_muted"/>
+          <text_small width="30" text="20"/>
         </lv_obj>
       </lv_obj>
       <!-- Divider -->
@@ -194,7 +193,7 @@
               style_pad_right="#space_lg" style_pad_top="#space_md" style_pad_bottom="#space_xs" flex_flow="row"
               style_flex_cross_place="center" style_pad_gap="#space_sm">
         <icon src="lock" size="xs" variant="secondary"/>
-        <text_small text="Config-defined (read-only)" style_text_color="#text_muted"/>
+        <text_small text="Config-defined (read-only)"/>
       </lv_obj>
       <!-- ================================================================== -->
       <!-- MAX Z VELOCITY (read-only) -->
@@ -220,7 +219,7 @@
       <lv_button name="btn_reset"
                  width="150" height="100%" style_radius="6" style_bg_color="#card_bg" style_border_width="1"
                  style_border_color="#border" style_shadow_width="0" clickable="true">
-        <text_button text="Reset" style_text_color="#text_muted"/>
+        <text_button text="Reset"/>
         <event_cb trigger="clicked" callback="on_limits_reset"/>
       </lv_button>
     </lv_obj>

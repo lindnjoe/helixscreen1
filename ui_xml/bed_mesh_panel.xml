@@ -45,7 +45,7 @@
                   style_border_width="0" style_pad_left="#space_md" style_pad_right="#space_md"
                   style_pad_top="#space_sm" style_pad_bottom="#space_sm" style_pad_gap="#space_sm" scrollable="false">
             <icon src="info" size="sm" color="#success"/>
-            <text_body text="Current Mesh" style_text_color="#text" flex_grow="1"/>
+            <text_body text="Current Mesh" flex_grow="1"/>
           </lv_obj>
           <!-- Divider -->
           <divider_horizontal/>
@@ -57,7 +57,7 @@
             <lv_obj width="100%"
                     height="content" flex_flow="row" style_bg_opa="0" style_border_width="0" style_pad_all="0"
                     scrollable="false">
-              <text_small text="Name" style_text_color="#text_muted"/>
+              <text_small text="Name"/>
               <text_small name="mesh_name_value"
                           bind_text="bed_mesh_profile_name" flex_grow="1" style_text_align="right"
                           style_pad_left="#space_sm" style_text_color="#success"/>
@@ -66,7 +66,7 @@
             <lv_obj width="100%"
                     height="content" flex_flow="row" style_bg_opa="0" style_border_width="0" style_pad_all="0"
                     scrollable="false">
-              <text_small text="Size" style_text_color="#text_muted"/>
+              <text_small text="Size"/>
               <text_small name="mesh_size_value"
                           bind_text="bed_mesh_dimensions" flex_grow="1" style_text_align="right"
                           style_pad_left="#space_sm" style_text_color="#text"/>
@@ -75,7 +75,7 @@
             <lv_obj width="100%"
                     height="content" flex_flow="row" style_bg_opa="0" style_border_width="0" style_pad_all="0"
                     scrollable="false">
-              <text_small name="mesh_max_label" bind_text="bed_mesh_max_label" style_text_color="#text_muted"/>
+              <text_small name="mesh_max_label" bind_text="bed_mesh_max_label"/>
               <text_small name="mesh_max_value"
                           bind_text="bed_mesh_max_value" flex_grow="1" style_text_align="right"
                           style_pad_left="#space_sm" style_text_color="#text"/>
@@ -84,7 +84,7 @@
             <lv_obj width="100%"
                     height="content" flex_flow="row" style_bg_opa="0" style_border_width="0" style_pad_all="0"
                     scrollable="false">
-              <text_small name="mesh_min_label" bind_text="bed_mesh_min_label" style_text_color="#text_muted"/>
+              <text_small name="mesh_min_label" bind_text="bed_mesh_min_label"/>
               <text_small name="mesh_min_value"
                           bind_text="bed_mesh_min_value" flex_grow="1" style_text_align="right"
                           style_pad_left="#space_sm" style_text_color="#text"/>
@@ -93,7 +93,7 @@
             <lv_obj width="100%"
                     height="content" flex_flow="row" style_bg_opa="0" style_border_width="0" style_pad_all="0"
                     scrollable="false">
-              <text_small text="Z Range" style_text_color="#text_muted"/>
+              <text_small text="Z Range"/>
               <text_small name="mesh_range_value"
                           bind_text="bed_mesh_variance" flex_grow="1" style_text_align="right"
                           style_pad_left="#space_sm" style_text_color="#text"/>
@@ -112,7 +112,7 @@
                   style_border_width="0" style_pad_left="#space_md" style_pad_right="#space_md"
                   style_pad_top="#space_sm" style_pad_bottom="#space_sm" style_pad_gap="#space_sm" scrollable="false">
             <icon src="layers" size="sm" color="#success"/>
-            <text_body text="Profiles" style_text_color="#text" flex_grow="1"/>
+            <text_body text="Profiles" flex_grow="1"/>
           </lv_obj>
           <!-- Divider -->
           <divider_horizontal/>
@@ -133,8 +133,7 @@
                           bind_text="bed_mesh_profile_0_name" flex_grow="1" style_text_color="#text"/>
               <!-- Range -->
               <text_small name="profile_0_range"
-                          width="50" bind_text="bed_mesh_profile_0_range" style_text_color="#text_muted"
-                          style_text_align="right"/>
+                          width="50" bind_text="bed_mesh_profile_0_range" style_text_align="right"/>
               <!-- Rename icon (only when active) -->
               <icon name="profile_0_rename"
                     src="pencil" size="sm" color="#success" clickable="true" style_pad_all="#space_xs">
@@ -164,8 +163,7 @@
               <text_small name="profile_1_name"
                           bind_text="bed_mesh_profile_1_name" flex_grow="1" style_text_color="#text"/>
               <text_small name="profile_1_range"
-                          width="50" bind_text="bed_mesh_profile_1_range" style_text_color="#text_muted"
-                          style_text_align="right"/>
+                          width="50" bind_text="bed_mesh_profile_1_range" style_text_align="right"/>
               <icon name="profile_1_rename"
                     src="pencil" size="sm" color="#success" clickable="true" style_pad_all="#space_xs">
                 <bind_flag_if_eq subject="bed_mesh_profile_1_active" flag="hidden" ref_value="0"/>
@@ -192,8 +190,7 @@
               <text_small name="profile_2_name"
                           bind_text="bed_mesh_profile_2_name" flex_grow="1" style_text_color="#text"/>
               <text_small name="profile_2_range"
-                          width="50" bind_text="bed_mesh_profile_2_range" style_text_color="#text_muted"
-                          style_text_align="right"/>
+                          width="50" bind_text="bed_mesh_profile_2_range" style_text_align="right"/>
               <icon name="profile_2_rename"
                     src="pencil" size="sm" color="#success" clickable="true" style_pad_all="#space_xs">
                 <bind_flag_if_eq subject="bed_mesh_profile_2_active" flag="hidden" ref_value="0"/>
@@ -220,8 +217,7 @@
               <text_small name="profile_3_name"
                           bind_text="bed_mesh_profile_3_name" flex_grow="1" style_text_color="#text"/>
               <text_small name="profile_3_range"
-                          width="50" bind_text="bed_mesh_profile_3_range" style_text_color="#text_muted"
-                          style_text_align="right"/>
+                          width="50" bind_text="bed_mesh_profile_3_range" style_text_align="right"/>
               <icon name="profile_3_rename"
                     src="pencil" size="sm" color="#success" clickable="true" style_pad_all="#space_xs">
                 <bind_flag_if_eq subject="bed_mesh_profile_3_active" flag="hidden" ref_value="0"/>
@@ -248,8 +244,7 @@
               <text_small name="profile_4_name"
                           bind_text="bed_mesh_profile_4_name" flex_grow="1" style_text_color="#text"/>
               <text_small name="profile_4_range"
-                          width="50" bind_text="bed_mesh_profile_4_range" style_text_color="#text_muted"
-                          style_text_align="right"/>
+                          width="50" bind_text="bed_mesh_profile_4_range" style_text_align="right"/>
               <icon name="profile_4_rename"
                     src="pencil" size="sm" color="#success" clickable="true" style_pad_all="#space_xs">
                 <bind_flag_if_eq subject="bed_mesh_profile_4_active" flag="hidden" ref_value="0"/>
@@ -270,8 +265,7 @@
                     width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="#space_md"
                     scrollable="false">
               <bind_flag_if_gt subject="bed_mesh_profile_count" flag="hidden" ref_value="0"/>
-              <text_small width="100%"
-                          text="No profiles available" style_text_color="#text_muted" style_text_align="center"/>
+              <text_small width="100%" text="No profiles available" style_text_align="center"/>
             </lv_obj>
           </lv_obj>
         </lv_obj>

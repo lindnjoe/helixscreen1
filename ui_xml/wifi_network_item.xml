@@ -47,7 +47,7 @@
       <!-- Network SSID - uses responsive font_body from theme -->
       <text_body name="ssid_label" clickable="false"/>
       <!-- Security type (right-justified) -->
-      <text_small name="security_label" style_text_color="#text_muted" clickable="false"/>
+      <text_small name="security_label" clickable="false"/>
     </lv_obj>
   </view>
 </component>

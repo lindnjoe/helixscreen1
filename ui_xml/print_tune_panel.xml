@@ -30,7 +30,7 @@
             <event_cb trigger="value_changed" callback="on_tune_speed_display"/>
             <event_cb trigger="released" callback="on_tune_speed_send"/>
           </lv_slider>
-          <text_small text="Movement speed" style_text_color="#text_muted"/>
+          <text_small text="Movement speed"/>
         </lv_obj>
         <!-- Flow Control (right) -->
         <lv_obj name="flow_section"
@@ -44,7 +44,7 @@
             <event_cb trigger="value_changed" callback="on_tune_flow_display"/>
             <event_cb trigger="released" callback="on_tune_flow_send"/>
           </lv_slider>
-          <text_small text="Extrusion rate" style_text_color="#text_muted"/>
+          <text_small text="Extrusion rate"/>
         </lv_obj>
       </lv_obj>
       <!-- Reset Speed & Flow Button (under sliders) -->
@@ -141,10 +141,8 @@
             </lv_button>
           </lv_obj>
         </lv_obj>
-        <text_small text="Closer = more squish | Farther = less squish" style_text_color="#text_muted"/>
-        <text_small name="z_offset_help_text"
-                    text="Temporary adjustment for this print, unless saved on Controls panel"
-                    style_text_color="#text_muted"/>
+        <text_small text="Closer = more squish | Farther = less squish"/>
+        <text_small name="z_offset_help_text" text="Temporary adjustment for this print, unless saved on Controls panel"/>
       </lv_obj>
     </lv_obj>
   </view>

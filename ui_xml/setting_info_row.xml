@@ -18,7 +18,7 @@
     <!-- Left side: Optional icon -->
     <icon name="row_icon" src="$icon" size="sm" variant="secondary"/>
     <!-- Middle: Label -->
-    <text_body name="label" text="$label" style_text_color="#text" flex_grow="1"/>
+    <text_body name="label" text="$label" flex_grow="1"/>
     <!-- Right side: Value (secondary color) -->
     <text_body name="value" text="$value" style_text_color="#text_muted"/>
   </view>

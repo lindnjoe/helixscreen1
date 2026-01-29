@@ -250,3 +250,14 @@ void XMLTestFixture::reset_subject_values() {
 
     spdlog::debug("[XMLTestFixture] Reset XML-registered temperature subject values to 0");
 }
+
+// ============================================================================
+// Stubs for application globals used by display_manager.cpp
+// ============================================================================
+// These stubs provide test-safe no-op implementations of app_globals functions
+// that are referenced by display_manager.cpp but not needed in unit tests.
+
+void app_request_quit() {
+    // No-op for tests - display manager calls this on window close
+    spdlog::debug("[TestStub] app_request_quit() called - no-op in tests");
+}

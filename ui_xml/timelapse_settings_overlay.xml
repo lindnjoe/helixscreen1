@@ -25,7 +25,8 @@
       <!-- ================================================================== -->
       <setting_dropdown_row name="row_timelapse_mode"
                             label="Recording Mode" icon="layers"
-                            description="Choose how frames are captured during printing" options="Layer&#10;Hyperlapse"
+                            description="Choose how frames are captured during printing" options="Layer
+Hyperlapse"
                             callback="on_timelapse_mode_changed"/>
       <!-- Mode info box -->
       <lv_obj name="mode_info_container"
@@ -42,7 +43,10 @@
       <!-- ================================================================== -->
       <setting_dropdown_row name="row_timelapse_framerate"
                             label="Framerate" icon="animation_play" description="Video playback speed"
-                            options="15 fps&#10;24 fps&#10;30 fps&#10;60 fps" callback="on_timelapse_framerate_changed"/>
+                            options="15 fps
+24 fps
+30 fps
+60 fps" callback="on_timelapse_framerate_changed"/>
       <!-- ================================================================== -->
       <!-- AUTO-RENDER -->
       <!-- ================================================================== -->
@@ -57,7 +61,7 @@
               style_pad_right="#space_lg" style_pad_top="#space_md" style_pad_bottom="#space_lg" flex_flow="row"
               style_flex_cross_place="center" style_flex_track_place="center" style_pad_gap="#space_sm">
         <icon src="info" size="xs" variant="secondary"/>
-        <text_small text="Requires Moonraker-Timelapse plugin" style_text_color="#text_muted"/>
+        <text_small text="Requires Moonraker-Timelapse plugin"/>
       </lv_obj>
     </lv_obj>
   </view>

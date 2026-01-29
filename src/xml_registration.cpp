@@ -4,7 +4,7 @@
 #include "xml_registration.h"
 
 #include "ui_ams_current_tool.h"
-#include "ui_ams_settings_overlay.h"
+#include "ui_ams_device_operations_overlay.h"
 #include "ui_button.h"
 #include "ui_fan_dial.h"
 #include "ui_fonts.h"
@@ -229,7 +229,7 @@ void register_xml_components() {
 
     // Settings overlay panels
     lv_xml_register_component_from_file("A:ui_xml/display_settings_overlay.xml");
-    lv_xml_register_component_from_file("A:ui_xml/theme_settings_overlay.xml");
+    lv_xml_register_component_from_file("A:ui_xml/theme_editor_overlay.xml");
     lv_xml_register_component_from_file("A:ui_xml/theme_preview_overlay.xml");
     lv_xml_register_component_from_file("A:ui_xml/theme_save_as_modal.xml");
     lv_xml_register_component_from_file("A:ui_xml/sensors_overlay.xml");

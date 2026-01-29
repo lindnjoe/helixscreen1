@@ -10,6 +10,7 @@
 #include "lvgl/src/xml/lv_xml_widget.h"
 #include "lvgl/src/xml/parsers/lv_xml_obj_parser.h"
 #include "theme_core.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -31,6 +32,7 @@ namespace {
 void update_button_text_contrast(lv_obj_t* btn) {
     lv_obj_t* label = lv_obj_get_child(btn, 0);
     if (!label) {
+        spdlog::debug("[ui_button] No label child found for button");
         return;
     }
 
@@ -46,8 +48,9 @@ void update_button_text_contrast(lv_obj_t* btn) {
 
     lv_obj_set_style_text_color(label, text_color, LV_PART_MAIN);
 
-    spdlog::trace("[ui_button] Updated text contrast: R={} G={} B={} lum={} -> {}", r, g, b, lum,
-                  (lum < 128) ? "light" : "dark");
+    spdlog::trace("[ui_button] text contrast: bg=0x{:06X} lum={} -> {} text=0x{:06X}",
+                  lv_color_to_u32(bg) & 0xFFFFFF, lum, (lum < 128) ? "light" : "dark",
+                  lv_color_to_u32(text_color) & 0xFFFFFF);
 }
 
 /**
@@ -60,6 +63,7 @@ void update_button_text_contrast(lv_obj_t* btn) {
  */
 void button_style_changed_cb(lv_event_t* e) {
     lv_obj_t* btn = lv_event_get_target_obj(e);
+    spdlog::trace("[ui_button] STYLE_CHANGED event fired");
     update_button_text_contrast(btn);
 }
 
@@ -79,8 +83,9 @@ void button_style_changed_cb(lv_event_t* e) {
 void* ui_button_create(lv_xml_parser_state_t* state, const char** attrs) {
     lv_obj_t* parent = static_cast<lv_obj_t*>(lv_xml_state_get_parent(state));
 
-    // Create button
+    // Create button with default height from theme system
     lv_obj_t* btn = lv_button_create(parent);
+    lv_obj_set_height(btn, theme_manager_get_spacing("button_height"));
 
     // Parse variant attribute (default: primary)
     const char* variant_str = lv_xml_get_value_of(attrs, "variant");
@@ -96,6 +101,12 @@ void* ui_button_create(lv_xml_parser_state_t* state, const char** attrs) {
         style = theme_core_get_button_secondary_style();
     } else if (strcmp(variant_str, "danger") == 0) {
         style = theme_core_get_button_danger_style();
+    } else if (strcmp(variant_str, "success") == 0) {
+        style = theme_core_get_button_success_style();
+    } else if (strcmp(variant_str, "tertiary") == 0) {
+        style = theme_core_get_button_tertiary_style();
+    } else if (strcmp(variant_str, "warning") == 0) {
+        style = theme_core_get_button_warning_style();
     } else if (strcmp(variant_str, "ghost") == 0) {
         style = theme_core_get_button_ghost_style();
     } else {
@@ -115,6 +126,7 @@ void* ui_button_create(lv_xml_parser_state_t* state, const char** attrs) {
 
     lv_obj_t* label = lv_label_create(btn);
     lv_label_set_text(label, text);
+    lv_obj_center(label);
 
     // Register style changed event handler for auto-contrast updates
     lv_obj_add_event_cb(btn, button_style_changed_cb, LV_EVENT_STYLE_CHANGED, nullptr);

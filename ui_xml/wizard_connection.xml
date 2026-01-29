@@ -24,7 +24,7 @@
                 height="content" flex_flow="row" style_flex_cross_place="center" style_bg_opa="0" style_border_width="0"
                 style_pad_all="0">
           <text_body text="Discovered Printers" style_flex_grow="1"/>
-          <text_small name="discovery_status" bind_text="mdns_status" style_text_color="#text_muted"/>
+          <text_small name="discovery_status" bind_text="mdns_status"/>
         </lv_obj>
         <lv_dropdown name="printer_dropdown" width="100%">
           <event_cb trigger="value_changed" callback="on_printer_selected"/>
@@ -89,8 +89,7 @@
           </lv_obj>
         </lv_obj>
         <!-- Help text: connection must be tested (hidden on successful auto-probe) -->
-        <text_small name="help_text"
-                    text="Connection must be tested successfully to continue" style_text_color="#text_muted"/>
+        <text_small name="help_text" text="Connection must be tested successfully to continue"/>
       </lv_obj>
     </ui_card>
   </view>

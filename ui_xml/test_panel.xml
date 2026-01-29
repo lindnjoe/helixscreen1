@@ -16,22 +16,22 @@
       <lv_obj flex_flow="column"
               style_flex_cross_place="center" style_pad_gap="8" style_bg_opa="0" style_border_width="0">
         <spinner size="lg"/>
-        <lv_label text="lg" style_text_font="#font_small" style_text_color="#text_muted"/>
+        <text_small text="lg"/>
       </lv_obj>
       <lv_obj flex_flow="column"
               style_flex_cross_place="center" style_pad_gap="8" style_bg_opa="0" style_border_width="0">
         <spinner size="md"/>
-        <lv_label text="md" style_text_font="#font_small" style_text_color="#text_muted"/>
+        <text_small text="md"/>
       </lv_obj>
       <lv_obj flex_flow="column"
               style_flex_cross_place="center" style_pad_gap="8" style_bg_opa="0" style_border_width="0">
         <spinner size="sm"/>
-        <lv_label text="sm" style_text_font="#font_small" style_text_color="#text_muted"/>
+        <text_small text="sm"/>
       </lv_obj>
       <lv_obj flex_flow="column"
               style_flex_cross_place="center" style_pad_gap="8" style_bg_opa="0" style_border_width="0">
         <spinner size="xs"/>
-        <lv_label text="xs" style_text_font="#font_small" style_text_color="#text_muted"/>
+        <text_small text="xs"/>
       </lv_obj>
     </ui_card>
     <!-- Separator -->
@@ -48,7 +48,7 @@
       <spool_canvas color="0x43A047" fill_level="0.40" size="64"/>
       <spool_canvas color="0xFDD835" fill_level="0.10" size="64"/>
     </ui_card>
-    <lv_label text="Fill: 100% / 75% / 40% / 10%" style_text_font="#font_small" style_text_color="#text_muted"/>
+    <text_small text="Fill: 100% / 75% / 40% / 10%"/>
     <!-- Flat Concentric Rings (existing ams_slot) for comparison -->
     <lv_label text="Flat Concentric Rings (existing ams_slot)"
               style_text_font="#font_heading" style_margin_top="10" style_margin_bottom="5"/>
@@ -60,7 +60,7 @@
       <ams_slot slot_index="2" fill_level="0.40"/>
       <ams_slot slot_index="3" fill_level="0.10"/>
     </ui_card>
-    <lv_label text="Fill: 100% / 75% / 40% / 10%" style_text_font="#font_small" style_text_color="#text_muted"/>
+    <text_small text="Fill: 100% / 75% / 40% / 10%"/>
     <!-- Separator -->
     <lv_obj width="100%" height="2" style_bg_opa="100" style_bg_color="#text_muted" style_border_width="0"/>
     <!-- ============================================================ -->

@@ -20,6 +20,35 @@
 
 #include "../catch_amalgamated.hpp"
 
+// Helper: Create a dark mode test palette with distinct colors
+static theme_palette_t make_dark_test_palette() {
+    theme_palette_t p = {};
+    p.screen_bg = lv_color_hex(0x121212);
+    p.panel_bg = lv_color_hex(0x1A1A1A);
+    p.card_bg = lv_color_hex(0x1E1E1E);
+    p.surface_control = lv_color_hex(0x2D2D2D);
+    p.border = lv_color_hex(0x424242);
+    p.text = lv_color_hex(0xE0E0E0);
+    p.text_muted = lv_color_hex(0xA0A0A0);
+    p.text_subtle = lv_color_hex(0x808080);
+    p.primary = lv_color_hex(0x2196F3);
+    p.secondary = lv_color_hex(0x03DAC6);
+    p.tertiary = lv_color_hex(0x6C757D);
+    p.info = lv_color_hex(0x42A5F5);
+    p.success = lv_color_hex(0x4CAF50);
+    p.warning = lv_color_hex(0xFFA726);
+    p.danger = lv_color_hex(0xEF5350);
+    p.focus = lv_color_hex(0x4FC3F7);
+    return p;
+}
+
+// Helper: Create a dark mode test palette with configurable primary color
+static theme_palette_t make_dark_test_palette_with_primary(lv_color_t primary) {
+    theme_palette_t p = make_dark_test_palette();
+    p.primary = primary;
+    return p;
+}
+
 // ============================================================================
 // Card Style Getter Tests
 // ============================================================================
@@ -238,21 +267,9 @@ TEST_CASE_METHOD(LVGLUITestFixture, "theme_core: card style updates on theme cha
     REQUIRE(res == LV_STYLE_RES_FOUND);
     lv_color_t before = before_value.color;
 
-    // Switch theme mode - use different colors for dark mode
-    // These are typical dark mode colors
-    lv_color_t dark_screen_bg = lv_color_hex(0x121212);
-    lv_color_t dark_card_bg = lv_color_hex(0x1E1E1E);
-    lv_color_t dark_surface = lv_color_hex(0x2D2D2D);
-    lv_color_t dark_text = lv_color_hex(0xE0E0E0);
-    lv_color_t dark_text_muted = lv_color_hex(0xA0A0A0);
-    lv_color_t dark_text_subtle = lv_color_hex(0x808080);
-    lv_color_t dark_focus = lv_color_hex(0x4FC3F7);
-    lv_color_t dark_primary = lv_color_hex(0x2196F3);
-    lv_color_t dark_border = lv_color_hex(0x424242);
-
-    theme_core_update_colors(true, // is_dark
-                             dark_screen_bg, dark_card_bg, dark_surface, dark_text, dark_text_muted,
-                             dark_text_subtle, dark_focus, dark_primary, dark_border);
+    // Switch to dark mode
+    theme_palette_t dark_palette = make_dark_test_palette();
+    theme_core_update_colors(true, &dark_palette, 40);
 
     // Get color after update
     lv_style_value_t after_value;
@@ -280,19 +297,8 @@ TEST_CASE_METHOD(LVGLUITestFixture, "theme_core: dialog style updates on theme c
     lv_color_t before = before_value.color;
 
     // Switch to dark mode
-    lv_color_t dark_screen_bg = lv_color_hex(0x121212);
-    lv_color_t dark_card_bg = lv_color_hex(0x1E1E1E);
-    lv_color_t dark_surface = lv_color_hex(0x2D2D2D);
-    lv_color_t dark_text = lv_color_hex(0xE0E0E0);
-    lv_color_t dark_text_muted = lv_color_hex(0xA0A0A0);
-    lv_color_t dark_text_subtle = lv_color_hex(0x808080);
-    lv_color_t dark_focus = lv_color_hex(0x4FC3F7);
-    lv_color_t dark_primary = lv_color_hex(0x2196F3);
-    lv_color_t dark_border = lv_color_hex(0x424242);
-
-    theme_core_update_colors(true, dark_screen_bg, dark_card_bg, dark_surface, dark_text,
-                             dark_text_muted, dark_text_subtle, dark_focus, dark_primary,
-                             dark_border);
+    theme_palette_t dark_palette = make_dark_test_palette();
+    theme_core_update_colors(true, &dark_palette, 40);
 
     // Get color after update
     lv_style_value_t after_value;
@@ -315,19 +321,8 @@ TEST_CASE_METHOD(LVGLUITestFixture, "theme_core: text style updates on theme cha
     lv_color_t before = before_value.color;
 
     // Switch to dark mode
-    lv_color_t dark_screen_bg = lv_color_hex(0x121212);
-    lv_color_t dark_card_bg = lv_color_hex(0x1E1E1E);
-    lv_color_t dark_surface = lv_color_hex(0x2D2D2D);
-    lv_color_t dark_text = lv_color_hex(0xE0E0E0);
-    lv_color_t dark_text_muted = lv_color_hex(0xA0A0A0);
-    lv_color_t dark_text_subtle = lv_color_hex(0x808080);
-    lv_color_t dark_focus = lv_color_hex(0x4FC3F7);
-    lv_color_t dark_primary = lv_color_hex(0x2196F3);
-    lv_color_t dark_border = lv_color_hex(0x424242);
-
-    theme_core_update_colors(true, dark_screen_bg, dark_card_bg, dark_surface, dark_text,
-                             dark_text_muted, dark_text_subtle, dark_focus, dark_primary,
-                             dark_border);
+    theme_palette_t dark_palette = make_dark_test_palette();
+    theme_core_update_colors(true, &dark_palette, 40);
 
     // Get color after update
     lv_style_value_t after_value;
@@ -351,19 +346,8 @@ TEST_CASE_METHOD(LVGLUITestFixture, "theme_core: muted text style updates on the
     lv_color_t before = before_value.color;
 
     // Switch to dark mode
-    lv_color_t dark_screen_bg = lv_color_hex(0x121212);
-    lv_color_t dark_card_bg = lv_color_hex(0x1E1E1E);
-    lv_color_t dark_surface = lv_color_hex(0x2D2D2D);
-    lv_color_t dark_text = lv_color_hex(0xE0E0E0);
-    lv_color_t dark_text_muted = lv_color_hex(0xA0A0A0);
-    lv_color_t dark_text_subtle = lv_color_hex(0x808080);
-    lv_color_t dark_focus = lv_color_hex(0x4FC3F7);
-    lv_color_t dark_primary = lv_color_hex(0x2196F3);
-    lv_color_t dark_border = lv_color_hex(0x424242);
-
-    theme_core_update_colors(true, dark_screen_bg, dark_card_bg, dark_surface, dark_text,
-                             dark_text_muted, dark_text_subtle, dark_focus, dark_primary,
-                             dark_border);
+    theme_palette_t dark_palette = make_dark_test_palette();
+    theme_core_update_colors(true, &dark_palette, 40);
 
     // Get color after update
     lv_style_value_t after_value;
@@ -386,19 +370,8 @@ TEST_CASE_METHOD(LVGLUITestFixture, "theme_core: subtle text style updates on th
     lv_color_t before = before_value.color;
 
     // Switch to dark mode
-    lv_color_t dark_screen_bg = lv_color_hex(0x121212);
-    lv_color_t dark_card_bg = lv_color_hex(0x1E1E1E);
-    lv_color_t dark_surface = lv_color_hex(0x2D2D2D);
-    lv_color_t dark_text = lv_color_hex(0xE0E0E0);
-    lv_color_t dark_text_muted = lv_color_hex(0xA0A0A0);
-    lv_color_t dark_text_subtle = lv_color_hex(0x808080);
-    lv_color_t dark_focus = lv_color_hex(0x4FC3F7);
-    lv_color_t dark_primary = lv_color_hex(0x2196F3);
-    lv_color_t dark_border = lv_color_hex(0x424242);
-
-    theme_core_update_colors(true, dark_screen_bg, dark_card_bg, dark_surface, dark_text,
-                             dark_text_muted, dark_text_subtle, dark_focus, dark_primary,
-                             dark_border);
+    theme_palette_t dark_palette = make_dark_test_palette();
+    theme_core_update_colors(true, &dark_palette, 40);
 
     // Get color after update
     lv_style_value_t after_value;
@@ -475,19 +448,8 @@ TEST_CASE_METHOD(LVGLUITestFixture, "theme_core: widget updates when shared styl
     lv_color_t before = lv_obj_get_style_bg_color(card, LV_PART_MAIN);
 
     // Update theme colors
-    lv_color_t dark_screen_bg = lv_color_hex(0x121212);
-    lv_color_t dark_card_bg = lv_color_hex(0x1E1E1E);
-    lv_color_t dark_surface = lv_color_hex(0x2D2D2D);
-    lv_color_t dark_text = lv_color_hex(0xE0E0E0);
-    lv_color_t dark_text_muted = lv_color_hex(0xA0A0A0);
-    lv_color_t dark_text_subtle = lv_color_hex(0x808080);
-    lv_color_t dark_focus = lv_color_hex(0x4FC3F7);
-    lv_color_t dark_primary = lv_color_hex(0x2196F3);
-    lv_color_t dark_border = lv_color_hex(0x424242);
-
-    theme_core_update_colors(true, dark_screen_bg, dark_card_bg, dark_surface, dark_text,
-                             dark_text_muted, dark_text_subtle, dark_focus, dark_primary,
-                             dark_border);
+    theme_palette_t dark_palette = make_dark_test_palette();
+    theme_core_update_colors(true, &dark_palette, 40);
 
     // Trigger LVGL style refresh (this is what theme_core_update_colors should do internally)
     lv_obj_report_style_change(nullptr);
@@ -526,20 +488,9 @@ TEST_CASE_METHOD(LVGLUITestFixture, "ui_card: background color updates on theme 
     uint32_t before_rgb = lv_color_to_u32(before) & 0x00FFFFFF;
     INFO("Initial card bg_color: 0x" << std::hex << before_rgb);
 
-    // Update theme colors to dark mode (significantly different colors)
-    lv_color_t dark_screen_bg = lv_color_hex(0x121212);
-    lv_color_t dark_card_bg = lv_color_hex(0x1E1E1E); // Notably different from light mode
-    lv_color_t dark_surface = lv_color_hex(0x2D2D2D);
-    lv_color_t dark_text = lv_color_hex(0xE0E0E0);
-    lv_color_t dark_text_muted = lv_color_hex(0xA0A0A0);
-    lv_color_t dark_text_subtle = lv_color_hex(0x808080);
-    lv_color_t dark_focus = lv_color_hex(0x4FC3F7);
-    lv_color_t dark_primary = lv_color_hex(0x2196F3);
-    lv_color_t dark_border = lv_color_hex(0x424242);
-
-    theme_core_update_colors(true, // is_dark
-                             dark_screen_bg, dark_card_bg, dark_surface, dark_text, dark_text_muted,
-                             dark_text_subtle, dark_focus, dark_primary, dark_border);
+    // Switch to dark mode
+    theme_palette_t dark_palette = make_dark_test_palette();
+    theme_core_update_colors(true, &dark_palette, 40);
 
     // Force LVGL style refresh cascade
     lv_obj_report_style_change(nullptr);
@@ -611,20 +562,9 @@ TEST_CASE_METHOD(LVGLUITestFixture, "ui_card: multiple cards update together on 
     REQUIRE(lv_color_eq(before1, before2));
     REQUIRE(lv_color_eq(before2, before3));
 
-    // Update to dark mode
-    lv_color_t dark_screen_bg = lv_color_hex(0x121212);
-    lv_color_t dark_card_bg = lv_color_hex(0x1E1E1E);
-    lv_color_t dark_surface = lv_color_hex(0x2D2D2D);
-    lv_color_t dark_text = lv_color_hex(0xE0E0E0);
-    lv_color_t dark_text_muted = lv_color_hex(0xA0A0A0);
-    lv_color_t dark_text_subtle = lv_color_hex(0x808080);
-    lv_color_t dark_focus = lv_color_hex(0x4FC3F7);
-    lv_color_t dark_primary = lv_color_hex(0x2196F3);
-    lv_color_t dark_border = lv_color_hex(0x424242);
-
-    theme_core_update_colors(true, dark_screen_bg, dark_card_bg, dark_surface, dark_text,
-                             dark_text_muted, dark_text_subtle, dark_focus, dark_primary,
-                             dark_border);
+    // Switch to dark mode
+    theme_palette_t dark_palette = make_dark_test_palette();
+    theme_core_update_colors(true, &dark_palette, 40);
 
     lv_obj_report_style_change(nullptr);
 
@@ -656,20 +596,9 @@ TEST_CASE_METHOD(LVGLUITestFixture, "ui_card: style matches shared card_style af
     lv_style_t* shared_style = theme_core_get_card_style();
     REQUIRE(shared_style != nullptr);
 
-    // Update to dark mode
-    lv_color_t dark_screen_bg = lv_color_hex(0x121212);
-    lv_color_t dark_card_bg = lv_color_hex(0x1E1E1E);
-    lv_color_t dark_surface = lv_color_hex(0x2D2D2D);
-    lv_color_t dark_text = lv_color_hex(0xE0E0E0);
-    lv_color_t dark_text_muted = lv_color_hex(0xA0A0A0);
-    lv_color_t dark_text_subtle = lv_color_hex(0x808080);
-    lv_color_t dark_focus = lv_color_hex(0x4FC3F7);
-    lv_color_t dark_primary = lv_color_hex(0x2196F3);
-    lv_color_t dark_border = lv_color_hex(0x424242);
-
-    theme_core_update_colors(true, dark_screen_bg, dark_card_bg, dark_surface, dark_text,
-                             dark_text_muted, dark_text_subtle, dark_focus, dark_primary,
-                             dark_border);
+    // Switch to dark mode
+    theme_palette_t dark_palette = make_dark_test_palette();
+    theme_core_update_colors(true, &dark_palette, 40);
 
     lv_obj_report_style_change(nullptr);
 
@@ -720,20 +649,9 @@ TEST_CASE_METHOD(LVGLUITestFixture, "ui_dialog: background color updates on them
     uint32_t before_rgb = lv_color_to_u32(before) & 0x00FFFFFF;
     INFO("Initial dialog bg_color: 0x" << std::hex << before_rgb);
 
-    // Update theme colors to dark mode (significantly different colors)
-    lv_color_t dark_screen_bg = lv_color_hex(0x121212);
-    lv_color_t dark_card_bg = lv_color_hex(0x1E1E1E);
-    lv_color_t dark_surface = lv_color_hex(0x2D2D2D); // Notably different from light mode
-    lv_color_t dark_text = lv_color_hex(0xE0E0E0);
-    lv_color_t dark_text_muted = lv_color_hex(0xA0A0A0);
-    lv_color_t dark_text_subtle = lv_color_hex(0x808080);
-    lv_color_t dark_focus = lv_color_hex(0x4FC3F7);
-    lv_color_t dark_primary = lv_color_hex(0x2196F3);
-    lv_color_t dark_border = lv_color_hex(0x424242);
-
-    theme_core_update_colors(true, // is_dark
-                             dark_screen_bg, dark_card_bg, dark_surface, dark_text, dark_text_muted,
-                             dark_text_subtle, dark_focus, dark_primary, dark_border);
+    // Switch to dark mode
+    theme_palette_t dark_palette = make_dark_test_palette();
+    theme_core_update_colors(true, &dark_palette, 40);
 
     // Force LVGL style refresh cascade
     lv_obj_report_style_change(nullptr);
@@ -764,20 +682,9 @@ TEST_CASE_METHOD(LVGLUITestFixture,
     lv_style_t* shared_style = theme_core_get_dialog_style();
     REQUIRE(shared_style != nullptr);
 
-    // Update to dark mode
-    lv_color_t dark_screen_bg = lv_color_hex(0x121212);
-    lv_color_t dark_card_bg = lv_color_hex(0x1E1E1E);
-    lv_color_t dark_surface = lv_color_hex(0x2D2D2D);
-    lv_color_t dark_text = lv_color_hex(0xE0E0E0);
-    lv_color_t dark_text_muted = lv_color_hex(0xA0A0A0);
-    lv_color_t dark_text_subtle = lv_color_hex(0x808080);
-    lv_color_t dark_focus = lv_color_hex(0x4FC3F7);
-    lv_color_t dark_primary = lv_color_hex(0x2196F3);
-    lv_color_t dark_border = lv_color_hex(0x424242);
-
-    theme_core_update_colors(true, dark_screen_bg, dark_card_bg, dark_surface, dark_text,
-                             dark_text_muted, dark_text_subtle, dark_focus, dark_primary,
-                             dark_border);
+    // Switch to dark mode
+    theme_palette_t dark_palette = make_dark_test_palette();
+    theme_core_update_colors(true, &dark_palette, 40);
 
     lv_obj_report_style_change(nullptr);
 
@@ -854,20 +761,9 @@ TEST_CASE_METHOD(LVGLUITestFixture, "ui_dialog: multiple dialogs update together
     REQUIRE(lv_color_eq(before1, before2));
     REQUIRE(lv_color_eq(before2, before3));
 
-    // Update to dark mode
-    lv_color_t dark_screen_bg = lv_color_hex(0x121212);
-    lv_color_t dark_card_bg = lv_color_hex(0x1E1E1E);
-    lv_color_t dark_surface = lv_color_hex(0x2D2D2D);
-    lv_color_t dark_text = lv_color_hex(0xE0E0E0);
-    lv_color_t dark_text_muted = lv_color_hex(0xA0A0A0);
-    lv_color_t dark_text_subtle = lv_color_hex(0x808080);
-    lv_color_t dark_focus = lv_color_hex(0x4FC3F7);
-    lv_color_t dark_primary = lv_color_hex(0x2196F3);
-    lv_color_t dark_border = lv_color_hex(0x424242);
-
-    theme_core_update_colors(true, dark_screen_bg, dark_card_bg, dark_surface, dark_text,
-                             dark_text_muted, dark_text_subtle, dark_focus, dark_primary,
-                             dark_border);
+    // Switch to dark mode
+    theme_palette_t dark_palette = make_dark_test_palette();
+    theme_core_update_colors(true, &dark_palette, 40);
 
     lv_obj_report_style_change(nullptr);
 
@@ -995,19 +891,8 @@ TEST_CASE_METHOD(LVGLUITestFixture, "text_small: text color updates on theme cha
     lv_color_t before = lv_obj_get_style_text_color(label, LV_PART_MAIN);
 
     // Update theme colors to dark mode
-    lv_color_t dark_screen_bg = lv_color_hex(0x121212);
-    lv_color_t dark_card_bg = lv_color_hex(0x1E1E1E);
-    lv_color_t dark_surface = lv_color_hex(0x2D2D2D);
-    lv_color_t dark_text = lv_color_hex(0xE0E0E0);
-    lv_color_t dark_text_muted = lv_color_hex(0xA0A0A0);
-    lv_color_t dark_text_subtle = lv_color_hex(0x808080);
-    lv_color_t dark_focus = lv_color_hex(0x4FC3F7);
-    lv_color_t dark_primary = lv_color_hex(0x2196F3);
-    lv_color_t dark_border = lv_color_hex(0x424242);
-
-    theme_core_update_colors(true, dark_screen_bg, dark_card_bg, dark_surface, dark_text,
-                             dark_text_muted, dark_text_subtle, dark_focus, dark_primary,
-                             dark_border);
+    theme_palette_t dark_palette = make_dark_test_palette();
+    theme_core_update_colors(true, &dark_palette, 40);
 
     lv_obj_report_style_change(nullptr);
 
@@ -1030,19 +915,8 @@ TEST_CASE_METHOD(LVGLUITestFixture, "text_xs: text color updates on theme change
     lv_color_t before = lv_obj_get_style_text_color(label, LV_PART_MAIN);
 
     // Update theme colors to dark mode
-    lv_color_t dark_screen_bg = lv_color_hex(0x121212);
-    lv_color_t dark_card_bg = lv_color_hex(0x1E1E1E);
-    lv_color_t dark_surface = lv_color_hex(0x2D2D2D);
-    lv_color_t dark_text = lv_color_hex(0xE0E0E0);
-    lv_color_t dark_text_muted = lv_color_hex(0xA0A0A0);
-    lv_color_t dark_text_subtle = lv_color_hex(0x808080);
-    lv_color_t dark_focus = lv_color_hex(0x4FC3F7);
-    lv_color_t dark_primary = lv_color_hex(0x2196F3);
-    lv_color_t dark_border = lv_color_hex(0x424242);
-
-    theme_core_update_colors(true, dark_screen_bg, dark_card_bg, dark_surface, dark_text,
-                             dark_text_muted, dark_text_subtle, dark_focus, dark_primary,
-                             dark_border);
+    theme_palette_t dark_palette = make_dark_test_palette();
+    theme_core_update_colors(true, &dark_palette, 40);
 
     lv_obj_report_style_change(nullptr);
 
@@ -1065,19 +939,8 @@ TEST_CASE_METHOD(LVGLUITestFixture, "text_button: text color updates on theme ch
     lv_color_t before = lv_obj_get_style_text_color(label, LV_PART_MAIN);
 
     // Update theme colors to dark mode
-    lv_color_t dark_screen_bg = lv_color_hex(0x121212);
-    lv_color_t dark_card_bg = lv_color_hex(0x1E1E1E);
-    lv_color_t dark_surface = lv_color_hex(0x2D2D2D);
-    lv_color_t dark_text = lv_color_hex(0xE0E0E0);
-    lv_color_t dark_text_muted = lv_color_hex(0xA0A0A0);
-    lv_color_t dark_text_subtle = lv_color_hex(0x808080);
-    lv_color_t dark_focus = lv_color_hex(0x4FC3F7);
-    lv_color_t dark_primary = lv_color_hex(0x2196F3);
-    lv_color_t dark_border = lv_color_hex(0x424242);
-
-    theme_core_update_colors(true, dark_screen_bg, dark_card_bg, dark_surface, dark_text,
-                             dark_text_muted, dark_text_subtle, dark_focus, dark_primary,
-                             dark_border);
+    theme_palette_t dark_palette = make_dark_test_palette();
+    theme_core_update_colors(true, &dark_palette, 40);
 
     lv_obj_report_style_change(nullptr);
 
@@ -1371,19 +1234,8 @@ TEST_CASE_METHOD(LVGLUITestFixture, "theme_core: icon text style updates on them
     lv_color_t before = before_value.color;
 
     // Switch to dark mode with different colors
-    lv_color_t dark_screen_bg = lv_color_hex(0x121212);
-    lv_color_t dark_card_bg = lv_color_hex(0x1E1E1E);
-    lv_color_t dark_surface = lv_color_hex(0x2D2D2D);
-    lv_color_t dark_text = lv_color_hex(0xE0E0E0);
-    lv_color_t dark_text_muted = lv_color_hex(0xA0A0A0);
-    lv_color_t dark_text_subtle = lv_color_hex(0x808080);
-    lv_color_t dark_focus = lv_color_hex(0x4FC3F7);
-    lv_color_t dark_primary = lv_color_hex(0x2196F3);
-    lv_color_t dark_border = lv_color_hex(0x424242);
-
-    theme_core_update_colors(true, dark_screen_bg, dark_card_bg, dark_surface, dark_text,
-                             dark_text_muted, dark_text_subtle, dark_focus, dark_primary,
-                             dark_border);
+    theme_palette_t dark_palette = make_dark_test_palette();
+    theme_core_update_colors(true, &dark_palette, 40);
 
     // Get color after update
     lv_style_value_t after_value;
@@ -1407,19 +1259,8 @@ TEST_CASE_METHOD(LVGLUITestFixture, "theme_core: icon muted style updates on the
     lv_color_t before = before_value.color;
 
     // Switch to dark mode
-    lv_color_t dark_screen_bg = lv_color_hex(0x121212);
-    lv_color_t dark_card_bg = lv_color_hex(0x1E1E1E);
-    lv_color_t dark_surface = lv_color_hex(0x2D2D2D);
-    lv_color_t dark_text = lv_color_hex(0xE0E0E0);
-    lv_color_t dark_text_muted = lv_color_hex(0xA0A0A0);
-    lv_color_t dark_text_subtle = lv_color_hex(0x808080);
-    lv_color_t dark_focus = lv_color_hex(0x4FC3F7);
-    lv_color_t dark_primary = lv_color_hex(0x2196F3);
-    lv_color_t dark_border = lv_color_hex(0x424242);
-
-    theme_core_update_colors(true, dark_screen_bg, dark_card_bg, dark_surface, dark_text,
-                             dark_text_muted, dark_text_subtle, dark_focus, dark_primary,
-                             dark_border);
+    theme_palette_t dark_palette = make_dark_test_palette();
+    theme_core_update_colors(true, &dark_palette, 40);
 
     // Get color after update
     lv_style_value_t after_value;
@@ -1442,19 +1283,8 @@ TEST_CASE_METHOD(LVGLUITestFixture, "theme_core: icon primary style updates on t
     lv_color_t before = before_value.color;
 
     // Switch to dark mode with a DIFFERENT primary color
-    lv_color_t dark_screen_bg = lv_color_hex(0x121212);
-    lv_color_t dark_card_bg = lv_color_hex(0x1E1E1E);
-    lv_color_t dark_surface = lv_color_hex(0x2D2D2D);
-    lv_color_t dark_text = lv_color_hex(0xE0E0E0);
-    lv_color_t dark_text_muted = lv_color_hex(0xA0A0A0);
-    lv_color_t dark_text_subtle = lv_color_hex(0x808080);
-    lv_color_t dark_focus = lv_color_hex(0x4FC3F7);
-    lv_color_t dark_primary = lv_color_hex(0xFF5722); // Different primary color
-    lv_color_t dark_border = lv_color_hex(0x424242);
-
-    theme_core_update_colors(true, dark_screen_bg, dark_card_bg, dark_surface, dark_text,
-                             dark_text_muted, dark_text_subtle, dark_focus, dark_primary,
-                             dark_border);
+    theme_palette_t palette = make_dark_test_palette_with_primary(lv_color_hex(0xFF5722));
+    theme_core_update_colors(true, &palette, 40);
 
     // Get color after update
     lv_style_value_t after_value;
@@ -1533,19 +1363,8 @@ TEST_CASE_METHOD(LVGLUITestFixture, "theme_core: spinner style updates on theme 
     lv_color_t before = before_value.color;
 
     // Switch to dark mode with a DIFFERENT primary color
-    lv_color_t dark_screen_bg = lv_color_hex(0x121212);
-    lv_color_t dark_card_bg = lv_color_hex(0x1E1E1E);
-    lv_color_t dark_surface = lv_color_hex(0x2D2D2D);
-    lv_color_t dark_text = lv_color_hex(0xE0E0E0);
-    lv_color_t dark_text_muted = lv_color_hex(0xA0A0A0);
-    lv_color_t dark_text_subtle = lv_color_hex(0x808080);
-    lv_color_t dark_focus = lv_color_hex(0x4FC3F7);
-    lv_color_t dark_primary = lv_color_hex(0xFF5722); // Different primary color
-    lv_color_t dark_border = lv_color_hex(0x424242);
-
-    theme_core_update_colors(true, dark_screen_bg, dark_card_bg, dark_surface, dark_text,
-                             dark_text_muted, dark_text_subtle, dark_focus, dark_primary,
-                             dark_border);
+    theme_palette_t palette = make_dark_test_palette_with_primary(lv_color_hex(0xFF5722));
+    theme_core_update_colors(true, &palette, 40);
 
     // Get arc color after update
     lv_style_value_t after_value;
@@ -1888,19 +1707,8 @@ TEST_CASE_METHOD(LVGLUITestFixture, "theme_core: button primary style updates on
     lv_color_t before = before_value.color;
 
     // Switch to dark mode with different primary color
-    lv_color_t dark_screen_bg = lv_color_hex(0x121212);
-    lv_color_t dark_card_bg = lv_color_hex(0x1E1E1E);
-    lv_color_t dark_surface = lv_color_hex(0x2D2D2D);
-    lv_color_t dark_text = lv_color_hex(0xE0E0E0);
-    lv_color_t dark_text_muted = lv_color_hex(0xA0A0A0);
-    lv_color_t dark_text_subtle = lv_color_hex(0x808080);
-    lv_color_t dark_focus = lv_color_hex(0x4FC3F7);
-    lv_color_t dark_primary = lv_color_hex(0xFF5722); // Different primary color
-    lv_color_t dark_border = lv_color_hex(0x424242);
-
-    theme_core_update_colors(true, dark_screen_bg, dark_card_bg, dark_surface, dark_text,
-                             dark_text_muted, dark_text_subtle, dark_focus, dark_primary,
-                             dark_border);
+    theme_palette_t palette = make_dark_test_palette_with_primary(lv_color_hex(0xFF5722));
+    theme_core_update_colors(true, &palette, 40);
 
     // Get color after update
     lv_style_value_t after_value;
@@ -1926,19 +1734,8 @@ TEST_CASE_METHOD(LVGLUITestFixture, "theme_core: button secondary style updates 
     lv_color_t before = before_value.color;
 
     // Switch to dark mode
-    lv_color_t dark_screen_bg = lv_color_hex(0x121212);
-    lv_color_t dark_card_bg = lv_color_hex(0x1E1E1E);
-    lv_color_t dark_surface = lv_color_hex(0x2D2D2D);
-    lv_color_t dark_text = lv_color_hex(0xE0E0E0);
-    lv_color_t dark_text_muted = lv_color_hex(0xA0A0A0);
-    lv_color_t dark_text_subtle = lv_color_hex(0x808080);
-    lv_color_t dark_focus = lv_color_hex(0x4FC3F7);
-    lv_color_t dark_primary = lv_color_hex(0x2196F3);
-    lv_color_t dark_border = lv_color_hex(0x424242);
-
-    theme_core_update_colors(true, dark_screen_bg, dark_card_bg, dark_surface, dark_text,
-                             dark_text_muted, dark_text_subtle, dark_focus, dark_primary,
-                             dark_border);
+    theme_palette_t dark_palette = make_dark_test_palette();
+    theme_core_update_colors(true, &dark_palette, 40);
 
     // Get color after update
     lv_style_value_t after_value;
@@ -1991,14 +1788,15 @@ TEST_CASE_METHOD(LVGLUITestFixture,
     uint8_t g = (rgb >> 8) & 0xFF;
     uint8_t b = rgb & 0xFF;
 
-    // Dark colors should have low average RGB (at most 0x40 = 64)
+    // Dark colors should have average RGB below midpoint (128)
+    // Actual theme colors may be lighter than the fallback (0x212121)
+    // e.g., Ayu light text is #5C6166 (avg ~97)
     int avg = (r + g + b) / 3;
-    REQUIRE(avg <= 0x40);
+    REQUIRE(avg < 128);
 }
 
 TEST_CASE_METHOD(LVGLUITestFixture,
-                 "theme_core: contrast text colors are different from each other",
-                 "[theme-core]") {
+                 "theme_core: contrast text colors are different from each other", "[theme-core]") {
     lv_color_t dark_bg_text = theme_core_get_text_for_dark_bg();
     lv_color_t light_bg_text = theme_core_get_text_for_light_bg();
 
@@ -2006,26 +1804,38 @@ TEST_CASE_METHOD(LVGLUITestFixture,
     REQUIRE_FALSE(lv_color_eq(dark_bg_text, light_bg_text));
 }
 
-TEST_CASE_METHOD(LVGLUITestFixture,
-                 "theme_core: contrast text getters work before theme init (fallback)",
+TEST_CASE_METHOD(LVGLUITestFixture, "theme_core: contrast text getters use theme tokens",
                  "[theme-core]") {
-    // Note: This test relies on the fixture already having initialized the theme.
-    // The fallback behavior is tested implicitly - if theme_core_deinit() were
-    // called, the getters should return fallback values.
-    //
-    // For now, we just verify the getters don't crash and return valid colors.
+    // Verify the getters look up tokens from the XML constant system
+    // The tokens should be registered by theme_manager_init()
+
+    // Get what the getters return
     lv_color_t dark_bg_text = theme_core_get_text_for_dark_bg();
     lv_color_t light_bg_text = theme_core_get_text_for_light_bg();
 
-    // Should return meaningful colors (not crash)
-    uint32_t rgb1 = lv_color_to_u32(dark_bg_text) & 0x00FFFFFF;
-    uint32_t rgb2 = lv_color_to_u32(light_bg_text) & 0x00FFFFFF;
+    // Get the raw token values
+    const char* text_dark_str = lv_xml_get_const(nullptr, "text_dark");
+    const char* text_light_str = lv_xml_get_const(nullptr, "text_light");
 
-    INFO("Dark bg text: 0x" << std::hex << rgb1);
-    INFO("Light bg text: 0x" << std::hex << rgb2);
+    INFO("text_dark token: " << (text_dark_str ? text_dark_str : "(null)"));
+    INFO("text_light token: " << (text_light_str ? text_light_str : "(null)"));
 
-    // Just verify they're different
-    REQUIRE(rgb1 != rgb2);
+    // If tokens exist, verify the getter returns matching color
+    if (text_dark_str && text_dark_str[0] == '#') {
+        lv_color_t expected = lv_color_hex(strtoul(text_dark_str + 1, nullptr, 16));
+        uint32_t got = lv_color_to_u32(dark_bg_text) & 0x00FFFFFF;
+        uint32_t exp = lv_color_to_u32(expected) & 0x00FFFFFF;
+        INFO("text_for_dark_bg: got 0x" << std::hex << got << ", expected 0x" << exp);
+        REQUIRE(lv_color_eq(dark_bg_text, expected));
+    }
+
+    if (text_light_str && text_light_str[0] == '#') {
+        lv_color_t expected = lv_color_hex(strtoul(text_light_str + 1, nullptr, 16));
+        uint32_t got = lv_color_to_u32(light_bg_text) & 0x00FFFFFF;
+        uint32_t exp = lv_color_to_u32(expected) & 0x00FFFFFF;
+        INFO("text_for_light_bg: got 0x" << std::hex << got << ", expected 0x" << exp);
+        REQUIRE(lv_color_eq(light_bg_text, expected));
+    }
 }
 
 // ============================================================================
