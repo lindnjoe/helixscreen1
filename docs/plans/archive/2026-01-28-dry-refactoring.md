@@ -23,12 +23,12 @@ Codebase audit identified ~810 lines of duplicated code across 6 functional area
 | 4 | Trampoline Macro | ✅ | 8c5cef96 |
 | 5 | Lazy Overlay Template | ✅ | 2b1c29c9 |
 | 6 | Subject Init Macro | ✅ | 14fbcadb |
-| 7 | Widget Lookup Macro | ⬜ | |
-| 8 | Temp Formatting Consistency | ⬜ | |
-| 9 | Cleanup RAII Helper | ⬜ | |
-| 10 | Observer Bundle Migration | ⬜ | |
-| 11 | JSON Helper Move | ⬜ | |
-| 12 | Macro Button Loop | ⬜ | |
+| 7 | Widget Lookup Macro | ✅ | cb233928 |
+| 8 | Temp Formatting Consistency | ✅ | 0ee54af5 |
+| 9 | Cleanup RAII Helper | ✅ | 17bbe771 |
+| 10 | Observer Bundle Migration | ✅ | ff54633e |
+| 11 | JSON Helper Move | ✅ | 3207dff1 |
+| 12 | Macro Button Loop | ✅ | dad5577f |
 
 **Legend:** ⬜ Pending | 🔄 In Progress | ✅ Complete
 
