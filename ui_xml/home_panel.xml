@@ -26,17 +26,16 @@
 
     <!-- Top section: Printer visualization + Tip -->
     <lv_obj width="100%"
-            flex_grow="2" style_bg_opa="0" style_border_width="0" style_pad_all="#space_sm" style_pad_left="0"
-            style_pad_gap="0" flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center"
-            scrollable="false">
+            flex_grow="2" style_pad_all="#space_sm" style_pad_left="0" style_pad_gap="0" flex_flow="row"
+            style_flex_main_place="center" style_flex_cross_place="center" scrollable="false">
 
       <!-- Printer Image Container: fixed percentage width, image scales to fit via inner_align="contain" -->
       <lv_obj width="#printer_container_width"
-              height="100%" flex_flow="column" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-              style_pad_right="#space_sm" style_pad_gap="0" scrollable="false">
+              height="100%" flex_flow="column" style_pad_all="0" style_pad_right="#space_sm" style_pad_gap="0"
+              scrollable="false">
         <lv_obj name="printer_container"
-                width="100%" flex_grow="1" style_bg_opa="0%" style_border_width="0" style_pad_all="0"
-                style_pad_bottom="0" scrollable="false" align="center" flex_flow="row">
+                width="100%" flex_grow="1" style_bg_opa="0%" style_pad_all="0" style_pad_bottom="0" scrollable="false"
+                align="center" flex_flow="row">
           <lv_image name="printer_image" width="100%" height="100%" align="center" inner_align="contain">
             <!-- Dim image when disconnected (state 0) or connecting (state 1) -->
             <bind_style name="image_dimmed" subject="printer_connection_state" ref_value="0"/>
@@ -57,8 +56,7 @@
         <!-- printer_container -->
 
         <!-- Printer info - subtle text at bottom -->
-        <lv_obj name="printer_info_bar"
-                width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0">
+        <lv_obj name="printer_info_bar" width="100%" height="content" style_pad_all="0">
           <bind_flag_if_eq subject="printer_info_visible" flag="hidden" ref_value="0"/>
           <text_small width="100%"
                       height="content" bind_text="printer_type_text" style_text_color="#text" style_text_align="center"
@@ -69,8 +67,8 @@
       <!-- Tooltip Message with accent bar (flex-grows to fill remaining horizontal space) -->
       <!-- Outer container centers content vertically -->
       <lv_obj height="100%"
-              flex_grow="1" style_bg_opa="0%" style_border_width="0" style_pad_all="0" flex_flow="column"
-              style_flex_main_place="center" scrollable="false">
+              flex_grow="1" style_bg_opa="0%" style_pad_all="0" flex_flow="column" style_flex_main_place="center"
+              scrollable="false">
         <!-- Tip container: left border acts as accent bar, auto-sizes to text height -->
         <lv_obj width="100%"
                 height="content" flex_flow="row" style_bg_opa="0%" style_radius="0"
@@ -91,8 +89,8 @@
 
     <!-- Bottom section: Info cards (40% of height via flex_grow="2", balances with top section's flex_grow="3") -->
     <lv_obj width="100%"
-            flex_grow="2" flex_flow="row" style_flex_cross_place="start" style_bg_opa="0%" style_border_width="0"
-            style_pad_all="#space_sm" style_pad_left="0" style_pad_gap="#space_md" scrollable="false">
+            flex_grow="2" flex_flow="row" style_flex_cross_place="start" style_bg_opa="0%" style_pad_all="#space_sm"
+            style_pad_left="0" style_pad_gap="#space_md" scrollable="false">
 
       <!-- Print Files Card - Benchy thumbnail + text in horizontal layout -->
       <!-- Disabled when not connected (state != 2) using LVGL's native disabled state -->
@@ -101,9 +99,8 @@
         <event_cb trigger="clicked" callback="print_card_clicked_cb"/>
         <!-- IDLE STATE: Benchy + "Print Files" (hidden when print_active == 1) -->
         <lv_obj name="print_card_idle"
-                width="100%" height="100%" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_sm"
-                clickable="false">
+                width="100%" height="100%" style_pad_all="0" flex_flow="row" style_flex_main_place="center"
+                style_flex_cross_place="center" style_pad_gap="#space_sm" clickable="false">
           <bind_flag_if_not_eq subject="print_active" flag="hidden" ref_value="0"/>
           <lv_image name="print_card_thumb"
                     width="50%" height="100%" src="A:assets/images/benchy_thumbnail_white.png" inner_align="contain"/>
@@ -111,9 +108,8 @@
         </lv_obj>
         <!-- PREPARING STATE: Progress + message (hidden when print_start_phase == 0/IDLE) -->
         <lv_obj name="print_card_preparing"
-                width="100%" height="100%" style_bg_opa="0" style_border_width="0" style_pad_all="#space_sm"
-                flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
-                style_pad_gap="#space_sm" hidden="true" clickable="false">
+                width="100%" height="100%" style_pad_all="#space_sm" flex_flow="column" style_flex_main_place="center"
+                style_flex_cross_place="center" style_pad_gap="#space_sm" hidden="true" clickable="false">
           <bind_flag_if_eq subject="print_start_phase" flag="hidden" ref_value="0"/>
           <!-- "Preparing Print" heading -->
           <text_body text="Preparing Print"/>
@@ -127,9 +123,9 @@
         <!-- PRINTING STATE: Actual print progress (hidden when print_show_progress==0) -->
         <!-- Horizontal layout: thumbnail left, info right (mirrors idle state layout) -->
         <lv_obj name="print_card_printing"
-                width="100%" height="100%" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_sm"
-                scrollable="false" hidden="true" clickable="false">
+                width="100%" height="100%" style_pad_all="0" flex_flow="row" style_flex_main_place="center"
+                style_flex_cross_place="center" style_pad_gap="#space_sm" scrollable="false" hidden="true"
+                clickable="false">
           <!-- Single binding: show only when print_active==1 AND print_start_phase==IDLE -->
           <bind_flag_if_eq subject="print_show_progress" flag="hidden" ref_value="0"/>
           <!-- Thumbnail (set programmatically via lv_image_set_src when print starts) -->
@@ -137,9 +133,8 @@
                     width="50%" height="100%" src="A:assets/images/benchy_thumbnail_white.png" inner_align="contain"/>
           <!-- Info column: filename, progress bar, percentage -->
           <lv_obj width="50%"
-                  height="100%" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-                  style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_xs"
-                  scrollable="false">
+                  height="100%" style_pad_all="0" flex_flow="column" style_flex_main_place="center"
+                  style_flex_cross_place="center" style_pad_gap="#space_xs" scrollable="false">
             <!-- Filename (constrained width with wrapping for long names) -->
             <text_body width="100%"
                        bind_text="print_display_filename" style_text_color="#text" long_mode="wrap"
@@ -160,14 +155,12 @@
 
         <!-- Top Row: [AMS if available] + Printer Status + Notification -->
         <!-- Uses flex_grow="1" like bottom row so divider height="80%" works correctly -->
-        <lv_obj width="100%"
-                flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                style_flex_cross_place="center">
+        <lv_obj width="100%" flex_grow="1" style_pad_all="0" flex_flow="row" style_flex_cross_place="center">
 
           <!-- Printer Status -->
           <lv_obj height="100%"
-                  flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-                  style_flex_main_place="center" style_flex_track_place="center">
+                  flex_grow="1" style_pad_all="0" flex_flow="column" style_flex_main_place="center"
+                  style_flex_track_place="center">
             <ui_button name="status_btn_printer" variant="ghost" align="center">
               <event_cb trigger="clicked" callback="printer_status_clicked_cb"/>
               <!-- Ready (green) - state 0 -->
@@ -231,10 +224,9 @@
 
           <!-- Notification (above light column) -->
           <lv_obj height="100%"
-                  flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-                  style_flex_main_place="center" style_flex_track_place="center">
-            <lv_obj name="status_notification_container"
-                    width="content" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0">
+                  flex_grow="1" style_pad_all="0" flex_flow="column" style_flex_main_place="center"
+                  style_flex_track_place="center">
+            <lv_obj name="status_notification_container" width="content" height="content" style_pad_all="0">
               <icon name="status_notification_icon"
                     src="notifications" size="#icon_size_card" variant="secondary" align="center" clickable="true">
                 <event_cb trigger="clicked" callback="status_notification_history_clicked"/>
@@ -242,12 +234,11 @@
               <!-- Notification Count Badge - wrapper provides fixed sizing, label inside uses bind_style -->
               <lv_obj name="notification_badge"
                       width="18" height="18" align="top_right" x="-#space_xxs" y="#space_xxs" style_radius="9"
-                      style_border_width="0" style_pad_all="0" hidden="true" scrollable="false" clickable="true">
+                      style_pad_all="0" hidden="true" scrollable="false" clickable="true">
                 <bind_flag_if_eq subject="notification_count" flag="hidden" ref_value="0"/>
                 <event_cb trigger="clicked" callback="status_notification_history_clicked"/>
                 <!-- Background with severity-bound color -->
-                <lv_obj name="badge_bg"
-                        width="100%" height="100%" style_radius="9" style_border_width="0" style_bg_color="#info">
+                <lv_obj name="badge_bg" width="100%" height="100%" style_radius="9" style_bg_color="#info">
                   <bind_style name="badge_info" subject="notification_severity" ref_value="0"/>
                   <bind_style name="badge_warning" subject="notification_severity" ref_value="1"/>
                   <bind_style name="badge_error" subject="notification_severity" ref_value="2"/>
@@ -266,8 +257,8 @@
 
           <!-- E-stop button container (ONLY visible when printing) -->
           <lv_obj height="100%"
-                  flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-                  style_flex_main_place="center" style_flex_track_place="center" hidden="true">
+                  flex_grow="1" style_pad_all="0" flex_flow="column" style_flex_main_place="center"
+                  style_flex_track_place="center" hidden="true">
             <bind_flag_if_eq subject="estop_visible" flag="hidden" ref_value="0"/>
             <!-- Circular button: radius=24 is half of button_height_small (48px) -->
             <ui_button name="estop_button_home"
@@ -285,8 +276,8 @@
 
           <!-- Firmware restart button container (ONLY visible when klippy SHUTDOWN) -->
           <lv_obj height="100%"
-                  flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-                  style_flex_main_place="center" style_flex_track_place="center" hidden="true">
+                  flex_grow="1" style_pad_all="0" flex_flow="column" style_flex_main_place="center"
+                  style_flex_track_place="center" hidden="true">
             <bind_flag_if_not_eq subject="klippy_state" flag="hidden" ref_value="2"/>
             <!-- Circular button: uses primary to indicate "safe" recovery action -->
             <ui_button name="firmware_restart_button_home"
@@ -298,9 +289,7 @@
         </lv_obj>
 
         <!-- Bottom Row: Temperature, Network, Light -->
-        <lv_obj width="100%"
-                flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                style_flex_cross_place="center">
+        <lv_obj width="100%" flex_grow="1" style_pad_all="0" flex_flow="row" style_flex_cross_place="center">
 
           <!-- Temperature display - icon on top, text below -->
           <!-- Icon color controlled by HeatingIconAnimator (gradient + pulse while heating) -->
@@ -349,9 +338,8 @@
 
           <!-- Humidity sensor status (hidden if no sensors) -->
           <lv_obj name="humidity_status_container"
-                  height="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-                  flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
-                  style_flex_track_place="center">
+                  height="100%" flex_grow="1" style_pad_all="0" flex_flow="column" style_flex_main_place="center"
+                  style_flex_cross_place="center" style_flex_track_place="center">
             <bind_flag_if_eq subject="humidity_sensor_count" flag="hidden" ref_value="0"/>
             <humidity_indicator/>
             <text_tiny text="Humidity" style_text_align="center"/>
@@ -364,9 +352,8 @@
 
           <!-- Width sensor status (hidden if no sensors) -->
           <lv_obj name="width_status_container"
-                  height="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-                  flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
-                  style_flex_track_place="center">
+                  height="100%" flex_grow="1" style_pad_all="0" flex_flow="column" style_flex_main_place="center"
+                  style_flex_cross_place="center" style_flex_track_place="center">
             <bind_flag_if_eq subject="width_sensor_count" flag="hidden" ref_value="0"/>
             <width_indicator/>
             <text_tiny text="Width" style_text_align="center"/>
@@ -379,9 +366,8 @@
 
           <!-- Probe sensor status (hidden if no sensors) -->
           <lv_obj name="probe_status_container"
-                  height="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-                  flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
-                  style_flex_track_place="center">
+                  height="100%" flex_grow="1" style_pad_all="0" flex_flow="column" style_flex_main_place="center"
+                  style_flex_cross_place="center" style_flex_track_place="center">
             <bind_flag_if_eq subject="probe_count" flag="hidden" ref_value="0"/>
             <probe_indicator/>
             <text_tiny text="Probe" style_text_align="center"/>
@@ -394,9 +380,8 @@
 
           <!-- Filament sensor status (hidden if no sensors, or has AMS and not in bypass) -->
           <lv_obj name="filament_status_container"
-                  height="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-                  flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
-                  style_flex_track_place="center">
+                  height="100%" flex_grow="1" style_pad_all="0" flex_flow="column" style_flex_main_place="center"
+                  style_flex_cross_place="center" style_flex_track_place="center">
             <bind_flag_if_eq subject="show_filament_status" flag="hidden" ref_value="0"/>
             <filament_sensor_indicator/>
             <text_tiny text="Loaded" style_text_align="center">
@@ -412,8 +397,7 @@
         <!-- Plugin injection point: widgets from plugins appear here -->
         <!-- Plugins can inject status widgets, indicators, or custom controls -->
         <lv_obj name="home_widget_area"
-                width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-                flex_flow="column" style_pad_gap="#space_sm"/>
+                width="100%" height="content" style_pad_all="0" flex_flow="column" style_pad_gap="#space_sm"/>
       </ui_card>
     </lv_obj>
   </view>

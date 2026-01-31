@@ -8,24 +8,24 @@
     <header_bar name="overlay_header" title="Input Shaper"/>
     <!-- Content Area -->
     <lv_obj name="panel_content"
-            width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="#space_lg"
-            style_pad_gap="#space_md" scrollable="true" scroll_dir="ver" flex_flow="column">
+            width="100%" flex_grow="1" style_pad_all="#space_lg" style_pad_gap="#space_md" scrollable="true"
+            scroll_dir="ver" flex_flow="column">
       <!-- ============================================================ -->
       <!-- STATE: IDLE - Clean, compact calibration interface -->
       <!-- ============================================================ -->
       <lv_obj name="state_idle"
-              width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-              style_pad_gap="#space_md" scrollable="false">
+              width="100%" height="content" style_pad_all="0" flex_flow="column" style_pad_gap="#space_md"
+              scrollable="false">
         <bind_flag_if_not_eq subject="input_shaper_state" flag="hidden" ref_value="0"/>
         <!-- Hero section: icon + title + help button -->
         <lv_obj width="100%"
                 height="content" style_bg_color="#screen_bg" style_bg_opa="255" style_radius="#border_radius"
-                style_border_width="0" style_pad_all="#space_lg" flex_flow="column" style_flex_main_place="center"
+                style_pad_all="#space_lg" flex_flow="column" style_flex_main_place="center"
                 style_flex_cross_place="center" style_pad_gap="#space_sm" scrollable="false">
           <!-- Top row: icon and help button -->
           <lv_obj width="100%"
-                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                  style_flex_main_place="center" style_flex_cross_place="center" scrollable="false">
+                  height="content" style_pad_all="0" flex_flow="row" style_flex_main_place="center"
+                  style_flex_cross_place="center" scrollable="false">
             <icon src="sine_wave" size="lg" variant="primary"/>
             <!-- Spacer to push help button right -->
             <lv_obj height="1" flex_grow="1" scrollable="false"/>
@@ -39,8 +39,7 @@
         </lv_obj>
         <!-- Calibration buttons - side by side -->
         <lv_obj width="100%"
-                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                style_pad_gap="#space_md" scrollable="false">
+                height="content" style_pad_all="0" flex_flow="row" style_pad_gap="#space_md" scrollable="false">
           <!-- Calibrate X Button -->
           <ui_button name="btn_calibrate_x" height="72" flex_grow="1" icon="axis_x_arrow" text="Calibrate X">
             <event_cb trigger="clicked" callback="input_shaper_calibrate_x_cb"/>
@@ -59,13 +58,13 @@
       <!-- STATE: MEASURING - Progress spinner -->
       <!-- ============================================================ -->
       <lv_obj name="state_measuring"
-              width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-              style_pad_gap="#space_lg" scrollable="false">
+              width="100%" height="content" style_pad_all="0" flex_flow="column" style_pad_gap="#space_lg"
+              scrollable="false">
         <bind_flag_if_not_eq subject="input_shaper_state" flag="hidden" ref_value="1"/>
         <!-- Spinner and status container -->
         <lv_obj width="100%"
                 height="content" style_min_height="160" style_bg_color="#screen_bg" style_bg_opa="255"
-                style_radius="#border_radius" style_border_width="0" style_pad_all="#space_xl" flex_flow="column"
+                style_radius="#border_radius" style_pad_all="#space_xl" flex_flow="column"
                 style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_md"
                 scrollable="false">
           <!-- Animated spinner -->
@@ -82,8 +81,8 @@
       <!-- STATE: RESULTS - Shaper recommendations -->
       <!-- ============================================================ -->
       <lv_obj name="state_results"
-              width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-              style_pad_gap="#space_md" scrollable="false">
+              width="100%" height="content" style_pad_all="0" flex_flow="column" style_pad_gap="#space_md"
+              scrollable="false">
         <bind_flag_if_not_eq subject="input_shaper_state" flag="hidden" ref_value="2"/>
         <!-- Success banner with recommendation -->
         <lv_obj width="100%"
@@ -91,9 +90,7 @@
                 style_border_width="1" style_border_color="#success" style_pad_all="#space_md" flex_flow="row"
                 style_flex_cross_place="center" style_pad_gap="#space_sm" scrollable="false">
           <icon src="check_circle" size="md" color="#success"/>
-          <lv_obj height="content"
-                  flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-                  scrollable="false">
+          <lv_obj height="content" flex_grow="1" style_pad_all="0" flex_flow="column" scrollable="false">
             <text_small text="Recommended" style_text_color="#success"/>
             <text_heading name="recommendation_label" text="mzv @ 36.7 Hz"/>
           </lv_obj>
@@ -101,13 +98,13 @@
         <!-- Frequency response chart container (populated programmatically) -->
         <lv_obj name="chart_container"
                 width="100%" height="160" style_bg_color="#screen_bg" style_bg_opa="255" style_radius="#border_radius"
-                style_border_width="0" style_pad_all="#space_sm" scrollable="false">
+                style_pad_all="#space_sm" scrollable="false">
           <!-- FrequencyResponseChart created here by InputShaperPanel -->
         </lv_obj>
         <!-- Results table header -->
         <lv_obj width="100%"
-                height="content" style_bg_opa="0" style_border_width="0" style_pad_left="#space_md"
-                style_pad_right="#space_md" style_pad_top="0" style_pad_bottom="0" flex_flow="row" scrollable="false">
+                height="content" style_pad_left="#space_md" style_pad_right="#space_md" style_pad_top="0"
+                style_pad_bottom="0" flex_flow="row" scrollable="false">
           <text_small width="40%" text="Shaper"/>
           <text_small width="30%" text="Freq"/>
           <text_small width="30%" text="Vibration"/>
@@ -115,12 +112,12 @@
         <!-- Results rows container -->
         <lv_obj width="100%"
                 height="content" style_bg_color="#screen_bg" style_bg_opa="255" style_radius="#border_radius"
-                style_border_width="0" style_pad_all="0" flex_flow="column" scrollable="false">
+                style_pad_all="0" flex_flow="column" scrollable="false">
           <!-- Row 0 -->
           <lv_obj name="shaper_row_0"
-                  width="100%" height="40" style_bg_opa="0" style_border_width="0" style_pad_left="#space_md"
-                  style_pad_right="#space_md" style_pad_top="#space_xs" style_pad_bottom="#space_xs" flex_flow="row"
-                  style_flex_cross_place="center" scrollable="false">
+                  width="100%" height="40" style_pad_left="#space_md" style_pad_right="#space_md"
+                  style_pad_top="#space_xs" style_pad_bottom="#space_xs" flex_flow="row" style_flex_cross_place="center"
+                  scrollable="false">
             <bind_flag_if_eq subject="shaper_0_visible" flag="hidden" ref_value="0"/>
             <text_body width="40%" bind_text="shaper_0_type"/>
             <text_small width="30%" bind_text="shaper_0_freq"/>
@@ -128,9 +125,9 @@
           </lv_obj>
           <!-- Row 1 -->
           <lv_obj name="shaper_row_1"
-                  width="100%" height="40" style_bg_opa="0" style_border_width="0" style_pad_left="#space_md"
-                  style_pad_right="#space_md" style_pad_top="#space_xs" style_pad_bottom="#space_xs" flex_flow="row"
-                  style_flex_cross_place="center" scrollable="false">
+                  width="100%" height="40" style_pad_left="#space_md" style_pad_right="#space_md"
+                  style_pad_top="#space_xs" style_pad_bottom="#space_xs" flex_flow="row" style_flex_cross_place="center"
+                  scrollable="false">
             <bind_flag_if_eq subject="shaper_1_visible" flag="hidden" ref_value="0"/>
             <text_body width="40%" bind_text="shaper_1_type"/>
             <text_small width="30%" bind_text="shaper_1_freq"/>
@@ -138,9 +135,9 @@
           </lv_obj>
           <!-- Row 2 -->
           <lv_obj name="shaper_row_2"
-                  width="100%" height="40" style_bg_opa="0" style_border_width="0" style_pad_left="#space_md"
-                  style_pad_right="#space_md" style_pad_top="#space_xs" style_pad_bottom="#space_xs" flex_flow="row"
-                  style_flex_cross_place="center" scrollable="false">
+                  width="100%" height="40" style_pad_left="#space_md" style_pad_right="#space_md"
+                  style_pad_top="#space_xs" style_pad_bottom="#space_xs" flex_flow="row" style_flex_cross_place="center"
+                  scrollable="false">
             <bind_flag_if_eq subject="shaper_2_visible" flag="hidden" ref_value="0"/>
             <text_body width="40%" bind_text="shaper_2_type"/>
             <text_small width="30%" bind_text="shaper_2_freq"/>
@@ -148,9 +145,9 @@
           </lv_obj>
           <!-- Row 3 -->
           <lv_obj name="shaper_row_3"
-                  width="100%" height="40" style_bg_opa="0" style_border_width="0" style_pad_left="#space_md"
-                  style_pad_right="#space_md" style_pad_top="#space_xs" style_pad_bottom="#space_xs" flex_flow="row"
-                  style_flex_cross_place="center" scrollable="false">
+                  width="100%" height="40" style_pad_left="#space_md" style_pad_right="#space_md"
+                  style_pad_top="#space_xs" style_pad_bottom="#space_xs" flex_flow="row" style_flex_cross_place="center"
+                  scrollable="false">
             <bind_flag_if_eq subject="shaper_3_visible" flag="hidden" ref_value="0"/>
             <text_body width="40%" bind_text="shaper_3_type"/>
             <text_small width="30%" bind_text="shaper_3_freq"/>
@@ -158,9 +155,9 @@
           </lv_obj>
           <!-- Row 4 -->
           <lv_obj name="shaper_row_4"
-                  width="100%" height="40" style_bg_opa="0" style_border_width="0" style_pad_left="#space_md"
-                  style_pad_right="#space_md" style_pad_top="#space_xs" style_pad_bottom="#space_xs" flex_flow="row"
-                  style_flex_cross_place="center" scrollable="false">
+                  width="100%" height="40" style_pad_left="#space_md" style_pad_right="#space_md"
+                  style_pad_top="#space_xs" style_pad_bottom="#space_xs" flex_flow="row" style_flex_cross_place="center"
+                  scrollable="false">
             <bind_flag_if_eq subject="shaper_4_visible" flag="hidden" ref_value="0"/>
             <text_body width="40%" bind_text="shaper_4_type"/>
             <text_small width="30%" bind_text="shaper_4_freq"/>
@@ -169,8 +166,7 @@
         </lv_obj>
         <!-- Action buttons -->
         <lv_obj width="100%"
-                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                style_pad_gap="#space_md" scrollable="false">
+                height="content" style_pad_all="0" flex_flow="row" style_pad_gap="#space_md" scrollable="false">
           <!-- Close button (secondary) -->
           <ui_button name="btn_close" flex_grow="1" variant="secondary" text="Close">
             <event_cb trigger="clicked" callback="input_shaper_close_cb"/>
@@ -200,8 +196,8 @@
       <!-- STATE: ERROR - Error message and retry -->
       <!-- ============================================================ -->
       <lv_obj name="state_error"
-              width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-              style_pad_gap="#space_md" scrollable="false">
+              width="100%" height="content" style_pad_all="0" flex_flow="column" style_pad_gap="#space_md"
+              scrollable="false">
         <bind_flag_if_not_eq subject="input_shaper_state" flag="hidden" ref_value="3"/>
         <!-- Error card -->
         <lv_obj width="100%"
@@ -216,8 +212,7 @@
         <!-- Troubleshooting tips -->
         <lv_obj width="100%"
                 height="content" style_bg_color="#screen_bg" style_bg_opa="255" style_radius="#border_radius"
-                style_border_width="0" style_pad_all="#space_md" flex_flow="column" style_pad_gap="#space_xs"
-                scrollable="false">
+                style_pad_all="#space_md" flex_flow="column" style_pad_gap="#space_xs" scrollable="false">
           <text_small text="Troubleshooting:"/>
           <text_small text="- Ensure ADXL345 is connected"/>
           <text_small text="- Check [resonance_tester] in printer.cfg"/>
@@ -225,8 +220,7 @@
         </lv_obj>
         <!-- Action buttons -->
         <lv_obj width="100%"
-                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                style_pad_gap="#space_md" scrollable="false">
+                height="content" style_pad_all="0" flex_flow="row" style_pad_gap="#space_md" scrollable="false">
           <!-- Back button -->
           <ui_button name="btn_error_back" flex_grow="1" variant="secondary" text="Back">
             <event_cb trigger="clicked" callback="input_shaper_close_cb"/>

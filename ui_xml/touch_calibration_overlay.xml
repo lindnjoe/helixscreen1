@@ -10,8 +10,7 @@
         extends="overlay_panel" width="#overlay_panel_width_full" title="Touch Calibration" bg_color="#screen_bg">
 
     <!-- Main content area - full screen for touch capture -->
-    <lv_obj name="calibration_content"
-            width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false">
+    <lv_obj name="calibration_content" width="100%" flex_grow="1" style_pad_all="0" scrollable="false">
 
       <!-- Instruction text (centered, top area) -->
       <text_body name="instruction_label"
@@ -35,8 +34,7 @@
 
       <!-- Touch capture overlay - invisible but captures all touches -->
       <!-- Visible during POINT_1/2/3 (calibration) and VERIFY (accuracy test) -->
-      <lv_obj name="touch_capture_overlay"
-              width="100%" height="100%" align="top_left" style_bg_opa="0" style_border_width="0" flag_clickable="true">
+      <lv_obj name="touch_capture_overlay" width="100%" height="100%" align="top_left" flag_clickable="true">
         <event_cb trigger="clicked" callback="on_touch_cal_overlay_touched"/>
         <!-- Bindings control visibility: hidden in states 0, 5 (visible in 1, 2, 3, 4) -->
         <bind_flag_if_eq subject="touch_cal_state" flag="hidden" ref_value="0"/>
@@ -45,9 +43,9 @@
 
       <!-- Button container (bottom center) -->
       <lv_obj name="button_container"
-              width="content" height="content" align="bottom_mid" style_pad_bottom="#space_xl" style_bg_opa="0"
-              style_border_width="0" flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center"
-              style_pad_gap="#space_md" scrollable="false">
+              width="content" height="content" align="bottom_mid" style_pad_bottom="#space_xl" flex_flow="row"
+              style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_md"
+              scrollable="false">
 
         <!-- Start button - visible only in IDLE (state=0) -->
         <ui_button name="btn_start" width="200" text="Start Calibration">

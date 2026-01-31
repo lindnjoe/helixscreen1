@@ -19,12 +19,12 @@
              flex_flow="column" style_flex_main_place="start" style_flex_cross_place="start">
       <!-- Row 1: Required fans (Hotend + Part Cooling) -->
       <lv_obj width="100%"
-              height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-              style_flex_main_place="space_between" style_flex_cross_place="start" style_pad_gap="#space_md">
+              height="content" style_pad_all="0" flex_flow="row" style_flex_main_place="space_between"
+              style_flex_cross_place="start" style_pad_gap="#space_md">
         <!-- Hotend Fan (left) -->
         <lv_obj width="48%"
-                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-                style_flex_main_place="start" style_flex_cross_place="start">
+                height="content" style_pad_all="0" flex_flow="column" style_flex_main_place="start"
+                style_flex_cross_place="start">
           <text_body text="Hotend Fan" style_pad_bottom="#space_sm"/>
           <lv_dropdown name="hotend_fan_dropdown"
                        width="100%" height="#header_height" options="heater_fan hotend_fan"
@@ -35,8 +35,8 @@
         </lv_obj>
         <!-- Part Cooling Fan (right) -->
         <lv_obj width="48%"
-                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-                style_flex_main_place="start" style_flex_cross_place="start">
+                height="content" style_pad_all="0" flex_flow="column" style_flex_main_place="start"
+                style_flex_cross_place="start">
           <text_body text="Part Cooling Fan" style_pad_bottom="#space_sm"/>
           <lv_dropdown name="part_cooling_fan_dropdown"
                        width="100%" height="#header_height" options="fan" style_border_width="#input_border_width"
@@ -47,13 +47,12 @@
       </lv_obj>
       <!-- Row 2: Optional fans (Chamber + Exhaust) - hidden if <= 2 fans -->
       <lv_obj name="optional_fans_row"
-              width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-              style_flex_main_place="space_between" style_flex_cross_place="start" style_pad_gap="#space_md"
-              style_pad_top="#space_md">
+              width="100%" height="content" style_pad_all="0" flex_flow="row" style_flex_main_place="space_between"
+              style_flex_cross_place="start" style_pad_gap="#space_md" style_pad_top="#space_md">
         <!-- Chamber Fan (left) -->
         <lv_obj width="48%"
-                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-                style_flex_main_place="start" style_flex_cross_place="start">
+                height="content" style_pad_all="0" flex_flow="column" style_flex_main_place="start"
+                style_flex_cross_place="start">
           <text_body text="Chamber Fan" style_pad_bottom="#space_sm"/>
           <lv_dropdown name="chamber_fan_dropdown"
                        width="100%" height="#header_height" options="None" style_border_width="#input_border_width"
@@ -63,8 +62,8 @@
         </lv_obj>
         <!-- Exhaust Fan (right) -->
         <lv_obj width="48%"
-                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-                style_flex_main_place="start" style_flex_cross_place="start">
+                height="content" style_pad_all="0" flex_flow="column" style_flex_main_place="start"
+                style_flex_cross_place="start">
           <text_body text="Exhaust Fan" style_pad_bottom="#space_sm"/>
           <lv_dropdown name="exhaust_fan_dropdown"
                        width="100%" height="#header_height" options="None" style_border_width="#input_border_width"

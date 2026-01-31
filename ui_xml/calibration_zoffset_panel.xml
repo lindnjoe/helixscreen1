@@ -11,21 +11,17 @@
     <header_bar name="overlay_header" title="Z-Offset Calibration"/>
     <!-- Content Area -->
     <lv_obj name="overlay_content"
-            width="100%" flex_grow="1" style_bg_opa="0" style_pad_left="#space_lg" style_pad_right="#space_lg"
-            style_pad_top="#space_lg" style_pad_bottom="#space_lg" style_border_width="0" flex_flow="column"
-            style_pad_gap="#space_lg" scrollable="false">
+            width="100%" flex_grow="1" style_pad_left="#space_lg" style_pad_right="#space_lg" style_pad_top="#space_lg"
+            style_pad_bottom="#space_lg" flex_flow="column" style_pad_gap="#space_lg" scrollable="false">
       <!-- ================================================================== -->
       <!-- STATE: IDLE (0) - Instructions and Start Button -->
       <!-- ================================================================== -->
       <lv_obj name="state_idle"
-              width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-              style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_lg"
-              scrollable="false">
+              width="100%" flex_grow="1" style_pad_all="0" flex_flow="column" style_flex_main_place="center"
+              style_flex_cross_place="center" style_pad_gap="#space_lg" scrollable="false">
         <bind_flag_if_not_eq subject="zoffset_cal_state" flag="hidden" ref_value="0"/>
         <!-- Instructions -->
-        <lv_obj width="100%"
-                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-                style_pad_gap="#space_sm">
+        <lv_obj width="100%" height="content" style_pad_all="0" flex_flow="column" style_pad_gap="#space_sm">
           <text_heading width="100%" text="Paper Test Calibration" style_text_align="center"/>
           <text_small width="100%"
                       text="This calibration uses the paper friction method to set your Z-offset."
@@ -35,7 +31,7 @@
         <!-- Steps Preview -->
         <lv_obj width="90%"
                 height="content" style_bg_color="#section_bg_color" style_radius="#border_radius"
-                style_pad_all="#space_lg" style_border_width="0" flex_flow="column" style_pad_gap="#space_xs">
+                style_pad_all="#space_lg" flex_flow="column" style_pad_gap="#space_xs">
           <text_small width="100%" text="1. Printer homes and probes the bed"/>
           <text_small width="100%" text="2. Place paper between nozzle and bed"/>
           <text_small width="100%" text="3. Lower nozzle until paper drags slightly"/>
@@ -50,9 +46,8 @@
       <!-- STATE: PROBING (1) - Waiting for probe to complete -->
       <!-- ================================================================== -->
       <lv_obj name="state_probing"
-              width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-              style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_lg"
-              scrollable="false">
+              width="100%" flex_grow="1" style_pad_all="0" flex_flow="column" style_flex_main_place="center"
+              style_flex_cross_place="center" style_pad_gap="#space_lg" scrollable="false">
         <bind_flag_if_not_eq subject="zoffset_cal_state" flag="hidden" ref_value="1"/>
         <spinner size="lg"/>
         <text_heading text="Probing Bed..." style_text_align="center"/>
@@ -66,13 +61,13 @@
       <!-- STATE: ADJUSTING (2) - Interactive Z adjustment -->
       <!-- ================================================================== -->
       <lv_obj name="state_adjusting"
-              width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-              style_flex_main_place="start" style_flex_cross_place="center" style_pad_gap="#space_lg" scrollable="false">
+              width="100%" flex_grow="1" style_pad_all="0" flex_flow="column" style_flex_main_place="start"
+              style_flex_cross_place="center" style_pad_gap="#space_lg" scrollable="false">
         <bind_flag_if_not_eq subject="zoffset_cal_state" flag="hidden" ref_value="2"/>
         <!-- Current Z Position Display -->
         <lv_obj width="100%"
                 height="80" style_bg_color="#section_bg_color" style_radius="#border_radius" style_pad_all="#space_md"
-                style_border_width="0" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center">
+                flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center">
           <text_small text="Current Z Position"/>
           <lv_label name="z_position_display" text="Z: 0.000" style_text_font="montserrat_28"/>
         </lv_obj>
@@ -82,12 +77,11 @@
                     style_text_align="center"/>
         <!-- Adjustment Buttons Grid -->
         <lv_obj width="100%"
-                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-                style_pad_gap="#space_sm" scrollable="false">
+                height="content" style_pad_all="0" flex_flow="column" style_pad_gap="#space_sm" scrollable="false">
           <!-- Row 1: Large adjustments -->
           <lv_obj width="100%"
-                  height="56" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                  style_flex_main_place="center" style_pad_gap="#space_md" scrollable="false">
+                  height="56" style_pad_all="0" flex_flow="row" style_flex_main_place="center" style_pad_gap="#space_md"
+                  scrollable="false">
             <ui_button name="btn_z_down_1" width="100" height="56" text="-1mm">
               <event_cb trigger="clicked" callback="on_zoffset_z_down_1"/>
             </ui_button>
@@ -103,8 +97,8 @@
           </lv_obj>
           <!-- Row 2: Fine adjustments -->
           <lv_obj width="100%"
-                  height="56" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                  style_flex_main_place="center" style_pad_gap="#space_md" scrollable="false">
+                  height="56" style_pad_all="0" flex_flow="row" style_flex_main_place="center" style_pad_gap="#space_md"
+                  scrollable="false">
             <ui_button name="btn_z_down_001" width="100" height="56" text="-0.01mm">
               <event_cb trigger="clicked" callback="on_zoffset_z_down_001"/>
             </ui_button>
@@ -123,8 +117,8 @@
         <lv_obj flex_grow="1"/>
         <!-- Accept / Abort Buttons -->
         <lv_obj width="100%"
-                height="56" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                style_flex_main_place="center" style_pad_gap="#space_md" scrollable="false">
+                height="56" style_pad_all="0" flex_flow="row" style_flex_main_place="center" style_pad_gap="#space_md"
+                scrollable="false">
           <ui_button name="btn_abort" width="140" height="56" text="Abort" variant="danger">
             <event_cb trigger="clicked" callback="on_zoffset_abort_clicked"/>
           </ui_button>
@@ -137,9 +131,8 @@
       <!-- STATE: SAVING (3) - Saving configuration -->
       <!-- ================================================================== -->
       <lv_obj name="state_saving"
-              width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-              style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_lg"
-              scrollable="false">
+              width="100%" flex_grow="1" style_pad_all="0" flex_flow="column" style_flex_main_place="center"
+              style_flex_cross_place="center" style_pad_gap="#space_lg" scrollable="false">
         <bind_flag_if_not_eq subject="zoffset_cal_state" flag="hidden" ref_value="3"/>
         <spinner size="lg"/>
         <text_heading text="Saving Configuration..." style_text_align="center"/>
@@ -149,9 +142,9 @@
       <!-- STATE: COMPLETE (4) - Calibration finished -->
       <!-- ================================================================== -->
       <lv_obj name="state_complete"
-              width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-              style_flex_main_place="center" style_flex_cross_place="center" style_flex_track_place="center"
-              style_pad_gap="#space_lg" scrollable="false">
+              width="100%" flex_grow="1" style_pad_all="0" flex_flow="column" style_flex_main_place="center"
+              style_flex_cross_place="center" style_flex_track_place="center" style_pad_gap="#space_lg"
+              scrollable="false">
         <bind_flag_if_not_eq subject="zoffset_cal_state" flag="hidden" ref_value="4"/>
         <lv_label text="#icon_check_circle" style_text_font="mdi_icons_48" style_text_color="#success"/>
         <text_heading text="Calibration Complete!" style_text_align="center"/>
@@ -164,17 +157,17 @@
       <!-- STATE: ERROR (5) - Something went wrong -->
       <!-- ================================================================== -->
       <lv_obj name="state_error"
-              width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-              style_flex_main_place="center" style_flex_cross_place="center" style_flex_track_place="center"
-              style_pad_gap="#space_lg" scrollable="false">
+              width="100%" flex_grow="1" style_pad_all="0" flex_flow="column" style_flex_main_place="center"
+              style_flex_cross_place="center" style_flex_track_place="center" style_pad_gap="#space_lg"
+              scrollable="false">
         <bind_flag_if_not_eq subject="zoffset_cal_state" flag="hidden" ref_value="5"/>
         <lv_label text="#icon_xmark_circle" style_text_font="mdi_icons_48" style_text_color="#danger"/>
         <text_heading text="Calibration Failed" style_text_align="center"/>
         <text_muted name="error_message"
                     width="80%" text="An error occurred during calibration." style_text_align="center" long_mode="wrap"/>
         <lv_obj width="100%"
-                height="56" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                style_flex_main_place="center" style_pad_gap="#space_md" scrollable="false">
+                height="56" style_pad_all="0" flex_flow="row" style_flex_main_place="center" style_pad_gap="#space_md"
+                scrollable="false">
           <ui_button name="btn_close_error" width="140" height="56" text="Close">
             <event_cb trigger="clicked" callback="on_zoffset_done_clicked"/>
           </ui_button>

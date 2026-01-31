@@ -70,48 +70,38 @@
                 action_button_callback="emergency_stop_clicked"/>
     <!-- Content Area: Two Columns -->
     <lv_obj name="overlay_content"
-            width="100%" flex_grow="1" style_bg_opa="0" style_pad_all="#space_lg" scrollable="false"
-            style_border_width="0" style_border_opa="0" flex_flow="row" style_flex_main_place="center">
+            width="100%" flex_grow="1" style_pad_all="#space_lg" scrollable="false" style_border_opa="0" flex_flow="row"
+            style_flex_main_place="center">
       <!-- Left Column (65%): XY Jog Pad -->
-      <lv_obj name="left_column"
-              width="65%" height="100%" style_bg_opa="0" style_pad_all="0" scrollable="false" style_border_width="0"
-              style_border_opa="0">
+      <lv_obj name="left_column" width="65%" height="100%" style_pad_all="0" scrollable="false" style_border_opa="0">
         <!-- Circular Jog Pad: Custom-Drawn Two-Zone Design (Bambu Lab Style) -->
         <!-- Outer ring = large jogs, inner circle = small jogs -->
         <!-- Custom draw shows concentric circles, radial dividers, axis labels, home icon -->
         <!-- Click detection uses angle from center to determine direction -->
         <lv_obj name="jog_pad_container"
-                width="content" height="content" style_bg_opa="0" style_pad_all="0" style_border_width="0"
-                style_border_opa="0" scrollable="false" clickable="true" align="center">
+                width="content" height="content" style_pad_all="0" style_border_opa="0" scrollable="false"
+                clickable="true" align="center">
           <!-- No child widgets - all graphics drawn via LV_EVENT_DRAW_POST -->
           <!-- Click handled via LV_EVENT_CLICKED with angle-based direction detection -->
         </lv_obj>
       </lv_obj>
       <!-- Right Column (35%): Z-Axis Controls + Position Display -->
       <lv_obj name="right_column"
-              width="35%" height="100%" style_bg_opa="0" style_pad_all="0" scrollable="false" style_border_width="0"
-              style_border_opa="0" flex_flow="column" style_flex_main_place="start" style_flex_cross_place="center"
-              style_pad_gap="#space_md">
+              width="35%" height="100%" style_pad_all="0" scrollable="false" style_border_opa="0" flex_flow="column"
+              style_flex_main_place="start" style_flex_cross_place="center" style_pad_gap="#space_md">
         <!-- Position Display - compact vertical layout -->
         <lv_obj name="position_col"
-                width="100%" height="content" style_bg_opa="0" style_pad_all="0" style_border_width="0"
-                flex_flow="column" style_flex_main_place="start" style_flex_cross_place="start"
-                style_pad_gap="#space_xs">
-          <lv_obj width="100%"
-                  height="content" style_bg_opa="0" style_pad_all="0" style_border_width="0" flex_flow="row"
-                  style_pad_gap="#space_xs">
+                width="100%" height="content" style_pad_all="0" flex_flow="column" style_flex_main_place="start"
+                style_flex_cross_place="start" style_pad_gap="#space_xs">
+          <lv_obj width="100%" height="content" style_pad_all="0" flex_flow="row" style_pad_gap="#space_xs">
             <text_small text="X:"/>
             <text_small name="pos_x" bind_text="motion_pos_x"/>
           </lv_obj>
-          <lv_obj width="100%"
-                  height="content" style_bg_opa="0" style_pad_all="0" style_border_width="0" flex_flow="row"
-                  style_pad_gap="#space_xs">
+          <lv_obj width="100%" height="content" style_pad_all="0" flex_flow="row" style_pad_gap="#space_xs">
             <text_small text="Y:"/>
             <text_small name="pos_y" bind_text="motion_pos_y"/>
           </lv_obj>
-          <lv_obj width="100%"
-                  height="content" style_bg_opa="0" style_pad_all="0" style_border_width="0" flex_flow="row"
-                  style_pad_gap="#space_xs">
+          <lv_obj width="100%" height="content" style_pad_all="0" flex_flow="row" style_pad_gap="#space_xs">
             <text_small text="Z:"/>
             <text_small name="pos_z" bind_text="motion_pos_z"/>
           </lv_obj>
@@ -119,9 +109,8 @@
         <!-- Z-Axis Button Group (responsive: uses flex_grow to fill available space) -->
         <!-- Label centered between up/down button pairs -->
         <lv_obj name="z_controls"
-                width="100%" flex_grow="1" style_bg_opa="0" style_pad_all="0" style_border_width="0"
-                style_border_opa="0" scrollable="false" flex_flow="column" style_flex_main_place="space_evenly"
-                style_flex_cross_place="center" style_pad_gap="#space_sm">
+                width="100%" flex_grow="1" style_pad_all="0" style_border_opa="0" scrollable="false" flex_flow="column"
+                style_flex_main_place="space_evenly" style_flex_cross_place="center" style_pad_gap="#space_sm">
           <ui_button name="z_up_10" width="100%" flex_grow="1" style_max_height="80" icon="arrow_up" text="10mm">
             <event_cb trigger="clicked" callback="on_motion_z_up_10"/>
           </ui_button>

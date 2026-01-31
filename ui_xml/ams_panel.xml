@@ -20,9 +20,8 @@
     <header_bar name="overlay_header" title="Multi-Filament"/>
     <!-- Content Area: Two Columns -->
     <lv_obj name="overlay_content"
-            width="100%" flex_grow="1" style_bg_opa="0" style_pad_all="#space_lg" style_pad_gap="#space_lg"
-            scrollable="false" style_border_width="0" flex_flow="row" style_flex_main_place="space_between"
-            style_flex_cross_place="start">
+            width="100%" flex_grow="1" style_pad_all="#space_lg" style_pad_gap="#space_lg" scrollable="false"
+            flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="start">
       <!-- ================================================================== -->
       <!-- LEFT COLUMN: AMS Unit Visualization                               -->
       <!-- ================================================================== -->
@@ -73,8 +72,7 @@
               <!-- Labels Layer - renders ON TOP of slots so labels aren't obscured by overlapping slots
                    Height matches slot stagger area; set dynamically by C++ for different gate counts -->
               <lv_obj name="labels_layer"
-                      width="100%" height="80" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-                      scrollable="false" clickable="false" overflow="visible"/>
+                      width="100%" height="80" style_pad_all="0" scrollable="false" clickable="false" overflow="visible"/>
               <!-- Tray - visual "holder" in front of spools, positioned at bottom
                    Height set dynamically by C++ to 1/3 of slot height -->
               <lv_obj name="slot_tray"
@@ -83,16 +81,14 @@
                       style_radius="#border_radius" style_pad_all="0" scrollable="false" clickable="false">
                 <!-- Left side border line (only left edge visible) -->
                 <lv_obj width="#space_xs"
-                        height="80%" align="left_mid" style_translate_x="#space_xs" style_bg_opa="0"
-                        style_border_width="#space_xxs" style_border_color="#text" style_border_opa="200"
-                        style_border_side="left" style_radius="#border_radius" style_pad_all="0" scrollable="false"
-                        clickable="false"/>
+                        height="80%" align="left_mid" style_translate_x="#space_xs" style_border_width="#space_xxs"
+                        style_border_color="#text" style_border_opa="200" style_border_side="left"
+                        style_radius="#border_radius" style_pad_all="0" scrollable="false" clickable="false"/>
                 <!-- Right side border line (only right edge visible) -->
                 <lv_obj width="#space_xs"
-                        height="80%" align="right_mid" style_translate_x="-4" style_bg_opa="0"
-                        style_border_width="#space_xxs" style_border_color="#text" style_border_opa="200"
-                        style_border_side="right" style_radius="#border_radius" style_pad_all="0" scrollable="false"
-                        clickable="false"/>
+                        height="80%" align="right_mid" style_translate_x="-4" style_border_width="#space_xxs"
+                        style_border_color="#text" style_border_opa="200" style_border_side="right"
+                        style_radius="#border_radius" style_pad_all="0" scrollable="false" clickable="false"/>
               </lv_obj>
             </lv_obj>
           </lv_obj>
@@ -162,9 +158,8 @@
         </ui_card>
         <!-- Status Section -->
         <lv_obj name="status_section"
-                width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="#space_sm"
-                flex_flow="row" style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_sm"
-                scrollable="false">
+                width="100%" height="content" style_pad_all="#space_sm" flex_flow="row" style_flex_main_place="center"
+                style_flex_cross_place="center" style_pad_gap="#space_sm" scrollable="false">
           <!-- Progress spinner (hidden by default, shown during operations) -->
           <lv_spinner name="action_progress"
                       width="#spinner_size" height="#spinner_size" style_arc_width_indicator="#space_xs"

@@ -23,9 +23,7 @@
         style_bg_color="#screen_bg" style_pad_gap="#space_md" scrollable="false">
     <!-- Row 1: Position card (left) | Right section with conditional E-Stop + Temps/Cooling -->
     <!-- Using explicit 55% height instead of flex-grow to avoid LVGL hidden-object bug -->
-    <lv_obj width="100%"
-            height="55%" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-            style_pad_gap="#space_md" scrollable="false">
+    <lv_obj width="100%" height="55%" style_pad_all="0" flex_flow="row" style_pad_gap="#space_md" scrollable="false">
       <!-- Card 1: Position (Toolhead Position + Motion) -->
       <ui_card name="card_position"
                height="100%" flex_grow="1" flex_flow="column" style_flex_main_place="space_between"
@@ -33,19 +31,18 @@
         <!-- Header -->
         <lv_obj height="content"
                 flex_flow="row" style_flex_cross_place="center" style_flex_track_place="center" style_pad_all="0"
-                style_pad_gap="#space_sm" style_border_width="0">
+                style_pad_gap="#space_sm">
           <icon src="axis_arrow" size="sm" variant="primary"/>
           <text_small text="Position" style_translate_y="2"/>
         </lv_obj>
         <!-- Position display with homing indicators -->
         <!-- Split into static label + dynamic value for proper alignment with proportional fonts -->
         <lv_obj width="100%"
-                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-                flex_flow="column" style_pad_gap="#space_xxs">
+                height="content" style_pad_all="0" scrollable="false" flex_flow="column" style_pad_gap="#space_xxs">
           <!-- X Position Row -->
           <lv_obj width="100%"
-                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-                  flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_xs">
+                  height="content" style_pad_all="0" scrollable="false" flex_flow="row" style_flex_cross_place="center"
+                  style_pad_gap="#space_xs">
             <text_body width="content" text="X:"/>
             <text_body name="pos_x" bind_text="controls_pos_x" flex_grow="1" style_text_align="right"/>
             <lv_obj width="10" height="10" style_radius="9999" style_margin_left="#space_xs">
@@ -55,8 +52,8 @@
           </lv_obj>
           <!-- Y Position Row -->
           <lv_obj width="100%"
-                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-                  flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_xs">
+                  height="content" style_pad_all="0" scrollable="false" flex_flow="row" style_flex_cross_place="center"
+                  style_pad_gap="#space_xs">
             <text_body width="content" text="Y:"/>
             <text_body name="pos_y" bind_text="controls_pos_y" flex_grow="1" style_text_align="right"/>
             <lv_obj width="10" height="10" style_radius="9999" style_margin_left="#space_xs">
@@ -66,8 +63,8 @@
           </lv_obj>
           <!-- Z Position Row -->
           <lv_obj width="100%"
-                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-                  flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_xs">
+                  height="content" style_pad_all="0" scrollable="false" flex_flow="row" style_flex_cross_place="center"
+                  style_pad_gap="#space_xs">
             <text_body width="content" text="Z:"/>
             <text_body name="pos_z" bind_text="controls_pos_z" flex_grow="1" style_text_align="right"/>
             <lv_obj width="10" height="10" style_radius="9999" style_margin_left="#space_xs">
@@ -81,11 +78,11 @@
           <event_cb trigger="clicked" callback="on_zoffset_tune"/>
           <lv_obj width="100%"
                   height="content" flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center"
-                  style_bg_opa="0" style_border_width="0" style_pad_all="0" clickable="false" scrollable="false">
+                  style_pad_all="0" clickable="false" scrollable="false">
             <text_muted text="Z-Offset:"/>
             <lv_obj width="content"
                     height="content" flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_xs"
-                    style_bg_opa="0" style_border_width="0" clickable="false" scrollable="false">
+                    clickable="false" scrollable="false">
               <text_body bind_text="controls_z_offset"/>
               <icon src="chevron_right" size="xs" variant="secondary"/>
             </lv_obj>
@@ -108,8 +105,8 @@
 
       <!-- Right section: E-Stop banner + Temps + Cooling -->
       <lv_obj height="100%"
-              flex_grow="2" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-              style_pad_gap="#space_xs" style_pad_row="0" scrollable="false">
+              flex_grow="2" style_pad_all="0" flex_flow="column" style_pad_gap="#space_xs" style_pad_row="0"
+              scrollable="false">
         <!-- Emergency Stop Banner (conditional, compact) -->
         <ui_button name="estop_button_controls"
                    width="100%" height="#button_height_sm" hidden="true" variant="danger" icon="alert_octagon"
@@ -120,8 +117,7 @@
 
         <!-- Temps + Cooling row (always visible) -->
         <lv_obj width="100%"
-                flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                style_pad_gap="#space_md" scrollable="false">
+                flex_grow="1" style_pad_all="0" flex_flow="row" style_pad_gap="#space_md" scrollable="false">
           <!-- Card 2: Temperatures (Combined Nozzle + Bed) -->
           <ui_card name="card_temperatures"
                    height="100%" flex_grow="1" flex_flow="column" style_flex_main_place="start"
@@ -130,7 +126,7 @@
             <event_cb trigger="clicked" callback="on_controls_temperatures"/>
             <lv_obj width="100%"
                     height="content" flex_flow="row" style_flex_cross_place="center" style_pad_all="0"
-                    style_pad_gap="#space_sm" style_border_width="0" scrollable="false">
+                    style_pad_gap="#space_sm" scrollable="false">
               <icon src="heater" size="sm" variant="primary"/>
               <text_small text="Temperatures" style_translate_y="2"/>
             </lv_obj>
@@ -139,8 +135,7 @@
               <event_cb trigger="clicked" callback="on_nozzle_temp_clicked"/>
               <lv_obj width="100%"
                       height="content" flex_flow="row" style_flex_main_place="space_between"
-                      style_flex_cross_place="center" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-                      clickable="false" scrollable="false">
+                      style_flex_cross_place="center" style_pad_all="0" clickable="false" scrollable="false">
                 <text_small text="Nozzle"/>
                 <temp_display name="nozzle_temp_display"
                               size="md" show_target="true" bind_current="extruder_temp" bind_target="extruder_target"
@@ -154,8 +149,7 @@
               <event_cb trigger="clicked" callback="on_bed_temp_clicked"/>
               <lv_obj width="100%"
                       height="content" flex_flow="row" style_flex_main_place="space_between"
-                      style_flex_cross_place="center" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-                      clickable="false" scrollable="false">
+                      style_flex_cross_place="center" style_pad_all="0" clickable="false" scrollable="false">
                 <text_small text="Bed"/>
                 <temp_display name="bed_temp_display"
                               size="md" show_target="true" bind_current="bed_temp" bind_target="bed_target"
@@ -166,9 +160,8 @@
                         width="90%" bind_text="controls_bed_status" style_text_color="#text" style_text_align="right"/>
             <!-- Chamber section (visible only if printer has chamber sensor) -->
             <lv_obj name="chamber_section"
-                    width="90%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-                    style_pad_top="#space_xs" hidden="true" flex_flow="row" style_flex_main_place="space_between"
-                    style_flex_cross_place="center">
+                    width="90%" height="content" style_pad_all="0" style_pad_top="#space_xs" hidden="true"
+                    flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center">
               <bind_flag_if_eq subject="printer_has_chamber_sensor" flag="hidden" ref_value="0"/>
               <text_small text="Chamber"/>
               <temp_display name="chamber_temp_display" size="md" show_target="false" bind_current="chamber_temp"/>
@@ -182,7 +175,7 @@
             <event_cb trigger="clicked" callback="on_controls_cooling"/>
             <lv_obj width="100%"
                     height="content" flex_flow="row" style_flex_cross_place="center" style_pad_all="0"
-                    style_pad_gap="#space_sm" style_border_width="0" scrollable="false">
+                    style_pad_gap="#space_sm" scrollable="false">
               <icon name="fan_icon" src="fan" size="sm" variant="primary"/>
               <text_small text="Cooling" style_translate_y="2"/>
             </lv_obj>
@@ -197,8 +190,8 @@
             <text_body name="fan_speed_display" width="80%" bind_text="controls_fan_speed" style_text_align="right"/>
             <!-- Secondary fans list (populated dynamically) -->
             <lv_obj name="secondary_fans_list"
-                    width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-                    scrollable="false" flex_flow="column" style_pad_gap="#space_xxs" style_pad_top="#space_xs">
+                    width="100%" height="content" style_pad_all="0" scrollable="false" flex_flow="column"
+                    style_pad_gap="#space_xxs" style_pad_top="#space_xs">
               <!-- Dynamic fan rows will be added here by C++ -->
             </lv_obj>
           </ui_card>
@@ -207,9 +200,7 @@
     </lv_obj>
     <!-- Row 2: Calibration & Tools (40%) | Quick Actions (60%) -->
     <!-- Using flex_grow here since Row 1 has explicit 55% height -->
-    <lv_obj width="100%"
-            flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-            style_pad_gap="#space_md" scrollable="false">
+    <lv_obj width="100%" flex_grow="1" style_pad_all="0" flex_flow="row" style_pad_gap="#space_md" scrollable="false">
       <!-- Card 4: Calibration & Tools (40% width, 2x2 grid) -->
       <ui_card name="card_calibration"
                width="0" height="100%" flex_grow="2" flex_flow="column" style_flex_main_place="start"
@@ -217,20 +208,18 @@
                scrollable="false">
         <!-- Header Row -->
         <lv_obj width="100%"
-                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-                flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_sm">
+                height="content" style_pad_all="0" scrollable="false" flex_flow="row" style_flex_cross_place="center"
+                style_pad_gap="#space_sm">
           <icon src="wrench" size="sm" variant="primary"/>
           <text_small text="Calibration &amp; Tools" style_translate_y="2"/>
         </lv_obj>
         <!-- 2x2 Grid Container -->
         <lv_obj width="100%"
-                flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-                style_pad_gap="#space_sm" scrollable="false">
+                flex_grow="1" style_pad_all="0" flex_flow="column" style_pad_gap="#space_sm" scrollable="false">
           <!-- Row 1: Bed Mesh | Z-Offset -->
           <lv_obj width="100%"
-                  flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                  style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_xs"
-                  scrollable="false">
+                  flex_grow="1" style_pad_all="0" flex_flow="row" style_flex_main_place="center"
+                  style_flex_cross_place="center" style_pad_gap="#space_xs" scrollable="false">
             <!-- Bed Mesh Button -->
             <ui_button name="btn_bed_mesh"
                        height="100%" flex_grow="1" icon="grid_large" text="Bed Mesh" style_bg_color="#card_bg">
@@ -245,9 +234,8 @@
           </lv_obj>
           <!-- Row 2: Bed Screws | Motors Off -->
           <lv_obj width="100%"
-                  flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                  style_flex_main_place="center" style_flex_cross_place="center" style_pad_gap="#space_xs"
-                  scrollable="false">
+                  flex_grow="1" style_pad_all="0" flex_flow="row" style_flex_main_place="center"
+                  style_flex_cross_place="center" style_pad_gap="#space_xs" scrollable="false">
             <!-- Bed Screws Button -->
             <ui_button name="btn_screws"
                        height="100%" flex_grow="1" icon="wrench" text="Bed Screws" style_bg_color="#card_bg">
@@ -261,7 +249,7 @@
               <event_cb trigger="clicked" callback="on_calibration_motors"/>
               <lv_obj width="100%"
                       height="100%" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
-                      style_bg_opa="0" style_border_width="0" style_pad_all="0" clickable="false" scrollable="false">
+                      style_pad_all="0" clickable="false" scrollable="false">
                 <icon src="engine" size="md" variant="warning" clickable="false">
                   <bind_flag_if_eq subject="motors_enabled" flag="hidden" ref_value="0"/>
                 </icon>
@@ -281,7 +269,7 @@
         <!-- Header -->
         <lv_obj height="content"
                 flex_flow="row" style_flex_cross_place="center" style_flex_track_place="center" style_pad_all="0"
-                style_pad_gap="#space_sm" style_border_width="0">
+                style_pad_gap="#space_sm">
           <icon src="flash" size="sm" variant="primary"/>
           <text_small text="Quick Actions" style_translate_y="2"/>
         </lv_obj>
@@ -289,8 +277,8 @@
         <text_small text="Home" style_pad_bottom="#space_xxs"/>
         <!-- Home buttons row -->
         <lv_obj width="100%"
-                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-                flex_flow="row" style_flex_main_place="center" style_pad_gap="#space_xs">
+                height="content" style_pad_all="0" scrollable="false" flex_flow="row" style_flex_main_place="center"
+                style_pad_gap="#space_xs">
           <ui_button name="btn_home_all"
                      width="0" height="#button_height_sm" text="All" flex_grow="1" style_radius="#border_radius"
                      style_border_width="1" style_border_color="#text_muted" style_border_opa="60">
@@ -315,12 +303,11 @@
         </lv_obj>
         <!-- Macro buttons grid with QGL/Z-Tilt -->
         <lv_obj width="100%"
-                flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-                flex_flow="column" style_pad_gap="#space_xs" style_flex_main_place="end">
+                flex_grow="1" style_pad_all="0" scrollable="false" flex_flow="column" style_pad_gap="#space_xs"
+                style_flex_main_place="end">
           <!-- Macro row 1: QGL/Z-Tilt + macro_1 (Clean Nozzle) -->
           <lv_obj width="100%"
-                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-                  flex_flow="row" style_pad_gap="#space_xs">
+                  height="content" style_pad_all="0" scrollable="false" flex_flow="row" style_pad_gap="#space_xs">
             <!-- QGL button - visible only if printer has quad_gantry_level -->
             <ui_button name="btn_qgl"
                        width="0" height="#button_height_sm" flex_grow="1" text="Quad Gantry Level"
@@ -347,8 +334,7 @@
           </lv_obj>
           <!-- Macro row 2 -->
           <lv_obj width="100%"
-                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-                  flex_flow="row" style_pad_gap="#space_xs">
+                  height="content" style_pad_all="0" scrollable="false" flex_flow="row" style_pad_gap="#space_xs">
             <ui_button name="btn_macro_2"
                        width="0" height="#button_height_sm" flex_grow="1" bind_text="macro_2_name"
                        style_bg_color="#success" style_bg_opa="40">

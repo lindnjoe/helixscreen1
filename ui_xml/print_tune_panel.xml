@@ -11,17 +11,16 @@
   <view name="print_tune_panel" extends="overlay_panel" title="Print Tuning">
     <!-- Content Area -->
     <lv_obj name="overlay_content"
-            width="100%" flex_grow="1" style_bg_opa="0" style_pad_all="#space_lg" scrollable="false"
-            style_border_width="0" flex_flow="column" style_flex_main_place="start" style_pad_gap="#space_md"
-            flag_overflow_visible="true">
+            width="100%" flex_grow="1" style_pad_all="#space_lg" scrollable="false" flex_flow="column"
+            style_flex_main_place="start" style_pad_gap="#space_md" flag_overflow_visible="true">
       <!-- Speed + Flow Row (side by side) -->
       <lv_obj name="speed_flow_row"
-              width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-              flex_flow="row" style_pad_gap="#space_lg" flag_overflow_visible="true">
+              width="100%" height="content" style_pad_all="0" scrollable="false" flex_flow="row"
+              style_pad_gap="#space_lg" flag_overflow_visible="true">
         <!-- Speed Control (left) -->
         <lv_obj name="speed_section"
-                height="content" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-                flex_flow="column" style_pad_gap="#space_sm" flag_overflow_visible="true" scrollable="false">
+                height="content" flex_grow="1" style_pad_all="0" flex_flow="column" style_pad_gap="#space_sm"
+                flag_overflow_visible="true" scrollable="false">
           <text_small text="Print Speed"/>
           <text_heading name="speed_display" bind_text="tune_speed_display"/>
           <lv_slider name="speed_slider"
@@ -34,8 +33,8 @@
         </lv_obj>
         <!-- Flow Control (right) -->
         <lv_obj name="flow_section"
-                height="content" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-                flex_flow="column" style_pad_gap="#space_sm" flag_overflow_visible="true" scrollable="false">
+                height="content" flex_grow="1" style_pad_all="0" flex_flow="column" style_pad_gap="#space_sm"
+                flag_overflow_visible="true" scrollable="false">
           <text_small text="Flow Rate"/>
           <text_heading name="flow_display" bind_text="tune_flow_display"/>
           <lv_slider name="flow_slider"
@@ -55,25 +54,25 @@
       <lv_obj flex_grow="1" scrollable="false"/>
       <!-- Z-Offset Baby Stepping Section -->
       <lv_obj name="z_offset_section"
-              width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-              style_pad_gap="#space_xs" scrollable="false">
+              width="100%" height="content" style_pad_all="0" flex_flow="column" style_pad_gap="#space_xs"
+              scrollable="false">
         <!-- Header Row -->
         <lv_obj width="100%"
-                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-                flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center">
+                height="content" style_pad_all="0" scrollable="false" flex_flow="row"
+                style_flex_main_place="space_between" style_flex_cross_place="center">
           <text_body text="Z-Offset"/>
           <text_heading name="z_offset_display" bind_text="tune_z_offset_display"/>
         </lv_obj>
 
         <!-- Buttons Container: Amount selectors (left) + Up/Down (right) -->
         <lv_obj width="100%"
-                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                style_flex_cross_place="center" style_pad_gap="#space_sm" scrollable="false">
+                height="content" style_pad_all="0" flex_flow="row" style_flex_cross_place="center"
+                style_pad_gap="#space_sm" scrollable="false">
 
           <!-- Amount selector buttons (radio-style, one selected at a time) -->
           <lv_obj height="content"
-                  flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                  style_flex_cross_place="center" style_pad_gap="#space_xxs" scrollable="false">
+                  flex_grow="1" style_pad_all="0" flex_flow="row" style_flex_cross_place="center"
+                  style_pad_gap="#space_xxs" scrollable="false">
             <ui_button name="btn_z_amount_005" flex_grow="1" text="0.05">
               <bind_style name="z_amount_selected" subject="z_amount_005_active" ref_value="1"/>
               <bind_style name="z_amount_unselected" subject="z_amount_005_active" ref_value="0"/>
@@ -97,8 +96,7 @@
           </lv_obj>
           <!-- Up/Down direction buttons (stacked vertically) -->
           <lv_obj width="56"
-                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-                  style_pad_gap="#space_xxs" scrollable="false">
+                  height="content" style_pad_all="0" flex_flow="column" style_pad_gap="#space_xxs" scrollable="false">
             <!-- Closer button (more squish) - icon depends on kinematics -->
             <ui_button name="btn_z_closer" width="100%">
               <event_cb trigger="clicked" callback="on_tune_z_closer"/>

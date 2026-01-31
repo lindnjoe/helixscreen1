@@ -16,11 +16,11 @@
     <!-- LEFT COLUMN: Temperature Status & AMS                              -->
     <!-- ================================================================== -->
     <lv_obj name="left_column"
-            width="40%" height="100%" style_bg_opa="0" style_pad_all="0" style_border_width="0" scrollable="false"
+            width="40%" height="100%" style_pad_all="0" scrollable="false"
             flex_flow="column" style_flex_main_place="space_between" style_pad_gap="#space_lg">
       <!-- TOP GROUP: Temperature displays -->
       <lv_obj name="temp_group"
-              width="100%" height="content" style_bg_opa="0" style_pad_all="0" style_border_width="0" scrollable="false"
+              width="100%" height="content" style_pad_all="0" scrollable="false"
               flex_flow="column" style_flex_main_place="start" style_pad_gap="#space_lg">
         <!-- Temperature Status Card - shows both nozzle and bed -->
         <ui_card name="temp_status_card"
@@ -31,19 +31,19 @@
           <text_body text="Temperature" align="left_mid"/>
           <!-- Nozzle Row: Current / Target (entire row tappable) -->
           <lv_obj width="100%"
-                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
+                  height="content" style_pad_all="0" scrollable="false"
                   flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center" clickable="true">
             <event_cb trigger="clicked" callback="on_filament_nozzle_target_tap"/>
             <text_small text="Nozzle" clickable="false" event_bubble="true"/>
             <lv_obj width="content"
-                    height="content" flex_flow="row" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                    height="content" flex_flow="row" style_pad_all="0"
                     scrollable="false" style_flex_cross_place="center" style_pad_gap="#space_xs" clickable="false"
                     event_bubble="true">
               <text_body name="nozzle_current_temp"
                          bind_text="filament_nozzle_current" clickable="false" event_bubble="true"/>
               <text_body text="/" clickable="false" event_bubble="true"/>
               <lv_obj name="nozzle_target_tap"
-                      width="content" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="#space_xs"
+                      width="content" height="content" style_pad_all="#space_xs"
                       scrollable="false" flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_xs"
                       clickable="false" event_bubble="true">
                 <text_body name="nozzle_target_temp"
@@ -54,18 +54,18 @@
           </lv_obj>
           <!-- Bed Row: Current / Target (entire row tappable) -->
           <lv_obj width="100%"
-                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
+                  height="content" style_pad_all="0" scrollable="false"
                   flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center" clickable="true">
             <event_cb trigger="clicked" callback="on_filament_bed_target_tap"/>
             <text_small text="Bed" clickable="false" event_bubble="true"/>
             <lv_obj width="content"
-                    height="content" flex_flow="row" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                    height="content" flex_flow="row" style_pad_all="0"
                     scrollable="false" style_flex_cross_place="center" style_pad_gap="#space_xs" clickable="false"
                     event_bubble="true">
               <text_body name="bed_current_temp" bind_text="filament_bed_current" clickable="false" event_bubble="true"/>
               <text_body text="/" clickable="false" event_bubble="true"/>
               <lv_obj name="bed_target_tap"
-                      width="content" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="#space_xs"
+                      width="content" height="content" style_pad_all="#space_xs"
                       scrollable="false" flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_xs"
                       clickable="false" event_bubble="true">
                 <text_body name="bed_target_temp" bind_text="filament_bed_target" clickable="false" event_bubble="true"/>
@@ -75,7 +75,7 @@
           </lv_obj>
           <!-- Status Indicator (icon + text row) -->
           <lv_obj width="100%"
-                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
+                  height="content" style_pad_all="0" scrollable="false"
                   flex_flow="row" style_flex_main_place="start" style_flex_cross_place="center"
                   style_pad_gap="#space_xs">
             <icon name="status_icon" src="info" size="xs" variant="secondary"/>
@@ -87,7 +87,7 @@
                  width="100%" height="120" style_radius="#border_radius" style_pad_all="#space_xs">
           <!-- Graph container - populated by C++ via TempControlPanel -->
           <lv_obj name="temp_graph_container"
-                  width="100%" height="100%" style_bg_opa="0" style_border_width="0" style_pad_all="0"/>
+                  width="100%" height="100%" style_pad_all="0"/>
         </ui_card>
       </lv_obj>
       <!-- BOTTOM: AMS Multi-Filament Card (hidden if no AMS) -->
@@ -97,14 +97,14 @@
         <bind_flag_if_eq subject="ams_type" flag="hidden" ref_value="0"/>
         <!-- Header row with icon -->
         <lv_obj width="100%"
-                height="content" style_bg_opa="0" style_pad_all="0" style_border_width="0" scrollable="false"
+                height="content" style_pad_all="0" scrollable="false"
                 flex_flow="row" style_flex_main_place="start" style_flex_cross_place="center" style_pad_gap="#space_sm">
           <icon src="filament" size="sm" variant="secondary"/>
           <text_body text="Multi-Filament" style_translate_y="2"/>
         </lv_obj>
         <!-- AMS mini status + Manage button row -->
         <lv_obj width="100%"
-                flex_grow="1" style_bg_opa="0" style_pad_all="0" style_border_width="0" scrollable="false"
+                flex_grow="1" style_pad_all="0" scrollable="false"
                 flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center"
                 style_pad_gap="#space_sm">
           <!-- AMS mini status (auto-binds to AmsState, fills parent) -->
@@ -122,22 +122,22 @@
     <!-- RIGHT COLUMN: Material Selection & Actions                        -->
     <!-- ================================================================== -->
     <lv_obj name="right_column"
-            width="58%" height="100%" style_bg_opa="0" style_pad_all="0" style_border_width="0" scrollable="false"
+            width="58%" height="100%" style_pad_all="0" scrollable="false"
             style_layout="flex" style_flex_flow="column" style_flex_main_place="space_between" style_pad_gap="#space_sm">
       <!-- TOP GROUP: Material Selection + Selected Temps (grouped as one flex child) -->
       <lv_obj name="material_group"
-              width="100%" height="content" style_bg_opa="0" style_pad_all="0" style_border_width="0" scrollable="false"
+              width="100%" height="content" style_pad_all="0" scrollable="false"
               flex_flow="column" style_pad_gap="#space_md">
         <!-- Material Selection Header -->
         <text_body text="Material" align="left_mid"/>
         <!-- Material Preset Buttons (2x2 Grid: PLA, PETG, ABS, TPU) -->
         <lv_obj name="preset_grid"
-                width="100%" height="content" style_bg_opa="0" style_pad_all="0" style_border_width="0"
+                width="100%" height="content" style_pad_all="0"
                 scrollable="false" flex_flow="column" style_flex_main_place="start" style_flex_cross_place="center"
                 style_pad_gap="#space_sm">
           <!-- Row 1: PLA, PETG -->
           <lv_obj width="100%"
-                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
+                  height="content" style_pad_all="0" scrollable="false"
                   flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center"
                   style_pad_gap="#space_md">
             <ui_button name="preset_pla" height="content" flex_grow="1" text="PLA" state_trickle="true">
@@ -153,7 +153,7 @@
           </lv_obj>
           <!-- Row 2: ABS, TPU -->
           <lv_obj width="100%"
-                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
+                  height="content" style_pad_all="0" scrollable="false"
                   flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center"
                   style_pad_gap="#space_md">
             <ui_button name="preset_abs" height="content" flex_grow="1" text="ABS" state_trickle="true">
@@ -178,13 +178,13 @@
       </lv_obj>
       <!-- BOTTOM GROUP: Operations (second flex child, pushed to bottom by space_between) -->
       <lv_obj name="operations_group"
-              width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
+              width="100%" height="content" style_pad_all="0" scrollable="false"
               flex_flow="column" style_pad_gap="#space_sm">
         <!-- Filament Operations Header -->
         <text_body text="Operations" align="left_mid"/>
         <!-- Purge Amount Selector -->
         <lv_obj name="purge_amount_row"
-                width="100%" height="content" style_bg_opa="0" style_pad_all="0" style_border_width="0"
+                width="100%" height="content" style_pad_all="0"
                 scrollable="false" flex_flow="row" style_flex_main_place="start" style_flex_cross_place="center"
                 style_pad_gap="#space_sm">
           <text_small text="Length:"/>
@@ -212,12 +212,12 @@
         </lv_obj>
         <!-- Action Buttons: Load/Unload side-by-side, Purge below -->
         <lv_obj name="action_buttons"
-                width="100%" height="content" style_bg_opa="0" style_pad_all="0" style_border_width="0"
+                width="100%" height="content" style_pad_all="0"
                 scrollable="false" flex_flow="column" style_flex_main_place="start" style_flex_cross_place="center"
                 style_pad_gap="#space_sm">
           <!-- Load/Unload Row -->
           <lv_obj width="100%"
-                  height="#button_height" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
+                  height="#button_height" style_pad_all="0" scrollable="false"
                   flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center"
                   style_pad_gap="#space_sm">
             <ui_button name="btn_load"
@@ -240,7 +240,7 @@
         </lv_obj>
         <!-- Safety Warning (compact inline - shows when cold) -->
         <lv_obj name="safety_warning"
-                width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
+                width="100%" height="content" style_pad_all="0"
                 scrollable="false" flex_flow="row" style_flex_main_place="start" style_flex_cross_place="center"
                 style_flex_track_place="center" style_pad_gap="#space_xs">
           <bind_flag_if_eq subject="filament_safety_warning_visible" flag="hidden" ref_value="0"/>

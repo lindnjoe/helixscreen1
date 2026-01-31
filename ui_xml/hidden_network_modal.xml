@@ -21,9 +21,9 @@
     <!-- STATE: IDLE - Hidden network entry form (hidden when connecting) -->
     <!-- ============================================================ -->
     <lv_obj name="hidden_form_container"
-            width="100%" height="content" style_min_height="280" style_bg_opa="0" style_border_width="0"
-            style_pad_left="#space_lg" style_pad_right="#space_lg" style_pad_top="#space_lg"
-            style_pad_bottom="#space_lg" flex_flow="column" style_flex_cross_place="start" style_pad_gap="#space_md">
+            width="100%" height="content" style_min_height="280" style_pad_left="#space_lg" style_pad_right="#space_lg"
+            style_pad_top="#space_lg" style_pad_bottom="#space_lg" flex_flow="column" style_flex_cross_place="start"
+            style_pad_gap="#space_md">
       <!-- Hide form when hidden_connecting == 1 -->
       <bind_flag_if_eq subject="hidden_connecting" flag="hidden" ref_value="1"/>
       <!-- Title -->
@@ -31,9 +31,7 @@
       <!-- SSID Input -->
       <form_field label="Network Name (SSID)" input_name="ssid_input" placeholder="Enter network name" max_length="32"/>
       <!-- Security Dropdown -->
-      <lv_obj width="100%"
-              height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-              style_pad_gap="#space_xs">
+      <lv_obj width="100%" height="content" style_pad_all="0" flex_flow="column" style_pad_gap="#space_xs">
         <text_body width="100%" text="Security" style_text_align="left"/>
         <lv_dropdown name="security_dropdown"
                      width="100%" height="#input_height" options="None WPA/WPA2 WPA3"
@@ -44,8 +42,7 @@
       </lv_obj>
       <!-- Password Input (hidden when security is None) -->
       <lv_obj name="password_container"
-              width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="column"
-              style_pad_gap="#space_xs">
+              width="100%" height="content" style_pad_all="0" flex_flow="column" style_pad_gap="#space_xs">
         <!-- Hide password field when security == 0 (None) -->
         <bind_flag_if_eq subject="hidden_security" flag="hidden" ref_value="0"/>
         <text_body width="100%" text="Password" style_text_align="left"/>
@@ -62,8 +59,7 @@
     <!-- STATE: CONNECTING - Spinner and status (shown when connecting) -->
     <!-- ============================================================ -->
     <lv_obj name="connecting_container"
-            width="100%" height="content" style_min_height="280" style_bg_opa="0" style_border_width="0"
-            style_pad_all="0" hidden="true">
+            width="100%" height="content" style_min_height="280" style_pad_all="0" hidden="true">
       <!-- Show spinner when hidden_connecting == 1 -->
       <bind_flag_if_eq subject="hidden_connecting" flag="hidden" ref_value="0"/>
       <connecting_state text="Connecting..."/>
@@ -73,8 +69,7 @@
     <!-- ============================================================ -->
     <!-- Button row (edge-to-edge style matching modal_dialog) -->
     <!-- ============================================================ -->
-    <lv_obj width="100%"
-            height="#button_height" style_pad_all="0" style_pad_gap="0" flex_flow="row">
+    <lv_obj width="100%" height="#button_height" style_pad_all="0" style_pad_gap="0" flex_flow="row">
       <!-- Cancel button (always visible) -->
       <ui_button name="cancel_btn" height="100%" flex_grow="1" style_radius="0" text="Cancel">
         <event_cb trigger="clicked" callback="on_hidden_cancel_clicked"/>

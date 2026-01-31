@@ -109,11 +109,11 @@
           <!-- Progress bar (shown when edit_remaining_mode=0) -->
           <lv_obj name="remaining_progress_container"
                   width="100%" height="#slider_height" style_bg_color="#text_muted" style_bg_opa="38"
-                  style_radius="#border_radius" style_border_width="0" style_pad_all="0" scrollable="false">
+                  style_radius="#border_radius" style_pad_all="0" scrollable="false">
             <bind_flag_if_eq subject="edit_remaining_mode" flag="hidden" ref_value="1"/>
             <lv_obj name="remaining_progress_fill"
                     height="100%" style_bg_color="#primary" style_bg_opa="255" style_radius="#border_radius"
-                    style_border_width="0" style_pad_all="0" scrollable="false"/>
+                    style_pad_all="0" scrollable="false"/>
           </lv_obj>
           <!-- Slider (shown when edit_remaining_mode=1) -->
           <lv_slider name="remaining_slider"

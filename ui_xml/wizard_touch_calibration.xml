@@ -16,9 +16,7 @@
 
     <!-- Full-screen touch capture overlay - captures touches anywhere during calibration -->
     <!-- Hidden in IDLE/VERIFY/COMPLETE states, shown during POINT_1/2/3 -->
-    <lv_obj name="touch_capture_overlay"
-            width="100%" height="100%" align="top_left" style_bg_opa="0" style_border_width="0" hidden="true"
-            flag_clickable="true">
+    <lv_obj name="touch_capture_overlay" width="100%" height="100%" align="top_left" hidden="true" flag_clickable="true">
       <event_cb trigger="clicked" callback="on_touch_cal_screen_touched"/>
     </lv_obj>
 
@@ -33,8 +31,7 @@
     <!-- Test area container - shown in COMPLETE state for testing calibration -->
     <lv_obj name="test_area_container"
             width="100%" flex_grow="1" flex_flow="row" style_flex_main_place="start" style_flex_cross_place="stretch"
-            style_pad_all="#space_md" style_pad_gap="#space_md" style_bg_opa="0" style_border_width="0"
-            scrollable="false" hidden="true">
+            style_pad_all="#space_md" style_pad_gap="#space_md" scrollable="false" hidden="true">
 
       <!-- Large touch test area - user taps here to verify calibration -->
       <lv_obj name="test_touch_area"
@@ -47,8 +44,8 @@
 
       <!-- Button column on right - flex_grow=0 to prevent expansion -->
       <lv_obj width="120"
-              height="100%" style_bg_opa="0" style_border_width="0" flex_flow="column" style_flex_main_place="center"
-              style_flex_cross_place="center" flex_grow="0" scrollable="false">
+              height="100%" flex_flow="column" style_flex_main_place="center" style_flex_cross_place="center"
+              flex_grow="0" scrollable="false">
         <ui_button name="btn_retry" width="100" text="Retry">
           <event_cb trigger="clicked" callback="on_touch_cal_retry_clicked"/>
         </ui_button>

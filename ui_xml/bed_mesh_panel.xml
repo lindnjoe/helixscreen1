@@ -26,8 +26,8 @@
     </header_bar>
     <!-- Content Area: Horizontal split (Left=Canvas, Right=Cards) -->
     <lv_obj name="overlay_content"
-            width="100%" flex_grow="1" style_bg_opa="0" style_pad_all="#space_md" scrollable="false"
-            style_border_width="0" flex_flow="row" style_pad_gap="#space_md">
+            width="100%" flex_grow="1" style_pad_all="#space_md" scrollable="false" flex_flow="row"
+            style_pad_gap="#space_md">
       <!-- Left: 3D Mesh Canvas wrapper (fills remaining space) -->
       <lv_obj name="canvas_wrapper" height="100%" flex_grow="1" style_pad_all="0" scrollable="false">
         <bed_mesh name="bed_mesh_canvas" width="100%" height="100%" clickable="true" style_border_width="0"/>
@@ -50,9 +50,9 @@
                  scrollable="false">
           <!-- Card Header -->
           <lv_obj width="100%"
-                  height="content" flex_flow="row" style_flex_cross_place="center" style_bg_opa="0"
-                  style_border_width="0" style_pad_left="#space_md" style_pad_right="#space_md"
-                  style_pad_top="#space_sm" style_pad_bottom="#space_sm" style_pad_gap="#space_sm" scrollable="false">
+                  height="content" flex_flow="row" style_flex_cross_place="center" style_pad_left="#space_md"
+                  style_pad_right="#space_md" style_pad_top="#space_sm" style_pad_bottom="#space_sm"
+                  style_pad_gap="#space_sm" scrollable="false">
             <icon src="info" size="sm" color="#success"/>
             <text_body text="Current Mesh" flex_grow="1"/>
           </lv_obj>
@@ -107,9 +107,9 @@
                  scrollable="false">
           <!-- Card Header -->
           <lv_obj width="100%"
-                  height="content" flex_flow="row" style_flex_cross_place="center" style_bg_opa="0"
-                  style_border_width="0" style_pad_left="#space_md" style_pad_right="#space_md"
-                  style_pad_top="#space_sm" style_pad_bottom="#space_sm" style_pad_gap="#space_sm" scrollable="false">
+                  height="content" flex_flow="row" style_flex_cross_place="center" style_pad_left="#space_md"
+                  style_pad_right="#space_md" style_pad_top="#space_sm" style_pad_bottom="#space_sm"
+                  style_pad_gap="#space_sm" scrollable="false">
             <icon src="layers" size="sm" color="#success"/>
             <text_body text="Profiles" flex_grow="1"/>
           </lv_obj>
@@ -117,8 +117,8 @@
           <divider_horizontal/>
           <!-- Profiles List (scrollable) -->
           <lv_obj name="profiles_list"
-                  width="100%" flex_grow="1" flex_flow="column" style_bg_opa="0" style_border_width="0"
-                  style_pad_all="#space_sm" style_pad_gap="#space_xs" scrollable="true" scroll_dir="ver">
+                  width="100%" flex_grow="1" flex_flow="column" style_pad_all="#space_sm" style_pad_gap="#space_xs"
+                  scrollable="true" scroll_dir="ver">
             <!-- Profile Row 0 -->
             <ui_card name="profile_row_0"
                      width="100%" height="44" flex_flow="row" style_flex_cross_place="center" style_border_width="0"

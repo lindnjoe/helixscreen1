@@ -3,7 +3,6 @@
 
 #include "ui_modal.h"
 
-#include "theme_manager.h"
 #include "ui_event_safety.h"
 #include "ui_keyboard.h"
 #include "ui_update_queue.h"
@@ -11,6 +10,7 @@
 
 #include "lvgl/src/xml/lv_xml.h"
 #include "settings_manager.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 

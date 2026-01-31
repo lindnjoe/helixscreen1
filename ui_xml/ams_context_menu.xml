@@ -13,8 +13,8 @@
     <!-- Context menu card - positioned by C++ -->
     <lv_obj name="context_menu"
             width="170" height="content" style_bg_color="#elevated_bg" style_bg_opa="255" style_radius="#border_radius"
-            style_border_width="0" style_pad_all="#space_sm" style_pad_gap="#space_xs" flex_flow="column"
-            style_flex_main_place="start" style_flex_cross_place="start" scrollable="false" clickable="true">
+            style_pad_all="#space_sm" style_pad_gap="#space_xs" flex_flow="column" style_flex_main_place="start"
+            style_flex_cross_place="start" scrollable="false" clickable="true">
       <!-- Load Button -->
       <ui_button name="btn_load"
                  width="100%" height="#button_height_sm" icon="z_closer" text="Load" variant="ghost" clickable="true">
@@ -40,9 +40,8 @@
       </ui_button>
       <!-- Divider before dropdowns -->
       <lv_obj name="dropdown_divider"
-              width="100%" height="1" style_bg_color="#text_muted" style_bg_opa="38" style_border_width="0"
-              style_pad_all="0" style_margin_top="#space_xs" style_margin_bottom="#space_xs" scrollable="false"
-              hidden="true"/>
+              width="100%" height="1" style_bg_color="#text_muted" style_bg_opa="38" style_pad_all="0"
+              style_margin_top="#space_xs" style_margin_bottom="#space_xs" scrollable="false" hidden="true"/>
       <!-- Tool Mapping Dropdown -->
       <lv_obj name="tool_dropdown_row"
               width="100%" height="content" style_pad_all="0" style_pad_left="#space_sm" style_pad_right="#space_sm"

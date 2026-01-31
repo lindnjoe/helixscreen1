@@ -22,8 +22,8 @@
         <!-- WiFi Status Card (Combined toggle + connection status) -->
         <!-- ============================================================== -->
         <lv_obj name="wifi_status_card"
-                width="100%" height="content" style_bg_color="#screen_bg" style_bg_opa="255" style_radius="#border_radius"
-                style_border_width="0" style_pad_all="#space_md" scrollable="false" flex_flow="column"
+                width="100%" height="content" style_bg_color="#screen_bg" style_bg_opa="255"
+                style_radius="#border_radius" style_pad_all="#space_md" scrollable="false" flex_flow="column"
                 style_pad_gap="#space_xs">
           <!-- Disable card when WiFi hardware unavailable -->
           <bind_state_if_eq subject="wifi_hardware_available" state="disabled" ref_value="0"/>
@@ -105,8 +105,8 @@
         <!-- Ethernet Status Card (Read-only) -->
         <!-- ============================================================== -->
         <lv_obj name="ethernet_status_card"
-                width="100%" height="content" style_bg_color="#screen_bg" style_bg_opa="255" style_radius="#border_radius"
-                style_border_width="0" style_pad_all="#space_md" scrollable="false" flex_flow="column"
+                width="100%" height="content" style_bg_color="#screen_bg" style_bg_opa="255"
+                style_radius="#border_radius" style_pad_all="#space_md" scrollable="false" flex_flow="column"
                 style_pad_gap="#space_xs">
           <!-- Header Row: Ethernet label -->
           <lv_obj width="100%"
@@ -190,7 +190,7 @@
             <text_small name="network_count_label" bind_text="network_count"/>
           </lv_obj>
           <!-- Refresh Button -->
-          <ui_button name="refresh_btn" variant="ghost" style_border_width="0" width="content" height="36">
+          <ui_button name="refresh_btn" width="content" height="36" variant="ghost" style_border_width="0">
             <bind_state_if_eq subject="wifi_scanning" state="disabled" ref_value="1"/>
             <bind_state_if_eq subject="wifi_hardware_available" state="disabled" ref_value="0"/>
             <lv_obj width="content"
@@ -211,8 +211,8 @@
         <!-- Networks List Container (scrollable) -->
         <lv_obj name="networks_list"
                 width="100%" flex_grow="1" style_bg_color="#screen_bg" style_bg_opa="255" style_radius="#border_radius"
-                style_border_width="0" style_pad_all="0" scrollable="true" scroll_dir="VER" scroll_elastic="false"
-                style_clip_corner="true" flex_flow="column">
+                style_pad_all="0" scrollable="true" scroll_dir="VER" scroll_elastic="false" style_clip_corner="true"
+                flex_flow="column">
           <!-- wifi_network_item components are created here dynamically by C++ -->
           <!-- Placeholder when hardware unavailable (shown when wifi_hardware_available == 0) -->
           <lv_obj name="wifi_hardware_unavailable_placeholder" width="100%" flex_grow="1" scrollable="false">

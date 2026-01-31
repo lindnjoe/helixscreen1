@@ -9,22 +9,21 @@
         extends="overlay_panel" width="#overlay_panel_width_full" title="Retraction Settings" bg_color="#screen_bg">
     <!-- Content Area -->
     <lv_obj name="overlay_content"
-            width="100%" flex_grow="1" style_bg_opa="0" style_pad_all="#space_lg" scrollable="true"
-            style_border_width="0" flex_flow="column" style_pad_gap="#space_lg">
+            width="100%" flex_grow="1" style_pad_all="#space_lg" scrollable="true" flex_flow="column"
+            style_pad_gap="#space_lg">
       <!-- ================================================================== -->
       <!-- ENABLE RETRACTION SECTION -->
       <!-- ================================================================== -->
       <lv_obj width="100%"
-              height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-              flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center">
+              height="content" style_pad_all="0" scrollable="false" flex_flow="row"
+              style_flex_main_place="space_between" style_flex_cross_place="center">
         <!-- Label with Icon -->
         <lv_obj width="content"
-                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-                flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_sm">
+                height="content" style_pad_all="0" scrollable="false" flex_flow="row" style_flex_cross_place="center"
+                style_pad_gap="#space_sm">
           <icon src="arrow_up_right" size="sm" variant="secondary"/>
           <lv_obj width="content"
-                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-                  flex_flow="column" style_pad_gap="#space_xxs">
+                  height="content" style_pad_all="0" scrollable="false" flex_flow="column" style_pad_gap="#space_xxs">
             <text_body text="Enable Retraction"/>
             <text_small text="Use G10/G11 firmware retraction"/>
           </lv_obj>
@@ -40,15 +39,14 @@
       <!-- RETRACT LENGTH SECTION -->
       <!-- ================================================================== -->
       <lv_obj name="retract_length_section"
-              width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-              flex_flow="column" style_pad_gap="#space_sm">
+              width="100%" height="content" style_pad_all="0" scrollable="false" flex_flow="column"
+              style_pad_gap="#space_sm">
         <!-- Section Label -->
         <lv_obj width="100%"
-                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-                flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center">
+                height="content" style_pad_all="0" scrollable="false" flex_flow="row"
+                style_flex_main_place="space_between" style_flex_cross_place="center">
           <lv_obj width="content"
-                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-                  flex_flow="column" style_pad_gap="#space_xxs">
+                  height="content" style_pad_all="0" scrollable="false" flex_flow="column" style_pad_gap="#space_xxs">
             <text_body text="Retract Length"/>
             <text_small text="0.4-2mm direct drive, 4-6mm bowden"/>
           </lv_obj>
@@ -57,9 +55,8 @@
         </lv_obj>
         <!-- Slider -->
         <lv_obj width="100%"
-                height="50" style_bg_opa="0" style_border_width="0" style_pad_left="#space_md"
-                style_pad_right="#space_md" style_pad_top="#space_md" style_pad_bottom="#space_md" scrollable="false"
-                flex_flow="row" style_flex_cross_place="center">
+                height="50" style_pad_left="#space_md" style_pad_right="#space_md" style_pad_top="#space_md"
+                style_pad_bottom="#space_md" scrollable="false" flex_flow="row" style_flex_cross_place="center">
           <text_small width="30" text="0"/>
           <lv_slider name="retract_length_slider"
                      flex_grow="1" min_value="0" max_value="600" value="80" style_margin_left="#space_sm"
@@ -75,15 +72,14 @@
       <!-- RETRACT SPEED SECTION -->
       <!-- ================================================================== -->
       <lv_obj name="retract_speed_section"
-              width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-              flex_flow="column" style_pad_gap="#space_sm">
+              width="100%" height="content" style_pad_all="0" scrollable="false" flex_flow="column"
+              style_pad_gap="#space_sm">
         <!-- Section Label -->
         <lv_obj width="100%"
-                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-                flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center">
+                height="content" style_pad_all="0" scrollable="false" flex_flow="row"
+                style_flex_main_place="space_between" style_flex_cross_place="center">
           <lv_obj width="content"
-                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-                  flex_flow="column" style_pad_gap="#space_xxs">
+                  height="content" style_pad_all="0" scrollable="false" flex_flow="column" style_pad_gap="#space_xxs">
             <text_body text="Retract Speed"/>
             <text_small text="Speed of retraction movement"/>
           </lv_obj>
@@ -92,9 +88,8 @@
         </lv_obj>
         <!-- Slider -->
         <lv_obj width="100%"
-                height="50" style_bg_opa="0" style_border_width="0" style_pad_left="#space_md"
-                style_pad_right="#space_md" style_pad_top="#space_md" style_pad_bottom="#space_md" scrollable="false"
-                flex_flow="row" style_flex_cross_place="center">
+                height="50" style_pad_left="#space_md" style_pad_right="#space_md" style_pad_top="#space_md"
+                style_pad_bottom="#space_md" scrollable="false" flex_flow="row" style_flex_cross_place="center">
           <text_small width="30" text="10"/>
           <lv_slider name="retract_speed_slider"
                      flex_grow="1" min_value="10" max_value="80" value="35" style_margin_left="#space_sm"
@@ -110,15 +105,14 @@
       <!-- UNRETRACT EXTRA LENGTH SECTION -->
       <!-- ================================================================== -->
       <lv_obj name="unretract_extra_section"
-              width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-              flex_flow="column" style_pad_gap="#space_sm">
+              width="100%" height="content" style_pad_all="0" scrollable="false" flex_flow="column"
+              style_pad_gap="#space_sm">
         <!-- Section Label -->
         <lv_obj width="100%"
-                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-                flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center">
+                height="content" style_pad_all="0" scrollable="false" flex_flow="row"
+                style_flex_main_place="space_between" style_flex_cross_place="center">
           <lv_obj width="content"
-                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-                  flex_flow="column" style_pad_gap="#space_xxs">
+                  height="content" style_pad_all="0" scrollable="false" flex_flow="column" style_pad_gap="#space_xxs">
             <text_body text="Unretract Extra"/>
             <text_small text="Extra prime to compensate ooze"/>
           </lv_obj>
@@ -127,9 +121,8 @@
         </lv_obj>
         <!-- Slider -->
         <lv_obj width="100%"
-                height="50" style_bg_opa="0" style_border_width="0" style_pad_left="#space_md"
-                style_pad_right="#space_md" style_pad_top="#space_md" style_pad_bottom="#space_md" scrollable="false"
-                flex_flow="row" style_flex_cross_place="center">
+                height="50" style_pad_left="#space_md" style_pad_right="#space_md" style_pad_top="#space_md"
+                style_pad_bottom="#space_md" scrollable="false" flex_flow="row" style_flex_cross_place="center">
           <text_small width="30" text="0"/>
           <lv_slider name="unretract_extra_slider"
                      flex_grow="1" min_value="0" max_value="100" value="0" style_margin_left="#space_sm"
@@ -145,15 +138,14 @@
       <!-- UNRETRACT SPEED SECTION -->
       <!-- ================================================================== -->
       <lv_obj name="unretract_speed_section"
-              width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-              flex_flow="column" style_pad_gap="#space_sm">
+              width="100%" height="content" style_pad_all="0" scrollable="false" flex_flow="column"
+              style_pad_gap="#space_sm">
         <!-- Section Label -->
         <lv_obj width="100%"
-                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-                flex_flow="row" style_flex_main_place="space_between" style_flex_cross_place="center">
+                height="content" style_pad_all="0" scrollable="false" flex_flow="row"
+                style_flex_main_place="space_between" style_flex_cross_place="center">
           <lv_obj width="content"
-                  height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-                  flex_flow="column" style_pad_gap="#space_xxs">
+                  height="content" style_pad_all="0" scrollable="false" flex_flow="column" style_pad_gap="#space_xxs">
             <text_body text="Unretract Speed"/>
             <text_small text="Speed of prime movement"/>
           </lv_obj>
@@ -162,9 +154,8 @@
         </lv_obj>
         <!-- Slider -->
         <lv_obj width="100%"
-                height="50" style_bg_opa="0" style_border_width="0" style_pad_left="#space_md"
-                style_pad_right="#space_md" style_pad_top="#space_md" style_pad_bottom="#space_md" scrollable="false"
-                flex_flow="row" style_flex_cross_place="center">
+                height="50" style_pad_left="#space_md" style_pad_right="#space_md" style_pad_top="#space_md"
+                style_pad_bottom="#space_md" scrollable="false" flex_flow="row" style_flex_cross_place="center">
           <text_small width="30" text="10"/>
           <lv_slider name="unretract_speed_slider"
                      flex_grow="1" min_value="10" max_value="60" value="35" style_margin_left="#space_sm"
@@ -178,8 +169,8 @@
       <lv_obj width="100%" flex_grow="1" scrollable="false"/>
       <!-- Info Note at bottom -->
       <lv_obj width="100%"
-              height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-              flex_flow="row" style_flex_cross_place="center" style_pad_gap="#space_sm">
+              height="content" style_pad_all="0" scrollable="false" flex_flow="row" style_flex_cross_place="center"
+              style_pad_gap="#space_sm">
         <icon src="info" size="xs" variant="secondary"/>
         <text_small text="Changes apply immediately. Adjust during print for tuning."/>
       </lv_obj>

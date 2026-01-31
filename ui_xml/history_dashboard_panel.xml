@@ -19,12 +19,11 @@
   <view name="history_dashboard_panel" extends="overlay_panel" title="Print History">
     <!-- Content Area - scrollable to fit all content on small screens -->
     <lv_obj name="overlay_content"
-            width="100%" flex_grow="1" style_bg_opa="0" style_pad_all="#space_lg" style_border_width="0"
-            scrollable="true" scroll_dir="ver" flex_flow="column">
+            width="100%" flex_grow="1" style_pad_all="#space_lg" scrollable="true" scroll_dir="ver" flex_flow="column">
       <!-- Time Filter Segmented Buttons (equal width via flex_grow) -->
       <lv_obj width="100%"
-              height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" style_pad_bottom="#space_md"
-              flex_flow="row" style_pad_gap="#space_xs" scrollable="false">
+              height="content" style_pad_all="0" style_pad_bottom="#space_md" flex_flow="row" style_pad_gap="#space_xs"
+              scrollable="false">
         <ui_button name="filter_day" text="Day" flex_grow="1">
           <bind_style name="filter_btn_selected" subject="history_filter_day_active" ref_value="1"/>
           <bind_style name="filter_btn_unselected" subject="history_filter_day_active" ref_value="0"/>
@@ -53,14 +52,14 @@
       </lv_obj>
       <!-- Top Row: Stats (left) + Filament Chart (right) - hidden when no jobs -->
       <lv_obj name="top_row"
-              width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-              style_flex_main_place="space_between" style_pad_gap="#space_sm" scrollable="false">
+              width="100%" height="content" style_pad_all="0" flex_flow="row" style_flex_main_place="space_between"
+              style_pad_gap="#space_sm" scrollable="false">
         <bind_flag_if_eq subject="history_has_jobs" flag="hidden" ref_value="0"/>
         <!-- Left: Stats Grid (2x2) -->
         <lv_obj name="stats_grid"
-                width="#stats_section_width" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-                flex_flow="row_wrap" style_flex_main_place="space_between" style_flex_cross_place="start"
-                style_flex_track_place="start" style_pad_gap="#space_xs" scrollable="false">
+                width="#stats_section_width" height="content" style_pad_all="0" flex_flow="row_wrap"
+                style_flex_main_place="space_between" style_flex_cross_place="start" style_flex_track_place="start"
+                style_pad_gap="#space_xs" scrollable="false">
           <!-- Row 1: Total Prints, Success Rate -->
           <ui_card name="card_total_prints"
                    width="48%" height="content" style_radius="#border_radius" style_pad_all="#space_xs"
@@ -95,8 +94,8 @@
           <text_xs text="Filament by Type"/>
           <!-- Chart container for horizontal bars -->
           <lv_obj name="filament_chart_container"
-                  width="100%" height="content" style_min_height="80" style_bg_opa="0" style_border_width="0"
-                  style_pad_all="0" flex_flow="column" style_pad_gap="#space_xxs" scrollable="false">
+                  width="100%" height="content" style_min_height="80" style_pad_all="0" flex_flow="column"
+                  style_pad_gap="#space_xxs" scrollable="false">
             <!-- Filament rows will be populated by C++ - each row has label + bar -->
           </lv_obj>
         </ui_card>
@@ -107,15 +106,14 @@
                style_margin_top="#space_sm" flex_flow="column" style_pad_gap="#space_xs">
         <bind_flag_if_eq subject="history_has_jobs" flag="hidden" ref_value="0"/>
         <lv_obj width="100%"
-                height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_flow="row"
-                style_flex_main_place="space_between" style_flex_cross_place="center" scrollable="false">
+                height="content" style_pad_all="0" flex_flow="row" style_flex_main_place="space_between"
+                style_flex_cross_place="center" scrollable="false">
           <text_muted text="Prints Trend"/>
           <text_small name="trend_period" text="Last 7 days" bind_text="trend_period"/>
         </lv_obj>
         <!-- Chart container - will be populated by C++ -->
         <lv_obj name="trend_chart_container"
-                width="100%" height="content" style_min_height="50" style_bg_opa="0" style_border_width="0"
-                style_pad_all="0" scrollable="false"/>
+                width="100%" height="content" style_min_height="50" style_pad_all="0" scrollable="false"/>
       </ui_card>
       <!-- Empty State (shown when no history) - centered in available space -->
       <centered_column name="empty_state" flex_grow="1" style_pad_all="#space_xl" hidden="true">
@@ -125,8 +123,7 @@
         <text_small width="100%" text="Your completed prints will appear here" style_text_align="center"/>
       </centered_column>
       <!-- Flex shim to push button to bottom (hidden when empty state is shown) -->
-      <lv_obj name="flex_shim"
-              width="100%" style_bg_opa="0" style_border_width="0" style_pad_all="0" flex_grow="1" scrollable="false">
+      <lv_obj name="flex_shim" width="100%" style_pad_all="0" flex_grow="1" scrollable="false">
         <bind_flag_if_eq subject="history_has_jobs" flag="hidden" ref_value="0"/>
       </lv_obj>
       <!-- View Full History Button (at bottom) -->

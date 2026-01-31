@@ -10,8 +10,8 @@
     <spool_canvas name="spool_canvas" size="#button_height" color="0x808080" fill_level="0.5"/>
     <!-- MIDDLE: Material/Vendor Info (flex-grow to fill space) -->
     <lv_obj name="info_column"
-            width="content" height="content" flex_grow="1" style_bg_opa="0" style_border_width="0" style_pad_all="0"
-            scrollable="false" flex_flow="column" style_pad_gap="#space_xs">
+            width="content" height="content" flex_grow="1" style_pad_all="0" scrollable="false" flex_flow="column"
+            style_pad_gap="#space_xs">
       <!-- Material + Color Name (e.g., "PLA - Jet Black") -->
       <text_body name="spool_name"
                  width="100%" text="PLA - Black" style_text_color="#text" long_mode="dots" style_pad_all="0"
@@ -23,8 +23,8 @@
     </lv_obj>
     <!-- RIGHT: Weight Metrics (right-aligned, fixed width) -->
     <lv_obj name="weight_column"
-            width="80" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="0" scrollable="false"
-            flex_flow="column" style_flex_cross_place="end" style_pad_gap="#space_xs">
+            width="80" height="content" style_pad_all="0" scrollable="false" flex_flow="column"
+            style_flex_cross_place="end" style_pad_gap="#space_xs">
       <!-- Remaining Weight (e.g., "850g") -->
       <text_body name="weight_text"
                  width="100%" text="850g" style_text_color="#text" style_text_align="right" style_pad_all="0"

@@ -25,13 +25,13 @@
                 action_button_pad="#space_md"/>
     <!-- Content -->
     <lv_obj name="overlay_content"
-            width="100%" flex_grow="1" style_bg_opa="0" style_pad_all="#space_md" scrollable="false"
-            style_border_width="0" flex_flow="column" style_pad_gap="0" style_pad_row="0">
+            width="100%" flex_grow="1" style_pad_all="#space_md" scrollable="false" flex_flow="column" style_pad_gap="0"
+            style_pad_row="0">
 
       <!-- Display: Textarea styled input (read-only) with unit label -->
       <lv_obj name="display_container"
-              width="100%" height="content" style_bg_opa="0" style_border_width="0" style_pad_all="#space_lg"
-              scrollable="false" flex_flow="row" style_flex_cross_place="center" style_pad_bottom="0">
+              width="100%" height="content" style_pad_all="#space_lg" scrollable="false" flex_flow="row"
+              style_flex_cross_place="center" style_pad_bottom="0">
         <text_input name="input_display"
                     height="content" flex_grow="1" text="" bind_text="keypad_display" style_text_font="#font_heading"
                     style_text_align="right" style_border_width="#input_border_width" style_radius="#border_radius"
@@ -42,8 +42,8 @@
 
       <!-- Button Grid: row_wrap with explicit row gaps (no space_evenly override) -->
       <lv_obj name="keypad_grid"
-              width="100%" flex_grow="1" style_bg_opa="0" style_border_width="0" scrollable="false" flex_flow="row_wrap"
-              style_pad_row="#space_sm" style_pad_column="#space_xs" style_flex_main_place="space_evenly">
+              width="100%" flex_grow="1" scrollable="false" flex_flow="row_wrap" style_pad_row="#space_sm"
+              style_pad_column="#space_xs" style_flex_main_place="space_evenly">
         <!-- Row 1 -->
         <ui_button name="btn_7" width="30%" height="#keypad_btn_height" text="7"/>
         <ui_button name="btn_8" width="30%" height="#keypad_btn_height" text="8"/>
