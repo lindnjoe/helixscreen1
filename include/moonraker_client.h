@@ -680,4 +680,10 @@ class MoonrakerClient : public hv::WebSocketClient {
     // Disconnect modal suppression (for intentional restarts)
     std::chrono::steady_clock::time_point suppress_disconnect_modal_until_{};
     mutable std::mutex suppress_mutex_;
+
+    // Lifetime guard for safe callback execution
+    // Callbacks capture a weak_ptr to this sentinel. When the destructor runs,
+    // it resets the shared_ptr FIRST, causing all weak_ptr::lock() calls to
+    // return nullptr, preventing callbacks from accessing destroyed members.
+    std::shared_ptr<bool> lifetime_guard_ = std::make_shared<bool>(true);
 };

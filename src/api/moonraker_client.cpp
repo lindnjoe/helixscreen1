@@ -53,27 +53,58 @@ MoonrakerClient::MoonrakerClient(EventLoopPtr loop)
 }
 
 MoonrakerClient::~MoonrakerClient() {
-    // Set destroying flag FIRST - during static destruction, mutexes may already be invalid.
-    // This flag prevents any callbacks from firing even if methods check it.
+    // CRITICAL: Reset lifetime guard FIRST, before any other destruction.
+    // This invalidates all weak_ptr captures in callbacks, causing them to
+    // return early when they try to lock() the weak_ptr. This prevents
+    // use-after-free when callbacks execute on the event loop thread after
+    // we've started destruction.
+    lifetime_guard_.reset();
+
+    // Set destroying flag - backup check for any code paths that don't use the guard
     is_destroying_.store(true);
 
     // Disable auto-reconnect BEFORE closing - prevents libhv from attempting
     // reconnection after we've started destruction (avoids stderr "No route to host")
     setReconnect(nullptr);
 
-    // During static destruction (via exit()), mutexes may be in an invalid state.
-    // DO NOT lock any mutexes or call methods that lock mutexes.
-    // Just clear callbacks directly - no other thread should be accessing during destruction.
-    state_change_callback_ = nullptr;
-
-    // Close WebSocket connection without complex cleanup that might lock mutexes.
-    // The base class WebSocketClient destructor will handle socket cleanup.
+    // Close WebSocket connection - replace callbacks with no-ops to prevent new callbacks
+    // from firing during destruction. The base class destructor will handle socket cleanup.
     onopen = []() {};
     onmessage = [](const std::string&) {};
     onclose = []() {};
 
-    // Note: We skip cleanup_pending_requests() and disconnect() because they use locks.
-    // Any pending requests will be abandoned - this is acceptable during shutdown.
+    // Clear state change callback without locking (destructor context)
+    state_change_callback_ = nullptr;
+
+    // Try to cleanup pending requests if mutex is available.
+    // During static destruction (via exit()), mutexes may be in an invalid state,
+    // so we use try_lock() to avoid blocking on a potentially corrupted mutex.
+    // If try_lock fails, we skip cleanup - any pending callbacks will be abandoned.
+    std::vector<std::function<void()>> cleanup_callbacks;
+    if (requests_mutex_.try_lock()) {
+        // Successfully acquired lock - safe to clean up
+        for (auto& [id, request] : pending_requests_) {
+            if (request.error_callback) {
+                MoonrakerError error = MoonrakerError::connection_lost(request.method);
+                cleanup_callbacks.push_back(
+                    [cb = std::move(request.error_callback), error]() mutable {
+                        try {
+                            cb(error);
+                        } catch (...) {
+                            // Swallow exceptions during destruction cleanup
+                        }
+                    });
+            }
+        }
+        pending_requests_.clear();
+        requests_mutex_.unlock();
+
+        // Invoke callbacks outside the lock
+        for (auto& callback : cleanup_callbacks) {
+            callback();
+        }
+    }
+    // If try_lock failed, we're likely in static destruction - skip cleanup
 }
 
 void MoonrakerClient::set_connection_state(ConnectionState new_state) {
@@ -222,9 +253,17 @@ int MoonrakerClient::connect(const char* url, std::function<void()> on_connected
 
     // Connection opened callback
     // Wrap entire callback body in try-catch to prevent any exception from escaping to libhv
-    onopen = [this, on_connected, url]() {
+    // Capture weak_ptr to lifetime_guard_ to safely detect destruction from event loop thread
+    onopen = [this, weak_guard = std::weak_ptr<bool>(lifetime_guard_), on_connected, url]() {
         try {
-            // Prevent callback execution if client is being destroyed (avoid use-after-free)
+            // Check lifetime guard FIRST - if lock fails, destructor has started
+            // This is thread-safe: weak_ptr::lock() is atomic with shared_ptr::reset()
+            auto guard = weak_guard.lock();
+            if (!guard) {
+                return; // Client is being destroyed, abort callback
+            }
+
+            // Backup check (may be redundant but keeps existing logging paths)
             if (is_destroying_.load()) {
                 return;
             }
@@ -264,12 +303,21 @@ int MoonrakerClient::connect(const char* url, std::function<void()> on_connected
 
     // Message received callback
     // Wrap entire callback body in try-catch to prevent any exception from escaping to libhv
-    onmessage = [this, on_connected, on_disconnected](const std::string& msg) {
+    // Capture weak_ptr to lifetime_guard_ to safely detect destruction from event loop thread
+    onmessage = [this, weak_guard = std::weak_ptr<bool>(lifetime_guard_), on_connected,
+                 on_disconnected](const std::string& msg) {
         // DEBUG: Log every raw message received to diagnose AD5M WebSocket issue
         spdlog::trace("[Moonraker Client] onmessage received {} bytes", msg.size());
 
         try {
-            // Prevent callback execution if client is being destroyed (avoid use-after-free)
+            // Check lifetime guard FIRST - if lock fails, destructor has started
+            // This is thread-safe: weak_ptr::lock() is atomic with shared_ptr::reset()
+            auto guard = weak_guard.lock();
+            if (!guard) {
+                return; // Client is being destroyed, abort callback
+            }
+
+            // Backup check (may be redundant but keeps existing logging paths)
             if (is_destroying_.load()) {
                 return;
             }
@@ -508,12 +556,21 @@ int MoonrakerClient::connect(const char* url, std::function<void()> on_connected
     // Connection closed callback
     // Wrap entire callback body in try-catch to prevent any exception from escaping
     // to libhv (which may not handle exceptions properly or may be noexcept)
-    onclose = [this, on_disconnected]() {
+    // Capture weak_ptr to lifetime_guard_ to safely detect destruction from event loop thread
+    onclose = [this, weak_guard = std::weak_ptr<bool>(lifetime_guard_), on_disconnected]() {
         try {
-            spdlog::debug("[Moonraker Client] onclose callback invoked, is_destroying={}",
-                          is_destroying_.load());
+            spdlog::debug("[Moonraker Client] onclose callback invoked");
 
-            // Prevent callback execution if client is being destroyed (avoid use-after-free)
+            // Check lifetime guard FIRST - if lock fails, destructor has started
+            // This is thread-safe: weak_ptr::lock() is atomic with shared_ptr::reset()
+            auto guard = weak_guard.lock();
+            if (!guard) {
+                spdlog::debug(
+                    "[Moonraker Client] onclose callback early return - client destroyed");
+                return; // Client is being destroyed, abort callback
+            }
+
+            // Backup check (may be redundant but keeps existing logging paths)
             if (is_destroying_.load()) {
                 spdlog::debug(
                     "[Moonraker Client] onclose callback early return due to destruction");

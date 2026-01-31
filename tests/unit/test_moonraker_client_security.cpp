@@ -679,15 +679,12 @@ TEST_CASE("MoonrakerClient all callback types exception-safe (comprehensive)",
 // Integration Tests - Multiple Security Properties
 // ============================================================================
 
-// FIXME: Disabled due to segmentation fault (SIGSEGV)
-// This test causes a segfault, likely due to object lifetime issues when
-// destroying the client while callbacks are still registered/executing.
-// Related to the mutex lock failures seen in concurrent tests.
-// See: test_moonraker_client_security.cpp:806
+// Previously disabled due to segfault (SIGSEGV) - fixed by adding lifetime_guard_
+// to MoonrakerClient. Callbacks now capture weak_ptr<bool> to safely detect
+// when the client is being destroyed, preventing use-after-free.
 TEST_CASE("MoonrakerClient security properties work together correctly",
-          "[.][connection][security][integration][eventloop][slow]") {
+          "[connection][security][integration][eventloop][slow]") {
     SECTION("Cleanup with exceptions, large IDs, and nested requests") {
-#if 0 // FIXME: Disabled - see comment above TEST_CASE
         auto loop = std::make_shared<hv::EventLoop>();
         auto client = std::make_unique<MoonrakerClient>(loop);
 
@@ -696,11 +693,7 @@ TEST_CASE("MoonrakerClient security properties work together correctly",
         // Send many requests with various properties
         for (int i = 0; i < 50; i++) {
             client->send_jsonrpc(
-                "printer.info",
-                json(),
-                [](json) {
-                    throw std::runtime_error("Success exception");
-                },
+                "printer.info", json(), [](json) { throw std::runtime_error("Success exception"); },
                 [&cleanup_callbacks_invoked, &client](const MoonrakerError& err) {
                     cleanup_callbacks_invoked++;
 
@@ -711,12 +704,10 @@ TEST_CASE("MoonrakerClient security properties work together correctly",
 
                     // Some callbacks send nested requests
                     if (cleanup_callbacks_invoked % 5 == 0) {
-                        client->send_jsonrpc("nested.request", json(),
-                            [](json) {},
-                            [](const MoonrakerError&) {});
+                        client->send_jsonrpc(
+                            "nested.request", json(), [](json) {}, [](const MoonrakerError&) {});
                     }
-                }
-            );
+                });
         }
 
         // Destroy client - tests all properties together:
@@ -728,6 +719,5 @@ TEST_CASE("MoonrakerClient security properties work together correctly",
 
         // All cleanup callbacks should have been invoked
         REQUIRE(cleanup_callbacks_invoked == 50);
-#endif
     }
 }
