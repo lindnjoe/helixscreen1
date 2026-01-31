@@ -56,16 +56,24 @@ void update_button_text_contrast(lv_obj_t* btn) {
     // Get user data to find icon and label
     // Check magic to ensure user_data hasn't been overwritten (e.g., by Modal::wire_button)
     UiButtonData* data = static_cast<UiButtonData*>(lv_obj_get_user_data(btn));
-    if (!data || data->magic != UiButtonData::MAGIC || !data->label) {
-        spdlog::debug("[ui_button] No button data or label found");
+    if (!data || data->magic != UiButtonData::MAGIC) {
+        spdlog::debug("[ui_button] No button data found");
+        return;
+    }
+
+    // Need at least one of icon or label to update
+    if (!data->label && !data->icon) {
+        spdlog::debug("[ui_button] No label or icon to update");
         return;
     }
 
     lv_color_t bg = lv_obj_get_style_bg_color(btn, LV_PART_MAIN);
     lv_color_t text_color = theme_core_get_contrast_text_color(bg);
 
-    // Apply to label
-    lv_obj_set_style_text_color(data->label, text_color, LV_PART_MAIN);
+    // Apply to label if present
+    if (data->label) {
+        lv_obj_set_style_text_color(data->label, text_color, LV_PART_MAIN);
+    }
 
     // Apply to icon if present
     if (data->icon) {
