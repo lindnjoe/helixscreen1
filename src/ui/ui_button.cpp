@@ -222,8 +222,12 @@ void* ui_button_create(lv_xml_parser_state_t* state, const char** attrs) {
     const char* icon_name = lv_xml_get_value_of(attrs, "icon");
 
     // Parse icon_position attribute (default: left)
+    // Supported values: "left" (default), "right", "top", "bottom"
     const char* icon_pos_str = lv_xml_get_value_of(attrs, "icon_position");
     bool icon_on_right = (icon_pos_str && strcmp(icon_pos_str, "right") == 0);
+    bool icon_on_top = (icon_pos_str && strcmp(icon_pos_str, "top") == 0);
+    bool icon_on_bottom = (icon_pos_str && strcmp(icon_pos_str, "bottom") == 0);
+    bool vertical_layout = icon_on_top || icon_on_bottom;
 
     // Allocate user data to track icon/label
     UiButtonData* data = new UiButtonData{.magic = UiButtonData::MAGIC,
@@ -235,24 +239,50 @@ void* ui_button_create(lv_xml_parser_state_t* state, const char** attrs) {
     bool has_text = (text && strlen(text) > 0);
 
     if (has_icon && has_text) {
-        // Icon + text: use horizontal flex layout
-        lv_obj_set_flex_flow(btn, LV_FLEX_FLOW_ROW);
-        lv_obj_set_flex_align(btn, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
-                              LV_FLEX_ALIGN_CENTER);
-        lv_obj_set_style_pad_column(btn, theme_manager_get_spacing("space_xs"), LV_PART_MAIN);
+        if (vertical_layout) {
+            // Icon + text: use vertical flex layout (column)
+            lv_obj_set_flex_flow(btn, LV_FLEX_FLOW_COLUMN);
+            lv_obj_set_flex_align(btn, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
+                                  LV_FLEX_ALIGN_CENTER);
+            // No pad_row - use pad_top on label to match Motors Off button style
+            lv_obj_set_style_pad_row(btn, 0, LV_PART_MAIN);
 
-        if (icon_on_right) {
-            // Text first, then icon
-            data->label = lv_label_create(btn);
-            lv_label_set_text(data->label, text);
-
-            data->icon = create_button_icon(btn, icon_name);
+            if (icon_on_bottom) {
+                // Text first, then icon
+                data->label = lv_label_create(btn);
+                lv_label_set_text(data->label, text);
+                data->icon = create_button_icon(btn, icon_name);
+            } else {
+                // Icon first (top), then text
+                data->icon = create_button_icon(btn, icon_name);
+                data->label = lv_label_create(btn);
+                lv_label_set_text(data->label, text);
+            }
+            // Use small font for vertical layout labels (matches text_small)
+            if (data->label) {
+                lv_obj_set_style_text_font(data->label, theme_manager_get_font("font_small"),
+                                           LV_PART_MAIN);
+                lv_obj_set_style_pad_top(data->label, theme_manager_get_spacing("space_xxs"),
+                                         LV_PART_MAIN);
+            }
         } else {
-            // Icon first, then text
-            data->icon = create_button_icon(btn, icon_name);
+            // Icon + text: use horizontal flex layout (row)
+            lv_obj_set_flex_flow(btn, LV_FLEX_FLOW_ROW);
+            lv_obj_set_flex_align(btn, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
+                                  LV_FLEX_ALIGN_CENTER);
+            lv_obj_set_style_pad_column(btn, theme_manager_get_spacing("space_xs"), LV_PART_MAIN);
 
-            data->label = lv_label_create(btn);
-            lv_label_set_text(data->label, text);
+            if (icon_on_right) {
+                // Text first, then icon
+                data->label = lv_label_create(btn);
+                lv_label_set_text(data->label, text);
+                data->icon = create_button_icon(btn, icon_name);
+            } else {
+                // Icon first (left), then text
+                data->icon = create_button_icon(btn, icon_name);
+                data->label = lv_label_create(btn);
+                lv_label_set_text(data->label, text);
+            }
         }
     } else if (has_icon) {
         // Icon only: center the icon, no label needed
@@ -278,8 +308,12 @@ void* ui_button_create(lv_xml_parser_state_t* state, const char** attrs) {
     // Apply initial text contrast
     update_button_text_contrast(btn);
 
+    const char* pos_name = icon_on_top      ? "top"
+                           : icon_on_bottom ? "bottom"
+                           : icon_on_right  ? "right"
+                                            : "left";
     spdlog::trace("[ui_button] Created button variant='{}' text='{}' icon='{}' icon_pos='{}'",
-                  variant_str, text, icon_name ? icon_name : "", icon_on_right ? "right" : "left");
+                  variant_str, text, icon_name ? icon_name : "", pos_name);
 
     return btn;
 }
@@ -296,14 +330,40 @@ void* ui_button_create(lv_xml_parser_state_t* state, const char** attrs) {
 void ui_button_apply(lv_xml_parser_state_t* state, const char** attrs) {
     lv_xml_obj_apply(state, attrs);
 
-    // If button has a name, give icon a derived name so it can be found
     void* item = lv_xml_state_get_item(state);
     lv_obj_t* btn = static_cast<lv_obj_t*>(item);
-    const char* btn_name = lv_obj_get_name(btn);
+    UiButtonData* data = static_cast<UiButtonData*>(lv_obj_get_user_data(btn));
 
+    // Handle bind_text - bind the internal label to a subject
+    const char* bind_text = lv_xml_get_value_of(attrs, "bind_text");
+    if (bind_text && data && data->magic == UiButtonData::MAGIC) {
+        lv_subject_t* subject = lv_xml_get_subject(&state->scope, bind_text);
+        if (subject) {
+            // If button has no label yet (text was empty), create one now
+            if (!data->label) {
+                data->label = lv_label_create(btn);
+                lv_obj_center(data->label);
+            }
+            // Get optional format string
+            const char* fmt = lv_xml_get_value_of(attrs, "bind_text-fmt");
+            if (fmt) {
+                fmt = lv_strdup(fmt);
+                lv_obj_add_event_cb(data->label, lv_event_free_user_data_cb, LV_EVENT_DELETE,
+                                    const_cast<char*>(fmt));
+            }
+            lv_label_bind_text(data->label, subject, fmt);
+            // Re-apply contrast after binding updates text
+            update_button_text_contrast(btn);
+            spdlog::trace("[ui_button] Bound label to subject '{}'", bind_text);
+        } else {
+            spdlog::warn("[ui_button] Subject '{}' not found for bind_text", bind_text);
+        }
+    }
+
+    // If button has a name, give icon a derived name so it can be found
+    const char* btn_name = lv_obj_get_name(btn);
     if (btn_name && strlen(btn_name) > 0) {
-        UiButtonData* data = static_cast<UiButtonData*>(lv_obj_get_user_data(btn));
-        if (data && data->icon) {
+        if (data && data->magic == UiButtonData::MAGIC && data->icon) {
             // Set icon name as "{button_name}_icon"
             char icon_name[128];
             snprintf(icon_name, sizeof(icon_name), "%s_icon", btn_name);
