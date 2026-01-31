@@ -52,31 +52,49 @@ void ThemeManager::init() {
 
     register_style_configs();
 
-    // Default Nord-ish palette for testing
-    current_palette_.screen_bg = lv_color_hex(0x1a1a2e);
-    current_palette_.overlay_bg = lv_color_hex(0x2E3440);
-    current_palette_.card_bg = lv_color_hex(0x2E3440);
-    current_palette_.elevated_bg = lv_color_hex(0x3B4252);
-    current_palette_.border = lv_color_hex(0x4C566A);
+    // Default Nord-ish dark palette
+    dark_palette_.screen_bg = lv_color_hex(0x1a1a2e);
+    dark_palette_.overlay_bg = lv_color_hex(0x2E3440);
+    dark_palette_.card_bg = lv_color_hex(0x2E3440);
+    dark_palette_.elevated_bg = lv_color_hex(0x3B4252);
+    dark_palette_.border = lv_color_hex(0x4C566A);
+    dark_palette_.text = lv_color_hex(0xECEFF4);
+    dark_palette_.text_muted = lv_color_hex(0xD8DEE9);
+    dark_palette_.text_subtle = lv_color_hex(0x8FBCBB);
+    dark_palette_.primary = lv_color_hex(0x88C0D0);
+    dark_palette_.secondary = lv_color_hex(0x81A1C1);
+    dark_palette_.tertiary = lv_color_hex(0x5E81AC);
+    dark_palette_.info = lv_color_hex(0x88C0D0);
+    dark_palette_.success = lv_color_hex(0xA3BE8C);
+    dark_palette_.warning = lv_color_hex(0xEBCB8B);
+    dark_palette_.danger = lv_color_hex(0xBF616A);
+    dark_palette_.focus = lv_color_hex(0x88C0D0);
+    dark_palette_.border_radius = 8;
+    dark_palette_.border_width = 1;
+    dark_palette_.border_opacity = 40;
 
-    current_palette_.text = lv_color_hex(0xECEFF4);
-    current_palette_.text_muted = lv_color_hex(0xD8DEE9);
-    current_palette_.text_subtle = lv_color_hex(0x8FBCBB);
+    // Default light palette (inverted tones)
+    light_palette_.screen_bg = lv_color_hex(0xECEFF4);
+    light_palette_.overlay_bg = lv_color_hex(0xE5E9F0);
+    light_palette_.card_bg = lv_color_hex(0xFFFFFF);
+    light_palette_.elevated_bg = lv_color_hex(0xF5F7FA);
+    light_palette_.border = lv_color_hex(0xD8DEE9);
+    light_palette_.text = lv_color_hex(0x2E3440);
+    light_palette_.text_muted = lv_color_hex(0x4C566A);
+    light_palette_.text_subtle = lv_color_hex(0x7B88A1);
+    light_palette_.primary = lv_color_hex(0x5E81AC);
+    light_palette_.secondary = lv_color_hex(0x81A1C1);
+    light_palette_.tertiary = lv_color_hex(0x88C0D0);
+    light_palette_.info = lv_color_hex(0x5E81AC);
+    light_palette_.success = lv_color_hex(0xA3BE8C);
+    light_palette_.warning = lv_color_hex(0xD08770);
+    light_palette_.danger = lv_color_hex(0xBF616A);
+    light_palette_.focus = lv_color_hex(0x5E81AC);
+    light_palette_.border_radius = 8;
+    light_palette_.border_width = 1;
+    light_palette_.border_opacity = 30;
 
-    current_palette_.primary = lv_color_hex(0x88C0D0);
-    current_palette_.secondary = lv_color_hex(0x81A1C1);
-    current_palette_.tertiary = lv_color_hex(0x5E81AC);
-    current_palette_.info = lv_color_hex(0x88C0D0);
-    current_palette_.success = lv_color_hex(0xA3BE8C);
-    current_palette_.warning = lv_color_hex(0xEBCB8B);
-    current_palette_.danger = lv_color_hex(0xBF616A);
-    current_palette_.focus = lv_color_hex(0x88C0D0);
-
-    current_palette_.border_radius = 8;
-    current_palette_.border_width = 1;
-    current_palette_.border_opacity = 40;
-
-    apply_palette(current_palette_);
+    apply_palette(dark_mode_ ? dark_palette_ : light_palette_);
     initialized_ = true;
 }
 
@@ -155,4 +173,78 @@ void ThemeManager::apply_palette(const ThemePalette& palette) {
             entry.configure(&entry.style, palette);
         }
     }
+}
+
+void ThemeManager::set_dark_mode(bool dark) {
+    if (dark_mode_ == dark && initialized_)
+        return;
+    dark_mode_ = dark;
+
+    if (initialized_) {
+        apply_palette(dark ? dark_palette_ : light_palette_);
+        // Trigger LVGL widget refresh
+        lv_obj_report_style_change(nullptr);
+    }
+}
+
+void ThemeManager::set_palettes(const ThemePalette& light, const ThemePalette& dark) {
+    light_palette_ = light;
+    dark_palette_ = dark;
+    // Update current palette if already initialized
+    if (initialized_) {
+        apply_palette(dark_mode_ ? dark_palette_ : light_palette_);
+    }
+}
+
+lv_color_t ThemeManager::get_color(std::string_view name) const {
+    // Map name to palette field
+    if (name == "screen_bg")
+        return current_palette_.screen_bg;
+    if (name == "overlay_bg")
+        return current_palette_.overlay_bg;
+    if (name == "card_bg")
+        return current_palette_.card_bg;
+    if (name == "elevated_bg")
+        return current_palette_.elevated_bg;
+    if (name == "border")
+        return current_palette_.border;
+    if (name == "text")
+        return current_palette_.text;
+    if (name == "text_muted")
+        return current_palette_.text_muted;
+    if (name == "text_subtle")
+        return current_palette_.text_subtle;
+    if (name == "primary")
+        return current_palette_.primary;
+    if (name == "secondary")
+        return current_palette_.secondary;
+    if (name == "tertiary")
+        return current_palette_.tertiary;
+    if (name == "info")
+        return current_palette_.info;
+    if (name == "success")
+        return current_palette_.success;
+    if (name == "warning")
+        return current_palette_.warning;
+    if (name == "danger")
+        return current_palette_.danger;
+    if (name == "focus")
+        return current_palette_.focus;
+
+    // Unknown color - return magenta for debugging
+    return lv_color_hex(0xFF00FF);
+}
+
+void ThemeManager::preview_palette(const ThemePalette& palette) {
+    previewing_ = true;
+    apply_palette(palette);
+    lv_obj_report_style_change(nullptr);
+}
+
+void ThemeManager::cancel_preview() {
+    if (!previewing_)
+        return;
+    previewing_ = false;
+    apply_palette(dark_mode_ ? dark_palette_ : light_palette_);
+    lv_obj_report_style_change(nullptr);
 }

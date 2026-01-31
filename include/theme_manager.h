@@ -101,6 +101,7 @@ struct StyleEntry {
 };
 
 #include <array>
+#include <string_view>
 
 /// Unified theme manager - singleton managing all styles and colors.
 /// Replaces theme_core.c + old theme_manager.cpp with table-driven approach.
@@ -123,6 +124,37 @@ class ThemeManager {
         return current_palette_;
     }
 
+    /// Check if dark mode is currently active
+    bool is_dark_mode() const {
+        return dark_mode_;
+    }
+
+    /// Set dark mode on/off and update all styles
+    void set_dark_mode(bool dark);
+
+    /// Toggle between dark and light mode
+    void toggle_dark_mode() {
+        set_dark_mode(!dark_mode_);
+    }
+
+    /// Set both light and dark palettes (for theme loading)
+    void set_palettes(const ThemePalette& light, const ThemePalette& dark);
+
+    /// Get color from current palette by name
+    /// Supports: "primary", "danger", "card_bg", "text", etc.
+    lv_color_t get_color(std::string_view name) const;
+
+    /// Preview a palette without permanently applying it
+    void preview_palette(const ThemePalette& palette);
+
+    /// Cancel preview and revert to current theme palette
+    void cancel_preview();
+
+    /// Check if currently previewing
+    bool is_previewing() const {
+        return previewing_;
+    }
+
     // Delete copy/move
     ThemeManager(const ThemeManager&) = delete;
     ThemeManager& operator=(const ThemeManager&) = delete;
@@ -132,7 +164,11 @@ class ThemeManager {
 
     std::array<StyleEntry, static_cast<size_t>(StyleRole::COUNT)> styles_{};
     ThemePalette current_palette_{};
+    ThemePalette light_palette_{};
+    ThemePalette dark_palette_{};
     bool initialized_ = false;
+    bool dark_mode_ = true;
+    bool previewing_ = false;
 
     void register_style_configs();
     void apply_palette(const ThemePalette& palette);

@@ -218,3 +218,100 @@ TEST_CASE_METHOD(LVGLTestFixture, "All registered configure functions are called
         REQUIRE(lv_style_get_prop(style, tc.prop, &val) == LV_STYLE_RES_FOUND);
     }
 }
+
+// ============================================================================
+// Phase 4: Dark/Light Mode Switching Tests
+// ============================================================================
+
+TEST_CASE_METHOD(LVGLTestFixture, "ThemeManager toggles dark mode", "[theme-manager][dark-mode]") {
+    auto& tm = ThemeManager::instance();
+    tm.init();
+
+    // Default is dark
+    REQUIRE(tm.is_dark_mode() == true);
+
+    // Toggle to light
+    tm.set_dark_mode(false);
+    REQUIRE(tm.is_dark_mode() == false);
+
+    // Toggle back
+    tm.toggle_dark_mode();
+    REQUIRE(tm.is_dark_mode() == true);
+}
+
+TEST_CASE_METHOD(LVGLTestFixture, "Styles update when mode changes",
+                 "[theme-manager][mode-change]") {
+    auto& tm = ThemeManager::instance();
+    tm.init();
+
+    lv_style_t* card = tm.get_style(StyleRole::Card);
+    lv_style_value_t dark_bg;
+    lv_style_get_prop(card, LV_STYLE_BG_COLOR, &dark_bg);
+
+    tm.set_dark_mode(false);
+
+    lv_style_value_t light_bg;
+    lv_style_get_prop(card, LV_STYLE_BG_COLOR, &light_bg);
+
+    // Colors should be different in light vs dark mode
+    bool different = (dark_bg.color.red != light_bg.color.red) ||
+                     (dark_bg.color.green != light_bg.color.green) ||
+                     (dark_bg.color.blue != light_bg.color.blue);
+    REQUIRE(different);
+}
+
+// ============================================================================
+// Phase 4: Color Lookup API Tests
+// ============================================================================
+
+TEST_CASE_METHOD(LVGLTestFixture, "get_color returns palette colors",
+                 "[theme-manager][get-color]") {
+    auto& tm = ThemeManager::instance();
+    tm.init();
+
+    lv_color_t primary = tm.get_color("primary");
+    lv_color_t danger = tm.get_color("danger");
+
+    // Should return actual colors (not default black or magenta error)
+    REQUIRE((primary.red + primary.green + primary.blue) > 0);
+    REQUIRE(danger.red > 0); // Danger should have red component
+
+    // Unknown returns magenta
+    lv_color_t unknown = tm.get_color("nonexistent");
+    REQUIRE(unknown.red == 0xFF);
+    REQUIRE(unknown.green == 0x00);
+    REQUIRE(unknown.blue == 0xFF);
+}
+
+// ============================================================================
+// Phase 4: Preview System Tests
+// ============================================================================
+
+TEST_CASE_METHOD(LVGLTestFixture, "preview_palette applies temporarily",
+                 "[theme-manager][preview]") {
+    auto& tm = ThemeManager::instance();
+    tm.init();
+
+    lv_style_t* card = tm.get_style(StyleRole::Card);
+    lv_style_value_t original_bg;
+    lv_style_get_prop(card, LV_STYLE_BG_COLOR, &original_bg);
+
+    // Preview a different palette
+    ThemePalette preview_palette = tm.current_palette();
+    preview_palette.card_bg = lv_color_hex(0xFF0000); // Red
+
+    tm.preview_palette(preview_palette);
+    REQUIRE(tm.is_previewing() == true);
+
+    lv_style_value_t preview_bg;
+    lv_style_get_prop(card, LV_STYLE_BG_COLOR, &preview_bg);
+    REQUIRE(preview_bg.color.red == 0xFF);
+
+    // Cancel reverts
+    tm.cancel_preview();
+    REQUIRE(tm.is_previewing() == false);
+
+    lv_style_value_t reverted_bg;
+    lv_style_get_prop(card, LV_STYLE_BG_COLOR, &reverted_bg);
+    REQUIRE(reverted_bg.color.red == original_bg.color.red);
+}
