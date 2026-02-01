@@ -1,6 +1,6 @@
 # Ideas & Future Improvements
 
-* Clean up NULL vs nullptr usage (use nullptr consistently in C++ code)
+* ~~Clean up NULL vs nullptr usage~~ ✅ Done (d326ec77)
 * More test coverage
 * Have libhv use spdlog for logging if possible
 * ~~Easy calibration workflow~~ ✅ Done (PID, Z-offset, screws tilt, input shaper stub)

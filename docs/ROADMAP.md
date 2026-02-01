@@ -175,7 +175,7 @@ Remaining items for production readiness:
 | **Camera/Webcam** | Low | Lower priority for local touchscreen use case |
 | **Client-side thumbnails** | Low | Fallback when Moonraker doesn't provide (USB symlinked files) |
 | **mDNS discovery** | Low | Auto-find Moonraker; manual IP works fine |
-| **NULL → nullptr cleanup** | Low | Consistency across C++ codebase |
+| ~~NULL → nullptr cleanup~~ | ✅ Done | d326ec77 - 29 files converted |
 | **Belt tension visualization** | Future | Controlled excitation + stroboscopic LED feedback |
 | **OTA updates** | Future | Currently requires manual binary update |
 | **Custom theme creation wizard** | Low | Guide users through creating themes from scratch |
