@@ -72,7 +72,7 @@ static inline void helix_print_backtrace(int fd) {
  */
 static inline void helix_lvgl_assert_handler(const char* file, int line, const char* func) {
     // Get timestamp
-    time_t now = time(nullptr);
+    time_t now = time(NULL);
     struct tm* tm_info = localtime(&now);
     char time_buf[32];
     strftime(time_buf, sizeof(time_buf), "%Y-%m-%d %H:%M:%S", tm_info);

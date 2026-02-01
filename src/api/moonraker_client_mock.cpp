@@ -2027,10 +2027,25 @@ void MoonrakerClientMock::dispatch_initial_state() {
         probed_matrix_json.push_back(row_json);
     }
 
-    // Build profiles object (Moonraker format: {"profile_name": {...}, ...})
+    // Build profiles object with full mesh data (Moonraker format)
     json profiles_json = json::object();
-    for (const auto& profile : bed_mesh_profiles_) {
-        profiles_json[profile] = json::object(); // Empty profile data (real has full mesh)
+    for (const auto& [name, profile] : stored_bed_mesh_profiles_) {
+        json points_json = json::array();
+        for (const auto& row : profile.probed_matrix) {
+            json row_json = json::array();
+            for (float val : row) {
+                row_json.push_back(val);
+            }
+            points_json.push_back(row_json);
+        }
+        profiles_json[name] = {{"points", points_json},
+                               {"mesh_params",
+                                {{"min_x", profile.mesh_min[0]},
+                                 {"min_y", profile.mesh_min[1]},
+                                 {"max_x", profile.mesh_max[0]},
+                                 {"max_y", profile.mesh_max[1]},
+                                 {"x_count", profile.x_count},
+                                 {"y_count", profile.y_count}}}};
     }
 
     // Build LED state JSON
