@@ -377,91 +377,33 @@ static void ams_slot_event_cb(lv_event_t* e) {
 // ============================================================================
 
 /**
- * @brief Create all child widgets inside the ams_slot container
+ * @brief Create spool visualization inside spool_container
  *
- * Creates a skeuomorphic filament spool visualization with:
- * - Circular spool shape with outer flange, filament ring, and center hub
- * - Material label below the spool
- * - Status badge overlaid on the spool
- * - Slot number badge in corner
+ * Creates either 3D canvas or flat concentric rings based on config.
+ * The spool_container is created by XML; this function populates it.
  */
-static void create_slot_children(lv_obj_t* container, AmsSlotData* data) {
-    // Get responsive spacing values
-    int32_t space_xs = theme_manager_get_spacing("space_xs");
+static void create_spool_visualization(AmsSlotData* data) {
+    if (!data || !data->spool_container) {
+        spdlog::error("[AmsSlot] create_spool_visualization: missing spool_container");
+        return;
+    }
 
-    // Fixed slot width to support overlapping layout for many slots
-    // When there are more than 4 slots, they overlap like in Bambu UI
-    // The parent slot_grid applies negative column padding to create overlap
-    int32_t space_lg = theme_manager_get_spacing("space_lg");
-    int32_t slot_width = (space_lg * 5) + 10; // ~90px - fits spool + padding
-    lv_obj_set_width(container, slot_width);
-    lv_obj_set_height(container, LV_SIZE_CONTENT);
-
-    // Container styling: transparent, no border, minimal padding
-    lv_obj_set_style_bg_opa(container, LV_OPA_TRANSP, LV_PART_MAIN);
-    lv_obj_set_style_border_width(container, 0, LV_PART_MAIN);
-    lv_obj_set_style_pad_all(container, 2, LV_PART_MAIN);
-    lv_obj_add_flag(container, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_flag(container, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
-    lv_obj_remove_flag(container, LV_OBJ_FLAG_SCROLLABLE);
-
-    // Use flex layout: column, center items
-    lv_obj_set_flex_flow(container, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(container, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
-                          LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_row(container, space_xs, LV_PART_MAIN);
-
-    // ========================================================================
-    // MATERIAL LABEL (above spool - leaves room for filament paths below)
-    // TODO: Convert ams_slot to XML component - styling should be declarative
-    // ========================================================================
-    lv_obj_t* material = lv_label_create(container);
-    const char* font_small_name = lv_xml_get_const(NULL, "font_small");
-    const lv_font_t* font_small =
-        font_small_name ? lv_xml_get_font(NULL, font_small_name) : &noto_sans_16;
-    lv_obj_set_style_text_font(material, font_small, LV_PART_MAIN);
-    lv_obj_set_style_text_color(material, theme_manager_get_color("text"), LV_PART_MAIN);
-    lv_obj_set_style_text_letter_space(material, 1, LV_PART_MAIN);
-    lv_obj_add_flag(material, LV_OBJ_FLAG_CLICKABLE);    // Make label tappable
-    lv_obj_add_flag(material, LV_OBJ_FLAG_EVENT_BUBBLE); // Propagate clicks to slot
-    data->material_label = material;
-
-    // Initialize material subject and bind to label (save observer for cleanup)
-    lv_subject_init_string(&data->material_subject, data->material_buf, nullptr,
-                           sizeof(data->material_buf), "--");
-    data->material_observer = lv_label_bind_text(material, &data->material_subject, "%s");
-
-    // ========================================================================
-    // SPOOL VISUALIZATION (style-dependent: 3D canvas or flat rings)
-    // ========================================================================
     // Check config for visualization style
     data->use_3d_style = is_3d_spool_style();
 
     // Spool size adapts to available space - scales with screen size
-    // Must fit within max_width=90px constraint: spool_size + 8 (container padding) < 90
-    // Note: space_lg already fetched above for slot_width calculation
+    int32_t space_lg = theme_manager_get_spacing("space_lg");
     int32_t spool_size = (space_lg * 4); // Responsive: 64px at 16px, 80px at 20px
+
+    // Update spool_container size to match responsive sizing
+    int32_t container_size = spool_size + 8; // Extra room for badge
+    lv_obj_set_size(data->spool_container, container_size, container_size);
 
     if (data->use_3d_style) {
         // ====================================================================
         // 3D SPOOL CANVAS (Bambu-style pseudo-3D with gradients + AA)
         // ====================================================================
-        // Container is larger than canvas to accommodate badge overflow
-        int32_t container_size = spool_size + 8; // Extra room for badge
-
-        // Create a container to hold both the canvas and overlay badges
-        lv_obj_t* spool_container = lv_obj_create(container);
-        lv_obj_set_size(spool_container, container_size, container_size);
-        lv_obj_set_style_bg_opa(spool_container, LV_OPA_TRANSP, LV_PART_MAIN);
-        lv_obj_set_style_border_width(spool_container, 0, LV_PART_MAIN);
-        lv_obj_set_style_pad_all(spool_container, 0, LV_PART_MAIN);
-        lv_obj_remove_flag(spool_container, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_add_flag(spool_container, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
-        lv_obj_add_flag(spool_container, LV_OBJ_FLAG_EVENT_BUBBLE); // Propagate clicks to slot
-        data->spool_container = spool_container;
-
-        // Create the 3D spool canvas inside the container (centered)
-        lv_obj_t* canvas = ui_spool_canvas_create(spool_container, spool_size);
+        lv_obj_t* canvas = ui_spool_canvas_create(data->spool_container, spool_size);
         if (canvas) {
             lv_obj_align(canvas, LV_ALIGN_CENTER, 0, 0);
             // Prevent flex layout from resizing the canvas
@@ -471,7 +413,7 @@ static void create_slot_children(lv_obj_t* container, AmsSlotData* data) {
             lv_obj_set_style_max_height(canvas, spool_size, LV_PART_MAIN);
             ui_spool_canvas_set_color(canvas, lv_color_hex(AMS_DEFAULT_SLOT_COLOR));
             ui_spool_canvas_set_fill_level(canvas, data->fill_level);
-            lv_obj_add_flag(canvas, LV_OBJ_FLAG_EVENT_BUBBLE); // Propagate clicks to slot
+            lv_obj_add_flag(canvas, LV_OBJ_FLAG_EVENT_BUBBLE);
             data->spool_canvas = canvas;
 
             spdlog::debug("[AmsSlot] Created 3D spool_canvas ({}x{})", spool_size, spool_size);
@@ -480,27 +422,18 @@ static void create_slot_children(lv_obj_t* container, AmsSlotData* data) {
         // ====================================================================
         // FLAT STYLE (skeuomorphic concentric rings)
         // ====================================================================
-        int32_t filament_ring_size = spool_size - 8; // 8px smaller (4px margin each side)
-        int32_t hub_size = spool_size / 3;           // Center hole proportional to spool
+        int32_t filament_ring_size = spool_size - 8;
+        int32_t hub_size = spool_size / 3;
 
-        // Spool container (holds all spool layers, provides shadow)
-        lv_obj_t* spool_container = lv_obj_create(container);
-        lv_obj_set_size(spool_container, spool_size, spool_size);
-        lv_obj_set_style_radius(spool_container, LV_RADIUS_CIRCLE, LV_PART_MAIN);
-        lv_obj_set_style_bg_opa(spool_container, LV_OPA_TRANSP, LV_PART_MAIN);
-        lv_obj_set_style_border_width(spool_container, 0, LV_PART_MAIN);
-        lv_obj_set_style_pad_all(spool_container, 0, LV_PART_MAIN);
-        lv_obj_remove_flag(spool_container, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_add_flag(spool_container, LV_OBJ_FLAG_EVENT_BUBBLE); // Propagate clicks to slot
-        // Shadow for 3D depth effect
-        lv_obj_set_style_shadow_width(spool_container, 8, LV_PART_MAIN);
-        lv_obj_set_style_shadow_opa(spool_container, LV_OPA_20, LV_PART_MAIN);
-        lv_obj_set_style_shadow_offset_y(spool_container, 2, LV_PART_MAIN);
-        lv_obj_set_style_shadow_color(spool_container, lv_color_black(), LV_PART_MAIN);
-        data->spool_container = spool_container;
+        // Add shadow to spool_container for flat style
+        lv_obj_set_style_radius(data->spool_container, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+        lv_obj_set_style_shadow_width(data->spool_container, 8, LV_PART_MAIN);
+        lv_obj_set_style_shadow_opa(data->spool_container, LV_OPA_20, LV_PART_MAIN);
+        lv_obj_set_style_shadow_offset_y(data->spool_container, 2, LV_PART_MAIN);
+        lv_obj_set_style_shadow_color(data->spool_container, lv_color_black(), LV_PART_MAIN);
 
         // Layer 1: Outer ring (flange - darker shade of filament color)
-        lv_obj_t* outer_ring = lv_obj_create(spool_container);
+        lv_obj_t* outer_ring = lv_obj_create(data->spool_container);
         lv_obj_set_size(outer_ring, spool_size, spool_size);
         lv_obj_align(outer_ring, LV_ALIGN_CENTER, 0, 0);
         lv_obj_set_style_radius(outer_ring, LV_RADIUS_CIRCLE, LV_PART_MAIN);
@@ -512,11 +445,11 @@ static void create_slot_children(lv_obj_t* container, AmsSlotData* data) {
                                       LV_PART_MAIN);
         lv_obj_set_style_border_opa(outer_ring, LV_OPA_50, LV_PART_MAIN);
         lv_obj_remove_flag(outer_ring, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_add_flag(outer_ring, LV_OBJ_FLAG_EVENT_BUBBLE); // Propagate clicks to slot
+        lv_obj_add_flag(outer_ring, LV_OBJ_FLAG_EVENT_BUBBLE);
         data->spool_outer = outer_ring;
 
-        // Layer 2: Main filament color ring (the actual vibrant filament color)
-        lv_obj_t* filament_ring = lv_obj_create(spool_container);
+        // Layer 2: Main filament color ring
+        lv_obj_t* filament_ring = lv_obj_create(data->spool_container);
         lv_obj_set_size(filament_ring, filament_ring_size, filament_ring_size);
         lv_obj_align(filament_ring, LV_ALIGN_CENTER, 0, 0);
         lv_obj_set_style_radius(filament_ring, LV_RADIUS_CIRCLE, LV_PART_MAIN);
@@ -525,11 +458,11 @@ static void create_slot_children(lv_obj_t* container, AmsSlotData* data) {
         lv_obj_set_style_bg_opa(filament_ring, LV_OPA_COVER, LV_PART_MAIN);
         lv_obj_set_style_border_width(filament_ring, 0, LV_PART_MAIN);
         lv_obj_remove_flag(filament_ring, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_add_flag(filament_ring, LV_OBJ_FLAG_EVENT_BUBBLE); // Propagate clicks to slot
+        lv_obj_add_flag(filament_ring, LV_OBJ_FLAG_EVENT_BUBBLE);
         data->color_swatch = filament_ring;
 
-        // Layer 3: Center hub (the dark hole where filament feeds from)
-        lv_obj_t* hub = lv_obj_create(spool_container);
+        // Layer 3: Center hub
+        lv_obj_t* hub = lv_obj_create(data->spool_container);
         lv_obj_set_size(hub, hub_size, hub_size);
         lv_obj_align(hub, LV_ALIGN_CENTER, 0, 0);
         lv_obj_set_style_radius(hub, LV_RADIUS_CIRCLE, LV_PART_MAIN);
@@ -538,82 +471,46 @@ static void create_slot_children(lv_obj_t* container, AmsSlotData* data) {
         lv_obj_set_style_border_width(hub, 1, LV_PART_MAIN);
         lv_obj_set_style_border_color(hub, theme_manager_get_color("ams_hub_border"), LV_PART_MAIN);
         lv_obj_remove_flag(hub, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_add_flag(hub, LV_OBJ_FLAG_EVENT_BUBBLE); // Propagate clicks to slot
+        lv_obj_add_flag(hub, LV_OBJ_FLAG_EVENT_BUBBLE);
         data->spool_hub = hub;
 
         spdlog::debug("[AmsSlot] Created flat spool rings ({}x{})", spool_size, spool_size);
     }
+}
 
-    // ========================================================================
-    // SLOT NUMBER BADGE (overlaid on bottom-right of spool)
-    // Shows slot number with status-colored background:
-    // - Green: filament ready (AVAILABLE, LOADED, FROM_BUFFER)
-    // - Red: problem (BLOCKED)
-    // - Hidden: empty slot (EMPTY) - faded spool is enough
-    // - Gray: unknown state (UNKNOWN)
-    // ========================================================================
-    lv_obj_t* status_badge = lv_obj_create(data->spool_container);
-    lv_obj_set_size(status_badge, 20, 20);
-    // Position badge at bottom-right of the canvas area
-    lv_obj_align(status_badge, LV_ALIGN_BOTTOM_RIGHT, -2, -2);
-    lv_obj_set_style_radius(status_badge, LV_RADIUS_CIRCLE, LV_PART_MAIN);
-    lv_obj_set_style_bg_color(status_badge, theme_manager_get_color("ams_badge_bg"), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(status_badge, LV_OPA_COVER, LV_PART_MAIN);
-    lv_obj_set_style_border_width(status_badge, 2, LV_PART_MAIN);
-    lv_obj_set_style_border_color(status_badge, theme_manager_get_color("card_bg"), LV_PART_MAIN);
-    lv_obj_remove_flag(status_badge, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_style_pad_all(status_badge, 0, LV_PART_MAIN);
-    lv_obj_add_flag(status_badge, LV_OBJ_FLAG_EVENT_BUBBLE); // Propagate clicks to slot
-    data->status_badge_bg = status_badge;
+/**
+ * @brief Set up text bindings for labels created by XML
+ *
+ * Initializes subjects and binds them to XML-created labels.
+ */
+static void setup_text_bindings(AmsSlotData* data) {
+    if (!data) {
+        return;
+    }
 
-    // Slot number label inside badge (replaces status icon)
-    lv_obj_t* slot_label = lv_label_create(status_badge);
-    const char* font_xs_name = lv_xml_get_const(NULL, "font_xs");
-    const lv_font_t* font_xs = font_xs_name ? lv_xml_get_font(NULL, font_xs_name) : &noto_sans_12;
-    lv_obj_set_style_text_font(slot_label, font_xs, LV_PART_MAIN);
-    lv_obj_set_style_text_color(slot_label, theme_manager_get_color("text"), LV_PART_MAIN);
-    lv_obj_center(slot_label);
-    lv_obj_add_flag(slot_label, LV_OBJ_FLAG_EVENT_BUBBLE); // Propagate clicks to slot
-    data->slot_badge = slot_label;
+    // Initialize and bind material subject
+    if (data->material_label) {
+        lv_subject_init_string(&data->material_subject, data->material_buf, nullptr,
+                               sizeof(data->material_buf), "--");
+        data->material_observer =
+            lv_label_bind_text(data->material_label, &data->material_subject, "%s");
+    }
 
-    // Initialize slot badge subject and bind to label (save observer for cleanup)
-    lv_subject_init_string(&data->slot_badge_subject, data->slot_badge_buf, nullptr,
-                           sizeof(data->slot_badge_buf), "?");
-    data->slot_badge_observer = lv_label_bind_text(slot_label, &data->slot_badge_subject, "%s");
+    // Initialize and bind slot badge subject
+    if (data->slot_badge) {
+        lv_subject_init_string(&data->slot_badge_subject, data->slot_badge_buf, nullptr,
+                               sizeof(data->slot_badge_buf), "?");
+        data->slot_badge_observer =
+            lv_label_bind_text(data->slot_badge, &data->slot_badge_subject, "%s");
+    }
 
-    // ========================================================================
-    // TOOL BADGE (overlaid on top-left of spool)
-    // Shows tool assignment (T0, T1, etc.) when a tool is mapped to this slot.
-    // Hidden when no tool assigned (mapped_tool == -1).
-    // ========================================================================
-    lv_obj_t* tool_badge = lv_obj_create(data->spool_container);
-    lv_obj_set_size(tool_badge, 22, 16);
-    // Position badge at top-left of the canvas area
-    lv_obj_align(tool_badge, LV_ALIGN_TOP_LEFT, 2, 2);
-    lv_obj_set_style_radius(tool_badge, 4, LV_PART_MAIN);
-    lv_obj_set_style_bg_color(tool_badge, theme_manager_get_color("text_muted"), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(tool_badge, LV_OPA_80, LV_PART_MAIN);
-    lv_obj_set_style_border_width(tool_badge, 0, LV_PART_MAIN);
-    lv_obj_remove_flag(tool_badge, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_style_pad_all(tool_badge, 0, LV_PART_MAIN);
-    lv_obj_add_flag(tool_badge, LV_OBJ_FLAG_EVENT_BUBBLE);
-    lv_obj_add_flag(tool_badge, LV_OBJ_FLAG_HIDDEN); // Hidden by default until tool assigned
-    data->tool_badge_bg = tool_badge;
-
-    // Tool label inside badge (T0, T1, etc.)
-    lv_obj_t* tool_label = lv_label_create(tool_badge);
-    lv_obj_set_style_text_font(tool_label, font_xs, LV_PART_MAIN);
-    lv_obj_set_style_text_color(tool_label, theme_manager_get_color("text"), LV_PART_MAIN);
-    lv_obj_center(tool_label);
-    lv_obj_add_flag(tool_label, LV_OBJ_FLAG_EVENT_BUBBLE);
-    data->tool_badge = tool_label;
-
-    // Initialize tool badge subject and bind to label (save observer for cleanup)
-    lv_subject_init_string(&data->tool_badge_subject, data->tool_badge_buf, nullptr,
-                           sizeof(data->tool_badge_buf), "");
-    data->tool_badge_observer = lv_label_bind_text(tool_label, &data->tool_badge_subject, "%s");
-
-    data->container = container;
+    // Initialize and bind tool badge subject
+    if (data->tool_badge) {
+        lv_subject_init_string(&data->tool_badge_subject, data->tool_badge_buf, nullptr,
+                               sizeof(data->tool_badge_buf), "");
+        data->tool_badge_observer =
+            lv_label_bind_text(data->tool_badge, &data->tool_badge_subject, "%s");
+    }
 }
 
 /**
@@ -703,31 +600,60 @@ static void setup_slot_observers(AmsSlotData* data) {
 
 /**
  * @brief XML create handler for ams_slot
+ *
+ * Creates the ams_slot widget by instantiating the ams_slot_view XML component
+ * and then populating it with dynamic content (spool canvas, observers).
  */
 static void* ams_slot_xml_create(lv_xml_parser_state_t* state, const char** attrs) {
     LV_UNUSED(attrs);
 
     void* parent = lv_xml_state_get_parent(state);
-    lv_obj_t* obj = lv_obj_create(static_cast<lv_obj_t*>(parent));
 
+    // Create the XML-defined structure
+    lv_obj_t* obj = static_cast<lv_obj_t*>(
+        lv_xml_create(static_cast<lv_obj_t*>(parent), "ams_slot_view", nullptr));
     if (!obj) {
-        spdlog::error("[AmsSlot] Failed to create container object");
+        spdlog::error(
+            "[AmsSlot] Failed to create from XML - ams_slot_view component may not be registered");
         return nullptr;
     }
 
-    // Allocate and register user data
+    // Allocate user data
     auto data_ptr = std::make_unique<AmsSlotData>();
     data_ptr->slot_index = -1; // Will be set by xml_apply when slot_index attr is parsed
     AmsSlotData* data = data_ptr.get();
-    register_slot_data(obj, data_ptr.release());
+    data->container = obj;
 
-    // Register event handler for cleanup
+    // Find XML-created children by name
+    data->material_label = lv_obj_find_by_name(obj, "material_label");
+    data->spool_container = lv_obj_find_by_name(obj, "spool_container");
+    data->status_badge_bg = lv_obj_find_by_name(obj, "status_badge");
+    data->slot_badge = lv_obj_find_by_name(obj, "slot_badge_label");
+    data->tool_badge_bg = lv_obj_find_by_name(obj, "tool_badge");
+    data->tool_badge = lv_obj_find_by_name(obj, "tool_badge_label");
+
+    // Validate required children were found
+    if (!data->spool_container) {
+        spdlog::error("[AmsSlot] Failed to find spool_container in XML");
+        return obj; // Return obj anyway so it gets cleaned up properly
+    }
+
+    // Create spool visualization (stays in C++)
+    create_spool_visualization(data);
+
+    // Set up text bindings for XML-created labels
+    setup_text_bindings(data);
+
+    // Register for cleanup
+    register_slot_data(obj, data_ptr.release());
     lv_obj_add_event_cb(obj, ams_slot_event_cb, LV_EVENT_DELETE, nullptr);
 
-    // Create child widgets
-    create_slot_children(obj, data);
+    // Apply responsive slot width
+    int32_t space_lg = theme_manager_get_spacing("space_lg");
+    int32_t slot_width = (space_lg * 5) + 10; // ~90px - fits spool + padding
+    lv_obj_set_width(obj, slot_width);
 
-    spdlog::debug("[AmsSlot] Created widget");
+    spdlog::debug("[AmsSlot] Created widget from XML");
 
     return obj;
 }
@@ -794,6 +720,10 @@ static void ams_slot_xml_apply(lv_xml_parser_state_t* state, const char** attrs)
 // ============================================================================
 
 void ui_ams_slot_register(void) {
+    // Register the XML component first (defines the structural template)
+    lv_xml_register_component_from_file("A:ui_xml/ams_slot_view.xml");
+
+    // Register the custom widget (uses the XML template + adds dynamic behavior)
     lv_xml_register_widget("ams_slot", ams_slot_xml_create, ams_slot_xml_apply);
     spdlog::info("[AmsSlot] Registered ams_slot widget with XML system");
 }
