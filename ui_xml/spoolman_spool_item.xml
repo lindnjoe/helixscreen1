@@ -14,7 +14,7 @@
     <!-- Color swatch -->
     <lv_obj name="spool_swatch"
             width="32" height="32" style_radius="#border_radius_small" style_bg_color="#text_muted" style_bg_opa="255"
-            style_border_width="#input_border_width" style_border_color="#text_muted" style_border_opa="80"
+            style_border_color="#text_muted" style_border_opa="80"
             scrollable="false" clickable="false"/>
     <!-- Details column -->
     <lv_obj height="content"

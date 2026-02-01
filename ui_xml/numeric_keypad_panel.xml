@@ -34,7 +34,7 @@
               style_flex_cross_place="center" style_pad_bottom="0">
         <text_input name="input_display"
                     height="content" flex_grow="1" text="" bind_text="keypad_display" style_text_font="#font_heading"
-                    style_text_align="right" style_border_width="#input_border_width" style_radius="#border_radius"
+                    style_text_align="right" style_radius="#border_radius"
                     one_line="true" clickable="false" scrollable="false"/>
         <lv_label name="input_unit"
                   text="" style_text_font="#font_body" style_text_color="#text_muted" style_pad_left="#space_sm"/>

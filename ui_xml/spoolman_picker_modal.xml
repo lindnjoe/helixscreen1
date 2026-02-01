@@ -31,7 +31,7 @@
             scrollable="false">
       <bind_flag_if_not_eq subject="ams_picker_state" flag="hidden" ref_value="0"/>
       <lv_spinner width="32"
-                  height="32" style_arc_width_indicator="#input_border_width" style_arc_color="#primary"
+                  height="32" style_arc_width_indicator="2" style_arc_color="#primary"
                   style_arc_opa_main="0"/>
       <text_small text="Loading spools..."/>
     </lv_obj>

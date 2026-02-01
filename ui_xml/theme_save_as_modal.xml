@@ -21,7 +21,7 @@
       <!-- Theme name input -->
       <lv_textarea name="theme_name_input"
                    width="100%" height="#input_height" placeholder="My Custom Theme" max_length="32" one_line="true"
-                   style_border_width="#input_border_width" style_pad_all="#space_md" style_text_font="#font_body"
+                   style_pad_all="#space_md" style_text_font="#font_body"
                    style_margin_top="#space_sm"/>
       <!-- Status message (hidden by default) -->
       <text_small name="save_as_status"

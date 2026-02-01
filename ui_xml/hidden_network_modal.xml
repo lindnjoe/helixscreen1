@@ -35,7 +35,7 @@
         <text_body width="100%" text="Security" style_text_align="left"/>
         <lv_dropdown name="security_dropdown"
                      width="100%" height="#input_height" options="None WPA/WPA2 WPA3"
-                     style_border_width="#input_border_width" style_radius="#border_radius" style_pad_all="#space_md"
+                     style_radius="#border_radius" style_pad_all="#space_md"
                      style_text_font="#font_body">
           <event_cb trigger="value_changed" callback="on_security_changed"/>
         </lv_dropdown>
@@ -48,7 +48,7 @@
         <text_body width="100%" text="Password" style_text_align="left"/>
         <lv_textarea name="password_input"
                      width="100%" height="#input_height" placeholder="Enter password" password_mode="true"
-                     max_length="64" one_line="true" style_border_width="#input_border_width" style_pad_all="#space_md"
+                     max_length="64" one_line="true" style_pad_all="#space_md"
                      style_text_font="#font_body"/>
       </lv_obj>
       <!-- Error message (hidden when empty) -->

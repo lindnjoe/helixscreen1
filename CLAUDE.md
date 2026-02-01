@@ -108,3 +108,37 @@ Trust debug output. Impossible values = bug is UPSTREAM. Ask "what ELSE?" not "d
 ## Critical Paths (always MAJOR work)
 
 PrinterState, WebSocket/threading, shutdown, DisplayManager, XML processing
+
+---
+
+## Autonomous Sessions
+
+When given autonomous control, Claude works independently to improve HelixScreen with minimal interruption.
+
+**Scratchpad**: `.claude/scratchpad/` - Claude's workspace for:
+- Ideas and feature concepts
+- Research notes and findings
+- Work-in-progress designs
+- Lessons learned (like `animated_value_use_cases.md`)
+
+**Mission**: Make HelixScreen the best damn touchscreen UI for Klipper printers.
+
+**Autonomy Guidelines**:
+- Work independently on improvements that align with existing patterns
+- Commit working code with tests (don't leave broken state)
+- Ask user ONLY for: major architectural decisions, UX preference calls, or when truly blocked
+- Document findings in scratchpad for future sessions
+- Small failures are fine - learn and move on
+
+**Good autonomous work**:
+- Polish and micro-improvements
+- Code cleanup and consistency
+- Adding missing tests
+- Fixing obvious bugs
+- Implementing features from ROADMAP.md
+
+**Ask first**:
+- New architectural patterns
+- Removing/deprecating features
+- Changes to critical paths (see above)
+- Anything that changes user-facing behavior significantly

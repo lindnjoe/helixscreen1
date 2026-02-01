@@ -156,10 +156,6 @@
     <px name="icon_button_size" value="32"/>
     <!-- Icon-only buttons (close, edit, etc.) -->
 
-    <!-- Input field dimensions (text inputs, dropdowns, rollers) -->
-    <px name="input_border_width" value="1"/>
-    <!-- Border width for input fields (prominent for visibility) -->
-
     <!-- ===================================================================== -->
     <!-- Typography - Responsive Semantic Fonts                              -->
     <!-- ===================================================================== -->

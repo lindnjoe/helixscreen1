@@ -21,7 +21,7 @@
       <!-- Probe sensor selection -->
       <text_body text="Probe Sensor"/>
       <lv_dropdown name="probe_sensor_dropdown"
-                   width="100%" height="#header_height" options="None" style_border_width="#input_border_width"
+                   width="100%" height="#header_height" options="None"
                    style_border_opa="100%" style_radius="#border_radius" style_pad_all="#space_lg">
         <event_cb trigger="value_changed" callback="on_probe_sensor_dropdown_changed"/>
       </lv_dropdown>

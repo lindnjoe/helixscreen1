@@ -20,7 +20,7 @@
     <!-- Textarea input with configurable name for C++ lookup -->
     <lv_textarea name="$input_name"
                  width="100%" height="#input_height" placeholder="$placeholder" max_length="$max_length" one_line="true"
-                 password_mode="$password_mode" style_border_width="#input_border_width" style_pad_all="#space_md"
+                 password_mode="$password_mode" style_pad_all="#space_md"
                  style_text_font="#font_body"/>
   </view>
 </component>

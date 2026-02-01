@@ -42,7 +42,7 @@
         <!-- Command textarea (read-only, displays curl command) -->
         <lv_textarea name="command_textarea"
                      width="100%" height="content" text="" max_length="256" one_line="false" clickable="false"
-                     scrollable="false" style_border_width="#input_border_width" style_pad_all="#space_sm"
+                     scrollable="false" style_pad_all="#space_sm"
                      style_text_font="#font_small" style_margin_top="#space_sm" style_min_height="56"/>
         <!-- Copy feedback -->
         <text_small name="copy_feedback"

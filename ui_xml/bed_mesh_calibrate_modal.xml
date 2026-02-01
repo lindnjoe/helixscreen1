@@ -53,7 +53,7 @@
       <!-- Profile name input -->
       <lv_textarea name="calibrate_profile_name_input"
                    width="100%" height="#input_height" placeholder="Profile name (e.g., default)" max_length="32"
-                   one_line="true" style_border_width="#input_border_width" style_pad_all="#space_md"
+                   one_line="true" style_pad_all="#space_md"
                    style_text_font="#font_body" style_margin_top="#space_xs"/>
     </lv_obj>
     <!-- ============================================================ -->
