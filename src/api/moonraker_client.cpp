@@ -22,6 +22,7 @@
 #include "printer_state.h"
 
 #include <algorithm> // For std::sort in MCU query handling
+#include <sstream>   // For annotate_gcode()
 
 using namespace hv;
 
@@ -35,6 +36,35 @@ std::atomic<bool> g_already_notified_disconnect{false};
 void reset_notification_flags() {
     g_already_notified_max_attempts.store(false);
     g_already_notified_disconnect.store(false);
+}
+
+// Annotate G-code with source comment for traceability
+// Handles multi-line G-code by adding comment to each line
+std::string annotate_gcode(const std::string& gcode) {
+    constexpr const char* GCODE_SOURCE_COMMENT = " ; from helixscreen";
+
+    std::string result;
+    result.reserve(gcode.size() + 20 * std::count(gcode.begin(), gcode.end(), '\n') + 20);
+
+    std::istringstream stream(gcode);
+    std::string line;
+    bool first = true;
+
+    while (std::getline(stream, line)) {
+        if (!first) {
+            result += '\n';
+        }
+        first = false;
+
+        // Only add comment to non-empty lines
+        if (!line.empty() && line.find_first_not_of(" \t\r") != std::string::npos) {
+            result += line + GCODE_SOURCE_COMMENT;
+        } else {
+            result += line;
+        }
+    }
+
+    return result;
 }
 } // namespace
 
@@ -965,7 +995,8 @@ bool MoonrakerClient::cancel_request(RequestId id) {
 }
 
 int MoonrakerClient::gcode_script(const std::string& gcode) {
-    json params = {{"script", gcode}};
+    std::string annotated = annotate_gcode(gcode);
+    json params = {{"script", annotated}};
     return send_jsonrpc("printer.gcode.script", params);
 }
 

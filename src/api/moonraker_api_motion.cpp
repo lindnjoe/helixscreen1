@@ -9,6 +9,7 @@
 #include "moonraker_api_internal.h"
 #include "spdlog/spdlog.h"
 
+#include <algorithm>
 #include <sstream>
 
 using namespace moonraker_internal;
@@ -420,15 +421,47 @@ void MoonrakerAPI::set_device_power(const std::string& device, const std::string
 // System Control Operations
 // ============================================================================
 
+namespace {
+// Annotate G-code with source comment for traceability
+// Handles multi-line G-code by adding comment to each line
+std::string annotate_gcode(const std::string& gcode) {
+    constexpr const char* GCODE_SOURCE_COMMENT = " ; from helixscreen";
+
+    std::string result;
+    result.reserve(gcode.size() + 20 * std::count(gcode.begin(), gcode.end(), '\n') + 20);
+
+    std::istringstream stream(gcode);
+    std::string line;
+    bool first = true;
+
+    while (std::getline(stream, line)) {
+        if (!first) {
+            result += '\n';
+        }
+        first = false;
+
+        // Only add comment to non-empty lines
+        if (!line.empty() && line.find_first_not_of(" \t\r") != std::string::npos) {
+            result += line + GCODE_SOURCE_COMMENT;
+        } else {
+            result += line;
+        }
+    }
+
+    return result;
+}
+} // namespace
+
 // ============================================================================
 // System Control Operations
 // ============================================================================
 
 void MoonrakerAPI::execute_gcode(const std::string& gcode, SuccessCallback on_success,
                                  ErrorCallback on_error) {
-    json params = {{"script", gcode}};
+    std::string annotated = annotate_gcode(gcode);
+    json params = {{"script", annotated}};
 
-    spdlog::debug("[Moonraker API] Executing G-code: {}", gcode);
+    spdlog::debug("[Moonraker API] Executing G-code: {}", annotated);
 
     client_.send_jsonrpc(
         "printer.gcode.script", params, [on_success](json) { on_success(); }, on_error);
