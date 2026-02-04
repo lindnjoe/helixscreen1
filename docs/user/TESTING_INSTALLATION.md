@@ -274,12 +274,20 @@ ps --no-headers -o comm 1
    ls /opt/helixscreen 2>/dev/null && echo "EXISTS - uninstall first" || echo "CLEAN"
    ```
 
-3. **Run installer:**
+3. **Download and copy from your computer** (AD5M lacks HTTPS support):
    ```bash
-   curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install.sh | sh
+   # On your computer:
+   wget https://github.com/prestonbrown/helixscreen/releases/latest/download/helixscreen-ad5m.tar.gz
+   wget https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install.sh
+   scp -O helixscreen-ad5m.tar.gz install.sh root@<printer-ip>:/data/
    ```
 
-4. **Verify installation:**
+4. **Run installer on printer:**
+   ```bash
+   sh /data/install.sh --local /data/helixscreen-ad5m.tar.gz
+   ```
+
+5. **Verify installation:**
    ```bash
    # Binary exists and runs
    /opt/helixscreen/bin/helix-screen --help | head -1
@@ -297,13 +305,13 @@ ps --no-headers -o comm 1
    # Should NOT have 'x' (execute) permission
    ```
 
-5. **Verify backlight patch:**
+6. **Verify backlight patch:**
    ```bash
    grep helixscreen_active /opt/config/mod/.shell/screen.sh
    # Should find the patch
    ```
 
-6. **Reboot test:**
+7. **Reboot test:**
    ```bash
    reboot
    ```
@@ -311,7 +319,7 @@ ps --no-headers -o comm 1
    - HelixScreen should appear on touchscreen
    - Backlight should be at full brightness (not dimmed)
 
-7. **Post-reboot verification:**
+8. **Post-reboot verification:**
    ```bash
    # Service running
    /etc/init.d/S90helixscreen status
@@ -325,21 +333,28 @@ ps --no-headers -o comm 1
 
 #### Upgrade Install Test
 
-1. **Run with --update:**
+1. **Download new release and copy** (same two-step process):
    ```bash
-   curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install.sh | sh -s -- --update
+   # On your computer:
+   wget https://github.com/prestonbrown/helixscreen/releases/latest/download/helixscreen-ad5m.tar.gz
+   scp -O helixscreen-ad5m.tar.gz root@<printer-ip>:/data/
    ```
 
-2. **Verify config preserved:**
+2. **Run with --update:**
+   ```bash
+   sh /data/install.sh --local /data/helixscreen-ad5m.tar.gz --update
+   ```
+
+3. **Verify config preserved:**
    ```bash
    cat /opt/helixscreen/helixconfig.json | head -5
    ```
 
 #### Uninstall Test
 
-1. **Run uninstaller:**
+1. **Run uninstaller** (install.sh should already be on printer from install):
    ```bash
-   curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install.sh | sh -s -- --uninstall
+   sh /data/install.sh --uninstall
    ```
 
 2. **Verify removal and GuppyScreen restoration:**
@@ -377,12 +392,20 @@ ps --no-headers -o comm 1
    ls /root/printer_software/helixscreen 2>/dev/null && echo "EXISTS - uninstall first" || echo "CLEAN"
    ```
 
-3. **Run installer:**
+3. **Download and copy from your computer** (AD5M lacks HTTPS support):
    ```bash
-   curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install.sh | sh
+   # On your computer:
+   wget https://github.com/prestonbrown/helixscreen/releases/latest/download/helixscreen-ad5m.tar.gz
+   wget https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install.sh
+   scp -O helixscreen-ad5m.tar.gz install.sh root@<printer-ip>:/data/
    ```
 
-4. **Verify installation:**
+4. **Run installer on printer:**
+   ```bash
+   sh /data/install.sh --local /data/helixscreen-ad5m.tar.gz
+   ```
+
+5. **Verify installation:**
    ```bash
    # Binary exists (note different path!)
    /root/printer_software/helixscreen/bin/helix-screen --help | head -1
@@ -402,13 +425,13 @@ ps --no-headers -o comm 1
    # Should NOT have 'x' permission
    ```
 
-5. **Reboot test:**
+7. **Reboot test:**
    ```bash
    reboot
    ```
    After reboot, HelixScreen should appear on touchscreen.
 
-6. **Post-reboot verification:**
+8. **Post-reboot verification:**
    ```bash
    # Service running
    /etc/init.d/S80helixscreen status
@@ -419,9 +442,9 @@ ps --no-headers -o comm 1
 
 #### Uninstall Test
 
-1. **Run uninstaller:**
+1. **Run uninstaller** (install.sh should already be on printer from install):
    ```bash
-   curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install.sh | sh -s -- --uninstall
+   sh /data/install.sh --uninstall
    ```
 
 2. **Verify removal and KlipperScreen restoration:**

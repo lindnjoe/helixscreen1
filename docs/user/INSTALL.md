@@ -132,7 +132,7 @@ On uninstall, GuppyScreen is restored.
 
 ---
 
-## MainsailOS Installation
+## Raspberry Pi / MainsailOS Installation
 
 ### Step 1: Connect to Your Pi
 
@@ -146,68 +146,23 @@ ssh pi@192.168.1.xxx
 
 Default password is usually `raspberry` unless you changed it.
 
-### Step 2: Download HelixScreen
+### Step 2: Run the Installer
 
 ```bash
-# Create installation directory
-cd ~
-
-# Download the latest release
-wget https://github.com/prestonbrown/helixscreen/releases/latest/download/helixscreen-pi.tar.gz
-
-# Extract
-tar -xzf helixscreen-pi.tar.gz
+curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install.sh | sh
 ```
 
-### Step 3: Install HelixScreen
+The installer automatically:
+1. Detects your platform
+2. Downloads the correct release
+3. Stops any competing UIs (KlipperScreen, etc.)
+4. Installs to `/opt/helixscreen/`
+5. Configures and starts the systemd service
+6. Sets up Moonraker update_manager for web UI updates
 
-```bash
-cd helixscreen
+### Step 3: Complete the Setup Wizard
 
-# Copy files to installation directory
-sudo mkdir -p /opt/helixscreen
-sudo cp -r bin config ui_xml assets /opt/helixscreen/
-
-# Install systemd service
-sudo cp config/helixscreen.service /etc/systemd/system/
-sudo systemctl daemon-reload
-```
-
-The package structure is:
-```
-helixscreen/
-├── bin/                    # Executables
-│   ├── helix-screen        # Main UI binary
-│   ├── helix-splash        # Splash screen binary
-│   ├── helix-watchdog      # Process supervisor
-│   └── helix-launcher.sh   # Launch script
-├── config/                 # Service config files
-│   ├── helixscreen.init    # SysV init script
-│   └── helixscreen.service # systemd unit file
-├── ui_xml/                 # UI layout definitions
-└── assets/                 # Fonts, images, themes
-```
-
-This will:
-1. Copy files to `/opt/helixscreen/`
-2. Install the systemd service
-3. Configure for automatic startup
-
-### Step 4: Start HelixScreen
-
-```bash
-# Start the service
-sudo systemctl start helixscreen
-
-# Verify it's running
-sudo systemctl status helixscreen
-```
-
-You should see a splash screen briefly, then the setup wizard on your display.
-
-### Step 5: Complete the Setup Wizard
-
-The on-screen wizard will guide you through:
+After installation, HelixScreen starts automatically. The on-screen wizard guides you through:
 1. WiFi configuration (if not connected via Ethernet)
 2. Finding your Moonraker instance
 3. Identifying your printer
@@ -514,6 +469,12 @@ cat /tmp/helixscreen.log  # View logs
 cat /tmp/helixscreen.log  # View logs
 ```
 
+**K1/Simple AF (SysV init):**
+```bash
+/etc/init.d/S99helixscreen start|stop|restart|status
+cat /tmp/helixscreen.log  # View logs
+```
+
 ### Disabling Other UIs
 
 If you have another UI installed, disable it to avoid conflicts:
@@ -537,6 +498,13 @@ chmod -x /opt/config/mod/.root/S80guppyscreen
 # Disable KlipperScreen
 /etc/init.d/S80klipperscreen stop
 chmod -x /etc/init.d/S80klipperscreen
+```
+
+**K1/Simple AF (SysV init):**
+```bash
+# Disable GuppyScreen
+/etc/init.d/S99guppyscreen stop
+chmod -x /etc/init.d/S99guppyscreen
 ```
 
 > **Note:** The HelixScreen installer automatically stops and disables competing UIs.
@@ -700,6 +668,25 @@ reboot
 ```
 </details>
 
+<details>
+<summary>K1/Simple AF</summary>
+
+```bash
+# Stop and remove service
+/etc/init.d/S99helixscreen stop
+rm /etc/init.d/S99helixscreen
+
+# Remove files
+rm -rf /usr/data/helixscreen
+
+# Re-enable GuppyScreen
+chmod +x /etc/init.d/S99guppyscreen 2>/dev/null || true
+
+# Reboot to restore GuppyScreen
+reboot
+```
+</details>
+
 ---
 
 ## Getting Help
@@ -720,7 +707,7 @@ sudo journalctl -u helixscreen -f
 sudo journalctl -u helixscreen -p err
 ```
 
-**AD5M (SysV init):**
+**AD5M / K1 (SysV init):**
 ```bash
 # View log file
 cat /tmp/helixscreen.log

@@ -6,14 +6,19 @@ This guide helps you upgrade HelixScreen to a newer version.
 
 ## Quick Upgrade
 
-The easiest way to upgrade is using the install script:
-
+**Raspberry Pi / Creality K1:**
 ```bash
-# MainsailOS (Pi)
-curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install.sh | bash -s -- --update
-
-# Adventurer 5M
 curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install.sh | sh -s -- --update
+```
+
+**Adventurer 5M** (no HTTPS support - two-step process):
+```bash
+# On your computer:
+wget https://github.com/prestonbrown/helixscreen/releases/latest/download/helixscreen-ad5m.tar.gz
+scp -O helixscreen-ad5m.tar.gz root@<printer-ip>:/data/
+
+# On the printer:
+sh /data/install.sh --local /data/helixscreen-ad5m.tar.gz --update
 ```
 
 This preserves your settings and updates to the latest version.
@@ -46,6 +51,12 @@ rm /root/printer_software/helixscreen/helixconfig.json
 /etc/init.d/S80helixscreen restart
 ```
 
+**Creality K1 (Simple AF):**
+```bash
+rm /usr/data/helixscreen/helixconfig.json
+/etc/init.d/S99helixscreen restart
+```
+
 After restarting, the wizard will guide you through setup again. Your printer settings (Klipper, Moonraker) are not affected - only HelixScreen's display preferences need to be reconfigured.
 
 ### Alternative: Factory Reset from UI
@@ -76,11 +87,12 @@ Your Klipper configuration, Moonraker settings, print history, and G-code files 
 
 ## Upgrade to Specific Version
 
-To install a specific version instead of the latest:
-
+**Raspberry Pi / Creality K1:**
 ```bash
-curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install.sh | bash -s -- --update --version v1.2.0
+curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install.sh | sh -s -- --update --version v1.2.0
 ```
+
+**Adventurer 5M:** Download the specific version tarball from [GitHub Releases](https://github.com/prestonbrown/helixscreen/releases), then use `--local` as shown above.
 
 ---
 
@@ -90,7 +102,17 @@ curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/script
 
 **Via SSH:**
 ```bash
+# Pi:
 /opt/helixscreen/bin/helix-screen --help | head -1
+
+# K1:
+/usr/data/helixscreen/bin/helix-screen --help | head -1
+
+# AD5M (Forge-X):
+/opt/helixscreen/bin/helix-screen --help | head -1
+
+# AD5M (Klipper Mod):
+/root/printer_software/helixscreen/bin/helix-screen --help | head -1
 ```
 
 ---
@@ -102,7 +124,7 @@ If you encounter issues after upgrading:
 1. Check [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for common problems
 2. View logs for error messages:
    - **Pi:** `sudo journalctl -u helixscreen -n 50`
-   - **AD5M:** `cat /tmp/helixscreen.log | tail -50`
+   - **AD5M / K1:** `tail -50 /tmp/helixscreen.log`
 3. Open an issue on [GitHub](https://github.com/prestonbrown/helixscreen/issues) with your version and any error messages
 
 ---
