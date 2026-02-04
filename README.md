@@ -142,3 +142,5 @@ GPL v3 — See individual source files for copyright headers.
 **Inspired by:** [GuppyScreen](https://github.com/ballaswag/guppyscreen) (general architecture, LVGL-based approach), [KlipperScreen](https://github.com/KlipperScreen/KlipperScreen) (feature inspiration)
 
 **Stack:** [LVGL 9.4](https://lvgl.io/), [Klipper](https://www.klipper3d.org/), [Moonraker](https://github.com/Arksine/moonraker), [libhv](https://github.com/ithewei/libhv), [spdlog](https://github.com/gabime/spdlog), [SDL2](https://www.libsdl.org/)
+
+**AI-Assisted Development:** HelixScreen was developed with the assistance of [Claude Code](https://github.com/anthropics/claude-code) and [Anthropic](https://www.anthropic.com/)'s Claude AI models
