@@ -13,7 +13,9 @@
   <img src="https://img.shields.io/badge/platform-Linux%20%7C%20macOS-lightgrey.svg" alt="Platform">
 </p>
 
-HelixScreen is a printer control interface built with LVGL 9's declarative XML system. Designed for embedded hardware, it brings advanced Klipper features to printers that ship with limited vendor UIs.
+Stock touchscreen UIs barely scratch the surface of what Klipper can do—and the good stuff (bed mesh visualization, input shaper graphs, multi-material control) lives in your browser. HelixScreen brings it all to your fingertips.
+
+Built on LVGL 9's modern declarative XML system, HelixScreen delivers a fast, polished experience across the entire Klipper ecosystem—from resource-constrained machines like the Creality K1 and FlashForge AD5M to custom Vorons, RatRigs, and high-end builds.
 
 ---
 
@@ -21,7 +23,7 @@ HelixScreen is a printer control interface built with LVGL 9's declarative XML s
 >
 > Core features are complete. We're looking for early adopters to help find edge cases.
 >
-> **Tested on:** Raspberry Pi 5, FlashForge Adventurer 5M Pro ([Forge-X](https://github.com/DrA1ex/ff5m) firmware)
+> **Tested on:** Voron 2.4 (Raspberry Pi 5), FlashForge Adventurer 5M Pro ([Forge-X](https://github.com/DrA1ex/ff5m) firmware)
 >
 > **Ready to help?** See [Quick Start](#quick-start). Issues and feedback welcome!
 
@@ -36,6 +38,7 @@ HelixScreen is a printer control interface built with LVGL 9's declarative XML s
 - **Declarative XML UI** — Change layouts without recompiling
 - **Reactive Data Binding** — Subject-Observer pattern for automatic UI updates
 - **Resource Efficient** — ~50-80MB footprint, runs on constrained hardware
+- **Scales Anywhere** — From a Creality K1 to a tricked-out Voron
 - **Modern C++17** — Type-safe architecture with RAII memory management
 
 | Feature | HelixScreen | GuppyScreen | KlipperScreen |
@@ -45,7 +48,7 @@ HelixScreen is a printer control interface built with LVGL 9's declarative XML s
 | Disk Size | ~50-80MB | ~60-80MB | ~150-200MB |
 | RAM Usage | ~12MB | ~15-20MB | ~40MB |
 | Reactive Binding | Built-in | Manual | Manual |
-| Status | Beta | Stable | Mature |
+| Status | Beta | Unmaintained | Mature (maintenance) |
 | Language | C++17 | C | Python 3 |
 
 ## Screenshots
