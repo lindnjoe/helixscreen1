@@ -18,6 +18,7 @@
 #include "asset_manager.h"
 #include "config.h"
 #include "display_manager.h"
+#include "environment_config.h"
 #include "hardware_validator.h"
 #include "moonraker_manager.h"
 #include "panel_factory.h"
@@ -465,36 +466,28 @@ bool Application::parse_args(int argc, char** argv) {
     // Auto-configure mock state based on requested panel (after parsing args)
     auto_configure_mock_state();
 
-    // Check HELIX_AUTO_QUIT_MS environment variable
+    // Apply environment variable overrides using type-safe EnvironmentConfig
+    using EnvConfig = helix::config::EnvironmentConfig;
+
+    // HELIX_AUTO_QUIT_MS: auto-quit timeout (100ms - 1hr)
     if (m_args.timeout_sec == 0) {
-        const char* auto_quit_env = std::getenv("HELIX_AUTO_QUIT_MS");
-        if (auto_quit_env != nullptr) {
-            char* endptr;
-            long val = strtol(auto_quit_env, &endptr, 10);
-            if (*endptr == '\0' && val >= 100 && val <= 3600000) {
-                m_args.timeout_sec = static_cast<int>((val + 999) / 1000);
-            }
+        if (auto timeout = EnvConfig::get_auto_quit_seconds()) {
+            m_args.timeout_sec = *timeout;
         }
     }
 
-    // Check HELIX_AUTO_SCREENSHOT
-    const char* auto_screenshot_env = std::getenv("HELIX_AUTO_SCREENSHOT");
-    if (auto_screenshot_env != nullptr && strcmp(auto_screenshot_env, "1") == 0) {
+    // HELIX_AUTO_SCREENSHOT: enable screenshot mode
+    if (EnvConfig::get_screenshot_enabled()) {
         m_args.screenshot_enabled = true;
     }
 
-    // Check HELIX_AMS_GATES
-    const char* ams_gates_env = std::getenv("HELIX_AMS_GATES");
-    if (ams_gates_env != nullptr) {
-        char* endptr;
-        long val = strtol(ams_gates_env, &endptr, 10);
-        if (*endptr == '\0' && val >= 1 && val <= 16) {
-            get_runtime_config()->mock_ams_gate_count = static_cast<int>(val);
-        }
+    // HELIX_AMS_GATES: mock AMS gate count (1-16)
+    if (auto gates = EnvConfig::get_mock_ams_gates()) {
+        get_runtime_config()->mock_ams_gate_count = *gates;
     }
 
-    // Check benchmark mode
-    m_benchmark_mode = (std::getenv("HELIX_BENCHMARK") != nullptr);
+    // HELIX_BENCHMARK: benchmark mode
+    m_benchmark_mode = EnvConfig::get_benchmark_mode();
     if (m_benchmark_mode) {
         spdlog::info("[Application] Benchmark mode enabled");
     }
