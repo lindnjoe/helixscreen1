@@ -67,13 +67,8 @@ ControlsPanel::ControlsPanel(PrinterState& printer_state, MoonrakerAPI* api)
 ControlsPanel::~ControlsPanel() {
     deinit_subjects();
 
-    // CRITICAL: Check if LVGL is still initialized before calling LVGL functions.
-    // During static destruction, LVGL may already be torn down.
-    if (!lv_is_initialized()) {
-        return;
-    }
-
     // Clean up lazily-created overlay panels to prevent dangling LVGL objects
+    // Note: safe_delete_obj handles shutdown guards (lv_is_initialized, is_destroying_all, etc.)
     using helix::ui::safe_delete_obj;
     safe_delete_obj(motion_panel_);
     safe_delete_obj(nozzle_temp_panel_);

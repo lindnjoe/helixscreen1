@@ -24,6 +24,7 @@
  */
 
 #include "lvgl.h"
+#include "static_panel_registry.h"
 
 namespace helix::ui {
 
@@ -32,13 +33,25 @@ namespace helix::ui {
  * @param obj Reference to object pointer (will be nulled after deletion)
  *
  * Safe to call with nullptr - no-op in that case.
+ * Skips deletion during shutdown (lv_deinit will clean up).
  * Prevents double-free by nulling pointer after deletion.
  */
 inline void safe_delete_obj(lv_obj_t*& obj) {
-    if (obj) {
-        lv_obj_del(obj);
-        obj = nullptr;
+    if (!obj) {
+        return;
     }
+    // Skip if LVGL not initialized or no display exists
+    if (!lv_is_initialized() || !lv_display_get_next(nullptr)) {
+        obj = nullptr;
+        return;
+    }
+    // Skip during destroy_all() - lv_deinit() will clean up all widgets
+    if (StaticPanelRegistry::is_destroying_all()) {
+        obj = nullptr;
+        return;
+    }
+    lv_obj_del(obj);
+    obj = nullptr;
 }
 
 /**
@@ -46,13 +59,25 @@ inline void safe_delete_obj(lv_obj_t*& obj) {
  * @param timer Reference to timer pointer (will be nulled after deletion)
  *
  * Safe to call with nullptr - no-op in that case.
+ * Skips deletion during shutdown (lv_deinit will clean up).
  * Prevents double-free by nulling pointer after deletion.
  */
 inline void safe_delete_timer(lv_timer_t*& timer) {
-    if (timer) {
-        lv_timer_delete(timer);
-        timer = nullptr;
+    if (!timer) {
+        return;
     }
+    // Skip if LVGL not initialized
+    if (!lv_is_initialized()) {
+        timer = nullptr;
+        return;
+    }
+    // Skip during destroy_all() - lv_deinit() will clean up all timers
+    if (StaticPanelRegistry::is_destroying_all()) {
+        timer = nullptr;
+        return;
+    }
+    lv_timer_delete(timer);
+    timer = nullptr;
 }
 
 } // namespace helix::ui

@@ -20,6 +20,7 @@
 #include "settings_manager.h"
 #include "static_panel_registry.h"
 #include "thumbnail_cache.h"
+#include "ui/ui_cleanup_helpers.h"
 
 #include <spdlog/spdlog.h>
 
@@ -326,11 +327,7 @@ void HistoryListPanel::on_deactivate() {
     }
 
     // Cancel any pending search timer
-    // Guard against LVGL shutdown - timer may already be destroyed
-    if (search_timer_ && lv_is_initialized()) {
-        lv_timer_delete(search_timer_);
-        search_timer_ = nullptr;
-    }
+    helix::ui::safe_delete_timer(search_timer_);
 
     // Reset filter state for fresh start on next activation
     search_query_.clear();
@@ -848,11 +845,7 @@ void HistoryListPanel::apply_sort(std::vector<PrintHistoryJob>& jobs) {
 
 void HistoryListPanel::on_search_changed() {
     // Cancel existing timer if any
-    // Guard against LVGL shutdown - timer may already be destroyed
-    if (search_timer_ && lv_is_initialized()) {
-        lv_timer_delete(search_timer_);
-        search_timer_ = nullptr;
-    }
+    helix::ui::safe_delete_timer(search_timer_);
 
     // Create debounce timer (300ms)
     search_timer_ = lv_timer_create(on_search_timer_static, 300, this);
