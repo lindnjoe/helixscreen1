@@ -91,28 +91,35 @@ install_runtime_deps() {
 }
 
 # Check available disk space
-# Requires at least 50MB free on /opt
+# Requires at least 50MB free on the install directory's filesystem
+# Note: INSTALL_DIR must be set before calling this function
 check_disk_space() {
     local platform=$1
     local required_mb=50
 
+    # Get the parent directory of install location (the filesystem to check)
+    local check_dir
+    check_dir=$(dirname "${INSTALL_DIR:-/opt/helixscreen}")
+    # If parent doesn't exist yet, go up another level
+    [ -d "$check_dir" ] || check_dir=$(dirname "$check_dir")
+
     # Get available space in MB
     local available_mb
-    if [ "$platform" = "ad5m" ]; then
+    if [ "$platform" = "ad5m" ] || [ "$platform" = "k1" ]; then
         # BusyBox df output format: blocks are in KB by default
-        available_mb=$(df /opt 2>/dev/null | tail -1 | awk '{print int($4/1024)}')
+        available_mb=$(df "$check_dir" 2>/dev/null | tail -1 | awk '{print int($4/1024)}')
     else
         # GNU df with -m flag outputs in MB
-        available_mb=$(df -m /opt 2>/dev/null | tail -1 | awk '{print $4}')
+        available_mb=$(df -m "$check_dir" 2>/dev/null | tail -1 | awk '{print $4}')
     fi
 
     if [ -n "$available_mb" ] && [ "$available_mb" -lt "$required_mb" ]; then
-        log_error "Insufficient disk space on /opt"
+        log_error "Insufficient disk space on $check_dir"
         log_error "Required: ${required_mb}MB, Available: ${available_mb}MB"
         exit 1
     fi
 
-    log_info "Disk space check: ${available_mb}MB available"
+    log_info "Disk space check: ${available_mb}MB available on $check_dir"
 }
 
 # Detect init system (systemd vs SysV)

@@ -37,6 +37,7 @@ get_latest_version() {
 download_release() {
     local version=$1
     local platform=$2
+
     local filename="helixscreen-${platform}-${version}.tar.gz"
     local url="https://github.com/${GITHUB_REPO}/releases/download/${version}/${filename}"
     local dest="${TMP_DIR}/helixscreen.tar.gz"
@@ -113,9 +114,9 @@ extract_release() {
     # Create parent directory
     $SUDO mkdir -p "$(dirname "${INSTALL_DIR}")"
 
-    # Extract - AD5M uses BusyBox tar which doesn't support -z
+    # Extract - AD5M and K1 use BusyBox tar which doesn't support -z
     cd "$(dirname "${INSTALL_DIR}")" || exit 1
-    if [ "$platform" = "ad5m" ]; then
+    if [ "$platform" = "ad5m" ] || [ "$platform" = "k1" ]; then
         if ! gunzip -c "$tarball" | $SUDO tar xf -; then
             log_error "Failed to extract tarball."
             log_error "The archive may be corrupted."

@@ -13,14 +13,14 @@ _HELIX_PERMISSIONS_SOURCED=1
 # Initialize SUDO (will be set by check_permissions)
 SUDO=""
 
-# Check if running as root (required for AD5M, optional for Pi)
+# Check if running as root (required for AD5M/K1, optional for Pi)
 # Sets: SUDO variable ("sudo" or "")
 check_permissions() {
     local platform=$1
 
-    if [ "$platform" = "ad5m" ]; then
+    if [ "$platform" = "ad5m" ] || [ "$platform" = "k1" ]; then
         if [ "$(id -u)" != "0" ]; then
-            log_error "AD5M installation requires root privileges."
+            log_error "Installation on $platform requires root privileges."
             log_error "Please run: sudo $0 $*"
             exit 1
         fi

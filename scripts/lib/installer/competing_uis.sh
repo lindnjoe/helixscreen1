@@ -11,7 +11,8 @@
 _HELIX_COMPETING_UIS_SOURCED=1
 
 # Known competing screen UIs to stop
-COMPETING_UIS="guppyscreen GuppyScreen KlipperScreen klipperscreen featherscreen FeatherScreen"
+# Includes: GuppyScreen (AD5M/K1), Grumpyscreen (K1/Simple AF), KlipperScreen, FeatherScreen
+COMPETING_UIS="guppyscreen GuppyScreen grumpyscreen Grumpyscreen KlipperScreen klipperscreen featherscreen FeatherScreen"
 
 # Stop competing screen UIs (GuppyScreen, KlipperScreen, Xorg, etc.)
 stop_competing_uis() {
@@ -78,11 +79,13 @@ stop_competing_uis() {
 
         # Check SysV init scripts (various locations)
         for initscript in /etc/init.d/S*${ui}* /etc/init.d/${ui}* /opt/config/mod/.root/S*${ui}*; do
+            # Skip if glob didn't match any files (literal pattern returned)
+            [ -e "$initscript" ] || continue
             # Skip if this is the PREVIOUS_UI_SCRIPT we already handled
             if [ "$initscript" = "$PREVIOUS_UI_SCRIPT" ]; then
                 continue
             fi
-            if [ -x "$initscript" ] 2>/dev/null; then
+            if [ -x "$initscript" ]; then
                 log_info "Stopping $ui ($initscript)..."
                 $SUDO "$initscript" stop 2>/dev/null || true
                 # Disable by removing execute permission (non-destructive)

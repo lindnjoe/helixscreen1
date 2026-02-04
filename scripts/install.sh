@@ -39,7 +39,8 @@ if [ -z "${_HELIX_BUNDLED_INSTALLER:-}" ]; then
     . "$LIB_DIR/competing_uis.sh"
     . "$LIB_DIR/release.sh"
     . "$LIB_DIR/service.sh"
-    . "$LIB_DIR/uninstall.sh"
+    . "$LIB_DIR/moonraker.sh"
+    . "$LIB_DIR/uninstall.sh"  # Must be last - uses functions from other modules
 fi
 
 # Set up error trap
@@ -123,14 +124,20 @@ main() {
         log_error "HelixScreen supports:"
         log_error "  - Raspberry Pi (aarch64/armv7l)"
         log_error "  - FlashForge Adventurer 5M (armv7l)"
+        log_error "  - Creality K1 series with Simple AF"
         exit 1
     fi
 
     # For AD5M, detect firmware variant and set appropriate paths
+    local firmware=""
     if [ "$platform" = "ad5m" ]; then
         AD5M_FIRMWARE=$(detect_ad5m_firmware)
+        firmware="$AD5M_FIRMWARE"
+    elif [ "$platform" = "k1" ]; then
+        K1_FIRMWARE=$(detect_k1_firmware)
+        firmware="$K1_FIRMWARE"
     fi
-    set_install_paths "$platform" "$AD5M_FIRMWARE"
+    set_install_paths "$platform" "$firmware"
 
     # Check permissions
     check_permissions "$platform"
@@ -185,6 +192,9 @@ main() {
     extract_release "$platform"
     install_service "$platform"
 
+    # Configure Moonraker update_manager (Pi only - enables web UI updates)
+    configure_moonraker_updates "$platform"
+
     # Start service
     start_service
 
@@ -210,7 +220,7 @@ main() {
     fi
     echo ""
 
-    if [ "$platform" = "ad5m" ]; then
+    if [ "$platform" = "ad5m" ] || [ "$platform" = "k1" ]; then
         echo "Note: You may need to reboot for the display to update."
     fi
 }

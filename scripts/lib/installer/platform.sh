@@ -1,10 +1,10 @@
 #!/bin/sh
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Module: platform
-# Platform detection: AD5M vs Pi, firmware variant, installation paths
+# Platform detection: AD5M vs K1 vs Pi, firmware variant, installation paths
 #
 # Reads: -
-# Writes: PLATFORM, AD5M_FIRMWARE, INSTALL_DIR, INIT_SCRIPT_DEST, PREVIOUS_UI_SCRIPT, TMP_DIR
+# Writes: PLATFORM, AD5M_FIRMWARE, K1_FIRMWARE, INSTALL_DIR, INIT_SCRIPT_DEST, PREVIOUS_UI_SCRIPT, TMP_DIR
 
 # Source guard
 [ -n "${_HELIX_PLATFORM_SOURCED:-}" ] && return 0
@@ -16,9 +16,10 @@ _HELIX_PLATFORM_SOURCED=1
 INIT_SCRIPT_DEST=""
 PREVIOUS_UI_SCRIPT=""
 AD5M_FIRMWARE=""
+K1_FIRMWARE=""
 
 # Detect platform
-# Returns: "ad5m", "pi", or "unsupported"
+# Returns: "ad5m", "k1", "pi", or "unsupported"
 detect_platform() {
     local arch kernel
     arch=$(uname -m)
@@ -30,6 +31,30 @@ detect_platform() {
         if echo "$kernel" | grep -q "ad5m\|5.4.61"; then
             echo "ad5m"
             return
+        fi
+    fi
+
+    # Check for Creality K1 series (Simple AF or stock with Klipper)
+    # K1 uses buildroot and has /usr/data structure
+    if [ -f /etc/os-release ] && grep -q "buildroot" /etc/os-release 2>/dev/null; then
+        # Buildroot-based system - check for K1 indicators
+        if [ -d "/usr/data" ]; then
+            # Check for K1-specific indicators (require at least 2 for confidence)
+            # - get_sn_mac.sh is a Creality-specific script
+            # - /usr/data/pellcorp is Simple AF
+            # - /usr/data/printer_data with klipper is a strong K1 indicator
+            local k1_indicators=0
+            [ -x "/usr/bin/get_sn_mac.sh" ] && k1_indicators=$((k1_indicators + 1))
+            [ -d "/usr/data/pellcorp" ] && k1_indicators=$((k1_indicators + 1))
+            [ -d "/usr/data/printer_data" ] && k1_indicators=$((k1_indicators + 1))
+            [ -d "/usr/data/klipper" ] && k1_indicators=$((k1_indicators + 1))
+            # Also check for Creality-specific paths
+            [ -f "/usr/data/creality/userdata/config/system_config.json" ] && k1_indicators=$((k1_indicators + 1))
+
+            if [ "$k1_indicators" -ge 2 ]; then
+                echo "k1"
+                return
+            fi
         fi
     fi
 
@@ -77,6 +102,26 @@ detect_ad5m_firmware() {
     echo "forge_x"
 }
 
+# Detect K1 firmware variant (Simple AF vs other)
+# Only called when platform is "k1"
+# Returns: "simple_af" or "stock_klipper"
+detect_k1_firmware() {
+    # Simple AF (pellcorp/creality) indicators
+    if [ -d "/usr/data/pellcorp" ]; then
+        echo "simple_af"
+        return
+    fi
+
+    # Check for GuppyScreen which Simple AF installs
+    if [ -d "/usr/data/guppyscreen" ] && [ -f "/etc/init.d/S99guppyscreen" ]; then
+        echo "simple_af"
+        return
+    fi
+
+    # Default to stock_klipper (generic K1 with Klipper)
+    echo "stock_klipper"
+}
+
 # Set installation paths based on platform and firmware
 # Sets: INSTALL_DIR, INIT_SCRIPT_DEST, PREVIOUS_UI_SCRIPT, TMP_DIR
 set_install_paths() {
@@ -102,6 +147,18 @@ set_install_paths() {
                 PREVIOUS_UI_SCRIPT="/opt/config/mod/.root/S80guppyscreen"
                 TMP_DIR="/tmp/helixscreen-install"
                 log_info "AD5M firmware: Forge-X"
+                log_info "Install directory: ${INSTALL_DIR}"
+                ;;
+        esac
+    elif [ "$platform" = "k1" ]; then
+        # Creality K1 series - uses /usr/data structure
+        case "$firmware" in
+            simple_af|*)
+                INSTALL_DIR="/usr/data/helixscreen"
+                INIT_SCRIPT_DEST="/etc/init.d/S99helixscreen"
+                PREVIOUS_UI_SCRIPT="/etc/init.d/S99guppyscreen"
+                TMP_DIR="/tmp/helixscreen-install"
+                log_info "K1 firmware: Simple AF"
                 log_info "Install directory: ${INSTALL_DIR}"
                 ;;
         esac

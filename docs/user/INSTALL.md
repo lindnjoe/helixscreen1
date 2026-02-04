@@ -12,6 +12,7 @@ This guide walks you through installing HelixScreen on your 3D printer's touchsc
 - [Prerequisites](#prerequisites)
 - [MainsailOS Installation](#mainsailos-installation)
 - [Adventurer 5M Installation](#adventurer-5m-installation)
+- [Creality K1 Installation](#creality-k1-series-simple-af)
 - [First Boot & Setup Wizard](#first-boot--setup-wizard)
 - [Display Configuration](#display-configuration)
 - [Starting on Boot](#starting-on-boot)
@@ -25,16 +26,15 @@ This guide walks you through installing HelixScreen on your 3D printer's touchsc
 
 **One-liner install (recommended):**
 ```bash
-# Raspberry Pi (MainsailOS)
-curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install.sh | sh
-
-# Adventurer 5M (run as root)
-curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install.sh | sh
+# Raspberry Pi (MainsailOS), Adventurer 5M, or Creality K1
+curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install-bundled.sh | sh
 ```
 
 The installer automatically detects your platform and downloads the correct release.
 
 > **Note:** Both `bash` and `sh` work. The installer is POSIX-compatible for BusyBox environments (like AD5M).
+
+**KIAUH users:** The one-liner works on KIAUH installations too! Alternatively, see [scripts/kiauh/](https://github.com/prestonbrown/helixscreen/tree/main/scripts/kiauh) to add HelixScreen to your KIAUH menu.
 
 **Manual installation** (if you prefer):
 
@@ -143,6 +143,36 @@ The HelixScreen installer will:
 
 On uninstall, all ForgeX changes are reversed and GuppyScreen is restored.
 
+### Creality K1 Series (Simple AF)
+
+- **Hardware:**
+  - Creality K1, K1C, K1 Max, or similar
+  - Stock touchscreen display
+  - Network connection
+
+- **Software:**
+  - [Simple AF](https://github.com/pellcorp/creality) installed and working
+  - SSH access to the printer (`root@<printer-ip>`)
+  - About 100MB free disk space in `/usr/data`
+
+The installer automatically detects Simple AF and configures paths:
+
+| Environment | Replaces | Install Location | Init Script |
+|-------------|----------|------------------|-------------|
+| **Simple AF** | GuppyScreen | `/usr/data/helixscreen/` | `S99helixscreen` |
+
+**Prerequisites:**
+1. Install Simple AF following [their instructions](https://github.com/pellcorp/creality)
+2. Verify GuppyScreen works on the touchscreen
+3. Then run the HelixScreen installer
+
+The HelixScreen installer will:
+- Stop and disable GuppyScreen
+- Install HelixScreen to `/usr/data/helixscreen/`
+- Configure Moonraker update_manager for one-click updates from Fluidd/Mainsail
+
+On uninstall, GuppyScreen is restored.
+
 ---
 
 ## MainsailOS Installation
@@ -225,7 +255,7 @@ The install script automatically detects your firmware (Forge-X or Klipper Mod) 
 
 ```bash
 ssh root@<printer-ip>
-curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install-bundled.sh | sh
 ```
 
 **What the installer does on Forge-X:**
@@ -526,16 +556,31 @@ On the touchscreen: **Settings > About** shows the current version.
 
 Or via SSH, check the help output:
 ```bash
-/opt/helixscreen/bin/helix-screen --help | head -1
+# Path varies by platform:
+#   Pi: /opt/helixscreen/helix-screen
+#   K1: /usr/data/helixscreen/helix-screen
+#   AD5M Klipper Mod: /root/printer_software/helixscreen/helix-screen
+/opt/helixscreen/helix-screen --help | head -1
 ```
+
+### Update from Mainsail/Fluidd Web UI (Pi Only)
+
+If you installed via the installer script, it automatically configures Moonraker's update_manager. You can update HelixScreen with one click from the Mainsail or Fluidd web interface:
+
+1. Open Mainsail/Fluidd in your browser
+2. Navigate to **Machine** (Mainsail) or **Settings** (Fluidd)
+3. Find **HelixScreen** in the update manager
+4. Click **Update** when a new version is available
+
+> **Note:** The installer adds an `[update_manager helixscreen]` section to your `moonraker.conf`. If you installed manually, see [Manual Update Manager Setup](#manual-update-manager-setup) below.
 
 ### Update Using Install Script (Recommended)
 
 The easiest way to update is using the install script with `--update`:
 
 ```bash
-# Both Pi and AD5M
-curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install.sh | bash -s -- --update
+# All platforms (Pi, AD5M, K1)
+curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install-bundled.sh | sh -s -- --update
 ```
 
 This preserves your configuration and updates to the latest version.
@@ -543,7 +588,7 @@ This preserves your configuration and updates to the latest version.
 ### Update to Specific Version
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install.sh | bash -s -- --update --version v1.2.0
+curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install-bundled.sh | sh -s -- --update --version v1.2.0
 ```
 
 ### Preserving Configuration
@@ -555,30 +600,42 @@ sudo rm /opt/helixscreen/helixconfig.json
 sudo systemctl restart helixscreen
 ```
 
+### Manual Update Manager Setup
+
+If you installed manually or the installer couldn't find your `moonraker.conf`, add this to enable web UI updates:
+
+```ini
+# Add to moonraker.conf
+# NOTE: The 'path' varies by platform:
+#   Pi: /opt/helixscreen
+#   K1/Simple AF: /usr/data/helixscreen
+#   AD5M Klipper Mod: /root/printer_software/helixscreen
+[update_manager helixscreen]
+type: git_repo
+channel: stable
+path: /opt/helixscreen
+origin: https://github.com/prestonbrown/helixscreen.git
+primary_branch: main
+managed_services: helixscreen
+install_script: scripts/install.sh
+```
+
+Then restart Moonraker:
+```bash
+sudo systemctl restart moonraker
+```
+
 ---
 
 ## Uninstalling
 
-### Using Uninstall Script (Recommended)
+### Using Install Script (Recommended)
 
-The uninstall script removes HelixScreen and **restores your previous UI** (GuppyScreen, FeatherScreen, etc.):
-
-```bash
-# Download and run (recommended - works on any platform)
-curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/uninstall.sh | sh
-
-# Or if HelixScreen is already installed, use the local script
-./scripts/uninstall.sh           # AD5M (already root)
-sudo ./scripts/uninstall.sh      # Pi
-
-# Skip confirmation prompt
-./scripts/uninstall.sh --force
-```
-
-### Using Install Script
+The install script with `--uninstall` removes HelixScreen and **restores your previous UI** (GuppyScreen, KlipperScreen, etc.):
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install.sh | bash -s -- --uninstall
+# All platforms (Pi, AD5M, K1)
+curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install-bundled.sh | sh -s -- --uninstall
 ```
 
 ### Manual Uninstall

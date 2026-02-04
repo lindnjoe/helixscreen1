@@ -133,9 +133,10 @@ cleanup_on_success() {
 INIT_SCRIPT_DEST=""
 PREVIOUS_UI_SCRIPT=""
 AD5M_FIRMWARE=""
+K1_FIRMWARE=""
 
 # Detect platform
-# Returns: "ad5m", "pi", or "unsupported"
+# Returns: "ad5m", "k1", "pi", or "unsupported"
 detect_platform() {
     local arch kernel
     arch=$(uname -m)
@@ -147,6 +148,30 @@ detect_platform() {
         if echo "$kernel" | grep -q "ad5m\|5.4.61"; then
             echo "ad5m"
             return
+        fi
+    fi
+
+    # Check for Creality K1 series (Simple AF or stock with Klipper)
+    # K1 uses buildroot and has /usr/data structure
+    if [ -f /etc/os-release ] && grep -q "buildroot" /etc/os-release 2>/dev/null; then
+        # Buildroot-based system - check for K1 indicators
+        if [ -d "/usr/data" ]; then
+            # Check for K1-specific indicators (require at least 2 for confidence)
+            # - get_sn_mac.sh is a Creality-specific script
+            # - /usr/data/pellcorp is Simple AF
+            # - /usr/data/printer_data with klipper is a strong K1 indicator
+            local k1_indicators=0
+            [ -x "/usr/bin/get_sn_mac.sh" ] && k1_indicators=$((k1_indicators + 1))
+            [ -d "/usr/data/pellcorp" ] && k1_indicators=$((k1_indicators + 1))
+            [ -d "/usr/data/printer_data" ] && k1_indicators=$((k1_indicators + 1))
+            [ -d "/usr/data/klipper" ] && k1_indicators=$((k1_indicators + 1))
+            # Also check for Creality-specific paths
+            [ -f "/usr/data/creality/userdata/config/system_config.json" ] && k1_indicators=$((k1_indicators + 1))
+
+            if [ "$k1_indicators" -ge 2 ]; then
+                echo "k1"
+                return
+            fi
         fi
     fi
 
@@ -194,6 +219,26 @@ detect_ad5m_firmware() {
     echo "forge_x"
 }
 
+# Detect K1 firmware variant (Simple AF vs other)
+# Only called when platform is "k1"
+# Returns: "simple_af" or "stock_klipper"
+detect_k1_firmware() {
+    # Simple AF (pellcorp/creality) indicators
+    if [ -d "/usr/data/pellcorp" ]; then
+        echo "simple_af"
+        return
+    fi
+
+    # Check for GuppyScreen which Simple AF installs
+    if [ -d "/usr/data/guppyscreen" ] && [ -f "/etc/init.d/S99guppyscreen" ]; then
+        echo "simple_af"
+        return
+    fi
+
+    # Default to stock_klipper (generic K1 with Klipper)
+    echo "stock_klipper"
+}
+
 # Set installation paths based on platform and firmware
 # Sets: INSTALL_DIR, INIT_SCRIPT_DEST, PREVIOUS_UI_SCRIPT, TMP_DIR
 set_install_paths() {
@@ -222,6 +267,18 @@ set_install_paths() {
                 log_info "Install directory: ${INSTALL_DIR}"
                 ;;
         esac
+    elif [ "$platform" = "k1" ]; then
+        # Creality K1 series - uses /usr/data structure
+        case "$firmware" in
+            simple_af|*)
+                INSTALL_DIR="/usr/data/helixscreen"
+                INIT_SCRIPT_DEST="/etc/init.d/S99helixscreen"
+                PREVIOUS_UI_SCRIPT="/etc/init.d/S99guppyscreen"
+                TMP_DIR="/tmp/helixscreen-install"
+                log_info "K1 firmware: Simple AF"
+                log_info "Install directory: ${INSTALL_DIR}"
+                ;;
+        esac
     else
         # Pi and other platforms - use default paths
         INSTALL_DIR="/opt/helixscreen"
@@ -238,14 +295,14 @@ set_install_paths() {
 #
 # Initialize SUDO (will be set by check_permissions)
 SUDO=""
-# Check if running as root (required for AD5M, optional for Pi)
+# Check if running as root (required for AD5M/K1, optional for Pi)
 # Sets: SUDO variable ("sudo" or "")
 check_permissions() {
     local platform=$1
 
-    if [ "$platform" = "ad5m" ]; then
+    if [ "$platform" = "ad5m" ] || [ "$platform" = "k1" ]; then
         if [ "$(id -u)" != "0" ]; then
-            log_error "AD5M installation requires root privileges."
+            log_error "Installation on $platform requires root privileges."
             log_error "Please run: sudo $0 $*"
             exit 1
         fi
@@ -351,28 +408,35 @@ install_runtime_deps() {
 }
 
 # Check available disk space
-# Requires at least 50MB free on /opt
+# Requires at least 50MB free on the install directory's filesystem
+# Note: INSTALL_DIR must be set before calling this function
 check_disk_space() {
     local platform=$1
     local required_mb=50
 
+    # Get the parent directory of install location (the filesystem to check)
+    local check_dir
+    check_dir=$(dirname "${INSTALL_DIR:-/opt/helixscreen}")
+    # If parent doesn't exist yet, go up another level
+    [ -d "$check_dir" ] || check_dir=$(dirname "$check_dir")
+
     # Get available space in MB
     local available_mb
-    if [ "$platform" = "ad5m" ]; then
+    if [ "$platform" = "ad5m" ] || [ "$platform" = "k1" ]; then
         # BusyBox df output format: blocks are in KB by default
-        available_mb=$(df /opt 2>/dev/null | tail -1 | awk '{print int($4/1024)}')
+        available_mb=$(df "$check_dir" 2>/dev/null | tail -1 | awk '{print int($4/1024)}')
     else
         # GNU df with -m flag outputs in MB
-        available_mb=$(df -m /opt 2>/dev/null | tail -1 | awk '{print $4}')
+        available_mb=$(df -m "$check_dir" 2>/dev/null | tail -1 | awk '{print $4}')
     fi
 
     if [ -n "$available_mb" ] && [ "$available_mb" -lt "$required_mb" ]; then
-        log_error "Insufficient disk space on /opt"
+        log_error "Insufficient disk space on $check_dir"
         log_error "Required: ${required_mb}MB, Available: ${available_mb}MB"
         exit 1
     fi
 
-    log_info "Disk space check: ${available_mb}MB available"
+    log_info "Disk space check: ${available_mb}MB available on $check_dir"
 }
 
 # Detect init system (systemd vs SysV)
@@ -599,7 +663,9 @@ restore_stock_firmware_ui() {
 
 #
 # Known competing screen UIs to stop
-COMPETING_UIS="guppyscreen GuppyScreen KlipperScreen klipperscreen featherscreen FeatherScreen"
+# Includes: GuppyScreen (AD5M/K1), Grumpyscreen (K1/Simple AF), KlipperScreen, FeatherScreen
+COMPETING_UIS="guppyscreen GuppyScreen grumpyscreen Grumpyscreen KlipperScreen klipperscreen featherscreen FeatherScreen"
+
 # Stop competing screen UIs (GuppyScreen, KlipperScreen, Xorg, etc.)
 stop_competing_uis() {
     log_info "Checking for competing screen UIs..."
@@ -665,11 +731,13 @@ stop_competing_uis() {
 
         # Check SysV init scripts (various locations)
         for initscript in /etc/init.d/S*${ui}* /etc/init.d/${ui}* /opt/config/mod/.root/S*${ui}*; do
+            # Skip if glob didn't match any files (literal pattern returned)
+            [ -e "$initscript" ] || continue
             # Skip if this is the PREVIOUS_UI_SCRIPT we already handled
             if [ "$initscript" = "$PREVIOUS_UI_SCRIPT" ]; then
                 continue
             fi
-            if [ -x "$initscript" ] 2>/dev/null; then
+            if [ -x "$initscript" ]; then
                 log_info "Stopping $ui ($initscript)..."
                 $SUDO "$initscript" stop 2>/dev/null || true
                 # Disable by removing execute permission (non-destructive)
@@ -746,6 +814,7 @@ get_latest_version() {
 download_release() {
     local version=$1
     local platform=$2
+
     local filename="helixscreen-${platform}-${version}.tar.gz"
     local url="https://github.com/${GITHUB_REPO}/releases/download/${version}/${filename}"
     local dest="${TMP_DIR}/helixscreen.tar.gz"
@@ -822,9 +891,9 @@ extract_release() {
     # Create parent directory
     $SUDO mkdir -p "$(dirname "${INSTALL_DIR}")"
 
-    # Extract - AD5M uses BusyBox tar which doesn't support -z
+    # Extract - AD5M and K1 use BusyBox tar which doesn't support -z
     cd "$(dirname "${INSTALL_DIR}")" || exit 1
-    if [ "$platform" = "ad5m" ]; then
+    if [ "$platform" = "ad5m" ] || [ "$platform" = "k1" ]; then
         if ! gunzip -c "$tarball" | $SUDO tar xf -; then
             log_error "Failed to extract tarball."
             log_error "The archive may be corrupted."
@@ -1013,6 +1082,158 @@ stop_service() {
 }
 
 # ============================================
+# Module: moonraker.sh
+# ============================================
+
+#
+# Common moonraker.conf locations
+MOONRAKER_CONF_PATHS="
+/home/pi/printer_data/config/moonraker.conf
+/home/mks/printer_data/config/moonraker.conf
+/root/printer_data/config/moonraker.conf
+/opt/config/moonraker.conf
+/usr/data/printer_data/config/moonraker.conf
+"
+
+# Find moonraker.conf
+# Returns: path to moonraker.conf or empty string
+find_moonraker_conf() {
+    for conf in $MOONRAKER_CONF_PATHS; do
+        if [ -f "$conf" ]; then
+            echo "$conf"
+            return 0
+        fi
+    done
+    echo ""
+}
+
+# Check if update_manager section for helixscreen already exists
+# Args: $1 = moonraker.conf path
+# Returns: 0 if exists, 1 if not
+has_update_manager_section() {
+    local conf="$1"
+    grep -q '^\[update_manager helixscreen\]' "$conf" 2>/dev/null
+}
+
+# Generate update_manager configuration block
+# Uses git_repo type for tracking updates
+# Note: Uses INSTALL_DIR which must be set before calling
+generate_update_manager_config() {
+    cat << EOF
+
+# HelixScreen Update Manager
+# Added by HelixScreen installer - enables one-click updates from Mainsail/Fluidd
+[update_manager helixscreen]
+type: git_repo
+channel: stable
+path: ${INSTALL_DIR}
+origin: https://github.com/prestonbrown/helixscreen.git
+primary_branch: main
+managed_services: helixscreen
+install_script: scripts/install.sh
+EOF
+}
+
+# Add update_manager section to moonraker.conf
+# Args: $1 = moonraker.conf path
+add_update_manager_section() {
+    local conf="$1"
+
+    # Create backup
+    $SUDO cp "$conf" "${conf}.bak.helixscreen" 2>/dev/null || true
+
+    # Append configuration
+    generate_update_manager_config | $SUDO tee -a "$conf" >/dev/null
+
+    log_success "Added update_manager section to $conf"
+    log_info "You can now update HelixScreen from the Mainsail/Fluidd web interface!"
+}
+
+# Configure Moonraker update_manager
+# Called during installation on platforms with web UI (Pi, K1 with Simple AF)
+configure_moonraker_updates() {
+    local platform=$1
+
+    # Skip on AD5M (typically no Mainsail/Fluidd web UI)
+    if [ "$platform" = "ad5m" ]; then
+        log_info "Skipping Moonraker update_manager on AD5M (typically no web UI)"
+        return 0
+    fi
+
+    # Pi and K1 (Simple AF) both commonly use Mainsail/Fluidd
+    log_info "Configuring Moonraker update_manager..."
+
+    local conf
+    conf=$(find_moonraker_conf)
+
+    if [ -z "$conf" ]; then
+        log_warn "Could not find moonraker.conf"
+        log_warn "To enable web UI updates, manually add to your moonraker.conf:"
+        echo ""
+        generate_update_manager_config
+        echo ""
+        return 0
+    fi
+
+    if has_update_manager_section "$conf"; then
+        log_info "update_manager section already exists in $conf"
+        return 0
+    fi
+
+    add_update_manager_section "$conf"
+
+    # Restart Moonraker to pick up the new configuration
+    if command -v systemctl >/dev/null 2>&1 && $SUDO systemctl is-active --quiet moonraker 2>/dev/null; then
+        log_info "Restarting Moonraker to apply configuration..."
+        $SUDO systemctl restart moonraker || true
+    elif [ -x "/etc/init.d/S56moonraker_service" ]; then
+        # K1/Simple AF uses SysV init
+        log_info "Restarting Moonraker to apply configuration..."
+        if ! $SUDO /etc/init.d/S56moonraker_service restart 2>/dev/null; then
+            log_warn "Could not restart Moonraker - you may need to restart it manually"
+        fi
+    fi
+}
+
+# Remove update_manager section from moonraker.conf
+# Called during uninstallation
+remove_update_manager_section() {
+    local conf
+    conf=$(find_moonraker_conf)
+
+    if [ -z "$conf" ]; then
+        return 0
+    fi
+
+    if ! has_update_manager_section "$conf"; then
+        return 0
+    fi
+
+    log_info "Removing update_manager section from $conf..."
+
+    # Create backup
+    $SUDO cp "$conf" "${conf}.bak.helixscreen-uninstall" 2>/dev/null || true
+
+    # Remove the section (from [update_manager helixscreen] to next section or EOF)
+    # This uses awk to skip lines between [update_manager helixscreen] and the next [section]
+    # Note: Need to run awk through sudo to handle permission on output file
+    $SUDO sh -c "awk '
+        /^\[update_manager helixscreen\]/ { skip=1; next }
+        /^\[/ { skip=0 }
+        !skip { print }
+    ' \"$conf\" > \"${conf}.tmp\"" && $SUDO mv "${conf}.tmp" "$conf"
+
+    # Also remove any "Added by HelixScreen" comment lines that precede it
+    $SUDO sed -i '/# HelixScreen Update Manager/d' "$conf" 2>/dev/null || \
+    $SUDO sed -i '' '/# HelixScreen Update Manager/d' "$conf" 2>/dev/null || true
+
+    $SUDO sed -i '/# Added by HelixScreen installer/d' "$conf" 2>/dev/null || \
+    $SUDO sed -i '' '/# Added by HelixScreen installer/d' "$conf" 2>/dev/null || true
+
+    log_success "Removed update_manager section from $conf"
+}
+
+# ============================================
 # Module: uninstall.sh
 # ============================================
 
@@ -1034,8 +1255,9 @@ uninstall() {
         $SUDO rm -f "/etc/systemd/system/${SERVICE_NAME}.service"
         $SUDO systemctl daemon-reload
     else
-        # Stop and remove SysV init scripts (check both possible locations)
-        for init_script in /etc/init.d/S80helixscreen /etc/init.d/S90helixscreen; do
+        # Stop and remove SysV init scripts (check all possible locations)
+        # AD5M: S80/S90, K1: S99
+        for init_script in /etc/init.d/S80helixscreen /etc/init.d/S90helixscreen /etc/init.d/S99helixscreen; do
             if [ -f "$init_script" ]; then
                 log_info "Stopping and removing $init_script..."
                 $SUDO "$init_script" stop 2>/dev/null || true
@@ -1062,9 +1284,11 @@ uninstall() {
     $SUDO rm -f /var/run/helix-splash.pid 2>/dev/null || true
     $SUDO rm -f /tmp/helixscreen.log 2>/dev/null || true
 
-    # Remove installation (check both possible locations)
+    # Remove installation (check all possible locations)
+    # AD5M: /opt/helixscreen, /root/printer_software/helixscreen
+    # K1: /usr/data/helixscreen
     local removed_dir=""
-    for install_dir in "/root/printer_software/helixscreen" "/opt/helixscreen"; do
+    for install_dir in "/root/printer_software/helixscreen" "/opt/helixscreen" "/usr/data/helixscreen"; do
         if [ -d "$install_dir" ]; then
             $SUDO rm -rf "$install_dir"
             log_success "Removed ${install_dir}"
@@ -1093,6 +1317,12 @@ uninstall() {
         fi
     fi
 
+    # Check for K1/Simple AF GuppyScreen
+    if [ -z "$restored_ui" ] && [ -f "/etc/init.d/S99guppyscreen" ]; then
+        $SUDO chmod +x "/etc/init.d/S99guppyscreen" 2>/dev/null || true
+        restored_ui="GuppyScreen (/etc/init.d/S99guppyscreen)"
+    fi
+
     if [ -z "$restored_ui" ]; then
         # Forge-X - restore GuppyScreen and stock UI settings
         # Restore ForgeX display mode to GUPPY (from HEADLESS or STOCK)
@@ -1117,6 +1347,11 @@ uninstall() {
         if [ -f "/opt/config/mod/.root/S35tslib" ]; then
             $SUDO chmod +x "/opt/config/mod/.root/S35tslib" 2>/dev/null || true
         fi
+    fi
+
+    # Remove update_manager section from moonraker.conf (if present)
+    if type remove_update_manager_section >/dev/null 2>&1; then
+        remove_update_manager_section || true
     fi
 
     log_success "HelixScreen uninstalled"
@@ -1167,7 +1402,9 @@ clean_old_installation() {
     stop_service
 
     # Remove installation directories (check all possible locations)
-    for install_dir in "/root/printer_software/helixscreen" "/opt/helixscreen"; do
+    # AD5M: /opt/helixscreen, /root/printer_software/helixscreen
+    # K1: /usr/data/helixscreen
+    for install_dir in "/root/printer_software/helixscreen" "/opt/helixscreen" "/usr/data/helixscreen"; do
         if [ -d "$install_dir" ]; then
             log_info "Removing $install_dir..."
             $SUDO rm -rf "$install_dir"
@@ -1189,8 +1426,9 @@ clean_old_installation() {
         done
     done
 
-    # Remove init scripts (check both possible locations)
-    for init_script in /etc/init.d/S80helixscreen /etc/init.d/S90helixscreen; do
+    # Remove init scripts (check all possible locations)
+    # AD5M: S80/S90, K1: S99
+    for init_script in /etc/init.d/S80helixscreen /etc/init.d/S90helixscreen /etc/init.d/S99helixscreen; do
         if [ -f "$init_script" ]; then
             log_info "Removing init script: $init_script"
             $SUDO rm -f "$init_script"
@@ -1294,14 +1532,20 @@ main() {
         log_error "HelixScreen supports:"
         log_error "  - Raspberry Pi (aarch64/armv7l)"
         log_error "  - FlashForge Adventurer 5M (armv7l)"
+        log_error "  - Creality K1 series with Simple AF"
         exit 1
     fi
 
-    # For AD5M, detect firmware variant and set appropriate paths
+    # For AD5M/K1, detect firmware variant and set appropriate paths
+    local firmware=""
     if [ "$platform" = "ad5m" ]; then
         AD5M_FIRMWARE=$(detect_ad5m_firmware)
+        firmware="$AD5M_FIRMWARE"
+    elif [ "$platform" = "k1" ]; then
+        K1_FIRMWARE=$(detect_k1_firmware)
+        firmware="$K1_FIRMWARE"
     fi
-    set_install_paths "$platform" "$AD5M_FIRMWARE"
+    set_install_paths "$platform" "$firmware"
 
     # Check permissions
     check_permissions "$platform"
@@ -1353,6 +1597,9 @@ main() {
     extract_release "$platform"
     install_service "$platform"
 
+    # Configure Moonraker update_manager (Pi only - enables web UI updates)
+    configure_moonraker_updates "$platform"
+
     # Start service
     start_service
 
@@ -1378,7 +1625,7 @@ main() {
     fi
     echo ""
 
-    if [ "$platform" = "ad5m" ]; then
+    if [ "$platform" = "ad5m" ] || [ "$platform" = "k1" ]; then
         echo "Note: You may need to reboot for the display to update."
     fi
 }

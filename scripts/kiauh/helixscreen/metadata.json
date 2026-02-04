@@ -1,0 +1,20 @@
+{
+  "index": 99,
+  "module": "helixscreen_extension",
+  "maintainer": "prestonbrown",
+  "display_name": "HelixScreen",
+  "repo_url": "https://github.com/prestonbrown/helixscreen",
+  "updates_enabled": true,
+  "description": [
+    "Modern touchscreen interface for Klipper 3D printers.",
+    "Fast C++ UI with LVGL graphics, designed for Raspberry Pi,",
+    "FlashForge Adventurer 5M, and Creality K1 (Simple AF). Features:",
+    "  - Setup wizard for easy configuration",
+    "  - Temperature control and monitoring",
+    "  - Print file management with thumbnails",
+    "  - AMS/multi-material support (Happy Hare, AFC)",
+    "  - Input shaper visualization",
+    "  - Bed mesh visualization",
+    "Requires: Moonraker running and accessible."
+  ]
+}

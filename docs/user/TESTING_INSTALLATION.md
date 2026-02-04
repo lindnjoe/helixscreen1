@@ -1,0 +1,693 @@
+# Installation Testing Guide
+
+This document provides step-by-step procedures for verifying HelixScreen installation across all supported platforms. Use this to validate releases before publishing or to troubleshoot installation issues.
+
+---
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Test Environment Requirements](#test-environment-requirements)
+- [Platform Test Matrix](#platform-test-matrix)
+- [Test Procedures](#test-procedures)
+  - [MainsailOS (Pi)](#mainsailos-pi)
+  - [KIAUH Pi](#kiauh-pi)
+  - [Manual Pi](#manual-pi)
+  - [AD5M/ForgeX](#ad5mforgex)
+  - [AD5M/Klipper Mod](#ad5mklipper-mod)
+- [Verification Checklist](#verification-checklist)
+- [Known Issues](#known-issues)
+
+---
+
+## Overview
+
+HelixScreen is an **add-on** to existing Klipper installations. We don't ship custom OS images - we assume Klipper/Moonraker is already working.
+
+**Common requirement for all platforms:** Moonraker API accessible (default: `http://localhost:7125`)
+
+### What the Installer Does
+
+1. Detects platform (Pi vs AD5M) and firmware variant (ForgeX vs Klipper Mod)
+2. Downloads the correct release tarball from GitHub
+3. Stops competing UIs (GuppyScreen, KlipperScreen, etc.)
+4. Extracts to the appropriate install directory
+5. Installs and enables the service (systemd or SysV init)
+6. Starts HelixScreen
+
+### Install Paths by Platform
+
+| Platform | Firmware | Install Dir | Init Script | Service Type |
+|----------|----------|-------------|-------------|--------------|
+| Pi (all) | - | `/opt/helixscreen` | `/etc/systemd/system/helixscreen.service` | systemd |
+| AD5M | ForgeX | `/opt/helixscreen` | `/etc/init.d/S90helixscreen` | SysV |
+| AD5M | Klipper Mod | `/root/printer_software/helixscreen` | `/etc/init.d/S80helixscreen` | SysV |
+| K1 | Simple AF | `/usr/data/helixscreen` | `/etc/init.d/S99helixscreen` | SysV |
+
+---
+
+## Test Environment Requirements
+
+### MainsailOS (Most Common)
+
+- **Hardware:** Pi 3/4/5 with touchscreen
+- **Software:** Working MainsailOS with Klipper/Moonraker
+- **Verify ready:**
+  ```bash
+  curl -s http://localhost:7125/printer/info | jq -r '.result.state'
+  # Should output: "ready" or "standby"
+  ```
+
+### KIAUH Pi
+
+- **Hardware:** Pi 3/4/5 with touchscreen
+- **Software:** Raspbian/Debian + KIAUH-installed Klipper/Moonraker
+- **Verify KIAUH:**
+  ```bash
+  ls ~/kiauh/kiauh.sh
+  ```
+- **Verify Moonraker:**
+  ```bash
+  curl -s http://localhost:7125/printer/info | jq -r '.result.state'
+  ```
+
+### Manual Pi
+
+- **Hardware:** Pi 3/4/5 with touchscreen
+- **Software:** Any Linux with manually installed Klipper/Moonraker (no KIAUH)
+- **Verify Moonraker:**
+  ```bash
+  curl -s http://localhost:7125/printer/info | jq -r '.result.state'
+  ```
+
+### AD5M/ForgeX
+
+- **Hardware:** FlashForge Adventurer 5M/5M Pro
+- **Software:** ForgeX firmware with GuppyScreen mode enabled
+- **Verify ForgeX:**
+  ```bash
+  grep display /opt/config/mod_data/variables.cfg
+  # Should contain: display = 'GUPPY'
+  ```
+- **Verify Moonraker:**
+  ```bash
+  curl -s http://localhost:7125/printer/info | jq -r '.result.state'
+  ```
+
+### AD5M/Klipper Mod
+
+- **Hardware:** FlashForge Adventurer 5M/5M Pro
+- **Software:** Klipper Mod firmware
+- **Verify Klipper Mod:**
+  ```bash
+  ls /root/printer_software/
+  # or
+  ls /mnt/data/.klipper_mod/
+  ```
+- **Verify Moonraker:**
+  ```bash
+  curl -s http://localhost:7125/printer/info | jq -r '.result.state'
+  ```
+
+### K1/Simple AF
+
+- **Hardware:** Creality K1, K1C, K1 Max, or similar
+- **Software:** Simple AF installed and working
+- **Verify Simple AF:**
+  ```bash
+  ls /usr/data/pellcorp/
+  # Should exist
+  ```
+- **Verify GuppyScreen running:**
+  ```bash
+  ps | grep -i guppy
+  ```
+- **Verify Moonraker:**
+  ```bash
+  curl -s http://localhost:7125/printer/info | jq -r '.result.state'
+  ```
+
+---
+
+## Platform Test Matrix
+
+| Test Case | MainsailOS | KIAUH Pi | Manual Pi | AD5M/ForgeX | AD5M/Klipper Mod | K1/Simple AF |
+|-----------|:----------:|:--------:|:---------:|:-----------:|:----------------:|:------------:|
+| Clean install | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| Upgrade install | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| Uninstall + reinstall | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| Reboot persistence | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| Moonraker connection | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| Touch input works | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| Display renders | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| Wizard completes | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| Panel navigation | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+| Competing UI disabled | [ ] | [ ] | [ ] | [ ] | [ ] | [ ] |
+
+---
+
+## Test Procedures
+
+### MainsailOS (Pi)
+
+#### Clean Install Test
+
+1. **SSH into Pi:**
+   ```bash
+   ssh pi@mainsailos.local
+   # or: ssh pi@<ip-address>
+   ```
+
+2. **Verify no existing HelixScreen:**
+   ```bash
+   ls /opt/helixscreen 2>/dev/null && echo "EXISTS - uninstall first" || echo "CLEAN"
+   systemctl is-active helixscreen 2>/dev/null || echo "Service not running (good)"
+   ```
+
+3. **Run installer:**
+   ```bash
+   curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install-bundled.sh | sh
+   ```
+
+4. **Verify installation:**
+   ```bash
+   # Binary exists and runs
+   /opt/helixscreen/bin/helix-screen --help | head -1
+
+   # Service is enabled
+   systemctl is-enabled helixscreen
+   # Expected: enabled
+
+   # Service is running
+   systemctl is-active helixscreen
+   # Expected: active
+   ```
+
+5. **Reboot test:**
+   ```bash
+   sudo reboot
+   ```
+   After reboot, verify HelixScreen appears on the touchscreen automatically.
+
+6. **Post-reboot verification:**
+   ```bash
+   # Service running after reboot
+   systemctl is-active helixscreen
+
+   # Check logs for errors
+   journalctl -u helixscreen -n 20 --no-pager | grep -i error || echo "No errors"
+   ```
+
+#### Upgrade Install Test
+
+1. **With existing HelixScreen installed, run:**
+   ```bash
+   curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install-bundled.sh | sh -s -- --update
+   ```
+
+2. **Verify config preserved:**
+   ```bash
+   # helixconfig.json should still exist with your settings
+   cat /opt/helixscreen/helixconfig.json | head -5
+   ```
+
+3. **Service should restart automatically and UI should appear.**
+
+#### Uninstall Test
+
+1. **Run uninstaller:**
+   ```bash
+   curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install-bundled.sh | sh -s -- --uninstall
+   ```
+
+2. **Verify removal:**
+   ```bash
+   ls /opt/helixscreen 2>/dev/null && echo "FAILED - still exists" || echo "REMOVED"
+   systemctl is-active helixscreen 2>/dev/null && echo "FAILED - still running" || echo "STOPPED"
+   ```
+
+3. **If KlipperScreen was installed, verify it restarts.**
+
+---
+
+### KIAUH Pi
+
+Same procedures as MainsailOS - the curl|sh installer works identically.
+
+**Additional check:** Verify KIAUH doesn't interfere:
+```bash
+# KIAUH should not show HelixScreen as installed (until we add KIAUH extension)
+~/kiauh/kiauh.sh
+# Navigate to menus - HelixScreen won't appear yet
+```
+
+---
+
+### Manual Pi
+
+Same procedures as MainsailOS - the curl|sh installer works on any systemd Linux.
+
+**Pre-check:** Ensure systemd is the init system:
+```bash
+ps --no-headers -o comm 1
+# Should output: systemd
+```
+
+---
+
+### AD5M/ForgeX
+
+#### Clean Install Test
+
+1. **SSH into AD5M:**
+   ```bash
+   ssh root@<printer-ip>
+   ```
+
+2. **Verify ForgeX and no existing HelixScreen:**
+   ```bash
+   # ForgeX in GUPPY mode
+   grep display /opt/config/mod_data/variables.cfg
+   # Expected: display = 'GUPPY'
+
+   # No existing HelixScreen
+   ls /opt/helixscreen 2>/dev/null && echo "EXISTS - uninstall first" || echo "CLEAN"
+   ```
+
+3. **Run installer:**
+   ```bash
+   curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install-bundled.sh | sh
+   ```
+
+4. **Verify installation:**
+   ```bash
+   # Binary exists and runs
+   /opt/helixscreen/bin/helix-screen --help | head -1
+
+   # Init script installed
+   ls -la /etc/init.d/S90helixscreen
+
+   # Service running
+   /etc/init.d/S90helixscreen status
+   # or check for process
+   ps | grep helix-screen | grep -v grep
+
+   # GuppyScreen disabled
+   ls -la /opt/config/mod/.root/S80guppyscreen
+   # Should NOT have 'x' (execute) permission
+   ```
+
+5. **Verify backlight patch:**
+   ```bash
+   grep helixscreen_active /opt/config/mod/.shell/screen.sh
+   # Should find the patch
+   ```
+
+6. **Reboot test:**
+   ```bash
+   reboot
+   ```
+   After reboot:
+   - HelixScreen should appear on touchscreen
+   - Backlight should be at full brightness (not dimmed)
+
+7. **Post-reboot verification:**
+   ```bash
+   # Service running
+   /etc/init.d/S90helixscreen status
+
+   # Check logs
+   cat /tmp/helixscreen.log | tail -20 | grep -i error || echo "No errors"
+
+   # Active flag exists
+   ls /tmp/helixscreen_active
+   ```
+
+#### Upgrade Install Test
+
+1. **Run with --update:**
+   ```bash
+   curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install-bundled.sh | sh -s -- --update
+   ```
+
+2. **Verify config preserved:**
+   ```bash
+   cat /opt/helixscreen/helixconfig.json | head -5
+   ```
+
+#### Uninstall Test
+
+1. **Run uninstaller:**
+   ```bash
+   curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install-bundled.sh | sh -s -- --uninstall
+   ```
+
+2. **Verify removal and GuppyScreen restoration:**
+   ```bash
+   # HelixScreen removed
+   ls /opt/helixscreen 2>/dev/null && echo "FAILED" || echo "REMOVED"
+
+   # GuppyScreen re-enabled
+   ls -la /opt/config/mod/.root/S80guppyscreen
+   # Should have 'x' (execute) permission
+
+   # Backlight patch removed
+   grep helixscreen_active /opt/config/mod/.shell/screen.sh && echo "FAILED - patch still present" || echo "Patch removed"
+   ```
+
+3. **Reboot and verify GuppyScreen appears.**
+
+---
+
+### AD5M/Klipper Mod
+
+#### Clean Install Test
+
+1. **SSH into AD5M:**
+   ```bash
+   ssh root@<printer-ip>
+   ```
+
+2. **Verify Klipper Mod and no existing HelixScreen:**
+   ```bash
+   # Klipper Mod indicator
+   ls /root/printer_software/ || ls /mnt/data/.klipper_mod/
+
+   # No existing HelixScreen
+   ls /root/printer_software/helixscreen 2>/dev/null && echo "EXISTS - uninstall first" || echo "CLEAN"
+   ```
+
+3. **Run installer:**
+   ```bash
+   curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install-bundled.sh | sh
+   ```
+
+4. **Verify installation:**
+   ```bash
+   # Binary exists (note different path!)
+   /root/printer_software/helixscreen/bin/helix-screen --help | head -1
+
+   # Init script installed (S80, not S90)
+   ls -la /etc/init.d/S80helixscreen
+
+   # Service running
+   /etc/init.d/S80helixscreen status
+
+   # KlipperScreen disabled
+   ls -la /etc/init.d/S80klipperscreen 2>/dev/null
+   # Should NOT have 'x' (execute) permission, or may not exist
+
+   # Xorg disabled (if was running)
+   ls -la /etc/init.d/S40xorg 2>/dev/null
+   # Should NOT have 'x' permission
+   ```
+
+5. **Reboot test:**
+   ```bash
+   reboot
+   ```
+   After reboot, HelixScreen should appear on touchscreen.
+
+6. **Post-reboot verification:**
+   ```bash
+   # Service running
+   /etc/init.d/S80helixscreen status
+
+   # Check logs
+   cat /tmp/helixscreen.log | tail -20 | grep -i error || echo "No errors"
+   ```
+
+#### Uninstall Test
+
+1. **Run uninstaller:**
+   ```bash
+   curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install-bundled.sh | sh -s -- --uninstall
+   ```
+
+2. **Verify removal and KlipperScreen restoration:**
+   ```bash
+   # HelixScreen removed
+   ls /root/printer_software/helixscreen 2>/dev/null && echo "FAILED" || echo "REMOVED"
+
+   # KlipperScreen re-enabled (if it existed)
+   ls -la /etc/init.d/S80klipperscreen 2>/dev/null
+   # Should have 'x' (execute) permission
+   ```
+
+3. **Reboot and verify KlipperScreen appears.**
+
+---
+
+### K1/Simple AF
+
+#### Clean Install Test
+
+1. **SSH into K1:**
+   ```bash
+   ssh root@<printer-ip>
+   ```
+
+2. **Verify Simple AF and no existing HelixScreen:**
+   ```bash
+   # Simple AF indicator
+   ls /usr/data/pellcorp/
+   # Should exist
+
+   # No existing HelixScreen
+   ls /usr/data/helixscreen 2>/dev/null && echo "EXISTS - uninstall first" || echo "CLEAN"
+   ```
+
+3. **Run installer:**
+   ```bash
+   curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install-bundled.sh | sh
+   ```
+
+4. **Verify installation:**
+   ```bash
+   # Binary exists
+   /usr/data/helixscreen/bin/helix-screen --help | head -1
+
+   # Init script installed (S99)
+   ls -la /etc/init.d/S99helixscreen
+
+   # Service running
+   /etc/init.d/S99helixscreen status
+   # or check for process
+   ps | grep helix-screen | grep -v grep
+
+   # GuppyScreen disabled
+   ls -la /etc/init.d/S99guppyscreen
+   # Should NOT have 'x' (execute) permission
+   ```
+
+5. **Reboot test:**
+   ```bash
+   reboot
+   ```
+   After reboot, HelixScreen should appear on touchscreen.
+
+6. **Post-reboot verification:**
+   ```bash
+   # Service running
+   /etc/init.d/S99helixscreen status
+
+   # Check logs
+   cat /tmp/helixscreen.log | tail -20 | grep -i error || echo "No errors"
+   ```
+
+#### Upgrade Install Test
+
+1. **Run with --update:**
+   ```bash
+   curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install-bundled.sh | sh -s -- --update
+   ```
+
+2. **Verify config preserved:**
+   ```bash
+   cat /usr/data/helixscreen/helixconfig.json | head -5
+   ```
+
+#### Uninstall Test
+
+1. **Run uninstaller:**
+   ```bash
+   curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install-bundled.sh | sh -s -- --uninstall
+   ```
+
+2. **Verify removal and GuppyScreen restoration:**
+   ```bash
+   # HelixScreen removed
+   ls /usr/data/helixscreen 2>/dev/null && echo "FAILED" || echo "REMOVED"
+
+   # GuppyScreen re-enabled
+   ls -la /etc/init.d/S99guppyscreen
+   # Should have 'x' (execute) permission
+   ```
+
+3. **Reboot and verify GuppyScreen appears.**
+
+---
+
+## Verification Checklist
+
+Run through this checklist after installation on each platform:
+
+### Basic Functionality
+
+- [ ] **Binary runs:** `/path/to/helix-screen --help` shows version
+- [ ] **Service enabled:** systemctl is-enabled (Pi) or init script exists (AD5M)
+- [ ] **Service running:** Active process, no crash loop
+- [ ] **Reboot persists:** After reboot, service starts automatically
+- [ ] **Display renders:** UI visible on touchscreen
+- [ ] **Touch input works:** Can tap buttons, scroll lists
+
+### Moonraker Integration
+
+- [ ] **Connects to Moonraker:** Home screen shows printer status (not "Disconnected")
+- [ ] **Receives updates:** Temperature values update in real-time
+- [ ] **Can send commands:** Toggle a fan or heater from the UI
+
+### Wizard & Configuration
+
+- [ ] **Wizard appears on first run:** (Delete helixconfig.json to test)
+- [ ] **Wizard completes:** All steps finish without error
+- [ ] **Settings persist:** Reboot and verify settings retained
+
+### UI Navigation
+
+- [ ] **Home panel:** Shows temperatures, printer status
+- [ ] **Controls panel:** Fans, macros, power controls
+- [ ] **Motion panel:** Jog controls, home buttons
+- [ ] **Temperature panels:** Nozzle and bed temp controls
+- [ ] **Print Select:** Lists G-code files
+- [ ] **Settings:** Can change theme, view about info
+
+### Platform-Specific
+
+**MainsailOS/Pi:**
+- [ ] systemd journal logs accessible: `journalctl -u helixscreen`
+- [ ] No KlipperScreen conflicts (if installed)
+
+**AD5M/ForgeX:**
+- [ ] Backlight at full brightness (not dimmed after boot)
+- [ ] `/tmp/helixscreen_active` flag exists while running
+- [ ] GuppyScreen init script disabled (no execute permission)
+- [ ] Stock FlashForge UI disabled in auto_run.sh
+
+**AD5M/Klipper Mod:**
+- [ ] Installed to `/root/printer_software/helixscreen` (not /opt)
+- [ ] Uses S80 init script (not S90)
+- [ ] Xorg disabled (framebuffer access)
+- [ ] KlipperScreen disabled
+
+**K1/Simple AF:**
+- [ ] Installed to `/usr/data/helixscreen`
+- [ ] Uses S99 init script
+- [ ] GuppyScreen disabled (no execute permission on init script)
+- [ ] Moonraker update_manager configured
+
+---
+
+## Known Issues
+
+### All Platforms
+
+| Issue | Workaround |
+|-------|------------|
+| Wizard keeps appearing | Check helixconfig.json exists and has valid JSON |
+| Touch offset | Use Settings → Touch Calibration |
+
+### Pi-Specific
+
+| Issue | Workaround |
+|-------|------------|
+| Pi 5 black screen | Try `drm_device: "/dev/dri/card1"` or `card2` in config |
+| Low memory on Pi 3 | Disable other services, reduce Moonraker cache |
+
+### AD5M/ForgeX-Specific
+
+| Issue | Workaround |
+|-------|------------|
+| Screen dims after boot | Re-run installer to apply backlight patch |
+| GuppyScreen still appears | Verify `/opt/config/mod/.root/S80guppyscreen` has no execute permission |
+
+### AD5M/Klipper Mod-Specific
+
+| Issue | Workaround |
+|-------|------------|
+| Install fails "disk full" | Installer should use /mnt/data; verify manually |
+| KlipperScreen still appears | Verify init script disabled: `chmod -x /etc/init.d/S80klipperscreen` |
+
+### K1/Simple AF-Specific
+
+| Issue | Workaround |
+|-------|------------|
+| GuppyScreen still appears | Verify `/etc/init.d/S99guppyscreen` has no execute permission |
+| Display not working | Verify Simple AF is properly installed first |
+
+---
+
+## Diagnostic Commands Quick Reference
+
+### Pi (systemd)
+
+```bash
+# Service status
+systemctl status helixscreen
+
+# Logs
+journalctl -u helixscreen -f          # Follow live
+journalctl -u helixscreen -n 100      # Last 100 lines
+journalctl -u helixscreen -p err      # Errors only
+
+# Restart
+sudo systemctl restart helixscreen
+```
+
+### AD5M (SysV init)
+
+```bash
+# Service status (ForgeX)
+/etc/init.d/S90helixscreen status
+
+# Service status (Klipper Mod)
+/etc/init.d/S80helixscreen status
+
+# Logs
+tail -f /tmp/helixscreen.log          # Follow live
+tail -100 /tmp/helixscreen.log        # Last 100 lines
+
+# Restart (ForgeX)
+/etc/init.d/S90helixscreen restart
+
+# Restart (Klipper Mod)
+/etc/init.d/S80helixscreen restart
+```
+
+### K1 (SysV init)
+
+```bash
+# Service status
+/etc/init.d/S99helixscreen status
+
+# Logs
+tail -f /tmp/helixscreen.log          # Follow live
+tail -100 /tmp/helixscreen.log        # Last 100 lines
+
+# Restart
+/etc/init.d/S99helixscreen restart
+```
+
+### Moonraker Check (All Platforms)
+
+```bash
+# Test Moonraker connection
+curl -s http://localhost:7125/printer/info | jq '.result.state'
+
+# List files
+curl -s http://localhost:7125/server/files/list | jq '.result | length'
+```
+
+---
+
+*Related: [INSTALL.md](INSTALL.md) | [TROUBLESHOOTING.md](TROUBLESHOOTING.md)*

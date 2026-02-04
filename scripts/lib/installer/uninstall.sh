@@ -27,8 +27,9 @@ uninstall() {
         $SUDO rm -f "/etc/systemd/system/${SERVICE_NAME}.service"
         $SUDO systemctl daemon-reload
     else
-        # Stop and remove SysV init scripts (check both possible locations)
-        for init_script in /etc/init.d/S80helixscreen /etc/init.d/S90helixscreen; do
+        # Stop and remove SysV init scripts (check all possible locations)
+        # AD5M: S80/S90, K1: S99
+        for init_script in /etc/init.d/S80helixscreen /etc/init.d/S90helixscreen /etc/init.d/S99helixscreen; do
             if [ -f "$init_script" ]; then
                 log_info "Stopping and removing $init_script..."
                 $SUDO "$init_script" stop 2>/dev/null || true
@@ -55,9 +56,11 @@ uninstall() {
     $SUDO rm -f /var/run/helix-splash.pid 2>/dev/null || true
     $SUDO rm -f /tmp/helixscreen.log 2>/dev/null || true
 
-    # Remove installation (check both possible locations)
+    # Remove installation (check all possible locations)
+    # AD5M: /opt/helixscreen, /root/printer_software/helixscreen
+    # K1: /usr/data/helixscreen
     local removed_dir=""
-    for install_dir in "/root/printer_software/helixscreen" "/opt/helixscreen"; do
+    for install_dir in "/root/printer_software/helixscreen" "/opt/helixscreen" "/usr/data/helixscreen"; do
         if [ -d "$install_dir" ]; then
             $SUDO rm -rf "$install_dir"
             log_success "Removed ${install_dir}"
@@ -86,6 +89,12 @@ uninstall() {
         fi
     fi
 
+    # Check for K1/Simple AF GuppyScreen
+    if [ -z "$restored_ui" ] && [ -f "/etc/init.d/S99guppyscreen" ]; then
+        $SUDO chmod +x "/etc/init.d/S99guppyscreen" 2>/dev/null || true
+        restored_ui="GuppyScreen (/etc/init.d/S99guppyscreen)"
+    fi
+
     if [ -z "$restored_ui" ]; then
         # Forge-X - restore GuppyScreen and stock UI settings
         # Restore ForgeX display mode to GUPPY (from HEADLESS or STOCK)
@@ -110,6 +119,11 @@ uninstall() {
         if [ -f "/opt/config/mod/.root/S35tslib" ]; then
             $SUDO chmod +x "/opt/config/mod/.root/S35tslib" 2>/dev/null || true
         fi
+    fi
+
+    # Remove update_manager section from moonraker.conf (if present)
+    if type remove_update_manager_section >/dev/null 2>&1; then
+        remove_update_manager_section || true
     fi
 
     log_success "HelixScreen uninstalled"
@@ -160,7 +174,9 @@ clean_old_installation() {
     stop_service
 
     # Remove installation directories (check all possible locations)
-    for install_dir in "/root/printer_software/helixscreen" "/opt/helixscreen"; do
+    # AD5M: /opt/helixscreen, /root/printer_software/helixscreen
+    # K1: /usr/data/helixscreen
+    for install_dir in "/root/printer_software/helixscreen" "/opt/helixscreen" "/usr/data/helixscreen"; do
         if [ -d "$install_dir" ]; then
             log_info "Removing $install_dir..."
             $SUDO rm -rf "$install_dir"
@@ -182,8 +198,9 @@ clean_old_installation() {
         done
     done
 
-    # Remove init scripts (check both possible locations)
-    for init_script in /etc/init.d/S80helixscreen /etc/init.d/S90helixscreen; do
+    # Remove init scripts (check all possible locations)
+    # AD5M: S80/S90, K1: S99
+    for init_script in /etc/init.d/S80helixscreen /etc/init.d/S90helixscreen /etc/init.d/S99helixscreen; do
         if [ -f "$init_script" ]; then
             log_info "Removing init script: $init_script"
             $SUDO rm -f "$init_script"
