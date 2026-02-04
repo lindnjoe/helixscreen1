@@ -7,6 +7,10 @@
     <color name="overlay_bg" value="#1E1E1E"/>
     <color name="overlay_text" value="#E0E0E0"/>
   </consts>
+  <styles>
+    <!-- Fully transparent but still takes up layout space -->
+    <style name="invisible" opa="0"/>
+  </styles>
   <!-- Print Status Panel - Active print monitoring with G-code 3D viewer -->
   <!-- Uses same sizing as print_file_detail: overlay_panel_width_large, 5:4 flex ratio -->
   <view name="print_status_panel"
@@ -106,23 +110,26 @@
 
         <!-- Metadata container - fixed height at bottom, overlaying thumbnail -->
         <lv_obj name="metadata_clip"
-                width="100%" height="93" style_radius="0" style_pad_all="0" align="bottom_mid" scrollable="false">
+                width="100%" height="103" style_radius="0" style_pad_all="0" align="bottom_mid" scrollable="false">
           <!-- Inner overlay with semi-transparent background and rounded corners -->
           <lv_obj name="metadata_overlay"
-                  width="100%" height="99" align="bottom_mid" style_bg_opa="160" style_radius="#border_radius"
+                  width="100%" height="109" align="bottom_mid" style_bg_opa="160" style_radius="#border_radius"
                   style_pad_left="#space_sm" style_pad_right="#space_sm" style_pad_top="#space_md"
                   style_pad_bottom="#space_sm" style_pad_gap="#space_xs" flex_flow="column" scrollable="false">
-            <!-- Print Progress Bar -->
+            <!-- Print Progress Bar (invisible during pre-print operations, but keeps layout space) -->
             <lv_bar name="print_progress"
                     width="100%" height="#space_md" style_bg_opa="255" style_bg_color="#overlay_bg"
                     style_border_width="0" style_radius="#space_xs" min_value="0" max_value="100"
-                    bind_value="print_progress"/>
+                    bind_value="print_progress">
+              <bind_style name="invisible" subject="preparing_visible" ref_value="1"/>
+            </lv_bar>
             <!-- Layer Progress (Layer X / Y) -->
             <text_small name="layer_progress_label"
                         width="100%" text="Layer 0 / 0" bind_text="print_layer_text" style_text_align="left"/>
             <!-- File Name (shared subject from ActivePrintMediaManager) -->
             <text_body name="file_name"
-                       width="100%" text="benchy.gcode" bind_text="print_display_filename" style_text_align="left"/>
+                       width="100%" text="benchy.gcode" bind_text="print_display_filename" style_text_align="left"
+                       long_mode="scroll_circular"/>
             <!-- Status Row: Time/Progress -->
             <lv_obj width="100%"
                     height="content" style_pad_all="0" flex_flow="row" style_flex_main_place="space_between"
