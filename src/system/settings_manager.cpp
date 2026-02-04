@@ -524,6 +524,11 @@ const char* SettingsManager::get_bed_mesh_render_mode_options() {
     return BED_MESH_RENDER_MODE_OPTIONS_TEXT;
 }
 
+bool SettingsManager::get_bed_mesh_show_zero_plane() const {
+    Config* config = Config::get_instance();
+    return config->get<bool>("/display/bed_mesh_show_zero_plane", true);
+}
+
 int SettingsManager::get_gcode_render_mode() const {
     return lv_subject_get_int(const_cast<lv_subject_t*>(&gcode_render_mode_subject_));
 }

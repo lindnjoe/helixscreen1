@@ -266,6 +266,11 @@ lv_obj_t* BedMeshPanel::create(lv_obj_t* parent) {
     spdlog::debug("[{}] Render mode set from settings: {} ({})", get_name(), saved_mode,
                   saved_mode == 0 ? "Auto" : (saved_mode == 1 ? "3D" : "2D"));
 
+    // Apply zero plane visibility from settings
+    bool show_zero_plane = SettingsManager::instance().get_bed_mesh_show_zero_plane();
+    ui_bed_mesh_set_zero_plane_visible(canvas_, show_zero_plane);
+    spdlog::debug("[{}] Zero plane visibility set from settings: {}", get_name(), show_zero_plane);
+
     // Evaluate render mode based on FPS history from previous sessions
     // This decides whether to use 3D or 2D fallback mode for AUTO mode
     ui_bed_mesh_evaluate_render_mode(canvas_);

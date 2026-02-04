@@ -1192,11 +1192,69 @@ static void render_decorations(lv_layer_t* layer, bed_mesh_renderer_t* renderer,
  * Uses helix::mesh rasterizer module for triangle fills - LVGL handles clipping
  * automatically via the layer system.
  *
+ * For uniform-color quads (like the zero plane), uses LVGL's polygon fill to
+ * avoid visible triangle seams along the diagonal.
+ *
  * @param layer LVGL draw layer
  * @param quad Quad with cached screen_x[], screen_y[] coordinates
  * @param use_gradient true = gradient interpolation, false = solid color
  */
 static void render_quad(lv_layer_t* layer, const bed_mesh_quad_3d_t& quad, bool use_gradient) {
+    /**
+     * Quad vertex layout:
+     *
+     *    [2]TL ──────── [3]TR
+     *      │              │
+     *      │     QUAD     │
+     *      │              │
+     *    [0]BL ──────── [1]BR
+     */
+
+    // Use quad's opacity (LV_OPA_COVER for mesh quads, translucent for zero plane)
+    lv_opa_t opacity = quad.opacity;
+
+    // For translucent quads (zero plane), use polygon fill instead of triangles
+    // to avoid visible diagonal seams. The plane is uniform color.
+    bool is_translucent = (opacity != LV_OPA_COVER);
+
+    if (is_translucent) {
+        // Render as a single filled polygon (no diagonal line)
+        // Vertex order: BL -> BR -> TR -> TL (clockwise for LVGL)
+        lv_point_precise_t points[4] = {
+            {static_cast<lv_value_precise_t>(quad.screen_x[0]),
+             static_cast<lv_value_precise_t>(quad.screen_y[0])}, // BL
+            {static_cast<lv_value_precise_t>(quad.screen_x[1]),
+             static_cast<lv_value_precise_t>(quad.screen_y[1])}, // BR
+            {static_cast<lv_value_precise_t>(quad.screen_x[3]),
+             static_cast<lv_value_precise_t>(quad.screen_y[3])}, // TR
+            {static_cast<lv_value_precise_t>(quad.screen_x[2]),
+             static_cast<lv_value_precise_t>(quad.screen_y[2])}, // TL
+        };
+
+        lv_draw_triangle_dsc_t tri_dsc;
+        lv_draw_triangle_dsc_init(&tri_dsc);
+        tri_dsc.color = quad.center_color;
+        tri_dsc.opa = opacity;
+
+        // LVGL 9 doesn't have polygon fill, so use 2 triangles but without gradient
+        // to minimize seam visibility. Use the native triangle draw for cleaner edges.
+        // Triangle 1: BL, BR, TR
+        tri_dsc.p[0] = points[0];
+        tri_dsc.p[1] = points[1];
+        tri_dsc.p[2] = points[2];
+        lv_draw_triangle(layer, &tri_dsc);
+
+        // Triangle 2: BL, TR, TL
+        tri_dsc.p[0] = points[0];
+        tri_dsc.p[1] = points[2];
+        tri_dsc.p[2] = points[3];
+        lv_draw_triangle(layer, &tri_dsc);
+        return;
+    }
+
+    // For opaque mesh quads, use triangle rasterizer with gradient support
+    bool should_use_gradient = use_gradient;
+
     /**
      * Render quad as 2 triangles (diagonal split from BL to TR):
      *
@@ -1211,29 +1269,27 @@ static void render_quad(lv_layer_t* layer, const bed_mesh_quad_3d_t& quad, bool 
      */
 
     // Triangle 1: [0]BL → [1]BR → [2]TL
-    // use_gradient = false during drag for performance (solid color fallback)
-    // use_gradient = true when static for quality (gradient interpolation)
-    if (use_gradient) {
+    if (should_use_gradient) {
         helix::mesh::fill_triangle_gradient(
             layer, quad.screen_x[0], quad.screen_y[0], quad.vertices[0].color, quad.screen_x[1],
             quad.screen_y[1], quad.vertices[1].color, quad.screen_x[2], quad.screen_y[2],
-            quad.vertices[2].color);
+            quad.vertices[2].color, opacity);
     } else {
         helix::mesh::fill_triangle_solid(layer, quad.screen_x[0], quad.screen_y[0],
                                          quad.screen_x[1], quad.screen_y[1], quad.screen_x[2],
-                                         quad.screen_y[2], quad.center_color);
+                                         quad.screen_y[2], quad.center_color, opacity);
     }
 
     // Triangle 2: [1]BR → [3]TR → [2]TL
-    if (use_gradient) {
+    if (should_use_gradient) {
         helix::mesh::fill_triangle_gradient(
             layer, quad.screen_x[1], quad.screen_y[1], quad.vertices[1].color, quad.screen_x[2],
             quad.screen_y[2], quad.vertices[2].color, quad.screen_x[3], quad.screen_y[3],
-            quad.vertices[3].color);
+            quad.vertices[3].color, opacity);
     } else {
         helix::mesh::fill_triangle_solid(layer, quad.screen_x[1], quad.screen_y[1],
                                          quad.screen_x[2], quad.screen_y[2], quad.screen_x[3],
-                                         quad.screen_y[3], quad.center_color);
+                                         quad.screen_y[3], quad.center_color, opacity);
     }
 }
 
@@ -1652,4 +1708,62 @@ void bed_mesh_renderer_clear_touch(bed_mesh_renderer_t* renderer) {
     if (!renderer)
         return;
     renderer->touch_valid = false;
+}
+
+// ============================================================================
+// Public API: Zero Reference Plane
+// ============================================================================
+
+void bed_mesh_renderer_set_zero_plane_visible(bed_mesh_renderer_t* renderer, bool visible) {
+    if (!renderer)
+        return;
+
+    if (renderer->show_zero_plane == visible)
+        return; // No change
+
+    renderer->show_zero_plane = visible;
+    spdlog::debug("[Bed Mesh Renderer] Zero plane visibility set to {}", visible);
+
+    // Regenerate quads to add/remove plane quads
+    if (renderer->has_mesh_data) {
+        helix::mesh::generate_mesh_quads(renderer);
+
+        // State transition: READY_TO_RENDER → MESH_LOADED (quads regenerated, projections invalid)
+        if (renderer->state == RendererState::READY_TO_RENDER) {
+            renderer->state = RendererState::MESH_LOADED;
+        }
+    }
+}
+
+bool bed_mesh_renderer_get_zero_plane_visible(bed_mesh_renderer_t* renderer) {
+    if (!renderer)
+        return false;
+    return renderer->show_zero_plane;
+}
+
+void bed_mesh_renderer_set_zero_plane_offset(bed_mesh_renderer_t* renderer, double z_offset_mm) {
+    if (!renderer)
+        return;
+
+    if (renderer->zero_plane_z_offset == z_offset_mm)
+        return; // No change
+
+    renderer->zero_plane_z_offset = z_offset_mm;
+    spdlog::debug("[Bed Mesh Renderer] Zero plane Z-offset set to {:.4f}mm", z_offset_mm);
+
+    // Regenerate quads if plane is visible
+    if (renderer->show_zero_plane && renderer->has_mesh_data) {
+        helix::mesh::generate_mesh_quads(renderer);
+
+        // State transition: READY_TO_RENDER → MESH_LOADED (quads regenerated, projections invalid)
+        if (renderer->state == RendererState::READY_TO_RENDER) {
+            renderer->state = RendererState::MESH_LOADED;
+        }
+    }
+}
+
+double bed_mesh_renderer_get_zero_plane_offset(bed_mesh_renderer_t* renderer) {
+    if (!renderer)
+        return 0.0;
+    return renderer->zero_plane_z_offset;
 }

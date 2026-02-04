@@ -280,6 +280,12 @@ class SettingsManager {
     static const char* get_bed_mesh_render_mode_options();
 
     /**
+     * @brief Get bed mesh zero plane visibility
+     * @return true if translucent Z=0 reference plane should be shown in 3D view
+     */
+    bool get_bed_mesh_show_zero_plane() const;
+
+    /**
      * @brief Get G-code render mode
      * @return Render mode (0=Auto, 1=3D View, 2=2D Layer View)
      */

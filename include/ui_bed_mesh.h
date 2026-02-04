@@ -121,6 +121,18 @@ bed_mesh_render_mode_t ui_bed_mesh_get_render_mode(lv_obj_t* canvas);
  */
 void ui_bed_mesh_set_render_mode(lv_obj_t* canvas, bed_mesh_render_mode_t mode);
 
+/**
+ * @brief Show or hide the zero reference plane
+ *
+ * The zero plane is a translucent reference surface at Z=0 that intersects
+ * the mesh, showing where the nozzle touches the bed. Parts of the mesh
+ * above the plane obscure it; parts below are visible through the plane.
+ *
+ * @param canvas The bed_mesh canvas widget
+ * @param visible true to show the zero plane, false to hide it
+ */
+void ui_bed_mesh_set_zero_plane_visible(lv_obj_t* canvas, bool visible);
+
 #ifdef __cplusplus
 }
 #endif

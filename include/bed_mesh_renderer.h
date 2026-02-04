@@ -130,6 +130,7 @@ struct bed_mesh_quad_3d_t {
 
     double avg_depth;        // Average depth for back-to-front sorting (computed from depths[])
     lv_color_t center_color; // Fallback solid color for fast rendering (drag mode)
+    lv_opa_t opacity;        // Quad opacity (LV_OPA_COVER for mesh, lower for zero plane)
 };
 
 // View/camera state for interactive rotation
@@ -401,6 +402,47 @@ void bed_mesh_renderer_clear_touch(bed_mesh_renderer_t* renderer);
  * @return Average FPS (60.0 if no samples yet)
  */
 float bed_mesh_renderer_get_average_fps(bed_mesh_renderer_t* renderer);
+
+/**
+ * @brief Show or hide the zero reference plane
+ *
+ * The zero plane is a translucent reference surface at Z=0 (or Z-offset)
+ * that intersects the mesh, showing where the nozzle touches the bed.
+ * Parts of the mesh above the plane obscure it; parts below are visible
+ * through the translucent plane.
+ *
+ * @param renderer Renderer instance
+ * @param visible true to show the zero plane, false to hide it
+ */
+void bed_mesh_renderer_set_zero_plane_visible(bed_mesh_renderer_t* renderer, bool visible);
+
+/**
+ * @brief Check if zero plane is currently visible
+ *
+ * @param renderer Renderer instance
+ * @return true if zero plane is shown, false otherwise
+ */
+bool bed_mesh_renderer_get_zero_plane_visible(bed_mesh_renderer_t* renderer);
+
+/**
+ * @brief Set the Z-offset for the zero reference plane
+ *
+ * By default the plane is at mesh Z=0. If your printer has a Z-offset
+ * (e.g., from probe calibration), set it here to position the plane
+ * at the actual nozzle zero position.
+ *
+ * @param renderer Renderer instance
+ * @param z_offset_mm Z-offset in millimeters (positive = plane above mesh Z=0)
+ */
+void bed_mesh_renderer_set_zero_plane_offset(bed_mesh_renderer_t* renderer, double z_offset_mm);
+
+/**
+ * @brief Get the current Z-offset for the zero reference plane
+ *
+ * @param renderer Renderer instance
+ * @return Current Z-offset in millimeters
+ */
+double bed_mesh_renderer_get_zero_plane_offset(bed_mesh_renderer_t* renderer);
 
 #ifdef __cplusplus
 }

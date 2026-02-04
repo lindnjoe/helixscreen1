@@ -11,6 +11,7 @@
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
+#include <cmath>
 
 namespace helix {
 namespace mesh {
@@ -149,15 +150,18 @@ void generate_mesh_quads(bed_mesh_renderer_t* renderer) {
                                      4)};
             quad.center_color = lv_color_make(avg_color.r, avg_color.g, avg_color.b);
 
-            quad.avg_depth = 0.0; // Will be computed during projection
+            quad.avg_depth = 0.0;        // Will be computed during projection
+            quad.opacity = LV_OPA_COVER; // Mesh quads are fully opaque
 
             renderer->quads.push_back(quad);
         }
     }
 
+    size_t mesh_quad_count = renderer->quads.size();
+
     // DEBUG: Log quad generation with z_scale used
-    spdlog::debug("[QUAD_GEN] Generated {} quads, z_scale={:.2f}, z_center={:.4f}",
-                  renderer->quads.size(), renderer->view_state.z_scale, renderer->cached_z_center);
+    spdlog::debug("[QUAD_GEN] Generated {} mesh quads, z_scale={:.2f}, z_center={:.4f}",
+                  mesh_quad_count, renderer->view_state.z_scale, renderer->cached_z_center);
     // Log a sample quad to verify Z values
     if (!renderer->quads.empty()) {
         int center_row = (renderer->rows - 1) / 2;
@@ -172,8 +176,115 @@ void generate_mesh_quads(bed_mesh_renderer_t* renderer) {
                 renderer->mesh[static_cast<size_t>(center_row)][static_cast<size_t>(center_col)]);
         }
     }
-    spdlog::trace("[Bed Mesh Geometry] Generated {} quads from {}x{} mesh", renderer->quads.size(),
-                  renderer->rows, renderer->cols);
+
+    // ========== Generate Zero Plane Quads ==========
+    // Translucent reference plane at Z=0 (or Z-offset) showing where nozzle touches bed
+    // The plane covers the FULL BED area (not just the mesh probe area)
+    if (renderer->show_zero_plane) {
+        // Calculate world Z coordinate for the zero plane
+        // zero_plane_z_offset is in mesh coordinates (mm), convert to world Z
+        double plane_world_z = helix::mesh::mesh_z_to_world_z(
+            renderer->zero_plane_z_offset, renderer->cached_z_center, renderer->view_state.z_scale);
+
+        // Zero plane color: grayish-white (matches Mainsail style)
+        lv_color_t plane_color = lv_color_make(200, 200, 210); // Slightly blue-tinted gray
+
+        // Determine plane bounds and grid spacing
+        double plane_min_x, plane_max_x, plane_min_y, plane_max_y;
+        double grid_spacing_x, grid_spacing_y;
+        int plane_cols, plane_rows;
+
+        if (renderer->geometry_computed && renderer->has_bed_bounds) {
+            // Use FULL BED bounds for the zero plane
+            plane_min_x = renderer->bed_min_x;
+            plane_max_x = renderer->bed_max_x;
+            plane_min_y = renderer->bed_min_y;
+            plane_max_y = renderer->bed_max_y;
+
+            // Use similar grid density as the mesh for good depth interleaving
+            // Calculate approximate cell size from mesh, then apply to bed
+            double mesh_cell_x =
+                (renderer->mesh_area_max_x - renderer->mesh_area_min_x) / (renderer->cols - 1);
+            double mesh_cell_y =
+                (renderer->mesh_area_max_y - renderer->mesh_area_min_y) / (renderer->rows - 1);
+
+            // Number of cells needed to cover the bed
+            plane_cols = static_cast<int>(std::ceil((plane_max_x - plane_min_x) / mesh_cell_x)) + 1;
+            plane_rows = static_cast<int>(std::ceil((plane_max_y - plane_min_y) / mesh_cell_y)) + 1;
+
+            // Clamp to reasonable limits
+            plane_cols = std::max(2, std::min(plane_cols, 30));
+            plane_rows = std::max(2, std::min(plane_rows, 30));
+
+            grid_spacing_x = (plane_max_x - plane_min_x) / (plane_cols - 1);
+            grid_spacing_y = (plane_max_y - plane_min_y) / (plane_rows - 1);
+        } else {
+            // Fallback: use mesh bounds
+            plane_min_x = 0.0;
+            plane_max_x = (renderer->cols - 1) * BED_MESH_SCALE;
+            plane_min_y = 0.0;
+            plane_max_y = (renderer->rows - 1) * BED_MESH_SCALE;
+            plane_cols = renderer->cols;
+            plane_rows = renderer->rows;
+            grid_spacing_x = BED_MESH_SCALE;
+            grid_spacing_y = BED_MESH_SCALE;
+        }
+
+        // Generate plane quads covering the full bed
+        for (int row = 0; row < plane_rows - 1; row++) {
+            for (int col = 0; col < plane_cols - 1; col++) {
+                bed_mesh_quad_3d_t plane_quad;
+
+                // Compute printer coordinates for this cell
+                double printer_x0 = plane_min_x + col * grid_spacing_x;
+                double printer_x1 = plane_min_x + (col + 1) * grid_spacing_x;
+                double printer_y0 = plane_min_y + row * grid_spacing_y;
+                double printer_y1 = plane_min_y + (row + 1) * grid_spacing_y;
+
+                // Convert to world coordinates
+                double base_x_0, base_x_1, base_y_0, base_y_1;
+                if (renderer->geometry_computed) {
+                    base_x_0 = helix::mesh::printer_x_to_world_x(printer_x0, renderer->bed_center_x,
+                                                                 renderer->coord_scale);
+                    base_x_1 = helix::mesh::printer_x_to_world_x(printer_x1, renderer->bed_center_x,
+                                                                 renderer->coord_scale);
+                    base_y_0 = helix::mesh::printer_y_to_world_y(printer_y0, renderer->bed_center_y,
+                                                                 renderer->coord_scale);
+                    base_y_1 = helix::mesh::printer_y_to_world_y(printer_y1, renderer->bed_center_y,
+                                                                 renderer->coord_scale);
+                } else {
+                    // Legacy fallback
+                    base_x_0 = printer_x0 - plane_max_x / 2.0;
+                    base_x_1 = printer_x1 - plane_max_x / 2.0;
+                    base_y_0 = -(printer_y0 - plane_max_y / 2.0);
+                    base_y_1 = -(printer_y1 - plane_max_y / 2.0);
+                }
+
+                // All vertices at same Z (flat plane)
+                // Vertex layout matches mesh quads: [0]=BL, [1]=BR, [2]=TL, [3]=TR
+                plane_quad.vertices[0] = {base_x_0, base_y_1, plane_world_z, plane_color};
+                plane_quad.vertices[1] = {base_x_1, base_y_1, plane_world_z, plane_color};
+                plane_quad.vertices[2] = {base_x_0, base_y_0, plane_world_z, plane_color};
+                plane_quad.vertices[3] = {base_x_1, base_y_0, plane_world_z, plane_color};
+
+                plane_quad.center_color = plane_color;
+                plane_quad.avg_depth = 0.0; // Will be computed during projection
+                plane_quad.opacity = renderer->zero_plane_opacity; // Translucent
+
+                renderer->quads.push_back(plane_quad);
+            }
+        }
+
+        spdlog::debug("[QUAD_GEN] Generated {} zero plane quads ({}x{} grid) covering full bed "
+                      "[{:.0f},{:.0f}]x[{:.0f},{:.0f}] at world_z={:.2f}",
+                      renderer->quads.size() - mesh_quad_count, plane_cols - 1, plane_rows - 1,
+                      plane_min_x, plane_max_x, plane_min_y, plane_max_y, plane_world_z);
+    }
+
+    spdlog::trace(
+        "[Bed Mesh Geometry] Generated {} total quads ({} mesh + {} plane) from {}x{} mesh",
+        renderer->quads.size(), mesh_quad_count, renderer->quads.size() - mesh_quad_count,
+        renderer->rows, renderer->cols);
 }
 
 void sort_quads_by_depth(std::vector<bed_mesh_quad_3d_t>& quads) {

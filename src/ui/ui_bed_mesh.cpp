@@ -577,3 +577,20 @@ void ui_bed_mesh_set_render_mode(lv_obj_t* widget, bed_mesh_render_mode_t mode) 
     bed_mesh_renderer_set_render_mode(data->renderer, mode);
     lv_obj_invalidate(widget); // Redraw with new mode
 }
+
+/**
+ * Show or hide the zero reference plane
+ */
+void ui_bed_mesh_set_zero_plane_visible(lv_obj_t* widget, bool visible) {
+    if (!widget) {
+        return;
+    }
+
+    bed_mesh_widget_data_t* data = (bed_mesh_widget_data_t*)lv_obj_get_user_data(widget);
+    if (!data || !data->renderer) {
+        return;
+    }
+
+    bed_mesh_renderer_set_zero_plane_visible(data->renderer, visible);
+    lv_obj_invalidate(widget); // Redraw with updated plane visibility
+}
