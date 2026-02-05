@@ -614,6 +614,15 @@ class PrinterState {
     }
 
     /**
+     * @brief Update speed for a specific fan (optimistic UI updates)
+     * @param object_name Moonraker object name (e.g., "fan_generic chamber_fan")
+     * @param speed Speed as 0.0-1.0 (Moonraker format)
+     */
+    void update_fan_speed(const std::string& object_name, double speed) {
+        fan_state_.update_fan_speed(object_name, speed);
+    }
+
+    /**
      * @brief Get G-code Z offset subject for tune panel
      *
      * Returns current Z-offset from gcode_move.homing_origin[2] in microns.

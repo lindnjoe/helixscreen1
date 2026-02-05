@@ -7,6 +7,7 @@
 
 #include "format_utils.h"
 #include "lvgl/src/xml/lv_xml.h"
+#include "settings_manager.h"
 #include "ui/ui_event_trampoline.h"
 
 #include <spdlog/spdlog.h>
@@ -54,8 +55,9 @@ FanDial::FanDial(lv_obj_t* parent, const std::string& name, const std::string& f
     lv_obj_add_event_cb(btn_off_, on_off_clicked, LV_EVENT_CLICKED, this);
     lv_obj_add_event_cb(btn_on_, on_on_clicked, LV_EVENT_CLICKED, this);
 
-    // Set initial speed display
+    // Set initial speed display and button states
     update_speed_label(initial_speed);
+    update_button_states(initial_speed);
 
     spdlog::debug("[FanDial] Created '{}' (id={}) with initial speed {}%", name, fan_id,
                   initial_speed);
@@ -71,7 +73,8 @@ FanDial::FanDial(FanDial&& other) noexcept
     : root_(other.root_), arc_(other.arc_), speed_label_(other.speed_label_),
       btn_off_(other.btn_off_), btn_on_(other.btn_on_), name_(std::move(other.name_)),
       fan_id_(std::move(other.fan_id_)), current_speed_(other.current_speed_),
-      on_speed_changed_(std::move(other.on_speed_changed_)), syncing_(other.syncing_) {
+      on_speed_changed_(std::move(other.on_speed_changed_)), syncing_(other.syncing_),
+      last_user_input_(other.last_user_input_) {
     // Clear the source pointers
     other.root_ = nullptr;
     other.arc_ = nullptr;
@@ -111,6 +114,7 @@ FanDial& FanDial::operator=(FanDial&& other) noexcept {
         current_speed_ = other.current_speed_;
         on_speed_changed_ = std::move(other.on_speed_changed_);
         syncing_ = other.syncing_;
+        last_user_input_ = other.last_user_input_;
 
         // Clear source pointers
         other.root_ = nullptr;
@@ -142,6 +146,21 @@ void FanDial::set_speed(int percent) {
     if (percent > 100)
         percent = 100;
 
+    // Suppress external updates while user is actively dragging the arc
+    if (arc_ && (lv_obj_get_state(arc_) & LV_STATE_PRESSED)) {
+        spdlog::trace("[FanDial] '{}' suppressed set_speed({}%) - arc is pressed", name_, percent);
+        return;
+    }
+
+    // Suppress external updates for a short window after the user releases the dial,
+    // so stale Moonraker values don't snap the dial back before confirmation arrives
+    constexpr uint32_t suppression_ms = 1500;
+    if (last_user_input_ > 0 && (lv_tick_get() - last_user_input_) < suppression_ms) {
+        spdlog::trace("[FanDial] '{}' suppressed set_speed({}%) - within {}ms of last input", name_,
+                      percent, suppression_ms);
+        return;
+    }
+
     current_speed_ = percent;
 
     // Set syncing flag to prevent callback loop
@@ -152,8 +171,9 @@ void FanDial::set_speed(int percent) {
         lv_arc_set_value(arc_, percent);
     }
 
-    // Update label
+    // Update label and button states
     update_speed_label(percent);
+    update_button_states(percent);
 
     syncing_ = false;
 
@@ -166,6 +186,23 @@ int FanDial::get_speed() const {
 
 void FanDial::set_on_speed_changed(SpeedCallback callback) {
     on_speed_changed_ = std::move(callback);
+}
+
+void FanDial::update_button_states(int percent) {
+    if (btn_off_) {
+        if (percent == 0) {
+            lv_obj_add_state(btn_off_, LV_STATE_DISABLED);
+        } else {
+            lv_obj_remove_state(btn_off_, LV_STATE_DISABLED);
+        }
+    }
+    if (btn_on_) {
+        if (percent == 100) {
+            lv_obj_add_state(btn_on_, LV_STATE_DISABLED);
+        } else {
+            lv_obj_remove_state(btn_on_, LV_STATE_DISABLED);
+        }
+    }
 }
 
 void FanDial::update_speed_label(int percent) {
@@ -188,9 +225,12 @@ void FanDial::handle_arc_changed() {
     if (!arc_)
         return;
 
+    last_user_input_ = lv_tick_get();
+
     int value = lv_arc_get_value(arc_);
     current_speed_ = value;
     update_speed_label(value);
+    update_button_states(value);
 
     if (on_speed_changed_) {
         on_speed_changed_(fan_id_, value);
@@ -199,8 +239,66 @@ void FanDial::handle_arc_changed() {
     spdlog::trace("[FanDial] '{}' arc changed to {}%", name_, value);
 }
 
+void FanDial::label_anim_exec_cb(void* var, int32_t value) {
+    auto* self = static_cast<FanDial*>(var);
+    // Update arc position, label text, and button states together
+    self->update_speed_label(static_cast<int>(value));
+    self->update_button_states(static_cast<int>(value));
+    if (self->arc_) {
+        lv_arc_set_value(self->arc_, static_cast<int32_t>(value));
+    }
+}
+
+void FanDial::anim_completed_cb(lv_anim_t* anim) {
+    auto* self = static_cast<FanDial*>(anim->var);
+    if (self) {
+        self->syncing_ = false;
+    }
+}
+
+void FanDial::animate_speed_label(int from, int to) {
+    // For no-change or missing label, just set directly
+    if (from == to) {
+        update_speed_label(to);
+        if (arc_) {
+            lv_arc_set_value(arc_, to);
+        }
+        syncing_ = false;
+        return;
+    }
+
+    // Respect animation settings
+    if (!SettingsManager::instance().get_animations_enabled()) {
+        update_speed_label(to);
+        if (arc_) {
+            lv_arc_set_value(arc_, to);
+        }
+        syncing_ = false;
+        return;
+    }
+
+    // Cancel any existing animation
+    lv_anim_delete(this, label_anim_exec_cb);
+
+    // Keep syncing_ true for the entire animation to suppress arc change callbacks
+    syncing_ = true;
+
+    lv_anim_t anim;
+    lv_anim_init(&anim);
+    lv_anim_set_var(&anim, this);
+    lv_anim_set_values(&anim, from, to);
+    lv_anim_set_duration(&anim, 400);
+    lv_anim_set_path_cb(&anim, lv_anim_path_ease_out);
+    lv_anim_set_exec_cb(&anim, label_anim_exec_cb);
+    lv_anim_set_completed_cb(&anim, anim_completed_cb);
+    lv_anim_start(&anim);
+}
+
 void FanDial::handle_off_clicked() {
-    set_speed(0);
+    last_user_input_ = lv_tick_get();
+    int prev_speed = current_speed_;
+    current_speed_ = 0;
+    animate_speed_label(prev_speed, 0);
 
     if (on_speed_changed_) {
         on_speed_changed_(fan_id_, 0);
@@ -210,7 +308,10 @@ void FanDial::handle_off_clicked() {
 }
 
 void FanDial::handle_on_clicked() {
-    set_speed(100);
+    last_user_input_ = lv_tick_get();
+    int prev_speed = current_speed_;
+    current_speed_ = 100;
+    animate_speed_label(prev_speed, 100);
 
     if (on_speed_changed_) {
         on_speed_changed_(fan_id_, 100);

@@ -265,6 +265,11 @@ void FanControlOverlay::send_fan_speed(const std::string& object_name, int speed
 
     spdlog::debug("[{}] Setting '{}' to {}%", get_name(), object_name, speed_percent);
 
+    // Optimistic update: immediately reflect the new speed in PrinterState so
+    // other UI (e.g. controls card secondary fan rows) updates without waiting
+    // for the Moonraker round-trip confirmation.
+    printer_state_.update_fan_speed(object_name, static_cast<double>(speed_percent) / 100.0);
+
     // MoonrakerAPI::set_fan_speed expects:
     // - "fan" for part cooling fan (uses M106)
     // - Fan name for generic fans (uses SET_FAN_SPEED)

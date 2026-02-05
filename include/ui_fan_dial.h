@@ -91,14 +91,19 @@ class FanDial {
 
   private:
     void update_speed_label(int percent);
+    void update_button_states(int percent);
+    void animate_speed_label(int from, int to);
     void handle_arc_changed();
+
     void handle_off_clicked();
     void handle_on_clicked();
 
-    // Static event trampolines
+    // Static callbacks
     static void on_arc_value_changed(lv_event_t* e);
     static void on_off_clicked(lv_event_t* e);
     static void on_on_clicked(lv_event_t* e);
+    static void label_anim_exec_cb(void* var, int32_t value);
+    static void anim_completed_cb(lv_anim_t* anim);
 
     lv_obj_t* root_ = nullptr;
     lv_obj_t* arc_ = nullptr;
@@ -110,7 +115,8 @@ class FanDial {
     std::string fan_id_;
     int current_speed_ = 0;
     SpeedCallback on_speed_changed_;
-    bool syncing_ = false; // Prevent callback loops during set_speed()
+    bool syncing_ = false;         // Prevent callback loops during set_speed()
+    uint32_t last_user_input_ = 0; // Tick of last user interaction (for suppression window)
 };
 
 /**

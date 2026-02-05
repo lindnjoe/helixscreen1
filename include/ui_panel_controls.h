@@ -160,6 +160,7 @@ class ControlsPanel : public PanelBase {
     lv_subject_t fan_speed_subject_{};
     char fan_speed_buf_[16] = {};
     lv_subject_t fan_pct_subject_{};
+    uint32_t last_fan_slider_input_ = 0; // Tick of last slider interaction (suppression window)
 
     // Macro button subjects for declarative binding
     lv_subject_t macro_1_visible_{};
