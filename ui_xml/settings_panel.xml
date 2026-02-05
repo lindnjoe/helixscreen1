@@ -158,11 +158,11 @@
     </setting_info_row>
     <!-- Klipper Version -->
     <setting_info_row name="row_klipper" label="Klipper" label_tag="Klipper" icon="toy_brick_outline">
-      <text_muted name="value" text="—" translation_tag="—"/>
+      <text_muted name="value" text="—"/>
     </setting_info_row>
     <!-- Moonraker Version -->
     <setting_info_row name="row_moonraker" label="Moonraker" label_tag="Moonraker" icon="toy_brick_outline">
-      <text_muted name="value" text="—" translation_tag="—"/>
+      <text_muted name="value" text="—"/>
     </setting_info_row>
     <!-- Total Print Hours -->
     <setting_info_row name="row_print_hours" label="Print Hours" label_tag="Print Hours" icon="clock">

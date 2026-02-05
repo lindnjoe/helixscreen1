@@ -78,13 +78,13 @@
                    width="48%" height="content" style_radius="#border_radius" style_pad_all="#space_xs"
                    flex_flow="column" style_flex_cross_place="start">
             <text_small text="Print Time" translation_tag="Print Time"/>
-            <text_heading name="stat_print_time" text="0h" translation_tag="0h" bind_text="stat_print_time"/>
+            <text_heading name="stat_print_time" text="0h" bind_text="stat_print_time"/>
           </ui_card>
           <ui_card name="card_filament"
                    width="48%" height="content" style_radius="#border_radius" style_pad_all="#space_xs"
                    flex_flow="column" style_flex_cross_place="start">
             <text_small text="Filament Used" translation_tag="Filament Used"/>
-            <text_heading name="stat_filament" text="0m" translation_tag="0m" bind_text="stat_filament"/>
+            <text_heading name="stat_filament" text="0m" bind_text="stat_filament"/>
           </ui_card>
         </lv_obj>
         <!-- Right: Filament by Type Chart with Labels -->

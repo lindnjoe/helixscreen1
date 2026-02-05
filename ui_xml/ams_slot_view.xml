@@ -38,7 +38,7 @@
 
     <!-- Material label at top (PLA, PETG, etc.) -->
     <text_small name="material_label"
-                text="--" translation_tag="--"
+                text="--"
                 style_text_color="#text"
                 style_text_letter_space="1"
                 clickable="true"

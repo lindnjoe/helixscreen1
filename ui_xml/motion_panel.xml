@@ -102,7 +102,7 @@
             <text_small name="pos_y" bind_text="motion_pos_y"/>
           </lv_obj>
           <lv_obj width="100%" style_pad_all="0" flex_flow="row" style_pad_gap="#space_xs">
-            <text_small text="Z:" translation_tag="Z:"/>
+            <text_small text="Z:"/>
             <text_small name="pos_z" bind_text="motion_pos_z"/>
           </lv_obj>
         </lv_obj>

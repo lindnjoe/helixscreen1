@@ -125,10 +125,10 @@
             </lv_bar>
             <!-- Layer Progress (Layer X / Y) -->
             <text_small name="layer_progress_label"
-                        width="100%" text="Layer 0 / 0" translation_tag="Layer 0 / 0" bind_text="print_layer_text" style_text_align="left"/>
+                        width="100%" text="Layer 0 / 0" bind_text="print_layer_text" style_text_align="left"/>
             <!-- File Name (shared subject from ActivePrintMediaManager) -->
             <text_body name="file_name"
-                       width="100%" text="benchy.gcode" translation_tag="benchy.gcode" bind_text="print_display_filename" style_text_align="left"
+                       width="100%" text="benchy.gcode" bind_text="print_display_filename" style_text_align="left"
                        long_mode="scroll_circular"/>
             <!-- Status Row: Time/Progress -->
             <lv_obj width="100%"
@@ -138,9 +138,9 @@
               <lv_obj height="content"
                       style_pad_all="0" flex_flow="row" style_flex_main_place="start" style_flex_cross_place="center"
                       scrollable="false">
-                <text_small name="print_elapsed" text="0h 00m" translation_tag="0h 00m" bind_text="print_elapsed"/>
+                <text_small name="print_elapsed" text="0h 00m" bind_text="print_elapsed"/>
                 <text_small text=" / "/>
-                <text_small name="print_remaining" text="0h 00m" translation_tag="0h 00m" bind_text="print_remaining"/>
+                <text_small name="print_remaining" text="0h 00m" bind_text="print_remaining"/>
               </lv_obj>
               <text_small name="print_percent" text="0%" bind_text="print_progress_text"/>
             </lv_obj>
