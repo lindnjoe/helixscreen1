@@ -68,9 +68,9 @@
 - **Uses**: 2 | **Velocity**: 0 | **Learned**: 2026-01-01 | **Last**: 2026-01-21 | **Category**: pattern | **Type**: informational
 > Use Sonnet (not Haiku) for architectural-level code reviews, structural changes, or final comprehensive reviews. Haiku is fine for quick single-file spot-checks with clear pass/fail criteria.
 
-### [L045] [*----|-----] LVGL dropdown options
-- **Uses**: 2 | **Velocity**: 0 | **Learned**: 2026-01-06 | **Last**: 2026-01-23 | **Category**: correction | **Type**: constraint
-> LVGL dropdowns do NOT support bind_options in XML. Always use lv_dropdown_set_options() directly in C++ code to set dropdown options dynamically. All other dropdowns in the codebase follow this pattern.
+### [L045] [*----|-----] XML dropdown options use &#10; entities
+- **Uses**: 2 | **Velocity**: 0 | **Learned**: 2026-01-06 | **Last**: 2026-01-23 | **Category**: gotcha | **Type**: constraint
+> LVGL dropdown options in XML use &#10; (newline entity) as separator: options="Auto&#10;3D View&#10;2D Heatmap". NEVER expand &#10; to literal newlines — XML parsers normalize literal newlines in attributes to SPACES (per XML spec), silently breaking all dropdown options into one entry. The format-xml.py correctly round-trips &#10; through lxml, but any tool that writes literal newlines into XML attributes will destroy them.
 
 ### [L046] [*----|*----] XML subject shadows C++ subject
 - **Uses**: 1 | **Velocity**: 0.015 | **Learned**: 2026-01-06 | **Last**: 2026-01-30 | **Category**: correction | **Type**: constraint

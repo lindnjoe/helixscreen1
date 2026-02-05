@@ -79,7 +79,7 @@
                   height="content" flex_flow="row" style_pad_all="0" style_pad_gap="#space_sm"
                   style_flex_cross_place="center">
             <text_small text="Ghost:" translation_tag="Ghost:"/>
-            <lv_dropdown name="ghost_mode_dropdown" flex_grow="1" options="Stipple Solid"/>
+            <lv_dropdown name="ghost_mode_dropdown" flex_grow="1" options="Stipple&#10;Solid"/>
           </lv_obj>
         </ui_card>
         <!-- File Section -->
