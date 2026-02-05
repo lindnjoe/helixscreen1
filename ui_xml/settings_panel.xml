@@ -12,6 +12,10 @@
     <!-- APPEARANCE SECTION -->
     <!-- ================================================================== -->
     <setting_section_header title="APPEARANCE" title_tag="APPEARANCE" icon="light"/>
+    <!-- Language Dropdown -->
+    <setting_dropdown_row name="row_language"
+                          label="Language" label_tag="Language" icon="translate" description="Choose display language" description_tag="Choose display language"
+                          callback="on_language_changed"/>
     <!-- Animations Toggle -->
     <setting_toggle_row name="row_animations"
                         label="Animations" label_tag="Animations" icon="animation" description="Enable UI motion effects" description_tag="Enable UI motion effects"
@@ -24,10 +28,6 @@
     <setting_action_row name="row_display_settings"
                         label="Display Settings" label_tag="Display Settings" icon="light" description="Theme, brightness, and sleep settings" description_tag="Theme, brightness, and sleep settings"
                         callback="on_display_settings_clicked"/>
-    <!-- Language Dropdown -->
-    <setting_dropdown_row name="row_language"
-                          label="Language" label_tag="Language" icon="translate" description="Choose display language" description_tag="Choose display language"
-                          callback="on_language_changed"/>
     <!-- ================================================================== -->
     <!-- PRINTER SECTION -->
     <!-- ================================================================== -->
