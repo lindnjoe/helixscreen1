@@ -13,6 +13,9 @@ make test                            # Build tests only (does NOT run them)
 make test-run                        # Build AND run tests in parallel
 ./build/bin/helix-tests "[tag]"      # Run specific test tags
 make pi-test                         # Build on thelio + deploy + run
+
+# Worktrees — MUST use for MAJOR work. Always in .worktrees/ (project root).
+scripts/setup-worktree.sh feature/my-branch  # Symlinks deps, builds fast
 ```
 
 **Panels:** home, controls, motion, nozzle-temp, bed-temp, extrusion, filament, settings, advanced, print-select
