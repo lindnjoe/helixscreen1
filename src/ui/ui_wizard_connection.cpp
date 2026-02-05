@@ -175,7 +175,8 @@ void WizardConnectionStep::init_subjects() {
                                         connection_port_buffer_, "connection_port");
     UI_SUBJECT_INIT_AND_REGISTER_STRING(connection_status_icon_, connection_status_icon_buffer_, "",
                                         "connection_status_icon");
-    UI_SUBJECT_INIT_AND_REGISTER_STRING(connection_status_text_, connection_status_text_buffer_, "",
+    UI_SUBJECT_INIT_AND_REGISTER_STRING(connection_status_text_, connection_status_text_buffer_,
+                                        "Connection must be tested successfully to continue",
                                         "connection_status_text");
     UI_SUBJECT_INIT_AND_REGISTER_INT(connection_testing_, 0, "connection_testing");
     UI_SUBJECT_INIT_AND_REGISTER_INT(connection_discovering_, 0, "connection_discovering");
