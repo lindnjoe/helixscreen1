@@ -5,6 +5,8 @@
 
 #include "ui_error_reporting.h"
 
+#include "runtime_config.h"
+
 #include <fstream>
 #include <iomanip>
 #include <sys/stat.h>
@@ -521,6 +523,16 @@ std::string Config::get_language() {
 
 void Config::set_language(const std::string& lang) {
     set("/language", lang);
+}
+
+bool Config::is_beta_features_enabled() {
+    // Always enable beta features in test mode
+    auto* rt = get_runtime_config();
+    if (rt && rt->is_test_mode()) {
+        return true;
+    }
+
+    return get<bool>("/beta_features", false);
 }
 
 void Config::reset_to_defaults() {

@@ -232,6 +232,18 @@ class Config {
     void set_language(const std::string& lang);
 
     /**
+     * @brief Check if beta features are enabled
+     *
+     * Beta features are gated behind this flag to allow testing
+     * before public release. Returns true if:
+     * - "beta_features" config key is true, OR
+     * - Running in --test mode (RuntimeConfig)
+     *
+     * @return true if beta features should be available
+     */
+    bool is_beta_features_enabled();
+
+    /**
      * @brief Reset configuration to factory defaults
      *
      * Clears all user settings and restores the config to initial state.

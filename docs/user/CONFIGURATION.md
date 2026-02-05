@@ -65,6 +65,7 @@ The configuration file is JSON format with several top-level sections:
   "wizard_completed": false,
   "wifi_expected": false,
   "language": "en",
+  "beta_features": false,
   "log_dest": "auto",
   "log_path": "",
   "log_level": "warn",
@@ -125,6 +126,11 @@ The configuration file is JSON format with several top-level sections:
 **Default:** `"en"`
 **Values:** `"en"` (English)
 **Description:** UI language code. Currently only English is supported.
+
+### `beta_features`
+**Type:** boolean
+**Default:** `false`
+**Description:** Enable beta features that are still under testing. Currently gates the HelixPrint plugin install prompt. Always enabled automatically when running in `--test` mode.
 
 ---
 

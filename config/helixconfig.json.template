@@ -12,6 +12,8 @@
   "_wifi_expected_comment": "Whether WiFi connectivity is expected. Used to show connection warnings. Set during wizard.",
   "language": "en",
   "_language_comment": "UI language code. Options: 'en' (English). Default: 'en'.",
+  "beta_features": false,
+  "_beta_features_comment": "Enable beta features (e.g., HelixPrint plugin install prompt). Default: false. Always enabled in --test mode.",
   "theme": {
     "preset": 0,
     "_preset_comment": "Theme accent preset. 0=Nord. Requires restart."

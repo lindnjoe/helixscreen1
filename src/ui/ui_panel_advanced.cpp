@@ -14,6 +14,7 @@
 #include "ui_update_queue.h"
 
 #include "app_globals.h"
+#include "config.h"
 #include "lvgl/src/others/translation/lv_translation.h"
 #include "macro_modification_manager.h"
 #include "moonraker_api.h"
@@ -232,6 +233,13 @@ void AdvancedPanel::on_pid_tuning_clicked(lv_event_t* /*e*/) {
 
 void AdvancedPanel::handle_helix_plugin_install_clicked() {
     spdlog::debug("[{}] HelixPrint Plugin Install clicked", get_name());
+
+    // Gate plugin install behind beta_features flag
+    Config* config = Config::get_instance();
+    if (config && !config->is_beta_features_enabled()) {
+        spdlog::debug("[{}] Beta features disabled, ignoring plugin install", get_name());
+        return;
+    }
 
     // Double-check plugin isn't already installed (defensive)
     if (printer_state_.service_has_helix_plugin()) {

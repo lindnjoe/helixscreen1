@@ -499,6 +499,12 @@ bool HelixPluginInstaller::should_prompt_install() const {
         return false; // Don't prompt if config not available
     }
 
+    // Gate plugin install prompt behind beta_features flag
+    if (!config->is_beta_features_enabled()) {
+        spdlog::debug("[PluginInstaller] Beta features disabled, skipping plugin prompt");
+        return false;
+    }
+
     // Don't show plugin prompt until the first-run wizard is complete.
     // The prompt will be triggered when wizard completes and connects to Moonraker,
     // which fires PrintSelectPanel's connection observer.
