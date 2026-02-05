@@ -1,5 +1,7 @@
 # Display Resolution Auto-Detection
 
+**Status:** ✅ COMPLETE (2026-02-05)
+
 ## Summary
 
 Add automatic display resolution detection for embedded backends (fbdev/DRM) with CLI override support for arbitrary resolutions.
