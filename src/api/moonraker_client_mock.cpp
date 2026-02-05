@@ -308,8 +308,14 @@ void MoonrakerClientMock::populate_capabilities() {
     json mock_config;
     mock_config["adxl345"] = json::object();
     mock_config["resonance_tester"] = json::object();
+    // Provide kinematics so bed_moves detection works
+    // HELIX_MOCK_KINEMATICS: "cartesian" (default), "corexy", "corexz", "delta"
+    const char* kin_env = std::getenv("HELIX_MOCK_KINEMATICS");
+    std::string mock_kinematics = (kin_env && kin_env[0]) ? kin_env : "cartesian";
+    mock_config["printer"] = {{"kinematics", mock_kinematics}};
     hardware_.parse_config_keys(mock_config);
-    spdlog::debug("[MoonrakerClientMock] Mock accelerometer config: adxl345, resonance_tester");
+    spdlog::debug("[MoonrakerClientMock] Mock config: adxl345, resonance_tester, kinematics={}",
+                  mock_kinematics);
 
     // Populate printer objects for hardware discovery
     std::vector<std::string> all_objects;

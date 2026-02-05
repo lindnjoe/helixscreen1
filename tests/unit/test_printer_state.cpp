@@ -1174,7 +1174,7 @@ TEST_CASE("PrinterState: Unknown webhooks state defaults to READY", "[state][kli
 // Kinematics / Bed Moves Tests
 // ============================================================================
 
-TEST_CASE("PrinterState: set_kinematics detects cartesian as bed-moves", "[state][kinematics]") {
+TEST_CASE("PrinterState: set_kinematics detects corexy as bed-moves", "[state][kinematics]") {
     lv_init_safe();
 
     PrinterState& state = get_printer_state();
@@ -1184,24 +1184,24 @@ TEST_CASE("PrinterState: set_kinematics detects cartesian as bed-moves", "[state
     // Default should be 0 (gantry moves)
     REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 0);
 
-    // Cartesian printers have moving beds on Z
-    state.set_kinematics("cartesian");
+    // CoreXY printers (without QGL) have moving beds on Z
+    state.set_kinematics("corexy");
     REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 1);
 }
 
-TEST_CASE("PrinterState: set_kinematics detects corexy as gantry-moves", "[state][kinematics]") {
+TEST_CASE("PrinterState: set_kinematics detects cartesian as gantry-moves", "[state][kinematics]") {
     lv_init_safe();
 
     PrinterState& state = get_printer_state();
     state.reset_for_testing();
     state.init_subjects(false);
 
-    // First set to cartesian (bed moves)
-    state.set_kinematics("cartesian");
+    // First set to corexy (bed moves)
+    state.set_kinematics("corexy");
     REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 1);
 
-    // CoreXY printers have moving gantry
-    state.set_kinematics("corexy");
+    // Cartesian printers have moving gantry on Z
+    state.set_kinematics("cartesian");
     REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 0);
 }
 
@@ -1217,29 +1217,29 @@ TEST_CASE("PrinterState: set_kinematics detects delta as gantry-moves", "[state]
     REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 0);
 }
 
-TEST_CASE("PrinterState: set_kinematics handles variations of cartesian", "[state][kinematics]") {
+TEST_CASE("PrinterState: set_kinematics handles kinematics variations", "[state][kinematics]") {
     lv_init_safe();
 
     PrinterState& state = get_printer_state();
     state.reset_for_testing();
     state.init_subjects(false);
 
-    SECTION("corexz with bed") {
-        // CoreXZ is like cartesian for Z (bed moves down)
+    SECTION("corexz - bed moves on Z") {
+        // CoreXZ contains "corexz", so bed moves
         state.set_kinematics("corexz");
-        // CoreXZ doesn't contain "cartesian", so default to gantry moves
-        REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 0);
-    }
-
-    SECTION("hybrid_corexy") {
-        state.set_kinematics("hybrid_corexy");
-        REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 0);
-    }
-
-    SECTION("limited_cartesian") {
-        // Some firmware uses "limited_cartesian" - contains "cartesian"
-        state.set_kinematics("limited_cartesian");
         REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 1);
+    }
+
+    SECTION("hybrid_corexy - bed moves (contains corexy)") {
+        // hybrid_corexy contains "corexy", so bed moves
+        state.set_kinematics("hybrid_corexy");
+        REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 1);
+    }
+
+    SECTION("limited_cartesian - gantry moves (no corexy/corexz)") {
+        // limited_cartesian does NOT contain "corexy" or "corexz"
+        state.set_kinematics("limited_cartesian");
+        REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 0);
     }
 }
 
@@ -1256,26 +1256,27 @@ TEST_CASE("PrinterState: Update kinematics from toolhead notification", "[state]
         {"params", {{{"toolhead", {{"kinematics", "cartesian"}, {"homed_axes", "xyz"}}}}, 0.0}}};
     state.update_from_status(notification["params"][0]);
 
-    // Should detect cartesian as bed-moves
-    REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 1);
+    // Cartesian = gantry moves on Z
+    REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 0);
 }
 
-TEST_CASE("PrinterState: Kinematics update from corexy notification", "[state][kinematics][ui]") {
+TEST_CASE("PrinterState: Kinematics update from cartesian notification",
+          "[state][kinematics][ui]") {
     lv_init_safe();
 
     PrinterState& state = get_printer_state();
     state.reset_for_testing();
     state.init_subjects(false);
 
-    // First set to cartesian
-    state.set_kinematics("cartesian");
+    // First set to corexy (bed moves)
+    state.set_kinematics("corexy");
     REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 1);
 
-    // Update to corexy via notification
+    // Update to cartesian via notification
     nlohmann::json notification = {
         {"method", "notify_status_update"},
         {"params",
-         {{{"toolhead", {{"kinematics", "corexy"}, {"position", {0.0, 0.0, 0.0, 0.0}}}}}, 0.0}}};
+         {{{"toolhead", {{"kinematics", "cartesian"}, {"position", {0.0, 0.0, 0.0, 0.0}}}}}, 0.0}}};
     state.update_from_status(notification["params"][0]);
 
     // Should now be gantry-moves
@@ -1307,13 +1308,13 @@ TEST_CASE("PrinterState: Observer fires when bed_moves changes", "[state][kinema
     REQUIRE(user_data[0] == 1);
     REQUIRE(user_data[1] == 0); // Default: gantry moves
 
-    // Change to cartesian (bed moves)
-    state.set_kinematics("cartesian");
+    // Change to corexy (bed moves)
+    state.set_kinematics("corexy");
     REQUIRE(user_data[0] == 2);
     REQUIRE(user_data[1] == 1); // Now bed moves
 
-    // Change to corexy (gantry moves)
-    state.set_kinematics("corexy");
+    // Change to cartesian (gantry moves)
+    state.set_kinematics("cartesian");
     REQUIRE(user_data[0] == 3);
     REQUIRE(user_data[1] == 0); // Back to gantry moves
 

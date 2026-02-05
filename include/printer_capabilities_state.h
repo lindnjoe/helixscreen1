@@ -83,7 +83,7 @@ class PrinterCapabilitiesState {
     /**
      * @brief Set bed moves on Z axis (from kinematics detection)
      *
-     * @param bed_moves True if bed moves on Z (cartesian), false if gantry moves (corexy)
+     * @param bed_moves True if bed moves on Z (corexy), false if gantry moves (cartesian/delta)
      */
     void set_bed_moves(bool bed_moves);
 

@@ -74,10 +74,14 @@ class MotionPanel : public OverlayBase {
     lv_subject_t pos_y_subject_;
     lv_subject_t pos_z_subject_;
     lv_subject_t z_axis_label_subject_; // "Bed" or "Print Head"
+    lv_subject_t z_up_icon_subject_;    // "arrow_expand_up" or "arrow_up"
+    lv_subject_t z_down_icon_subject_;  // "arrow_expand_down" or "arrow_down"
     char pos_x_buf_[32];
     char pos_y_buf_[32];
     char pos_z_buf_[32];
     char z_axis_label_buf_[16];
+    char z_up_icon_buf_[24];
+    char z_down_icon_buf_[24];
     bool bed_moves_ = false; // If true, invert Z direction (arrows match bed movement)
 
     jog_distance_t current_distance_ = JOG_DIST_1MM;

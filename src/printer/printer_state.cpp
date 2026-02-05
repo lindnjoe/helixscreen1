@@ -472,6 +472,12 @@ void PrinterState::set_hardware_internal(const helix::PrinterDiscovery& hardware
     // Delegate capability subject updates to capabilities_state_ component
     capabilities_state_.set_hardware(hardware, capability_overrides_);
 
+    // Set kinematics from hardware discovery (configfile.config.printer.kinematics)
+    // This is more reliable than toolhead status, which returns null on some printers
+    if (!hardware.kinematics().empty()) {
+        set_kinematics(hardware.kinematics());
+    }
+
     // Tell temperature state which sensor to use for chamber temperature
     temperature_state_.set_chamber_sensor_name(hardware.chamber_sensor_name());
 

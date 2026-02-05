@@ -50,6 +50,8 @@ MotionPanel::MotionPanel() {
     std::strcpy(pos_y_buf_, "— mm");
     std::strcpy(pos_z_buf_, "— mm");
     std::strcpy(z_axis_label_buf_, "Z Axis"); // Default before kinematics detected
+    std::strcpy(z_up_icon_buf_, "arrow_up");
+    std::strcpy(z_down_icon_buf_, "arrow_down");
 
     spdlog::debug("[MotionPanel] Instance created");
 }
@@ -77,9 +79,15 @@ void MotionPanel::init_subjects() {
     UI_MANAGED_SUBJECT_STRING(pos_y_subject_, pos_y_buf_, "— mm", "motion_pos_y", subjects_);
     UI_MANAGED_SUBJECT_STRING(pos_z_subject_, pos_z_buf_, "— mm", "motion_pos_z", subjects_);
 
-    // Z-axis label: "Bed" (cartesian) or "Print Head" (corexy/delta)
+    // Z-axis label: "Bed" (corexy/corexz) or "Print Head" (cartesian/delta)
     UI_MANAGED_SUBJECT_STRING(z_axis_label_subject_, z_axis_label_buf_, "Z Axis",
                               "motion_z_axis_label", subjects_);
+
+    // Z button icons: expand variants for bed-moves, regular for head-moves
+    UI_MANAGED_SUBJECT_STRING(z_up_icon_subject_, z_up_icon_buf_, "arrow_up", "motion_z_up_icon",
+                              subjects_);
+    UI_MANAGED_SUBJECT_STRING(z_down_icon_subject_, z_down_icon_buf_, "arrow_down",
+                              "motion_z_down_icon", subjects_);
 
     // Register PrinterState observers (RAII - auto-removed on destruction)
     register_position_observers();
@@ -357,7 +365,19 @@ void MotionPanel::update_z_axis_label(bool bed_moves) {
     std::strncpy(z_axis_label_buf_, label, sizeof(z_axis_label_buf_) - 1);
     z_axis_label_buf_[sizeof(z_axis_label_buf_) - 1] = '\0';
     lv_subject_copy_string(&z_axis_label_subject_, z_axis_label_buf_);
-    spdlog::debug("[{}] Z-axis label updated: {} (bed_moves={})", get_name(), label, bed_moves);
+
+    // Update Z button icons: expand variants (with platform line) for bed-moves
+    const char* up_icon = bed_moves ? "arrow_expand_up" : "arrow_up";
+    const char* down_icon = bed_moves ? "arrow_expand_down" : "arrow_down";
+    std::strncpy(z_up_icon_buf_, up_icon, sizeof(z_up_icon_buf_) - 1);
+    z_up_icon_buf_[sizeof(z_up_icon_buf_) - 1] = '\0';
+    lv_subject_copy_string(&z_up_icon_subject_, z_up_icon_buf_);
+    std::strncpy(z_down_icon_buf_, down_icon, sizeof(z_down_icon_buf_) - 1);
+    z_down_icon_buf_[sizeof(z_down_icon_buf_) - 1] = '\0';
+    lv_subject_copy_string(&z_down_icon_subject_, z_down_icon_buf_);
+
+    spdlog::debug("[{}] Z-axis updated: label={}, icons={}/{} (bed_moves={})", get_name(), label,
+                  up_icon, down_icon, bed_moves);
 }
 
 void MotionPanel::update_z_display() {
@@ -404,12 +424,12 @@ void MotionPanel::handle_z_button(const char* name) {
         return;
     }
 
-    // For cartesian printers (bed moves on Z), invert direction so arrows match physical motion:
+    // For bed-moves printers (CoreXY etc), invert direction so arrows match physical motion:
     // - Up arrow = bed moves UP toward nozzle = G-code Z- (bed rises, gap decreases)
     // - Down arrow = bed moves DOWN away from nozzle = G-code Z+ (bed lowers, gap increases)
     if (bed_moves_) {
         distance = -distance;
-        spdlog::debug("[{}] Cartesian printer: inverted Z direction for bed movement", get_name());
+        spdlog::debug("[{}] Bed-moves printer: inverted Z direction for bed movement", get_name());
     }
 
     spdlog::debug("[{}] Z jog: {:+.0f}mm (bed_moves={})", get_name(), distance, bed_moves_);
