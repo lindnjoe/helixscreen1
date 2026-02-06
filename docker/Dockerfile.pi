@@ -3,20 +3,33 @@
 # HelixScreen - Raspberry Pi (aarch64) Cross-Compilation Toolchain
 #
 # Build: docker build -t helixscreen/toolchain-pi -f Dockerfile.pi .
-# Usage: docker run --rm -v $(pwd):/src -w /src helixscreen/toolchain-pi make PLATFORM_TARGET=pi -j$(nproc)
+# Usage: docker run --rm -v $(pwd):/src -w /src helixscreen/toolchain-pi
 #
-# Target: Raspberry Pi running Mainsail OS (Debian Bookworm, aarch64)
+# Target: Raspberry Pi / BTT Pi running Mainsail OS or similar (Debian Bookworm, aarch64)
+#   - CPU: Cortex-A72 / Cortex-A76 (armv8-a)
+#   - Display: DRM/KMS (libdrm + libinput)
+#   - C Library: glibc 2.36 (Debian Bookworm)
+#
+# Strategy: Debian cross-compiler for glibc ABI compatibility with target system.
+# Dynamic linking — binary requires target system libraries at runtime.
+# This ensures the binary works on any Debian Bookworm aarch64 system.
+#
+# Note: Uses Debian's aarch64-linux-gnu toolchain (NOT ARM's standalone toolchain)
+# because dynamic linking requires matching the target's glibc version exactly.
+# ARM's standalone toolchain is used for static builds (see Dockerfile.ad5m).
 
 FROM debian:bookworm-slim
 
 LABEL maintainer="HelixScreen <dev@helixscreen.io>"
 LABEL description="Cross-compilation toolchain for Raspberry Pi (aarch64)"
 
-# Avoid interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install base build tools
+# Install build dependencies
 # Note: autotools required for building libnl submodule
+# NOTE: nlohmann-json is bundled with libhv (lib/libhv/cpputil/json.hpp)
+# DO NOT install nlohmann-json3-dev - it causes ABI mismatches
+# Always use: #include "hv/json.hpp" (NOT <nlohmann/json.hpp>)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     crossbuild-essential-arm64 \
@@ -25,8 +38,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     make \
     cmake \
-    libfmt-dev \
     python3 \
+    file \
     autoconf \
     automake \
     libtool \
@@ -34,44 +47,54 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     bison \
     && rm -rf /var/lib/apt/lists/*
 
-# Add arm64 architecture and install target libraries
+# Add arm64 architecture and install ONLY the target libraries we actually link against.
+# Specifically excluded (not linked, would only bloat the image):
+#   - libgbm-dev:arm64, libgles2-mesa-dev:arm64, libegl1-mesa-dev:arm64
+#     (LVGL uses software rendering, not GPU — DRM/KMS is display-only)
 RUN dpkg --add-architecture arm64 && apt-get update && apt-get install -y --no-install-recommends \
     libc6-dev:arm64 \
     libstdc++-12-dev:arm64 \
-    libssl-dev:arm64 \
     libdrm-dev:arm64 \
     libinput-dev:arm64 \
     libudev-dev:arm64 \
     libfmt-dev:arm64 \
+    libssl-dev:arm64 \
     libsystemd-dev:arm64 \
-    # NOTE: nlohmann-json is bundled with libhv (lib/libhv/cpputil/json.hpp)
-    # DO NOT install nlohmann-json3-dev - it causes ABI mismatches
-    # Always use: #include "hv/json.hpp" (NOT <nlohmann/json.hpp>)
-    # OpenGL ES / EGL / GBM for GPU-accelerated rendering on Pi
-    libgbm-dev:arm64 \
-    libgles2-mesa-dev:arm64 \
-    libegl1-mesa-dev:arm64 \
     && rm -rf /var/lib/apt/lists/*
 
-# Set up cross-compilation environment
+# ==============================================================================
+# Cross-Compilation Environment
+# ==============================================================================
+
 ENV CROSS_COMPILE=aarch64-linux-gnu-
 ENV CC=aarch64-linux-gnu-gcc
 ENV CXX=aarch64-linux-gnu-g++
-ENV AR=aarch64-linux-gnu-ar
+# Use gcc-ar and gcc-ranlib for LTO compatibility (they load the LTO plugin)
+ENV AR=aarch64-linux-gnu-gcc-ar
 ENV STRIP=aarch64-linux-gnu-strip
-ENV RANLIB=aarch64-linux-gnu-ranlib
+ENV RANLIB=aarch64-linux-gnu-gcc-ranlib
 ENV LD=aarch64-linux-gnu-ld
 
 # pkg-config for cross-compilation
 ENV PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig
 ENV PKG_CONFIG_SYSROOT_DIR=/
 
-# Create working directory
+# Working directory
 WORKDIR /src
 
 # Configure git to trust the mounted source directory
 # Required because the container runs as root but files are owned by the host user
 RUN git config --global --add safe.directory '*'
+
+# Verify the toolchain works (including LTO-aware tools)
+RUN aarch64-linux-gnu-gcc --version && \
+    aarch64-linux-gnu-g++ --version && \
+    aarch64-linux-gnu-gcc-ar --version && \
+    aarch64-linux-gnu-gcc-ranlib --version && \
+    echo "✓ Toolchain verification passed (including LTO support)" && \
+    echo "" && \
+    echo "NOTE: This toolchain uses DYNAMIC linking." && \
+    echo "Binary requires target system libraries at runtime."
 
 # Default command: build for Pi
 # SKIP_OPTIONAL_DEPS=1 runs minimal dependency check (skips npm, clang-format, etc.)

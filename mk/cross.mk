@@ -36,6 +36,8 @@ ifeq ($(PLATFORM_TARGET),pi)
     ENABLE_SDL := no
     ENABLE_TINYGL_3D := yes
     ENABLE_EVDEV := yes
+    # SSL enabled for HTTPS/WSS support
+    ENABLE_SSL := yes
     HELIX_HAS_SYSTEMD := yes
     BUILD_SUBDIR := pi
     # Strip binary for size - embedded targets don't need debug symbols
@@ -336,7 +338,7 @@ pi-docker: ensure-docker
 		echo "$(YELLOW)Docker image not found. Building toolchain first...$(RESET)"; \
 		$(MAKE) docker-toolchain-pi; \
 	fi
-	$(Q)docker run --rm --user $$(id -u):$$(id -g) -v "$(PWD)":/src -w /src helixscreen/toolchain-pi \
+	$(Q)docker run --platform linux/amd64 --rm --user $$(id -u):$$(id -g) -v "$(PWD)":/src -w /src helixscreen/toolchain-pi \
 		make PLATFORM_TARGET=pi SKIP_OPTIONAL_DEPS=1 -j$$(nproc)
 	@$(MAKE) --no-print-directory maybe-stop-colima
 
@@ -377,7 +379,7 @@ docker-toolchains: docker-toolchain-pi docker-toolchain-ad5m docker-toolchain-k1
 
 docker-toolchain-pi: ensure-buildx
 	@echo "$(CYAN)Building Raspberry Pi toolchain Docker image...$(RESET)"
-	$(Q)docker buildx build -t helixscreen/toolchain-pi -f docker/Dockerfile.pi docker/
+	$(Q)docker buildx build --platform linux/amd64 -t helixscreen/toolchain-pi -f docker/Dockerfile.pi docker/
 
 docker-toolchain-ad5m: ensure-buildx
 	@echo "$(CYAN)Building Adventurer 5M toolchain Docker image...$(RESET)"
