@@ -241,7 +241,7 @@ static void on_update_download_dismiss(lv_event_t* /*e*/) {
 static void on_update_restart(lv_event_t* /*e*/) {
     LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_update_restart");
     spdlog::info("[SettingsPanel] User requested restart after update");
-    std::exit(0);
+    app_request_quit();
     LVGL_SAFE_EVENT_CB_END();
 }
 
@@ -1294,5 +1294,6 @@ void register_settings_panel_callbacks() {
                              SettingsPanel::on_factory_reset_clicked);
     lv_xml_register_event_cb(nullptr, "on_hardware_health_clicked",
                              SettingsPanel::on_hardware_health_clicked);
+    lv_xml_register_event_cb(nullptr, "on_check_updates_clicked", on_check_updates_clicked);
     lv_xml_register_event_cb(nullptr, "on_install_update_clicked", on_install_update_clicked);
 }

@@ -26,7 +26,9 @@
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
+#include <fcntl.h>
 #include <sys/statvfs.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #include "hv/json.hpp"
@@ -140,6 +142,63 @@ bool is_update_available(const std::string& current_version, const std::string& 
     }
 
     return *latest > *current;
+}
+
+/**
+ * @brief Execute a command safely via fork/exec (no shell interpretation)
+ *
+ * Avoids command injection by bypassing the shell entirely.
+ * Stdout/stderr are redirected to /dev/null.
+ *
+ * @param program Full path to executable (or name for PATH lookup)
+ * @param args Argument list (argv[0] should be the program name)
+ * @return Exit code of the child process, or -1 on fork/exec failure
+ */
+int safe_exec(const std::vector<std::string>& args) {
+    if (args.empty()) {
+        return -1;
+    }
+
+    pid_t pid = fork();
+    if (pid < 0) {
+        spdlog::error("[UpdateChecker] fork() failed: {}", strerror(errno));
+        return -1;
+    }
+
+    if (pid == 0) {
+        // Child process — redirect stdout/stderr to /dev/null
+        int devnull = open("/dev/null", O_WRONLY);
+        if (devnull >= 0) {
+            dup2(devnull, STDOUT_FILENO);
+            dup2(devnull, STDERR_FILENO);
+            close(devnull);
+        }
+
+        // Build C-style argv array
+        std::vector<char*> argv;
+        argv.reserve(args.size() + 1);
+        for (const auto& arg : args) {
+            argv.push_back(const_cast<char*>(arg.c_str()));
+        }
+        argv.push_back(nullptr);
+
+        // Use execvp for PATH lookup (e.g. gunzip on BusyBox embedded systems)
+        execvp(argv[0], argv.data());
+        // If execvp returns, it failed
+        _exit(127);
+    }
+
+    // Parent — wait for child
+    int status = 0;
+    if (waitpid(pid, &status, 0) < 0) {
+        spdlog::error("[UpdateChecker] waitpid() failed: {}", strerror(errno));
+        return -1;
+    }
+
+    if (WIFEXITED(status)) {
+        return WEXITSTATUS(status);
+    }
+    return -1;
 }
 
 } // anonymous namespace
@@ -530,6 +589,7 @@ void UpdateChecker::do_download() {
 
     if (result == 0) {
         spdlog::error("[UpdateChecker] Download failed from {}", url);
+        std::remove(download_path.c_str()); // Clean up partial download
         report_download_status(DownloadStatus::Error, 0, "Error: Download failed",
                                "Failed to download update file");
         return;
@@ -554,9 +614,8 @@ void UpdateChecker::do_download() {
     spdlog::info("[UpdateChecker] Download complete: {} bytes", result);
     report_download_status(DownloadStatus::Verifying, 100, "Verifying download...");
 
-    // Verify gzip integrity
-    auto verify_cmd = "gunzip -t " + download_path + " 2>&1";
-    auto ret = std::system(verify_cmd.c_str());
+    // Verify gzip integrity (fork/exec to avoid shell injection)
+    auto ret = safe_exec({"gunzip", "-t", download_path});
     if (ret != 0) {
         spdlog::error("[UpdateChecker] Tarball verification failed");
         std::remove(download_path.c_str());
@@ -604,8 +663,7 @@ void UpdateChecker::do_install(const std::string& tarball_path) {
 
     spdlog::info("[UpdateChecker] Running: {} --local {} --update", install_script, tarball_path);
 
-    auto cmd = install_script + " --local " + tarball_path + " --update 2>&1";
-    auto ret = std::system(cmd.c_str());
+    auto ret = safe_exec({install_script, "--local", tarball_path, "--update"});
 
     // Clean up tarball regardless of result
     std::remove(tarball_path.c_str());
