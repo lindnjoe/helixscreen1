@@ -157,6 +157,7 @@ MDI_ICONS+=",0xF062C"    # source-branch (bypass)
 MDI_ICONS+=",0xF062E"    # tune
 MDI_ICONS+=",0xF06A5"    # power-plug
 MDI_ICONS+=",0xF06B0"    # update
+MDI_ICONS+=",0xF0709"    # restart (restart HelixScreen)
 MDI_ICONS+=",0xF0717"    # snowflake (cooldown)
 MDI_ICONS+=",0xF072E"    # arrow-down-bold (z-closer)
 MDI_ICONS+=",0xF0731"    # arrow-left-bold

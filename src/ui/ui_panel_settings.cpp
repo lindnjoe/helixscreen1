@@ -241,7 +241,7 @@ static void on_update_download_dismiss(lv_event_t* /*e*/) {
 static void on_update_restart(lv_event_t* /*e*/) {
     LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_update_restart");
     spdlog::info("[SettingsPanel] User requested restart after update");
-    app_request_quit();
+    app_request_restart_service();
     LVGL_SAFE_EVENT_CB_END();
 }
 
@@ -975,6 +975,19 @@ void SettingsPanel::handle_touch_calibration_clicked() {
     });
 }
 
+void SettingsPanel::handle_restart_helix_clicked() {
+    spdlog::info("[SettingsPanel] Restart HelixScreen requested");
+    ui_toast_show(ToastSeverity::INFO, "Restarting HelixScreen...", 1500);
+
+    // Schedule restart after brief delay to let toast display
+    ui_async_call(
+        [](void*) {
+            spdlog::info("[SettingsPanel] Initiating restart...");
+            app_request_restart_service();
+        },
+        nullptr);
+}
+
 void SettingsPanel::handle_factory_reset_clicked() {
     spdlog::debug("[{}] Factory Reset clicked - showing confirmation dialog", get_name());
 
@@ -1216,6 +1229,12 @@ void SettingsPanel::on_plugins_clicked(lv_event_t* /*e*/) {
     LVGL_SAFE_EVENT_CB_END();
 }
 
+void SettingsPanel::on_restart_helix_settings_clicked(lv_event_t* /*e*/) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_restart_helix_settings_clicked");
+    get_global_settings_panel().handle_restart_helix_clicked();
+    LVGL_SAFE_EVENT_CB_END();
+}
+
 // ============================================================================
 // STATIC TRAMPOLINES - OVERLAYS
 // ============================================================================
@@ -1234,10 +1253,8 @@ void SettingsPanel::on_restart_later_clicked(lv_event_t* /* e */) {
 
 void SettingsPanel::on_restart_now_clicked(lv_event_t* /*e*/) {
     LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_restart_now_clicked");
-    spdlog::info("[SettingsPanel] User requested restart");
-    // Exit the application - user will restart manually
-    // In a real embedded system, this would trigger a system restart
-    exit(0);
+    spdlog::info("[SettingsPanel] User requested restart (input settings changed)");
+    app_request_restart_service();
     LVGL_SAFE_EVENT_CB_END();
 }
 
@@ -1294,6 +1311,8 @@ void register_settings_panel_callbacks() {
                              SettingsPanel::on_factory_reset_clicked);
     lv_xml_register_event_cb(nullptr, "on_hardware_health_clicked",
                              SettingsPanel::on_hardware_health_clicked);
+    lv_xml_register_event_cb(nullptr, "on_restart_helix_settings_clicked",
+                             SettingsPanel::on_restart_helix_settings_clicked);
     lv_xml_register_event_cb(nullptr, "on_check_updates_clicked", on_check_updates_clicked);
     lv_xml_register_event_cb(nullptr, "on_install_update_clicked", on_install_update_clicked);
 }

@@ -298,6 +298,13 @@ void app_request_restart_for_theme() {
     }
     spdlog::info("[App Globals] Restart command: {}", cmd_line);
 
+    // Under systemd, just quit - the service manager handles restart
+    if (getenv("INVOCATION_ID")) {
+        spdlog::info("[App Globals] Running under systemd - quitting for theme restart");
+        g_quit_requested = true;
+        return;
+    }
+
 #if defined(__unix__) || defined(__APPLE__)
     pid_t pid = fork();
 
@@ -324,6 +331,15 @@ void app_request_restart_for_theme() {
         "[App Globals] Theme restart not supported on this platform, falling back to quit");
     g_quit_requested = true;
 #endif
+}
+
+void app_request_restart_service() {
+    if (getenv("INVOCATION_ID")) {
+        spdlog::info("[App Globals] Running under systemd - quitting for service restart");
+        app_request_quit();
+    } else {
+        app_request_restart();
+    }
 }
 
 bool app_quit_requested() {

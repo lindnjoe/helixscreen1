@@ -580,6 +580,11 @@ void app_request_restart() {
     spdlog::debug("[Test Stub] app_request_restart called - no-op in tests");
 }
 
+// Stub for app_request_restart_service (tests don't restart)
+void app_request_restart_service() {
+    spdlog::debug("[Test Stub] app_request_restart_service called - no-op in tests");
+}
+
 // Stub for get_helix_cache_dir (tests use temp directory)
 #include "app_globals.h"
 std::string get_helix_cache_dir(const std::string& subdir) {

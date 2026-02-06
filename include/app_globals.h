@@ -168,6 +168,18 @@ void app_request_restart();
 void app_request_restart_for_theme();
 
 /**
+ * @brief Request application restart with service-awareness
+ *
+ * Detects whether the app is running under systemd (INVOCATION_ID env var)
+ * and uses the appropriate restart strategy:
+ * - Under systemd: app_request_quit() (systemd Restart=always handles restart)
+ * - Standalone/dev: app_request_restart() (fork/exec new process)
+ *
+ * Use this instead of app_request_restart() for all user-facing restart actions.
+ */
+void app_request_restart_service();
+
+/**
  * @brief Check if quit has been requested
  * @return true if app_request_quit() or app_request_restart() was called
  */

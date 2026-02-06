@@ -11,7 +11,6 @@
 #include "ui_panel_macros.h"
 #include "ui_panel_spoolman.h"
 #include "ui_toast.h"
-#include "ui_update_queue.h"
 
 #include "app_globals.h"
 #include "config.h"
@@ -70,7 +69,6 @@ void AdvancedPanel::init_subjects() {
     lv_xml_register_event_cb(nullptr, "on_helix_plugin_uninstall_clicked",
                              on_helix_plugin_uninstall_clicked);
     lv_xml_register_event_cb(nullptr, "on_phase_tracking_changed", on_phase_tracking_changed);
-    lv_xml_register_event_cb(nullptr, "on_restart_helix_clicked", on_restart_helix_clicked);
     lv_xml_register_event_cb(nullptr, "on_pid_tuning_clicked", on_pid_tuning_clicked);
 
     // Note: Input shaping uses on_input_shaper_row_clicked registered by InputShaperPanel
@@ -219,10 +217,6 @@ void AdvancedPanel::on_phase_tracking_changed(lv_event_t* e) {
     get_global_advanced_panel().handle_phase_tracking_changed(enabled);
 }
 
-void AdvancedPanel::on_restart_helix_clicked(lv_event_t* /*e*/) {
-    get_global_advanced_panel().handle_restart_helix_clicked();
-}
-
 void AdvancedPanel::on_pid_tuning_clicked(lv_event_t* /*e*/) {
     get_global_advanced_panel().handle_pid_tuning_clicked();
 }
@@ -320,22 +314,4 @@ void AdvancedPanel::handle_phase_tracking_changed(bool enabled) {
             // Revert the toggle state
             printer_state_.set_phase_tracking_enabled(!enabled);
         });
-}
-
-// ============================================================================
-// RESTART HANDLER
-// ============================================================================
-
-void AdvancedPanel::handle_restart_helix_clicked() {
-    spdlog::info("[{}] Restart HelixScreen requested", get_name());
-    ui_toast_show(ToastSeverity::INFO, lv_tr("Restarting HelixScreen..."), 1500);
-
-    // Schedule restart after a brief delay to let toast display
-    // Uses fork/exec pattern from app_globals - works on both systemd and standalone
-    ui_async_call(
-        [](void*) {
-            spdlog::info("[Advanced Panel] Initiating restart...");
-            app_request_restart();
-        },
-        nullptr);
 }

@@ -137,6 +137,11 @@
                           description_tag="Review detected hardware validation issues"
                           callback="on_hardware_health_clicked"/>
     </lv_obj>
+    <!-- Restart HelixScreen -->
+    <setting_action_row name="row_restart_helix"
+                        label="Restart HelixScreen" label_tag="Restart HelixScreen" icon="restart"
+                        description="Restart the display application"
+                        description_tag="Restart the display application" callback="on_restart_helix_settings_clicked"/>
     <!-- Factory Reset -->
     <setting_action_row name="row_factory_reset"
                         label="Factory Reset" label_tag="Factory Reset" icon="refresh"
