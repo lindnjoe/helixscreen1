@@ -784,3 +784,26 @@ TEST_CASE("UpdateChecker get_platform_asset_name format", "[update_checker]") {
 
     checker.shutdown();
 }
+
+TEST_CASE("UpdateChecker download requires cached update", "[update_checker]") {
+    auto& checker = UpdateChecker::instance();
+    checker.init();
+    checker.clear_cache();
+
+    // Should not crash or start download without cached update
+    checker.start_download();
+    REQUIRE(checker.get_download_status() == UpdateChecker::DownloadStatus::Error);
+
+    checker.shutdown();
+}
+
+TEST_CASE("UpdateChecker cancel_download sets cancelled flag", "[update_checker]") {
+    auto& checker = UpdateChecker::instance();
+    checker.init();
+
+    checker.cancel_download();
+    // Verify it doesn't crash and state is not Downloading
+    REQUIRE(checker.get_download_status() != UpdateChecker::DownloadStatus::Downloading);
+
+    checker.shutdown();
+}

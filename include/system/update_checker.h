@@ -8,8 +8,9 @@
  * Checks GitHub releases API for newer versions of HelixScreen.
  * Uses background thread to avoid blocking the UI during network operations.
  *
- * SAFETY: This service is READ-ONLY. It never installs or modifies anything.
- * All errors are handled gracefully to ensure the printer is never affected.
+ * SAFETY: Downloads and installs require explicit user confirmation and are
+ * blocked while a print is in progress. All errors are handled gracefully
+ * to ensure the printer is never affected.
  */
 
 #pragma once

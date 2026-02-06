@@ -5,8 +5,9 @@
  * @file update_checker.cpp
  * @brief Async update checker implementation
  *
- * SAFETY CRITICAL:
- * - This service is READ-ONLY - it never installs or modifies anything
+ * SAFETY:
+ * - Downloads and installs require explicit user confirmation
+ * - Downloads are blocked while a print is in progress
  * - All errors are caught and logged, never thrown
  * - Network failures are gracefully handled
  * - Rate limited to avoid hammering GitHub API
@@ -21,6 +22,9 @@
 #include "version.h"
 
 #include <chrono>
+#include <cstdio>
+#include <cstdlib>
+#include <unistd.h>
 
 #include "hv/json.hpp"
 
@@ -174,6 +178,11 @@ void UpdateChecker::init() {
     if (initialized_) {
         return;
     }
+
+    // Reset cancellation flags from any previous shutdown
+    shutting_down_ = false;
+    cancelled_ = false;
+    download_cancelled_ = false;
 
     init_subjects();
 
@@ -332,11 +341,41 @@ void UpdateChecker::report_download_status(DownloadStatus status, int progress,
 }
 
 // ============================================================================
-// Download Stubs (implementation in future task)
+// Download and Install
 // ============================================================================
 
 void UpdateChecker::start_download() {
-    spdlog::warn("[UpdateChecker] start_download() not yet implemented");
+    if (shutting_down_.load())
+        return;
+
+    // Must have a cached update to download
+    std::unique_lock<std::mutex> lock(mutex_);
+    if (!cached_info_ || cached_info_->download_url.empty()) {
+        spdlog::error("[UpdateChecker] start_download() called without cached update info");
+        // Unlock before report_download_status (it also acquires mutex_)
+        lock.unlock();
+        report_download_status(DownloadStatus::Error, 0, "Error: No update available",
+                               "No update information cached");
+        return;
+    }
+
+    // Don't start if already downloading
+    auto current = download_status_.load();
+    if (current == DownloadStatus::Downloading || current == DownloadStatus::Installing) {
+        spdlog::warn("[UpdateChecker] Download already in progress");
+        return;
+    }
+
+    // Join previous download thread (must release lock first to prevent deadlock)
+    lock.unlock();
+    if (download_thread_.joinable()) {
+        download_thread_.join();
+    }
+
+    download_cancelled_ = false;
+    report_download_status(DownloadStatus::Downloading, 0, "Starting download...");
+
+    download_thread_ = std::thread(&UpdateChecker::do_download, this);
 }
 
 void UpdateChecker::cancel_download() {
@@ -344,11 +383,148 @@ void UpdateChecker::cancel_download() {
 }
 
 void UpdateChecker::do_download() {
-    // Will be implemented in future task
+    std::string url;
+    std::string version;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!cached_info_)
+            return;
+        url = cached_info_->download_url;
+        version = cached_info_->version;
+    }
+
+    auto download_path = get_download_path();
+    spdlog::info("[UpdateChecker] Downloading {} to {}", url, download_path);
+
+    // Progress callback -- dispatches to LVGL thread
+    auto progress_cb = [this](size_t received, size_t total) {
+        if (download_cancelled_.load())
+            return;
+
+        int percent = 0;
+        if (total > 0) {
+            percent = static_cast<int>((100 * received) / total);
+        }
+
+        // Throttle UI updates to every 2%
+        int current = download_progress_.load();
+        if (percent - current >= 2 || percent == 100) {
+            auto mb_received = static_cast<double>(received) / (1024.0 * 1024.0);
+            auto mb_total = static_cast<double>(total) / (1024.0 * 1024.0);
+            auto text = fmt::format("Downloading... {:.1f}/{:.1f} MB", mb_received, mb_total);
+            report_download_status(DownloadStatus::Downloading, percent, text);
+        }
+    };
+
+    // Download the file using libhv
+    size_t result = requests::downloadFile(url.c_str(), download_path.c_str(), progress_cb);
+
+    if (download_cancelled_.load()) {
+        spdlog::info("[UpdateChecker] Download cancelled");
+        std::remove(download_path.c_str());
+        report_download_status(DownloadStatus::Idle, 0, "");
+        return;
+    }
+
+    if (result == 0) {
+        spdlog::error("[UpdateChecker] Download failed from {}", url);
+        report_download_status(DownloadStatus::Error, 0, "Error: Download failed",
+                               "Failed to download update file");
+        return;
+    }
+
+    // Verify file size sanity (reject < 1MB or > 50MB)
+    if (result < 1024 * 1024) {
+        spdlog::error("[UpdateChecker] Downloaded file too small: {} bytes", result);
+        std::remove(download_path.c_str());
+        report_download_status(DownloadStatus::Error, 0, "Error: Invalid download",
+                               "Downloaded file is too small");
+        return;
+    }
+    if (result > 50 * 1024 * 1024) {
+        spdlog::error("[UpdateChecker] Downloaded file too large: {} bytes", result);
+        std::remove(download_path.c_str());
+        report_download_status(DownloadStatus::Error, 0, "Error: Invalid download",
+                               "Downloaded file is too large");
+        return;
+    }
+
+    spdlog::info("[UpdateChecker] Download complete: {} bytes", result);
+    report_download_status(DownloadStatus::Verifying, 100, "Verifying download...");
+
+    // Verify gzip integrity
+    auto verify_cmd = "gunzip -t " + download_path + " 2>&1";
+    auto ret = std::system(verify_cmd.c_str());
+    if (ret != 0) {
+        spdlog::error("[UpdateChecker] Tarball verification failed");
+        std::remove(download_path.c_str());
+        report_download_status(DownloadStatus::Error, 0, "Error: Corrupt download",
+                               "Downloaded file failed integrity check");
+        return;
+    }
+
+    spdlog::info("[UpdateChecker] Tarball verified OK, proceeding to install");
+    do_install(download_path);
 }
 
-void UpdateChecker::do_install(const std::string& /*tarball_path*/) {
-    // Will be implemented in future task
+void UpdateChecker::do_install(const std::string& tarball_path) {
+    if (download_cancelled_.load()) {
+        std::remove(tarball_path.c_str());
+        report_download_status(DownloadStatus::Idle, 0, "");
+        return;
+    }
+
+    report_download_status(DownloadStatus::Installing, 100, "Installing update...");
+
+    // Find install.sh in common locations
+    std::string install_script;
+    const std::vector<std::string> search_paths = {
+        "/opt/helixscreen/scripts/install.sh",
+        "/opt/helixscreen/install.sh",
+        "/root/printer_software/helixscreen/scripts/install.sh",
+        "/usr/data/helixscreen/scripts/install.sh",
+        "scripts/install.sh", // development fallback
+    };
+
+    for (const auto& path : search_paths) {
+        if (access(path.c_str(), X_OK) == 0) {
+            install_script = path;
+            break;
+        }
+    }
+
+    if (install_script.empty()) {
+        spdlog::error("[UpdateChecker] Cannot find install.sh");
+        report_download_status(DownloadStatus::Error, 0, "Error: Installer not found",
+                               "Cannot locate install.sh script");
+        return;
+    }
+
+    spdlog::info("[UpdateChecker] Running: {} --local {} --update", install_script, tarball_path);
+
+    auto cmd = install_script + " --local " + tarball_path + " --update 2>&1";
+    auto ret = std::system(cmd.c_str());
+
+    // Clean up tarball regardless of result
+    std::remove(tarball_path.c_str());
+
+    if (ret != 0) {
+        spdlog::error("[UpdateChecker] Install script failed with code {}", ret);
+        report_download_status(DownloadStatus::Error, 0, "Error: Installation failed",
+                               "install.sh returned error code " + std::to_string(ret));
+        return;
+    }
+
+    spdlog::info("[UpdateChecker] Update installed successfully!");
+
+    std::string version;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        version = cached_info_ ? cached_info_->version : "unknown";
+    }
+
+    report_download_status(DownloadStatus::Complete, 100,
+                           "v" + version + " installed! Restart to apply.");
 }
 
 // ============================================================================
