@@ -49,9 +49,14 @@ $(BUILD_DIR)/splash/%.o: src/%.cpp | $(BUILD_DIR)/splash
 
 # Splash needs config.o (display_backend_drm.cpp uses Config), backlight_backend.o (for turning
 # on backlight at startup), and a UI notification stub (config.cpp calls ui_notification_error
-# on save failures). Note: backlight_backend needs to be compiled separately with HELIX_SPLASH_ONLY
-# to skip test mode check (which requires runtime_config from main.cpp).
-SPLASH_EXTRA_OBJS := $(OBJ_DIR)/system/config.o $(BUILD_DIR)/splash/backlight_backend.o $(BUILD_DIR)/splash/ui_notification_stub.o
+# on save failures). Note: both config.o and backlight_backend.o must be compiled separately with
+# HELIX_SPLASH_ONLY to skip runtime_config dependency (which pulls in main app symbols).
+SPLASH_EXTRA_OBJS := $(BUILD_DIR)/splash/config.o $(BUILD_DIR)/splash/backlight_backend.o $(BUILD_DIR)/splash/ui_notification_stub.o
+
+# Compile config for splash (with HELIX_SPLASH_ONLY to guard get_runtime_config dependency)
+$(BUILD_DIR)/splash/config.o: src/system/config.cpp | $(BUILD_DIR)/splash
+	@echo "[CXX] $< (splash)"
+	$(Q)$(CXX) $(SPLASH_CXXFLAGS) $(DEPFLAGS) -c $< -o $@
 
 # Compile backlight backend for splash (with HELIX_SPLASH_ONLY to skip runtime_config dependency)
 $(BUILD_DIR)/splash/backlight_backend.o: src/api/backlight_backend.cpp | $(BUILD_DIR)/splash
