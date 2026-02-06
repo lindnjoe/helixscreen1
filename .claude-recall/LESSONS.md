@@ -45,7 +45,7 @@
 > LVGL observer callbacks use C-style function signatures (lv_observer_t*, lv_subject_t*) - NOT lambdas. Must pass user_data via lv_observer_get_user_data(observer). Also: lv_subject_set_*() from non-main threads must use ui_async_call() to avoid render-phase assertions.
 
 ### [L031] [***--|****-] XML no recompile
-- **Uses**: 20 | **Velocity**: 2.0149999999999997 | **Learned**: 2025-12-27 | **Last**: 2026-02-05 | **Category**: gotcha | **Type**: constraint
+- **Uses**: 21 | **Velocity**: 3.0149999999999997 | **Learned**: 2025-12-27 | **Last**: 2026-02-06 | **Category**: gotcha | **Type**: constraint
 > XML files are loaded at RUNTIME - never rebuild after XML-only changes. Just relaunch the app. This includes layout changes, styling, bindings, event callbacks - anything in ui_xml/*.xml. Only rebuild when C++ code changes.
 
 ### [L036] [*----|-----] Header file documentation
