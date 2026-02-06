@@ -143,3 +143,15 @@ INIT_SCRIPT="config/helixscreen.init"
 @test "bundled installer contains deploy_platform_hooks" {
     grep -q 'deploy_platform_hooks' scripts/install.sh
 }
+
+@test "bundled installer contains detect_klipper_user" {
+    grep -q 'detect_klipper_user' scripts/install.sh
+}
+
+@test "bundled installer contains record_disabled_service" {
+    grep -q 'record_disabled_service' scripts/install.sh
+}
+
+@test "bundled installer contains fix_install_ownership" {
+    grep -q 'fix_install_ownership' scripts/install.sh
+}

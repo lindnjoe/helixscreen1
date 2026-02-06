@@ -196,6 +196,8 @@ INIT_SCRIPT_DEST=""
 PREVIOUS_UI_SCRIPT=""
 AD5M_FIRMWARE=""
 K1_FIRMWARE=""
+KLIPPER_USER=""
+KLIPPER_HOME=""
 
 # Detect platform
 # Returns: "ad5m", "k1", "pi", or "unsupported"
@@ -243,8 +245,8 @@ detect_platform() {
             echo "pi"
             return
         fi
-        # Also check for MainsailOS
-        if [ -d /home/pi ] || [ -d /home/mks ]; then
+        # Also check for MainsailOS / BTT Pi / MKS
+        if [ -d /home/pi ] || [ -d /home/mks ] || [ -d /home/biqu ]; then
             echo "pi"
             return
         fi
@@ -259,6 +261,69 @@ detect_platform() {
     fi
 
     echo "unsupported"
+}
+
+# Detect the Klipper ecosystem user (who runs klipper/moonraker services)
+# Detection cascade (most reliable first):
+#   1. systemd: systemctl show klipper.service
+#   2. Process table: ps for running klipper
+#   3. printer_data scan: /home/*/printer_data
+#   4. Well-known users: biqu, pi, mks
+#   5. Fallback: root
+# Sets: KLIPPER_USER, KLIPPER_HOME
+detect_klipper_user() {
+    # 1. systemd service owner (most reliable on Pi)
+    if command -v systemctl >/dev/null 2>&1; then
+        local svc_user
+        svc_user=$(systemctl show -p User --value klipper.service 2>/dev/null) || true
+        if [ -n "$svc_user" ] && [ "$svc_user" != "root" ] && id "$svc_user" >/dev/null 2>&1; then
+            KLIPPER_USER="$svc_user"
+            KLIPPER_HOME=$(eval echo "~$svc_user")
+            log_info "Klipper user (systemd): $KLIPPER_USER"
+            return 0
+        fi
+    fi
+
+    # 2. Process table (catches running instances)
+    local ps_user
+    ps_user=$(ps -eo user,comm 2>/dev/null | awk '/klipper$/ && !/grep/ {print $1; exit}') || true
+    if [ -n "$ps_user" ] && [ "$ps_user" != "root" ] && id "$ps_user" >/dev/null 2>&1; then
+        KLIPPER_USER="$ps_user"
+        KLIPPER_HOME=$(eval echo "~$ps_user")
+        log_info "Klipper user (process): $KLIPPER_USER"
+        return 0
+    fi
+
+    # 3. printer_data directory scan
+    local pd_dir
+    for pd_dir in /home/*/printer_data; do
+        [ -d "$pd_dir" ] || continue
+        local pd_user
+        pd_user=$(echo "$pd_dir" | sed 's|^/home/||;s|/printer_data$||')
+        if [ -n "$pd_user" ] && id "$pd_user" >/dev/null 2>&1; then
+            KLIPPER_USER="$pd_user"
+            KLIPPER_HOME="/home/$pd_user"
+            log_info "Klipper user (printer_data): $KLIPPER_USER"
+            return 0
+        fi
+    done
+
+    # 4. Well-known users (checked in priority order)
+    local known_user
+    for known_user in biqu pi mks; do
+        if id "$known_user" >/dev/null 2>&1; then
+            KLIPPER_USER="$known_user"
+            KLIPPER_HOME="/home/$known_user"
+            log_info "Klipper user (well-known): $KLIPPER_USER"
+            return 0
+        fi
+    done
+
+    # 5. Fallback: root (embedded platforms, AD5M, K1)
+    KLIPPER_USER="root"
+    KLIPPER_HOME="/root"
+    log_info "Klipper user (fallback): root"
+    return 0
 }
 
 # Detect AD5M firmware variant (Klipper Mod vs Forge-X)
@@ -349,6 +414,7 @@ set_install_paths() {
         INIT_SCRIPT_DEST="/etc/init.d/S90helixscreen"
         PREVIOUS_UI_SCRIPT=""
         TMP_DIR="/tmp/helixscreen-install"
+        detect_klipper_user
     fi
 }
 
@@ -868,7 +934,8 @@ uninstall_forgex_logged_wrapper() {
 
 # Uninstall ForgeX-specific configuration (for uninstall)
 # Restores display mode, stock UI, screen.sh, GuppyScreen/tslib init scripts,
-# and cleans up backup files from manual patches
+# and cleans up backup files from manual patches.
+# Note: Sets caller's `restored_ui` variable via dynamic scoping.
 uninstall_forgex() {
     # Restore ForgeX display mode to GUPPY (from HEADLESS or STOCK)
     if [ -f "/opt/config/mod_data/variables.cfg" ]; then
@@ -917,6 +984,29 @@ uninstall_forgex() {
 # Includes: GuppyScreen (AD5M/K1), Grumpyscreen (K1/Simple AF), KlipperScreen, FeatherScreen
 COMPETING_UIS="guppyscreen GuppyScreen grumpyscreen Grumpyscreen KlipperScreen klipperscreen featherscreen FeatherScreen"
 
+# State file tracking services we disabled (for clean uninstall re-enablement)
+DISABLED_SERVICES_FILE="${INSTALL_DIR}/config/.disabled_services"
+
+# Record a disabled service for later re-enablement
+# Args: $1 = type ("systemd" or "sysv-chmod"), $2 = target (service name or script path)
+record_disabled_service() {
+    local type="$1"
+    local target="$2"
+    local entry="${type}:${target}"
+
+    # Ensure config directory exists
+    if [ -n "${INSTALL_DIR:-}" ] && [ ! -d "${INSTALL_DIR}/config" ]; then
+        $SUDO mkdir -p "${INSTALL_DIR}/config"
+    fi
+
+    # Don't duplicate entries
+    if [ -f "$DISABLED_SERVICES_FILE" ] && grep -qF "$entry" "$DISABLED_SERVICES_FILE" 2>/dev/null; then
+        return 0
+    fi
+
+    echo "$entry" | $SUDO tee -a "$DISABLED_SERVICES_FILE" >/dev/null
+}
+
 # Stop ForgeX-specific competing UIs (stock FlashForge firmware UI)
 stop_forgex_competing_uis() {
     # Stop stock FlashForge firmware UI (AD5M/Adventurer 5M)
@@ -937,6 +1027,7 @@ stop_kmod_competing_uis() {
         $SUDO /etc/init.d/S40xorg stop 2>/dev/null || true
         # Disable Xorg init script (non-destructive, reversible)
         $SUDO chmod -x /etc/init.d/S40xorg 2>/dev/null || true
+        record_disabled_service "sysv-chmod" "/etc/init.d/S40xorg"
         # Kill any remaining Xorg processes
         kill_process_by_name Xorg X || true
         found_any=true
@@ -971,6 +1062,7 @@ stop_competing_uis() {
         $SUDO "$PREVIOUS_UI_SCRIPT" stop 2>/dev/null || true
         # Disable by removing execute permission (non-destructive, reversible)
         $SUDO chmod -x "$PREVIOUS_UI_SCRIPT" 2>/dev/null || true
+        record_disabled_service "sysv-chmod" "$PREVIOUS_UI_SCRIPT"
         found_any=true
     fi
 
@@ -981,6 +1073,7 @@ stop_competing_uis() {
                 log_info "Stopping $ui (systemd service)..."
                 $SUDO systemctl stop "$ui" 2>/dev/null || true
                 $SUDO systemctl disable "$ui" 2>/dev/null || true
+                record_disabled_service "systemd" "$ui"
                 found_any=true
             fi
         fi
@@ -998,6 +1091,7 @@ stop_competing_uis() {
                 $SUDO "$initscript" stop 2>/dev/null || true
                 # Disable by removing execute permission (non-destructive)
                 $SUDO chmod -x "$initscript" 2>/dev/null || true
+                record_disabled_service "sysv-chmod" "$initscript"
                 found_any=true
             fi
         done
@@ -1313,6 +1407,20 @@ install_service_systemd() {
 
     $SUDO cp "$service_src" "$service_dest"
 
+    # Template placeholders (match SysV pattern in install_service_sysv)
+    local helix_user="${KLIPPER_USER:-root}"
+    local helix_group="${KLIPPER_USER:-root}"
+    local install_dir="${INSTALL_DIR:-/opt/helixscreen}"
+
+    $SUDO sed -i "s|@@HELIX_USER@@|${helix_user}|g" "$service_dest" 2>/dev/null || \
+    $SUDO sed -i '' "s|@@HELIX_USER@@|${helix_user}|g" "$service_dest" 2>/dev/null || true
+
+    $SUDO sed -i "s|@@HELIX_GROUP@@|${helix_group}|g" "$service_dest" 2>/dev/null || \
+    $SUDO sed -i '' "s|@@HELIX_GROUP@@|${helix_group}|g" "$service_dest" 2>/dev/null || true
+
+    $SUDO sed -i "s|@@INSTALL_DIR@@|${install_dir}|g" "$service_dest" 2>/dev/null || \
+    $SUDO sed -i '' "s|@@INSTALL_DIR@@|${install_dir}|g" "$service_dest" 2>/dev/null || true
+
     if ! $SUDO systemctl daemon-reload; then
         log_error "Failed to reload systemd daemon."
         exit 1
@@ -1432,6 +1540,18 @@ deploy_platform_hooks() {
     log_info "Deployed platform hooks: $platform"
 }
 
+# Fix ownership of config directory for non-root Klipper users
+# Binaries stay root-owned for security; only config needs user write access
+fix_install_ownership() {
+    local user="${KLIPPER_USER:-}"
+    if [ -n "$user" ] && [ "$user" != "root" ] && [ -d "$INSTALL_DIR" ]; then
+        log_info "Setting ownership to ${user}..."
+        if [ -d "${INSTALL_DIR}/config" ]; then
+            $SUDO chown -R "${user}:${user}" "${INSTALL_DIR}/config"
+        fi
+    fi
+}
+
 # Stop service for update
 stop_service() {
     if [ "$INIT_SYSTEM" = "systemd" ]; then
@@ -1466,6 +1586,7 @@ stop_service() {
 # Common moonraker.conf locations
 MOONRAKER_CONF_PATHS="
 /home/pi/printer_data/config/moonraker.conf
+/home/biqu/printer_data/config/moonraker.conf
 /home/mks/printer_data/config/moonraker.conf
 /root/printer_data/config/moonraker.conf
 /opt/config/moonraker.conf
@@ -1475,6 +1596,16 @@ MOONRAKER_CONF_PATHS="
 # Find moonraker.conf
 # Returns: path to moonraker.conf or empty string
 find_moonraker_conf() {
+    # Dynamic: check detected user's home first
+    if [ -n "${KLIPPER_HOME:-}" ]; then
+        local user_conf="${KLIPPER_HOME}/printer_data/config/moonraker.conf"
+        if [ -f "$user_conf" ]; then
+            echo "$user_conf"
+            return 0
+        fi
+    fi
+
+    # Static fallback
     for conf in $MOONRAKER_CONF_PATHS; do
         if [ -f "$conf" ]; then
             echo "$conf"
@@ -1615,6 +1746,35 @@ remove_update_manager_section() {
 # ============================================
 
 #
+# Re-enable services that were disabled during installation
+# Reads the state file and reverses each recorded disable action
+reenable_disabled_services() {
+    local state_file="${INSTALL_DIR}/config/.disabled_services"
+    [ -f "$state_file" ] || return 0
+
+    log_info "Re-enabling previously disabled services..."
+    while IFS= read -r entry; do
+        # Skip empty lines and comments
+        case "$entry" in ""|\#*) continue ;; esac
+
+        local type="${entry%%:*}"
+        local target="${entry#*:}"
+
+        case "$type" in
+            systemd)
+                log_info "Re-enabling systemd service: $target"
+                $SUDO systemctl enable "$target" 2>/dev/null || true
+                ;;
+            sysv-chmod)
+                if [ -f "$target" ]; then
+                    log_info "Re-enabling init script: $target"
+                    $SUDO chmod +x "$target" 2>/dev/null || true
+                fi
+                ;;
+        esac
+    done < "$state_file"
+}
+
 # Uninstall HelixScreen
 # Args: platform (optional)
 uninstall() {
@@ -1650,6 +1810,9 @@ uninstall() {
     $SUDO rm -f /var/run/helixscreen.pid 2>/dev/null || true
     $SUDO rm -f /var/run/helix-splash.pid 2>/dev/null || true
     $SUDO rm -f /tmp/helixscreen.log 2>/dev/null || true
+
+    # Re-enable services from state file (before removing install dir)
+    reenable_disabled_services
 
     # Remove installation (check all possible locations)
     local removed_dir=""
@@ -2016,6 +2179,7 @@ main() {
         download_release "$version" "$platform"
     fi
     extract_release "$platform"
+    fix_install_ownership
     install_service "$platform"
     install_platform_hooks
 
