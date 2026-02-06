@@ -3,12 +3,41 @@
 # Module: uninstall
 # Uninstall and clean installation functions
 #
-# Reads: All paths, INIT_SYSTEM, SUDO, AD5M_FIRMWARE, SERVICE_NAME
+# Reads: All paths, INIT_SYSTEM, SUDO, AD5M_FIRMWARE, SERVICE_NAME, INSTALL_DIR
 # Writes: (none)
 
 # Source guard
 [ -n "${_HELIX_UNINSTALL_SOURCED:-}" ] && return 0
 _HELIX_UNINSTALL_SOURCED=1
+
+# Re-enable services that were disabled during installation
+# Reads the state file and reverses each recorded disable action
+reenable_disabled_services() {
+    local state_file="${INSTALL_DIR}/config/.disabled_services"
+    [ -f "$state_file" ] || return 0
+
+    log_info "Re-enabling previously disabled services..."
+    while IFS= read -r entry; do
+        # Skip empty lines and comments
+        case "$entry" in ""|\#*) continue ;; esac
+
+        local type="${entry%%:*}"
+        local target="${entry#*:}"
+
+        case "$type" in
+            systemd)
+                log_info "Re-enabling systemd service: $target"
+                $SUDO systemctl enable "$target" 2>/dev/null || true
+                ;;
+            sysv-chmod)
+                if [ -f "$target" ]; then
+                    log_info "Re-enabling init script: $target"
+                    $SUDO chmod +x "$target" 2>/dev/null || true
+                fi
+                ;;
+        esac
+    done < "$state_file"
+}
 
 # Uninstall HelixScreen
 # Args: platform (optional)
@@ -45,6 +74,9 @@ uninstall() {
     $SUDO rm -f /var/run/helixscreen.pid 2>/dev/null || true
     $SUDO rm -f /var/run/helix-splash.pid 2>/dev/null || true
     $SUDO rm -f /tmp/helixscreen.log 2>/dev/null || true
+
+    # Re-enable services from state file (before removing install dir)
+    reenable_disabled_services
 
     # Remove installation (check all possible locations)
     local removed_dir=""

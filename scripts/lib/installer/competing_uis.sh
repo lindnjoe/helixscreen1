@@ -4,7 +4,7 @@
 # Stop competing screen UIs (GuppyScreen, KlipperScreen, Xorg, stock FlashForge UI)
 #
 # Reads: AD5M_FIRMWARE, INIT_SYSTEM, PREVIOUS_UI_SCRIPT, SUDO
-# Writes: (none)
+# Writes: DISABLED_SERVICES_FILE
 
 # Source guard
 [ -n "${_HELIX_COMPETING_UIS_SOURCED:-}" ] && return 0
@@ -13,6 +13,29 @@ _HELIX_COMPETING_UIS_SOURCED=1
 # Known competing screen UIs to stop
 # Includes: GuppyScreen (AD5M/K1), Grumpyscreen (K1/Simple AF), KlipperScreen, FeatherScreen
 COMPETING_UIS="guppyscreen GuppyScreen grumpyscreen Grumpyscreen KlipperScreen klipperscreen featherscreen FeatherScreen"
+
+# State file tracking services we disabled (for clean uninstall re-enablement)
+DISABLED_SERVICES_FILE="${INSTALL_DIR}/config/.disabled_services"
+
+# Record a disabled service for later re-enablement
+# Args: $1 = type ("systemd" or "sysv-chmod"), $2 = target (service name or script path)
+record_disabled_service() {
+    local type="$1"
+    local target="$2"
+    local entry="${type}:${target}"
+
+    # Ensure config directory exists
+    if [ -n "${INSTALL_DIR:-}" ] && [ ! -d "${INSTALL_DIR}/config" ]; then
+        $SUDO mkdir -p "${INSTALL_DIR}/config"
+    fi
+
+    # Don't duplicate entries
+    if [ -f "$DISABLED_SERVICES_FILE" ] && grep -qF "$entry" "$DISABLED_SERVICES_FILE" 2>/dev/null; then
+        return 0
+    fi
+
+    echo "$entry" | $SUDO tee -a "$DISABLED_SERVICES_FILE" >/dev/null
+}
 
 # Stop ForgeX-specific competing UIs (stock FlashForge firmware UI)
 stop_forgex_competing_uis() {
@@ -34,6 +57,7 @@ stop_kmod_competing_uis() {
         $SUDO /etc/init.d/S40xorg stop 2>/dev/null || true
         # Disable Xorg init script (non-destructive, reversible)
         $SUDO chmod -x /etc/init.d/S40xorg 2>/dev/null || true
+        record_disabled_service "sysv-chmod" "/etc/init.d/S40xorg"
         # Kill any remaining Xorg processes
         kill_process_by_name Xorg X || true
         found_any=true
@@ -68,6 +92,7 @@ stop_competing_uis() {
         $SUDO "$PREVIOUS_UI_SCRIPT" stop 2>/dev/null || true
         # Disable by removing execute permission (non-destructive, reversible)
         $SUDO chmod -x "$PREVIOUS_UI_SCRIPT" 2>/dev/null || true
+        record_disabled_service "sysv-chmod" "$PREVIOUS_UI_SCRIPT"
         found_any=true
     fi
 
@@ -78,6 +103,7 @@ stop_competing_uis() {
                 log_info "Stopping $ui (systemd service)..."
                 $SUDO systemctl stop "$ui" 2>/dev/null || true
                 $SUDO systemctl disable "$ui" 2>/dev/null || true
+                record_disabled_service "systemd" "$ui"
                 found_any=true
             fi
         fi
@@ -95,6 +121,7 @@ stop_competing_uis() {
                 $SUDO "$initscript" stop 2>/dev/null || true
                 # Disable by removing execute permission (non-destructive)
                 $SUDO chmod -x "$initscript" 2>/dev/null || true
+                record_disabled_service "sysv-chmod" "$initscript"
                 found_any=true
             fi
         done
