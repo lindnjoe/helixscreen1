@@ -1,9 +1,9 @@
 # HelixScreen Technical Debt Tracker
 
 **Created:** 2024-12-16
-**Last Updated:** 2026-01-20
+**Last Updated:** 2026-02-06
 **Status:** IN PROGRESS
-**Overall Progress:** ~60%
+**Overall Progress:** ~50%
 
 ---
 
@@ -18,50 +18,69 @@
 7. [Priority 5: Large File Refactoring](#7-priority-5-large-file-refactoring)
 8. [Priority 6: Documentation Updates](#8-priority-6-documentation-updates)
 9. [Priority 7: Tooling & CI](#9-priority-7-tooling--ci)
-10. [Appendix: Search Patterns](#appendix-search-patterns)
-11. [Appendix: Verification Commands](#appendix-verification-commands)
+10. [Priority 8: Code Duplication Reduction](#10-priority-8-code-duplication-reduction)
+11. [Priority 9: Threading & Async Simplification](#11-priority-9-threading--async-simplification)
+12. [Priority 10: API Surface Reduction](#12-priority-10-api-surface-reduction)
+13. [Appendix: Search Patterns](#appendix-search-patterns)
+14. [Appendix: Verification Commands](#appendix-verification-commands)
 
 ---
 
 ## 1. Executive Summary
 
-### Current State (as of 2026-01-12)
+### Current State (as of 2026-02-06)
 - **Overall Grade:** A (92/100)
 - **Critical Issues:** 0 (Timer leaks and RAII violations FIXED)
-- **High Priority Issues:** ~140 event handlers, 533 inline styles
-- **Technical Debt:** 16 hardcoded spacing values, 2 files >1500 LOC
+- **High Priority Issues:** ~140 event handlers, 533 inline styles, ~1,800 lines of duplicated boilerplate
+- **Architectural Debt:** 3 async patterns undocumented, 68 subject getters on PrinterState, MoonrakerAPI at 117 methods
+- **Technical Debt:** 2 files >1500 LOC, 27 TODOs, 1 deprecated API
 
 ### Target State
-- **Target Grade:** A (95/100)
+- **Target Grade:** A+ (97/100)
 - **Zero critical safety issues** ✅ ACHIEVED
 - **Documented exceptions for legitimate imperative code**
 - **Design tokens used consistently**
+- **Duplication hotspots eliminated (sensor managers, AMS backends, wizard steps)**
+- **Async patterns documented and standardized**
+- **PrinterState API surface reduced via subject bundles**
 
-### Current Metrics (2026-01-20)
+### Current Metrics (2026-02-06)
 
 > *Files >1500 LOC: ui_panel_print_status.cpp still needs attention. ui_panel_print_select.cpp
 > target revised to <2200 LOC (orchestration layer with 8+ modules) - currently at 2107 LOC ✅
+
 | Category | Count | Target |
 |----------|-------|--------|
-| Timer creates | 18 | — |
-| Timer deletes | 25+ | ≥ creates ✅ |
+| Timer creates | 18 | -- |
+| Timer deletes | 25+ | >= creates ✅ |
 | Manual `delete` | 0 | 0 ✅ |
 | `lv_malloc` in src/ | 1 | 0 |
 | Hardcoded padding | 0 | 0 ✅ |
 | Event handlers | 140 | Documented |
 | Inline styles | 533 | <100 |
 | Files >1500 LOC | 2 | 1* |
+| Sensor manager duplication | ~800 LOC | 0 |
+| AMS backend duplication | ~600 LOC | 0 |
+| Wizard step boilerplate | ~400 LOC | 0 |
+| Async pattern types | 3 (undocumented) | Documented, standardized |
+| PrinterState subject getters | 68 | ~13 bundles |
+| MoonrakerAPI public methods | 117 | Split into domains |
+| Singletons | 23+ | Documented, context pattern for UI |
+| TODOs in codebase | 27 | Triaged |
 
 ### Estimated Effort
 | Priority | Effort | Impact | Status |
 |----------|--------|--------|--------|
 | P1: Critical Safety | ~~2-4 hours~~ | Prevents crashes/leaks | ✅ COMPLETE |
 | P2: RAII Compliance | ~~4-6 hours~~ | Memory safety | ✅ COMPLETE |
-| P3: XML Tokens | 8-12 hours | Maintainability | In Progress |
-| P4: Declarative UI | 16-24 hours | Architecture compliance | Pending |
-| P5: File Splitting | 16-24 hours | Maintainability | Pending |
-| P6: Documentation | 4-6 hours | Developer experience | Pending |
+| P3: XML Tokens | ~~8-12 hours~~ | Maintainability | ✅ COMPLETE |
+| P4: Declarative UI | 12-16 hours | Architecture compliance | ~80% |
+| P5: File Splitting | 6-10 hours | Maintainability | ~50% |
+| P6: Documentation | 4-6 hours | Developer experience | ~50% |
 | P7: Tooling | 8-12 hours | Prevent regressions | Pending |
+| P8: Code Duplication | 8-12 hours | ~1800 LOC reduction | Pending |
+| P9: Threading/Async | 4-8 hours | Consistency, safety | Pending |
+| P10: API Surface | 16-24 hours | Coupling, compile times | Pending |
 
 ---
 
@@ -1208,6 +1227,547 @@ lint:
 
 ---
 
+## 10. Priority 8: Code Duplication Reduction
+
+**Status:** [ ] Not Started
+**Estimated Time:** 8-12 hours
+**Risk if Skipped:** Maintenance burden, inconsistent bug fixes (fix in one place, miss others)
+
+> **2026-02-06:** Identified by dedicated duplication analysis agent. Three major hotspots account for ~1,800 lines of near-identical code. All three are low-risk refactors with contained blast radius.
+>
+> **Cross-reference:** See `ARCHITECTURAL_DEBT.md` sections 6.1-6.9 for full analysis.
+
+### 10.1 Sensor Manager Template Base (HIGHEST PRIORITY)
+
+**Why first:** Easy, contained, highest duplication density. 6 files with 95% identical code.
+
+**Files affected:**
+- `src/sensors/temperature_sensor_manager.cpp`
+- `src/sensors/humidity_sensor_manager.cpp`
+- `src/sensors/accel_sensor_manager.cpp`
+- `src/sensors/probe_sensor_manager.cpp`
+- `src/sensors/color_sensor_manager.cpp`
+- `src/sensors/width_sensor_manager.cpp`
+
+**Duplicated code (~800 LOC total):**
+1. Anonymous namespace async callback wrapper
+2. Meyer's singleton `instance()` method
+3. Default constructor/destructor
+4. `category_name()` returning string literal
+5. `discover()` - klipper object iteration, state map management, stale entry cleanup
+6. `update_subjects_on_main_thread()` dispatch pattern
+
+#### 10.1.1 Create CRTP Base Class
+
+- [ ] Create `include/sensors/sensor_manager_base.h`:
+```cpp
+// SPDX-License-Identifier: GPL-3.0-or-later
+#pragma once
+
+#include "sensors/sensor_manager.h"  // ISensorManager
+#include "ui_update_queue.h"
+#include <spdlog/spdlog.h>
+#include <mutex>
+#include <map>
+#include <vector>
+
+namespace helix::sensors {
+
+template <typename Derived, typename Config, typename State>
+class SensorManagerBase : public ISensorManager {
+public:
+    static Derived& instance() {
+        static Derived inst;
+        return inst;
+    }
+
+    void discover(const std::vector<std::string>& klipper_objects) override {
+        std::lock_guard<std::recursive_mutex> lock(mutex_);
+        spdlog::info("[{}] Discovering sensors from {} objects",
+                     static_cast<Derived*>(this)->category_name(),
+                     klipper_objects.size());
+        sensors_.clear();
+        for (const auto& name : klipper_objects) {
+            // Delegate parsing to derived class
+            if (auto config = static_cast<Derived*>(this)->try_parse(name)) {
+                sensors_.push_back(std::move(*config));
+                if (states_.find(name) == states_.end()) {
+                    State state;
+                    state.available = true;
+                    states_[name] = state;
+                } else {
+                    states_[name].available = true;
+                }
+            }
+        }
+        // Mark stale entries
+        for (auto it = states_.begin(); it != states_.end();) {
+            bool found = false;
+            for (const auto& s : sensors_) {
+                if (s.klipper_name == it->first) { found = true; break; }
+            }
+            if (!found) it = states_.erase(it); else ++it;
+        }
+    }
+
+    void schedule_ui_update() {
+        ui_async_call([](void*) {
+            Derived::instance().update_subjects_on_main_thread();
+        }, nullptr);
+    }
+
+protected:
+    SensorManagerBase() = default;
+    ~SensorManagerBase() = default;
+
+    std::recursive_mutex mutex_;
+    std::vector<Config> sensors_;
+    std::map<std::string, State> states_;
+};
+
+} // namespace helix::sensors
+```
+
+- [ ] **Verify pattern matches** all 6 sensor managers (check for variations)
+
+#### 10.1.2 Migrate Each Sensor Manager
+
+For each manager, reduce to just:
+```cpp
+class TemperatureSensorManager
+    : public SensorManagerBase<TemperatureSensorManager, TempSensorConfig, TempSensorState> {
+    friend class SensorManagerBase;
+public:
+    std::string category_name() const override { return "temperature"; }
+
+protected:
+    std::optional<TempSensorConfig> try_parse(const std::string& klipper_name);
+    void update_subjects_on_main_thread();  // Sensor-specific subject updates
+};
+```
+
+- [ ] Migrate `temperature_sensor_manager.cpp` (reference implementation)
+- [ ] Build + run `make test-run` with temperature sensor tests
+- [ ] Migrate `humidity_sensor_manager.cpp`
+- [ ] Migrate `accel_sensor_manager.cpp`
+- [ ] Migrate `probe_sensor_manager.cpp`
+- [ ] Migrate `color_sensor_manager.cpp`
+- [ ] Migrate `width_sensor_manager.cpp`
+- [ ] Build + full test run
+
+#### 10.1.3 Verification
+
+```bash
+# Each sensor manager should be <100 lines after migration
+wc -l src/sensors/*_sensor_manager.cpp
+
+# Build
+make -j
+
+# Run sensor-related tests
+./build/bin/helix-tests "[sensor]"
+
+# Full test
+make test-run
+```
+
+- [ ] All 6 managers migrated
+- [ ] Each manager < 100 lines (was ~250 each)
+- [ ] Build succeeds
+- [ ] All tests pass
+
+---
+
+### 10.2 AMS Backend Base Class
+
+**Why second:** Easy, high duplication density. 4 files with 95% identical lifecycle code.
+
+**Files affected:**
+- `src/printer/ams_backend_afc.cpp` (1,617 lines)
+- `src/printer/ams_backend_happy_hare.cpp`
+- `src/printer/ams_backend_valgace.cpp`
+- `src/printer/ams_backend_toolchanger.cpp`
+
+**Duplicated patterns (~600 LOC total):**
+1. Constructor: identical `system_info_` initialization (differs only in AmsType and 2-3 boolean flags)
+2. Destructor: identical `subscription_.release()`
+3. `start()`: identical mutex lock, running_ check, null checks, subscription registration
+4. `stop()`: identical mutex lock, subscription release, running_ = false
+
+#### 10.2.1 Create AmsBackendBase Class
+
+- [ ] Create `include/ams_backend_base.h`:
+```cpp
+// SPDX-License-Identifier: GPL-3.0-or-later
+#pragma once
+
+#include "ams_backend.h"
+#include "subscription_guard.h"
+
+class AmsBackendBase : public AmsBackend {
+public:
+    ~AmsBackendBase() override;
+
+    AmsError start() override;
+    void stop() override;
+
+protected:
+    struct BackendConfig {
+        AmsType type;
+        const char* type_name;
+        bool supports_endless_spool = true;
+        bool supports_spoolman = true;
+        bool supports_tool_mapping = true;
+        bool supports_bypass = true;
+        bool has_hardware_bypass_sensor = false;
+    };
+
+    AmsBackendBase(MoonrakerAPI* api, MoonrakerClient* client, const BackendConfig& config);
+
+    virtual void handle_status_update(const nlohmann::json& notification) = 0;
+    virtual void on_started() {}  // Hook for post-start setup
+
+    MoonrakerAPI* api_ = nullptr;
+    MoonrakerClient* client_ = nullptr;
+    AmsSystemInfo system_info_;
+    SubscriptionGuard subscription_;
+    bool running_ = false;
+    std::mutex mutex_;  // or std::recursive_mutex per backend
+};
+```
+
+- [ ] Create `src/printer/ams_backend_base.cpp` with common lifecycle
+
+#### 10.2.2 Migrate Each Backend
+
+- [ ] Migrate `ams_backend_afc.cpp` (reference implementation)
+- [ ] Build + test AMS AFC functionality
+- [ ] Migrate `ams_backend_happy_hare.cpp`
+- [ ] Migrate `ams_backend_valgace.cpp`
+- [ ] Migrate `ams_backend_toolchanger.cpp`
+- [ ] Build + full test run
+
+#### 10.2.3 Verification
+
+```bash
+# Check reduction
+wc -l src/printer/ams_backend_*.cpp
+
+# Build
+make -j
+
+# Run AMS tests
+./build/bin/helix-tests "[ams]"
+
+make test-run
+```
+
+- [ ] All 4 backends migrated
+- [ ] Common lifecycle code in base class
+- [ ] Build succeeds
+- [ ] All AMS tests pass
+
+---
+
+### 10.3 Wizard Step Boilerplate Macro
+
+**Why third:** Moderate effort, moderate impact. 8+ files with repeated singleton/move/init patterns.
+
+**Files affected:** All `src/ui/ui_wizard_*.cpp` files (8+)
+
+**Duplicated patterns (~400 LOC):**
+1. Global `std::unique_ptr<WizardXxxStep>` + `get_wizard_xxx_step()` factory
+2. `StaticPanelRegistry::instance().register_destroy(...)` call
+3. Move constructor/assignment operator
+4. `init_subjects()` with logging bookends and `subjects_initialized_` guard
+
+#### 10.3.1 Create Macro
+
+- [ ] Add to appropriate header (e.g., `include/ui_wizard_common.h`):
+```cpp
+// SPDX-License-Identifier: GPL-3.0-or-later
+#pragma once
+
+#include "static_panel_registry.h"
+#include <memory>
+
+#define DEFINE_WIZARD_STEP(ClassName) \
+    static std::unique_ptr<ClassName> g_##ClassName; \
+    ClassName* get_##ClassName() { \
+        if (!g_##ClassName) { \
+            g_##ClassName = std::make_unique<ClassName>(); \
+            StaticPanelRegistry::instance().register_destroy( \
+                #ClassName, []() { g_##ClassName.reset(); }); \
+        } \
+        return g_##ClassName.get(); \
+    }
+```
+
+#### 10.3.2 Migrate Wizard Steps
+
+- [ ] Migrate one wizard as reference (e.g., `ui_wizard_heater_select.cpp`)
+- [ ] Migrate remaining 7+ wizard files
+- [ ] Build + test wizard navigation
+
+#### 10.3.3 Verification
+
+```bash
+# Count boilerplate reduction
+grep -c "get_wizard\|g_wizard" src/ui/ui_wizard_*.cpp
+
+make -j
+make test-run
+```
+
+- [ ] All wizard files use macro
+- [ ] Move constructors simplified or defaulted
+- [ ] Build succeeds
+- [ ] All wizard tests pass
+
+---
+
+### 10.4 Event Callback Registration Tables (OPTIONAL)
+
+**Lower priority but high readability impact.**
+
+- [ ] Create registration table helper
+- [ ] Migrate one panel as reference (e.g., `ui_panel_controls.cpp` with 20+ registrations)
+- [ ] Migrate remaining panels if pattern proves clean
+
+### 10.5 JSON Parse + Fallback Helper (OPTIONAL)
+
+- [ ] Create template `load_json_with_fallback<T>(path, fallback_fn)` in utility header
+- [ ] Migrate highest-duplication callers
+
+---
+
+## 11. Priority 9: Threading & Async Simplification
+
+**Status:** [ ] Not Started
+**Estimated Time:** 4-8 hours
+**Risk if Skipped:** Inconsistency leads to subtle threading bugs in future changes
+
+> **2026-02-06:** Identified by dedicated threading analysis agent. Overall threading complexity: 5.5/10.
+> Fundamentals are solid but three different async patterns with no guidance creates maintainer confusion.
+>
+> **Cross-reference:** See `ARCHITECTURAL_DEBT.md` section 7 for full analysis.
+
+### 11.1 Document Async Pattern Guidance (HIGHEST PRIORITY)
+
+**Why first:** Zero code risk, prevents future divergence.
+
+Current state: Three patterns, no documentation on when to use which.
+
+- [ ] Add to `CLAUDE.md` Threading section:
+```markdown
+### Async Pattern Selection Guide
+
+| Situation | Pattern | Example |
+|-----------|---------|---------|
+| Simple member function call from background thread | `helix::async::call_method_ref(this, &Class::method, args...)` | `printer_state.cpp` |
+| Complex payload needing explicit ownership transfer | `ui_queue_update<T>(std::make_unique<T>(...), handler)` | `ui_print_preparation_manager.cpp` |
+| One-off simple callback (avoid in new code) | `ui_async_call(lambda)` | Legacy patterns only |
+
+**Default:** Use `helix::async::call_method_ref()` unless you need structured data transfer.
+**Never in new code:** Raw `ui_async_call()` with manual memory management.
+```
+
+- [ ] Add to `docs/ARCHITECTURE.md` if it exists
+
+### 11.2 Fix Callback Bypass
+
+**Problem:** `PrintStartCollector` directly uses `client_.register_method_callback()`, bypassing MoonrakerManager's notification queue.
+
+- [ ] Audit `src/print/print_start_collector.cpp` for direct callback registration
+- [ ] Determine if routing through MoonrakerManager is safe (check for latency requirements)
+- [ ] If safe, migrate to use MoonrakerManager notification queue
+- [ ] If not safe (latency-critical), document why direct registration is intentional
+
+### 11.3 Remove Redundant `is_destroying_` Flag
+
+**File:** `include/moonraker_client.h`, `src/api/moonraker_client.cpp`
+
+**Problem:** `is_destroying_` atomic is redundant with `lifetime_guard_` (weak_ptr). Both prevent callbacks after destruction.
+
+- [ ] Audit all uses of `is_destroying_` in moonraker_client.cpp
+- [ ] Verify `lifetime_guard_.lock()` returns nullptr in all the same paths
+- [ ] Remove `is_destroying_` if redundant
+- [ ] Build + test connection/disconnection scenarios
+
+### 11.4 Audit PrinterState state_mutex_
+
+**File:** `include/printer_state.h:1376`
+
+- [ ] Grep all uses of `state_mutex_` in printer_state.cpp
+- [ ] If only used for excluded objects, document or remove
+- [ ] If removable, verify excluded objects update is already deferred via helix::async
+
+### 11.5 Consolidate AbortManager Synchronization (OPTIONAL)
+
+**File:** `include/abort_manager.h`
+
+- [ ] Review if `escalation_level_` and `commands_sent_` atomics can be grouped under `message_mutex_`
+- [ ] Document decision either way
+
+### 11.6 Verification
+
+```bash
+# Build
+make -j
+
+# Run threading-sensitive tests
+./build/bin/helix-tests "[async]" "[threading]" "[websocket]"
+
+# Full test
+make test-run
+
+# Manual: start in test mode, connect/disconnect rapidly, verify no crashes
+./build/bin/helix-screen --test -vv
+```
+
+- [ ] All changes build cleanly
+- [ ] No threading regressions
+- [ ] Async pattern guidance documented
+
+---
+
+## 12. Priority 10: API Surface Reduction
+
+**Status:** [ ] Not Started
+**Estimated Time:** 16-24 hours
+**Risk if Skipped:** Growing coupling, slow compile times, difficult testing
+
+> **2026-02-06:** Identified by coupling analysis agent. PrinterState exposes 166 public methods (68 subject getters).
+> MoonrakerAPI exposes 117 methods across 7+ domains. Both are included by 30-39+ UI files.
+>
+> **Cross-reference:** See `ARCHITECTURAL_DEBT.md` sections 1.1, 1.5, 8 for full analysis.
+
+### 12.1 PrinterState Subject Bundles
+
+**Why first:** Reduces the most-used API from 68 getters to ~13 bundles.
+
+#### 12.1.1 Design Bundle Structs
+
+- [ ] Create `include/printer_state_subjects.h`:
+```cpp
+// SPDX-License-Identifier: GPL-3.0-or-later
+#pragma once
+
+#include <lvgl.h>
+
+namespace helix {
+
+struct TemperatureSubjects {
+    lv_subject_t* extruder_temp;
+    lv_subject_t* extruder_target;
+    lv_subject_t* bed_temp;
+    lv_subject_t* bed_target;
+};
+
+struct MotionSubjects {
+    lv_subject_t* position_x;
+    lv_subject_t* position_y;
+    lv_subject_t* position_z;
+    lv_subject_t* homed_axes;
+    lv_subject_t* speed_factor;
+    lv_subject_t* flow_factor;
+    lv_subject_t* z_offset;
+    lv_subject_t* z_offset_microns;
+};
+
+struct PrintSubjects {
+    lv_subject_t* state;
+    lv_subject_t* progress;
+    lv_subject_t* filename;
+    lv_subject_t* total_duration;
+    lv_subject_t* print_duration;
+    lv_subject_t* filament_used;
+    lv_subject_t* current_layer;
+    lv_subject_t* total_layers;
+    // ... etc
+};
+
+// struct FanSubjects { ... };
+// struct NetworkSubjects { ... };
+// struct LedSubjects { ... };
+// struct CapabilitySubjects { ... };
+// struct CalibrationSubjects { ... };
+// struct HardwareValidationSubjects { ... };
+// struct VisibilitySubjects { ... };
+// struct VersionSubjects { ... };
+// struct ExcludedObjectSubjects { ... };
+// struct PluginStatusSubjects { ... };
+
+} // namespace helix
+```
+
+- [ ] Map all 68 existing getters to bundles
+- [ ] Verify complete coverage (no getter left behind)
+
+#### 12.1.2 Add Bundle Accessors to PrinterState
+
+- [ ] Add `const TemperatureSubjects& temperature_subjects() const;` etc. to PrinterState
+- [ ] Keep individual getters temporarily (mark `[[deprecated]]`)
+- [ ] Build + verify no regressions
+
+#### 12.1.3 Migrate Call Sites (Incremental)
+
+Migrate one panel at a time:
+```cpp
+// Before:
+auto* temp = printer_state.get_extruder_temp_subject();
+auto* target = printer_state.get_extruder_target_subject();
+
+// After:
+auto& ts = printer_state.temperature_subjects();
+auto* temp = ts.extruder_temp;
+auto* target = ts.extruder_target;
+```
+
+- [ ] Migrate `ui_panel_home.cpp` (reference)
+- [ ] Migrate remaining panels (can be done incrementally)
+- [ ] Remove deprecated individual getters when all migrated
+
+### 12.2 MoonrakerAPI Domain Split (FUTURE)
+
+**Why later:** Higher effort, medium risk. Best done after subject bundles.
+
+- [ ] Define domain boundaries (Files, Motion, Heating, History, Timelapse, Spoolman, LED, Plugin)
+- [ ] Create sub-facade classes (one per domain)
+- [ ] Add accessor methods to MoonrakerAPI: `api.files().list_files(...)`
+- [ ] Migrate call sites (incremental, one domain at a time)
+
+### 12.3 Deprecated API Migration
+
+**File:** `include/moonraker_api.h:293`
+
+- [ ] Search all uses of `MoonrakerAPI::has_helix_plugin()`
+- [ ] Replace with `PrinterState::service_has_helix_plugin()`
+- [ ] Remove deprecated method
+
+```bash
+# Discovery
+grep -rn "has_helix_plugin" src/ include/ --include="*.cpp" --include="*.h"
+```
+
+### 12.4 Verification
+
+```bash
+make -j
+
+# Compile time comparison (before/after):
+time make clean && time make -j
+
+make test-run
+```
+
+- [ ] Subject bundles reduce getter count from 68 to ~13
+- [ ] Compile times measurably improved
+- [ ] All tests pass
+- [ ] No regressions
+
+---
+
 ## Appendix: Search Patterns
 
 ### Memory Safety Patterns
@@ -1276,6 +1836,76 @@ grep -rn "#include.*backend" src/ui/ui_*.cpp
 grep -h "#include" src/ui/ui_panel_*.cpp | sort | uniq -c | sort -rn
 ```
 
+### Code Duplication Patterns (P8)
+
+```bash
+# Sensor manager singleton boilerplate
+grep -rn "::instance()" src/sensors/*_sensor_manager.cpp
+
+# Sensor manager discover() duplication
+grep -c "discover" src/sensors/*_sensor_manager.cpp
+
+# AMS backend start/stop duplication
+grep -c "running_" src/printer/ams_backend_*.cpp
+
+# Wizard step singleton boilerplate
+grep -rn "g_wizard_\|get_wizard_" src/ui/ui_wizard_*.cpp
+
+# Panel singleton boilerplate
+grep -rn "g_.*_panel\|get_global_" src/ui/ui_panel_*.cpp
+
+# Event callback registration density
+for f in src/ui/ui_panel_*.cpp; do
+    count=$(grep -c "lv_xml_register_event_cb" "$f" 2>/dev/null || echo 0)
+    if [ "$count" -gt 5 ]; then
+        echo "  $count registrations: $f"
+    fi
+done
+```
+
+### Threading & Async Patterns (P9)
+
+```bash
+# Three async patterns
+echo "helix::async: $(grep -rn 'helix::async::' src/ --include='*.cpp' | wc -l)"
+echo "ui_queue_update: $(grep -rn 'ui_queue_update' src/ --include='*.cpp' | wc -l)"
+echo "ui_async_call: $(grep -rn 'ui_async_call' src/ --include='*.cpp' | wc -l)"
+
+# Mutex inventory
+grep -rn "std::mutex\|std::recursive_mutex" include/ --include="*.h" | grep -v "lib/"
+
+# Atomic inventory
+grep -rn "std::atomic" include/ --include="*.h" | grep -v "lib/"
+
+# Direct callback registration (bypass check)
+grep -rn "register_method_callback\|register_notify_update" src/ --include="*.cpp" | grep -v "moonraker_manager"
+```
+
+### API Surface Patterns (P10)
+
+```bash
+# PrinterState subject getters
+grep -c "get_.*_subject" include/printer_state.h
+
+# MoonrakerAPI public methods (approximate)
+grep -c "void \|bool \|std::" include/moonraker_api.h | head -1
+
+# Files including printer_state.h
+grep -rl '#include.*printer_state.h' src/ --include="*.cpp" | wc -l
+
+# Files including moonraker_api.h
+grep -rl '#include.*moonraker_api.h' src/ --include="*.cpp" | wc -l
+
+# Singleton usage density
+grep -rn "::instance()" src/ --include="*.cpp" | wc -l
+
+# Deprecated API usage
+grep -rn "has_helix_plugin" src/ include/ --include="*.cpp" --include="*.h"
+
+# TODO/FIXME count
+grep -rn "TODO\|FIXME\|HACK" src/ --include="*.cpp" --include="*.h" | grep -v "lib/" | wc -l
+```
+
 ---
 
 ## Appendix: Verification Commands
@@ -1317,6 +1947,29 @@ echo "Files >1500 lines:"
 wc -l src/ui/ui_panel_*.cpp 2>/dev/null | awk '$1 > 1500 && $1 <= 2000 {print "  " $0}' | head -5
 
 echo ""
+echo "=== Code Duplication (P8) ==="
+echo "Sensor manager files:"
+wc -l src/sensors/*_sensor_manager.cpp 2>/dev/null
+echo "AMS backend files:"
+wc -l src/printer/ams_backend_*.cpp 2>/dev/null | grep -v mock | grep -v base
+echo "Wizard step files:"
+wc -l src/ui/ui_wizard_*.cpp 2>/dev/null
+
+echo ""
+echo "=== Threading (P9) ==="
+echo "helix::async calls: $(grep -rn 'helix::async::' src/ --include='*.cpp' 2>/dev/null | wc -l)"
+echo "ui_queue_update calls: $(grep -rn 'ui_queue_update' src/ --include='*.cpp' 2>/dev/null | wc -l)"
+echo "ui_async_call calls: $(grep -rn 'ui_async_call' src/ --include='*.cpp' 2>/dev/null | wc -l)"
+echo "Direct callback registrations: $(grep -rn 'register_method_callback' src/ --include='*.cpp' 2>/dev/null | grep -v moonraker_manager | wc -l)"
+
+echo ""
+echo "=== API Surface (P10) ==="
+echo "PrinterState subject getters: $(grep -c 'get_.*_subject' include/printer_state.h 2>/dev/null)"
+echo "Files including printer_state.h: $(grep -rl 'printer_state.h' src/ --include='*.cpp' 2>/dev/null | wc -l)"
+echo "Files including moonraker_api.h: $(grep -rl 'moonraker_api.h' src/ --include='*.cpp' 2>/dev/null | wc -l)"
+echo "TODOs: $(grep -rn 'TODO\|FIXME' src/ --include='*.cpp' --include='*.h' 2>/dev/null | grep -v lib/ | wc -l)"
+
+echo ""
 echo "========================================"
 ```
 
@@ -1342,13 +1995,16 @@ Update this table as work progresses:
 
 | Priority | Status | Progress | Completed Date | Notes |
 |----------|--------|----------|----------------|-------|
-| P1: Critical Safety | [x] | 100% | | Timer leak fix done; `LvglTimerGuard` RAII wrapper created; all timer deletions guarded |
+| P1: Critical Safety | [x] | 100% | 2026-01-12 | Timer leak fix done; `LvglTimerGuard` RAII wrapper created; all timer deletions guarded |
 | P2: RAII Compliance | [x] | 100% | 2026-01-20 | All manual delete converted to RAII |
 | P3: XML Tokens | [x] | 100% | 2026-01-20 | All hardcoded spacing migrated to design tokens |
 | P4: Declarative UI | [~] | 80% | | 28 event handlers in panels (most legitimate); inline styles remaining |
-| P5: File Splitting | [~] | 50% | | print_select: 2227 LOC, print_status: 1999 LOC; 3 modules extracted but not integrated |
+| P5: File Splitting | [~] | 50% | | print_select: 2107 LOC ✅, print_status: ~1963 LOC still needs split |
 | P6: Documentation | [~] | 50% | | Timer docs + doc consolidation in progress |
-| P7: Tooling | [ ] | 0% | | |
+| P7: Tooling | [ ] | 0% | | Pre-commit hooks, CI, make lint |
+| P8: Code Duplication | [ ] | 0% | | Sensor managers (800 LOC), AMS backends (600 LOC), wizard steps (400 LOC) |
+| P9: Threading/Async | [ ] | 0% | | Document patterns, fix callback bypass, remove redundant sync |
+| P10: API Surface | [ ] | 0% | | Subject bundles, MoonrakerAPI split, deprecated API migration |
 
 ---
 
@@ -1356,6 +2012,7 @@ Update this table as work progresses:
 
 | Date | Author | Changes |
 |------|--------|---------|
+| 2026-02-06 | Claude | **Major audit update (5-agent deep dive).** Added P8: Code Duplication Reduction (sensor managers ~800 LOC, AMS backends ~600 LOC, wizard steps ~400 LOC, with detailed CRTP/macro migration plans). Added P9: Threading & Async Simplification (document 3 async patterns, fix callback bypass, remove redundant sync). Added P10: API Surface Reduction (PrinterState subject bundles 68->13, MoonrakerAPI domain split, deprecated API migration). Updated TOC, executive summary, metrics, effort table, progress summary, and search patterns appendix with new categories. Updated audit baseline script with duplication/threading/API surface metrics. |
 | 2026-01-20 | Claude | P2 COMPLETE: Converted 4 remaining manual delete to RAII in ui_bed_mesh, ui_print_light_timelapse, ui_print_preparation_manager, ui_wizard_wifi. |
 | 2026-01-20 | Claude | P3 COMPLETE: All hardcoded spacing migrated. P5 progress: Extracted FileSorter, PathNavigator, HistoryIntegration from print_select. Updated metrics for P2/P4/P5. |
 | 2026-01-12 | Claude | P1 COMPLETE: All timer deletions now guarded with lv_is_initialized(); LvglTimerGuard RAII wrapper created |
