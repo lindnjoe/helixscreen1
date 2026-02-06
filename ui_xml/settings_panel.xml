@@ -14,20 +14,23 @@
     <setting_section_header title="APPEARANCE" title_tag="APPEARANCE" icon="light"/>
     <!-- Language Dropdown -->
     <setting_dropdown_row name="row_language"
-                          label="Language" label_tag="Language" icon="translate" description="Choose display language" description_tag="Choose display language"
-                          callback="on_language_changed"/>
+                          label="Language" label_tag="Language" icon="translate" description="Choose display language"
+                          description_tag="Choose display language" callback="on_language_changed"/>
     <!-- Animations Toggle -->
     <setting_toggle_row name="row_animations"
-                        label="Animations" label_tag="Animations" icon="animation" description="Enable UI motion effects" description_tag="Enable UI motion effects"
+                        label="Animations" label_tag="Animations" icon="animation"
+                        description="Enable UI motion effects" description_tag="Enable UI motion effects"
                         callback="on_animations_changed"/>
     <!-- 3D Preview Toggle -->
     <setting_toggle_row name="row_gcode_3d"
-                        label="3D Preview" label_tag="3D Preview" icon="rotate_3d" description="Interactive 3D G-code during prints" description_tag="Interactive 3D G-code during prints"
-                        callback="on_gcode_3d_changed"/>
+                        label="3D Preview" label_tag="3D Preview" icon="rotate_3d"
+                        description="Interactive 3D G-code during prints"
+                        description_tag="Interactive 3D G-code during prints" callback="on_gcode_3d_changed"/>
     <!-- Display Settings (opens overlay for brightness + sleep timeout) -->
     <setting_action_row name="row_display_settings"
-                        label="Display Settings" label_tag="Display Settings" icon="light" description="Theme, brightness, and sleep settings" description_tag="Theme, brightness, and sleep settings"
-                        callback="on_display_settings_clicked"/>
+                        label="Display Settings" label_tag="Display Settings" icon="light"
+                        description="Theme, brightness, and sleep settings"
+                        description_tag="Theme, brightness, and sleep settings" callback="on_display_settings_clicked"/>
     <!-- ================================================================== -->
     <!-- PRINTER SECTION -->
     <!-- ================================================================== -->
@@ -36,45 +39,52 @@
     <lv_obj name="container_filament_sensors" width="100%" style_pad_all="0" scrollable="false">
       <bind_flag_if_eq subject="filament_sensor_count" flag="hidden" ref_value="0"/>
       <setting_action_row name="row_filament_sensors"
-                          label="Filament Sensors" label_tag="Filament Sensors" icon="filament" description="Configure filament detection sensors" description_tag="Configure filament detection sensors"
-                          callback="on_filament_sensors_clicked"/>
+                          label="Filament Sensors" label_tag="Filament Sensors" icon="filament"
+                          description="Configure filament detection sensors"
+                          description_tag="Configure filament detection sensors" callback="on_filament_sensors_clicked"/>
     </lv_obj>
     <!-- AMS Settings (hidden if no AMS detected) -->
     <lv_obj name="container_ams_settings" width="100%" style_pad_all="0" scrollable="false">
       <bind_flag_if_eq subject="ams_slot_count" flag="hidden" ref_value="0"/>
       <setting_action_row name="row_ams_settings"
-                          label="AMS Settings" label_tag="AMS Settings" icon="filament" description="Quick actions, calibration, speed" description_tag="Quick actions, calibration, speed"
-                          callback="on_ams_settings_clicked"/>
+                          label="AMS Settings" label_tag="AMS Settings" icon="filament"
+                          description="Quick actions, calibration, speed"
+                          description_tag="Quick actions, calibration, speed" callback="on_ams_settings_clicked"/>
     </lv_obj>
     <!-- Spoolman Settings (hidden if Spoolman not available) -->
     <lv_obj name="container_spoolman_settings" width="100%" style_pad_all="0" scrollable="false">
       <bind_flag_if_eq subject="printer_has_spoolman" flag="hidden" ref_value="0"/>
       <setting_action_row name="row_spoolman_settings"
-                          label="Spoolman" label_tag="Spoolman" icon="database" description="Weight sync settings" description_tag="Weight sync settings"
-                          callback="on_spoolman_settings_clicked"/>
+                          label="Spoolman" label_tag="Spoolman" icon="database" description="Weight sync settings"
+                          description_tag="Weight sync settings" callback="on_spoolman_settings_clicked"/>
     </lv_obj>
     <!-- LED Light Toggle (hidden if no LED capability) -->
     <lv_obj name="container_led_light" width="100%" style_pad_all="0" scrollable="false">
       <bind_flag_if_eq subject="printer_has_led" flag="hidden" ref_value="0"/>
       <setting_toggle_row name="row_led_light"
-                          label="LED on at Start" label_tag="LED on at Start" icon="light" description="Turn on LED when printer starts" description_tag="Turn on LED when printer starts"
-                          callback="on_led_light_changed"/>
+                          label="LED on at Start" label_tag="LED on at Start" icon="light"
+                          description="Turn on LED when printer starts"
+                          description_tag="Turn on LED when printer starts" callback="on_led_light_changed"/>
     </lv_obj>
     <!-- Firmware Retraction Settings (hidden if no firmware_retraction capability) -->
     <lv_obj name="container_firmware_retraction" width="100%" style_pad_all="0" scrollable="false">
       <bind_flag_if_eq subject="printer_has_firmware_retraction" flag="hidden" ref_value="0"/>
       <setting_action_row name="row_firmware_retraction"
                           label="Retraction Settings" label_tag="Retraction Settings" icon="arrow_up_right"
-                          description="Configure G10/G11 firmware retraction" description_tag="Configure G10/G11 firmware retraction" callback="on_retraction_row_clicked"/>
+                          description="Configure G10/G11 firmware retraction"
+                          description_tag="Configure G10/G11 firmware retraction" callback="on_retraction_row_clicked"/>
     </lv_obj>
     <!-- E-Stop Confirmation Toggle -->
     <setting_toggle_row name="row_estop_confirm"
                         label="E-Stop Confirmation" label_tag="E-Stop Confirmation" icon="alert_octagon"
-                        description="Require confirmation before emergency stop" description_tag="Require confirmation before emergency stop" callback="on_estop_confirm_changed"/>
+                        description="Require confirmation before emergency stop"
+                        description_tag="Require confirmation before emergency stop" callback="on_estop_confirm_changed"/>
     <!-- Macro Buttons (opens overlay for configuring quick buttons and standard macros) -->
     <setting_action_row name="row_macro_buttons"
                         label="Macro Buttons" label_tag="Macro Buttons" icon="script_text"
-                        description="Configure quick buttons and standard macros" description_tag="Configure quick buttons and standard macros" callback="on_macro_buttons_clicked"/>
+                        description="Configure quick buttons and standard macros"
+                        description_tag="Configure quick buttons and standard macros"
+                        callback="on_macro_buttons_clicked"/>
     <!-- ================================================================== -->
     <!-- NOTIFICATIONS SECTION -->
     <!-- ================================================================== -->
@@ -83,12 +93,13 @@
     <lv_obj name="container_sounds" width="100%" style_pad_all="0" scrollable="false">
       <bind_flag_if_eq subject="printer_has_speaker" flag="hidden" ref_value="0"/>
       <setting_toggle_row name="row_sounds"
-                          label="Sounds" label_tag="Sounds" icon="notifications" description="Enable audio feedback" description_tag="Enable audio feedback"
-                          callback="on_sounds_changed"/>
+                          label="Sounds" label_tag="Sounds" icon="notifications" description="Enable audio feedback"
+                          description_tag="Enable audio feedback" callback="on_sounds_changed"/>
     </lv_obj>
     <!-- Completion Alert Dropdown (Off/Notification/Alert) -->
     <setting_dropdown_row name="row_completion_alert"
-                          label="Print Completion Alert" label_tag="Print Completion Alert" icon="notifications" description="Notify when print finishes" description_tag="Notify when print finishes"
+                          label="Print Completion Alert" label_tag="Print Completion Alert" icon="notifications"
+                          description="Notify when print finishes" description_tag="Notify when print finishes"
                           options="Off&#10;Notification&#10;Alert" callback="on_completion_alert_changed"/>
     <!-- ================================================================== -->
     <!-- MOTION SECTION -->
@@ -96,15 +107,17 @@
     <setting_section_header title="MOTION" title_tag="MOTION" icon="speed"/>
     <!-- Machine Limits -->
     <setting_action_row name="row_machine_limits"
-                        label="Machine Limits" label_tag="Machine Limits" icon="dashboard" description="Velocity and acceleration limits" description_tag="Velocity and acceleration limits"
-                        callback="on_machine_limits_clicked"/>
+                        label="Machine Limits" label_tag="Machine Limits" icon="dashboard"
+                        description="Velocity and acceleration limits"
+                        description_tag="Velocity and acceleration limits" callback="on_machine_limits_clicked"/>
     <!-- ================================================================== -->
     <!-- SYSTEM SECTION -->
     <!-- ================================================================== -->
     <setting_section_header title="SYSTEM" title_tag="SYSTEM" icon="sysinfo"/>
     <!-- Network Settings -->
     <setting_action_row name="row_network"
-                        label="Network Settings" label_tag="Network Settings" icon="wifi" description="WiFi and Ethernet configuration" description_tag="WiFi and Ethernet configuration"
+                        label="Network Settings" label_tag="Network Settings" icon="wifi"
+                        description="WiFi and Ethernet configuration" description_tag="WiFi and Ethernet configuration"
                         callback="on_network_clicked"/>
     <!-- Touch Calibration (hidden on non-touch displays unless test mode) -->
     <!-- Description is bound to touch_cal_status subject in C++ setup() -->
@@ -119,17 +132,21 @@
       <bind_flag_if_eq subject="hardware_has_issues" flag="hidden" ref_value="0"/>
       <!-- Label bound to hardware_issues_label subject in C++ for reactive updates -->
       <setting_action_row name="row_hardware_health"
-                          label="Hardware Issues" label_tag="Hardware Issues" icon="alert" description="Review detected hardware validation issues" description_tag="Review detected hardware validation issues"
+                          label="Hardware Issues" label_tag="Hardware Issues" icon="alert"
+                          description="Review detected hardware validation issues"
+                          description_tag="Review detected hardware validation issues"
                           callback="on_hardware_health_clicked"/>
     </lv_obj>
     <!-- Factory Reset -->
     <setting_action_row name="row_factory_reset"
-                        label="Factory Reset" label_tag="Factory Reset" icon="refresh" description="Reset all settings and restart wizard" description_tag="Reset all settings and restart wizard"
-                        callback="on_factory_reset_clicked"/>
+                        label="Factory Reset" label_tag="Factory Reset" icon="refresh"
+                        description="Reset all settings and restart wizard"
+                        description_tag="Reset all settings and restart wizard" callback="on_factory_reset_clicked"/>
     <!-- Plugins (gated by beta_features config flag) -->
     <setting_action_row name="row_plugins"
-                        label="Plugins" label_tag="Plugins" icon="puzzle_outline" description="View installed plugins and status" description_tag="View installed plugins and status"
-                        callback="on_plugins_clicked">
+                        label="Plugins" label_tag="Plugins" icon="puzzle_outline"
+                        description="View installed plugins and status"
+                        description_tag="View installed plugins and status" callback="on_plugins_clicked">
       <bind_flag_if_eq subject="show_beta_features" flag="hidden" ref_value="0"/>
     </setting_action_row>
     <!-- Software Update -->
@@ -137,18 +154,14 @@
       <text_muted name="value" bind_text="update_current_version"/>
     </setting_info_row>
     <setting_action_row name="row_check_updates"
-                        label="Check for Updates" label_tag="Check for Updates" icon="refresh" description="" description_tag=""
-                        callback="on_check_updates_clicked"/>
-    <setting_info_row name="row_update_status" label="Update Status" label_tag="Update Status" icon="sysinfo">
-      <text_muted name="value" bind_text="update_version_text"/>
-    </setting_info_row>
+                        label="Check for Updates" label_tag="Check for Updates" icon="refresh"
+                        bind_description="update_version_text" callback="on_check_updates_clicked"/>
     <!-- Install Update (visible only when update available) -->
     <lv_obj name="container_install_update" width="100%" style_pad_all="0">
       <bind_flag_if_not_eq subject="update_status" flag="hidden" ref_value="2"/>
       <setting_action_row name="row_install_update"
-                          label="Install Update" label_tag="Install Update"
-                          icon="download" description="" description_tag=""
-                          callback="on_install_update_clicked"/>
+                          label="Install Update" label_tag="Install Update" icon="download" description=""
+                          description_tag="" callback="on_install_update_clicked"/>
     </lv_obj>
     <!-- ================================================================== -->
     <!-- ABOUT SECTION -->
@@ -163,7 +176,8 @@
               event_bubble="true">
         <icon name="row_icon" src="info" size="sm" variant="secondary" clickable="false" event_bubble="true"/>
         <text_body name="label"
-                   text="Version" translation_tag="Version" style_text_color="#text" flex_grow="1" clickable="false" event_bubble="true"/>
+                   text="Version" translation_tag="Version" style_text_color="#text" flex_grow="1" clickable="false"
+                   event_bubble="true"/>
         <text_muted name="value" bind_text="version_value" clickable="false" event_bubble="true"/>
       </lv_obj>
       <event_cb trigger="clicked" callback="on_version_clicked"/>
