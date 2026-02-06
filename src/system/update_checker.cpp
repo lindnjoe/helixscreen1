@@ -17,7 +17,9 @@
 
 #include "ui_update_queue.h"
 
+#include "app_globals.h"
 #include "hv/requests.h"
+#include "printer_state.h"
 #include "spdlog/spdlog.h"
 #include "version.h"
 
@@ -347,6 +349,15 @@ void UpdateChecker::report_download_status(DownloadStatus status, int progress,
 void UpdateChecker::start_download() {
     if (shutting_down_.load())
         return;
+
+    // Safety: refuse download while printing
+    auto job_state = get_printer_state().get_print_job_state();
+    if (job_state == PrintJobState::PRINTING || job_state == PrintJobState::PAUSED) {
+        spdlog::warn("[UpdateChecker] Cannot download update while printing");
+        report_download_status(DownloadStatus::Error, 0, "Error: Cannot update while printing",
+                               "Stop the print before installing updates");
+        return;
+    }
 
     // Must have a cached update to download
     std::unique_lock<std::mutex> lock(mutex_);

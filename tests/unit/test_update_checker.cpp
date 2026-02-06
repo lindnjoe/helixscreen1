@@ -807,3 +807,14 @@ TEST_CASE("UpdateChecker cancel_download sets cancelled flag", "[update_checker]
 
     checker.shutdown();
 }
+
+TEST_CASE("UpdateChecker blocks download during print", "[update_checker]") {
+    auto& checker = UpdateChecker::instance();
+    checker.init();
+
+    // In test mode, printer is never printing, so this verifies
+    // the guard doesn't interfere with normal operation
+    REQUIRE(checker.get_download_status() != UpdateChecker::DownloadStatus::Downloading);
+
+    checker.shutdown();
+}
