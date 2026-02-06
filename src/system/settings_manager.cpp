@@ -322,7 +322,8 @@ std::string SettingsManager::get_theme_name() const {
     }
     // Fallback to config if theme_manager not initialized yet
     Config* config = Config::get_instance();
-    return config ? config->get<std::string>("/display/theme", "nord") : "nord";
+    return config ? config->get<std::string>("/display/theme", helix::DEFAULT_THEME)
+                  : helix::DEFAULT_THEME;
 }
 
 void SettingsManager::set_theme_name(const std::string& name) {
