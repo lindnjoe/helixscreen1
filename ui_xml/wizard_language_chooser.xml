@@ -17,7 +17,7 @@
              flex_grow="1" style_radius="#border_radius" style_pad_all="#space_lg" style_pad_gap="#space_md"
              flex_flow="column" style_flex_main_place="start" style_flex_cross_place="center">
 
-      <!-- Animated Welcome Header - cycles through languages (Latin script only) -->
+      <!-- Animated Welcome Header - cycles through all supported languages -->
       <text_heading name="welcome_header" bind_text="wizard_welcome_text"
                     width="100%" style_text_align="center" style_pad_top="#space_md" style_pad_bottom="#space_lg"/>
 

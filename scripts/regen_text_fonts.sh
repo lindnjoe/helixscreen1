@@ -60,36 +60,49 @@ UNICODE_RANGES+=",0x2026"        # Ellipsis
 UNICODE_RANGES+=",0x20AC"        # Euro sign
 UNICODE_RANGES+=",0x2122"        # Trademark
 
-# Extract CJK characters from translations if fonts available
+# Extract CJK characters from translations and C++ sources if fonts available
 CJKCHARS=""
 if [ "$CJK_AVAILABLE" = true ]; then
-    echo "Extracting CJK characters from translations..."
+    echo "Extracting CJK characters from translations and C++ sources..."
     CJKCHARS=$(python3 << 'EOF'
+import glob
 import re
 
 chars = set()
 
-# Chinese translations
-try:
-    with open('translations/zh.yml', 'r') as f:
-        content = f.read()
-        chars.update(re.findall(r'[\u4e00-\u9fff]', content))
-        chars.update(re.findall(r'[\u3400-\u4dbf]', content))
-        chars.update(re.findall(r'[\uff00-\uffef]', content))
-        chars.update(re.findall(r'[\u3000-\u303f]', content))
-except FileNotFoundError:
-    pass
+# CJK Unicode ranges to scan for
+CJK_RANGES = [
+    r'[\u3000-\u303f]',   # CJK Symbols and Punctuation
+    r'[\u3040-\u309f]',   # Hiragana
+    r'[\u30a0-\u30ff]',   # Katakana
+    r'[\u3400-\u4dbf]',   # CJK Unified Ideographs Extension A
+    r'[\u4e00-\u9fff]',   # CJK Unified Ideographs
+    r'[\uff00-\uffef]',   # Halfwidth and Fullwidth Forms
+]
 
-# Japanese translations
-try:
-    with open('translations/ja.yml', 'r') as f:
-        content = f.read()
-        chars.update(re.findall(r'[\u3040-\u309f]', content))
-        chars.update(re.findall(r'[\u30a0-\u30ff]', content))
-        chars.update(re.findall(r'[\u4e00-\u9fff]', content))
-        chars.update(re.findall(r'[\uff00-\uffef]', content))
-except FileNotFoundError:
-    pass
+def extract_cjk(content):
+    """Extract all CJK characters from a string."""
+    found = set()
+    for pattern in CJK_RANGES:
+        found.update(re.findall(pattern, content))
+    return found
+
+# Translation files
+for path in ['translations/zh.yml', 'translations/ja.yml']:
+    try:
+        with open(path, 'r') as f:
+            chars.update(extract_cjk(f.read()))
+    except FileNotFoundError:
+        pass
+
+# C++ source files (catches hardcoded CJK strings like welcome text)
+for pattern in ['src/**/*.cpp', 'src/**/*.h', 'include/**/*.h']:
+    for path in glob.glob(pattern, recursive=True):
+        try:
+            with open(path, 'r') as f:
+                chars.update(extract_cjk(f.read()))
+        except (FileNotFoundError, UnicodeDecodeError):
+            pass
 
 if chars:
     print(','.join(f'0x{ord(c):04x}' for c in sorted(chars)))
@@ -190,8 +203,8 @@ echo "  - Western European: é, è, ê, ñ, ü, ö, ß, etc."
 echo "  - Central European: ą, ę, ł, ő, etc."
 echo "  - Cyrillic: А-Яа-я (Russian, Ukrainian, etc.)"
 if [ "$CJK_AVAILABLE" = true ]; then
-    echo "  - Chinese: Simplified Chinese characters (from translations)"
-    echo "  - Japanese: Hiragana, Katakana, Kanji (from translations)"
+    echo "  - Chinese: Simplified Chinese characters (from translations + C++ sources)"
+    echo "  - Japanese: Hiragana, Katakana, Kanji (from translations + C++ sources)"
 fi
 echo ""
 echo "Rebuild the project: make -j"
