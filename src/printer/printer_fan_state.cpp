@@ -70,11 +70,11 @@ void PrinterFanState::update_from_status(const nlohmann::json& status) {
     // Update main part-cooling fan speed
     if (status.contains("fan")) {
         const auto& fan = status["fan"];
-        spdlog::debug("[PrinterFanState] Received fan status update: {}", fan.dump());
+        spdlog::trace("[PrinterFanState] Received fan status update: {}", fan.dump());
 
         if (fan.contains("speed") && fan["speed"].is_number()) {
             int speed_pct = units::json_to_percent(fan, "speed");
-            spdlog::debug("[PrinterFanState] Fan speed update: {}%", speed_pct);
+            spdlog::trace("[PrinterFanState] Fan speed update: {}%", speed_pct);
             lv_subject_set_int(&fan_speed_, speed_pct);
 
             // Also update multi-fan tracking

@@ -110,8 +110,8 @@ void PrinterCalibrationState::update_from_status(const nlohmann::json& status) {
 
             if (old_enabled != new_enabled) {
                 lv_subject_set_int(&motors_enabled_, new_enabled);
-                spdlog::info("[PrinterCalibrationState] Motors {}: homed_axes='{}'",
-                             new_enabled ? "enabled" : "disabled", axes);
+                spdlog::trace("[PrinterCalibrationState] Motors {}: homed_axes='{}'",
+                              new_enabled ? "enabled" : "disabled", axes);
             }
         }
     }
@@ -134,8 +134,8 @@ void PrinterCalibrationState::update_from_status(const nlohmann::json& status) {
 
             if (old_enabled != new_enabled) {
                 lv_subject_set_int(&motors_enabled_, new_enabled);
-                spdlog::info("[PrinterCalibrationState] Motors {}: stepper_enable update",
-                             new_enabled ? "enabled" : "disabled");
+                spdlog::trace("[PrinterCalibrationState] Motors {}: stepper_enable update",
+                              new_enabled ? "enabled" : "disabled");
             }
         }
     }

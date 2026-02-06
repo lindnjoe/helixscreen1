@@ -201,7 +201,7 @@ void TemperatureSensorManager::update_from_status(const nlohmann::json& status) 
             if (state.temperature != old_state.temperature || state.target != old_state.target ||
                 state.speed != old_state.speed) {
                 any_changed = true;
-                spdlog::debug("[TemperatureSensorManager] Sensor {} updated: temp={:.1f}C, "
+                spdlog::trace("[TemperatureSensorManager] Sensor {} updated: temp={:.1f}C, "
                               "target={:.1f}C, speed={:.2f}",
                               sensor.sensor_name, state.temperature, state.target, state.speed);
             }
@@ -209,11 +209,11 @@ void TemperatureSensorManager::update_from_status(const nlohmann::json& status) 
 
         if (any_changed) {
             if (sync_mode_) {
-                spdlog::debug(
+                spdlog::trace(
                     "[TemperatureSensorManager] sync_mode: updating subjects synchronously");
                 update_subjects();
             } else {
-                spdlog::debug("[TemperatureSensorManager] async_mode: deferring via ui_async_call");
+                spdlog::trace("[TemperatureSensorManager] async_mode: deferring via ui_async_call");
                 ui_async_call(async_update_temp_subjects_callback, nullptr);
             }
         }
