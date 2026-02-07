@@ -273,7 +273,7 @@ bool GCodeParser::parse_exclude_object_command(const std::string& line) {
         }
 
         objects_[name] = obj;
-        spdlog::debug("[GCode Parser] Defined object: {} at ({}, {})", name, obj.center.x,
+        spdlog::trace("[GCode Parser] Defined object: {} at ({}, {})", name, obj.center.x,
                       obj.center.y);
         return true;
     }
@@ -874,7 +874,7 @@ ParsedGCodeFile GCodeParser::finalize() {
 
     // Debug: Log object bounding boxes
     for (const auto& [name, obj] : result.objects) {
-        spdlog::debug("[GCode Parser] Object '{}' AABB: min=({:.2f},{:.2f},{:.2f}) "
+        spdlog::trace("[GCode Parser] Object '{}' AABB: min=({:.2f},{:.2f},{:.2f}) "
                       "max=({:.2f},{:.2f},{:.2f}) "
                       "center=({:.2f},{:.2f},{:.2f})",
                       name, obj.bounding_box.min.x, obj.bounding_box.min.y, obj.bounding_box.min.z,

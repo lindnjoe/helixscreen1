@@ -41,11 +41,11 @@ ThemeEditorOverlay::ThemeEditorOverlay() {
 
 ThemeEditorOverlay::~ThemeEditorOverlay() {
     if (!lv_is_initialized()) {
-        spdlog::debug("[ThemeEditorOverlay] Destroyed (LVGL already deinit)");
+        spdlog::trace("[ThemeEditorOverlay] Destroyed (LVGL already deinit)");
         return;
     }
 
-    spdlog::debug("[ThemeEditorOverlay] Destroyed");
+    spdlog::trace("[ThemeEditorOverlay] Destroyed");
 }
 
 helix::ModePalette& ThemeEditorOverlay::get_active_palette() {

@@ -212,7 +212,7 @@ void delete_cb(lv_event_t* e) {
         }
         s_registry.erase(obj);
         delete data;
-        spdlog::debug("[Confetti] Destroyed");
+        spdlog::trace("[Confetti] Destroyed");
     }
 }
 

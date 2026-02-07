@@ -74,7 +74,7 @@ bool PluginManager::discover_plugins(const std::string& plugins_dir) {
         return false;
     }
 
-    spdlog::info("[plugin] Discovering plugins in: {}", plugins_dir);
+    spdlog::debug("[plugin] Discovering plugins in: {}", plugins_dir);
 
     int discovered_count = 0;
     int error_count = 0;
@@ -157,8 +157,8 @@ bool PluginManager::discover_plugins(const std::string& plugins_dir) {
                      enabled ? "enabled" : "disabled");
     }
 
-    spdlog::info("[plugin] Discovery complete: {} plugins found, {} errors", discovered_count,
-                 error_count);
+    spdlog::debug("[plugin] Discovery complete: {} plugins found, {} errors", discovered_count,
+                  error_count);
 
     return true;
 }
@@ -305,11 +305,14 @@ bool PluginManager::load_plugin_internal(const std::string& plugin_id) {
 // ============================================================================
 
 void PluginManager::unload_all() {
+    if (loaded_.empty() && load_order_.empty())
+        return;
+
     // Unload in reverse dependency order
     std::vector<std::string> unload_order = load_order_;
     std::reverse(unload_order.begin(), unload_order.end());
 
-    spdlog::info("[plugin] Unloading {} plugins", loaded_.size());
+    spdlog::debug("[plugin] Unloading {} plugins", loaded_.size());
 
     for (const auto& plugin_id : unload_order) {
         unload_plugin(plugin_id);
@@ -327,7 +330,7 @@ bool PluginManager::unload_plugin(const std::string& plugin_id) {
 
     LoadedPlugin& loaded = it->second;
 
-    spdlog::info("[plugin] Unloading: {}", plugin_id);
+    spdlog::debug("[plugin] Unloading: {}", plugin_id);
 
     // Remove all UI widgets injected by this plugin
     InjectionPointManager::instance().remove_plugin_widgets(plugin_id);

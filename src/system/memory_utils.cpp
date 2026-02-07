@@ -193,7 +193,7 @@ bool is_gcode_2d_streaming_safe_impl(size_t file_size_bytes, size_t available_kb
 
     size_t total_needed_kb = layer_index_kb + lru_cache_kb + ghost_buffer_kb + safety_margin_kb;
 
-    spdlog::debug("[memory_utils] 2D streaming: need {}KB (index={}KB, cache={}KB, "
+    spdlog::trace("[memory_utils] 2D streaming: need {}KB (index={}KB, cache={}KB, "
                   "ghost={}KB@{}x{}, margin={}KB), available={}KB",
                   total_needed_kb, layer_index_kb, lru_cache_kb, ghost_buffer_kb, display_width,
                   display_height, safety_margin_kb, available_kb);

@@ -57,7 +57,7 @@ GCodeTinyGLRenderer::~GCodeTinyGLRenderer() {
         draw_buf_ = nullptr;
     }
 
-    spdlog::debug("[GCode TinyGL] GCodeTinyGLRenderer destroyed");
+    spdlog::trace("[GCode TinyGL] GCodeTinyGLRenderer destroyed");
 }
 
 void GCodeTinyGLRenderer::set_viewport_size(int width, int height) {
@@ -1086,7 +1086,7 @@ void GCodeTinyGLRenderer::set_print_progress_layer(int current_layer) {
     ghost_mode_enabled_ = (current_layer >= 0);
 
     if (ghost_mode_enabled_) {
-        spdlog::debug("[GCode::Renderer] Ghost mode enabled: progress layer = {}", current_layer);
+        spdlog::trace("[GCode::Renderer] Ghost mode enabled: progress layer = {}", current_layer);
     } else {
         spdlog::debug("[GCode::Renderer] Ghost mode disabled");
     }

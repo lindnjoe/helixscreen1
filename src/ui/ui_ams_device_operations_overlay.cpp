@@ -56,7 +56,7 @@ AmsDeviceOperationsOverlay::~AmsDeviceOperationsOverlay() {
         lv_subject_deinit(&has_calibration_subject_);
         lv_subject_deinit(&has_speed_subject_);
     }
-    spdlog::debug("[{}] Destroyed", get_name());
+    spdlog::trace("[{}] Destroyed", get_name());
 }
 
 // ============================================================================

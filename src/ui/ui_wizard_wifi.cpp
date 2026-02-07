@@ -541,7 +541,7 @@ void WizardWifiStep::handle_wifi_toggle_changed(lv_event_t* e) {
 
                 // Check if manager still exists
                 if (weak_mgr.expired()) {
-                    spdlog::debug("[{}] WiFiManager destroyed, ignoring callback",
+                    spdlog::trace("[{}] WiFiManager destroyed, ignoring callback",
                                   self->get_name());
                     return;
                 }

@@ -298,7 +298,7 @@ static void bed_mesh_delete_cb(lv_event_t* e) {
         if (data->renderer) {
             bed_mesh_renderer_destroy(data->renderer);
             data->renderer = nullptr;
-            spdlog::debug("[bed_mesh] Destroyed renderer");
+            spdlog::trace("[bed_mesh] Destroyed renderer");
         }
         // data automatically freed via ~unique_ptr()
     }

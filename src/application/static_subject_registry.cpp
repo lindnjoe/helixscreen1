@@ -36,17 +36,17 @@ void StaticSubjectRegistry::deinit_all() {
         return;
     }
 
-    spdlog::debug("[StaticSubjectRegistry] Deinitializing {} subject sources in reverse order...",
+    spdlog::trace("[StaticSubjectRegistry] Deinitializing {} subject sources in reverse order...",
                   deinitializers_.size());
 
     // Deinit in reverse order (last registered = first deinitialized)
     for (auto it = deinitializers_.rbegin(); it != deinitializers_.rend(); ++it) {
-        spdlog::debug("[StaticSubjectRegistry] Deinitializing: {}", it->name);
+        spdlog::trace("[StaticSubjectRegistry] Deinitializing: {}", it->name);
         if (it->deinit_fn) {
             it->deinit_fn();
         }
     }
 
     deinitializers_.clear();
-    spdlog::debug("[StaticSubjectRegistry] All subjects deinitialized");
+    spdlog::trace("[StaticSubjectRegistry] All subjects deinitialized");
 }

@@ -145,10 +145,10 @@ void MoonrakerAPI::update_bed_mesh(const json& bed_mesh) {
     if (active_bed_mesh_.probed_matrix.empty()) {
         spdlog::debug("[MoonrakerAPI] Bed mesh data cleared (no probed_matrix)");
     } else {
-        spdlog::info("[MoonrakerAPI] Bed mesh updated: profile='{}', size={}x{}, "
-                     "profiles={}, algo='{}'",
-                     active_bed_mesh_.name, active_bed_mesh_.x_count, active_bed_mesh_.y_count,
-                     bed_mesh_profiles_.size(), active_bed_mesh_.algo);
+        spdlog::debug("[MoonrakerAPI] Bed mesh updated: profile='{}', size={}x{}, "
+                      "profiles={}, algo='{}'",
+                      active_bed_mesh_.name, active_bed_mesh_.x_count, active_bed_mesh_.y_count,
+                      bed_mesh_profiles_.size(), active_bed_mesh_.algo);
     }
 }
 

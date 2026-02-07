@@ -47,7 +47,7 @@ RetractionSettingsOverlay::RetractionSettingsOverlay(MoonrakerClient* client) : 
 RetractionSettingsOverlay::~RetractionSettingsOverlay() {
     // SubjectManager handles LVGL initialization check and cleanup
     subjects_.deinit_all();
-    spdlog::debug("[RetractionSettings] Destroyed");
+    spdlog::trace("[RetractionSettings] Destroyed");
 }
 
 void RetractionSettingsOverlay::init_subjects() {

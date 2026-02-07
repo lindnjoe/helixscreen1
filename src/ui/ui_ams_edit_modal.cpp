@@ -35,7 +35,7 @@ AmsEditModal::~AmsEditModal() {
     deinit_subjects();
 
     // Modal destructor will call hide() if visible
-    spdlog::debug("[AmsEditModal] Destroyed");
+    spdlog::trace("[AmsEditModal] Destroyed");
 }
 
 AmsEditModal::AmsEditModal(AmsEditModal&& other) noexcept
@@ -764,7 +764,7 @@ void AmsEditModal::handle_sync_spoolman() {
         [this, spool_id, guard]() {
             // Check if modal still exists before using 'this'
             if (guard.expired()) {
-                spdlog::debug("[AmsEditModal] Spoolman sync callback ignored - modal destroyed");
+                spdlog::trace("[AmsEditModal] Spoolman sync callback ignored - modal destroyed");
                 return;
             }
             spdlog::info("[AmsEditModal] Spoolman spool {} weight synced successfully", spool_id);

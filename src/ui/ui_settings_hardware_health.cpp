@@ -50,7 +50,7 @@ HardwareHealthOverlay::HardwareHealthOverlay() {
 }
 
 HardwareHealthOverlay::~HardwareHealthOverlay() {
-    spdlog::debug("[{}] Destroyed", get_name());
+    spdlog::trace("[{}] Destroyed", get_name());
 }
 
 // ============================================================================

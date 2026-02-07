@@ -370,7 +370,7 @@ void DisplayManager::check_display_sleep() {
     static uint32_t last_log_time = 0;
     uint32_t now = get_ticks();
     if (inactive_ms > 10000 && (now - last_log_time) >= 30000) {
-        spdlog::debug(
+        spdlog::trace(
             "[DisplayManager] Sleep check: inactive={}s, dim_timeout={}s, sleep_timeout={}s, "
             "dimmed={}, sleeping={}, backlight={}",
             inactive_ms / 1000, m_dim_timeout_sec, sleep_timeout_sec, m_display_dimmed,
@@ -496,7 +496,7 @@ void DisplayManager::restore_display_on_shutdown() {
         m_backlight->set_brightness(brightness);
     }
     m_display_sleeping = false;
-    spdlog::info("[DisplayManager] Shutdown: restoring display to {}% brightness", brightness);
+    spdlog::debug("[DisplayManager] Shutdown: restoring display to {}% brightness", brightness);
 }
 
 void DisplayManager::set_backlight_brightness(int percent) {

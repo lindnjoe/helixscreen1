@@ -67,8 +67,8 @@ ThumbnailProcessor::ThumbnailProcessor()
 
     // Start thread pool
     thread_pool_->start(MIN_WORKER_THREADS);
-    spdlog::info("[ThumbnailProcessor] Initialized with {} worker threads, cache: {}",
-                 MIN_WORKER_THREADS, cache_dir_);
+    spdlog::debug("[ThumbnailProcessor] Initialized with {} worker threads, cache: {}",
+                  MIN_WORKER_THREADS, cache_dir_);
 }
 
 ThumbnailProcessor::~ThumbnailProcessor() {
@@ -247,7 +247,7 @@ ThumbnailTarget ThumbnailProcessor::get_target_for_display() {
 void ThumbnailProcessor::set_cache_dir(const std::string& path) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (cache_dir_ != path) {
-        spdlog::info("[ThumbnailProcessor] Cache directory updated: {}", path);
+        spdlog::debug("[ThumbnailProcessor] Cache directory updated: {}", path);
         cache_dir_ = path;
 
         try {

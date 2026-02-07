@@ -58,12 +58,12 @@ void PrinterHardwareValidationState::deinit_subjects() {
 
 void PrinterHardwareValidationState::reset_for_testing() {
     if (!subjects_initialized_) {
-        spdlog::debug("[PrinterHardwareValidationState] reset_for_testing: subjects not "
+        spdlog::trace("[PrinterHardwareValidationState] reset_for_testing: subjects not "
                       "initialized, nothing to reset");
         return;
     }
 
-    spdlog::debug("[PrinterHardwareValidationState] reset_for_testing: Deinitializing subjects to "
+    spdlog::trace("[PrinterHardwareValidationState] reset_for_testing: Deinitializing subjects to "
                   "clear observers");
 
     // Clear the validation result

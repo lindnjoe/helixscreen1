@@ -141,8 +141,8 @@ void MoonrakerAPIMock::download_file_partial(const std::string& root, const std:
         content.resize(static_cast<size_t>(file.gcount()));
         file.close();
 
-        spdlog::info("[MoonrakerAPIMock] Partial download {} ({} of {} bytes)", filename,
-                     content.size(), max_bytes);
+        spdlog::debug("[MoonrakerAPIMock] Partial download {} ({} of {} bytes)", filename,
+                      content.size(), max_bytes);
 
         if (on_success) {
             on_success(content);
@@ -225,7 +225,8 @@ void MoonrakerAPIMock::download_file_to_path(const std::string& root, const std:
 
     // Verify the copy worked
     auto file_size = std::filesystem::file_size(dest_path);
-    spdlog::info("[MoonrakerAPIMock] Copied {} -> {} ({} bytes)", local_path, dest_path, file_size);
+    spdlog::debug("[MoonrakerAPIMock] Copied {} -> {} ({} bytes)", local_path, dest_path,
+                  file_size);
 
     if (on_success) {
         on_success(dest_path);

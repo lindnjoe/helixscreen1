@@ -1110,10 +1110,10 @@ void HomePanel::on_print_state_changed(PrintJobState state) {
     bool is_active = (state == PrintJobState::PRINTING || state == PrintJobState::PAUSED);
 
     if (is_active) {
-        spdlog::info("[{}] Print active - updating card progress display", get_name());
+        spdlog::debug("[{}] Print active - updating card progress display", get_name());
         update_print_card_from_state(); // Update label immediately
     } else {
-        spdlog::info("[{}] Print not active - reverting card to idle state", get_name());
+        spdlog::debug("[{}] Print not active - reverting card to idle state", get_name());
         reset_print_card_to_idle();
     }
 }

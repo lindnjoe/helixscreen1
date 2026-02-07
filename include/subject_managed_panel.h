@@ -198,7 +198,7 @@ class SubjectManager {
                     owner_info = std::string(file_path) + ":" + std::to_string(info->line) + " (" +
                                  info->name + ")";
                 }
-                spdlog::debug(
+                spdlog::trace(
                     "[SubjectManager] LVGL not initialized, skipping {} subject deinits from {}",
                     subjects_.size(), owner_info);
             }
@@ -206,7 +206,7 @@ class SubjectManager {
             return;
         }
 
-        spdlog::debug("[SubjectManager] Deinitializing {} subjects", subjects_.size());
+        spdlog::trace("[SubjectManager] Deinitializing {} subjects", subjects_.size());
 
         for (auto* subject : subjects_) {
             if (subject) {

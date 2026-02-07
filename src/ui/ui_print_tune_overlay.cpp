@@ -154,7 +154,7 @@ PrintTuneOverlay::~PrintTuneOverlay() {
     // Panel widget is owned by LVGL parent, will be cleaned up when parent is deleted
     tune_panel_ = nullptr;
 
-    spdlog::debug("[PrintTuneOverlay] Destroyed");
+    spdlog::trace("[PrintTuneOverlay] Destroyed");
 }
 
 // ============================================================================

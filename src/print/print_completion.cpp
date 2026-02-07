@@ -211,11 +211,11 @@ static void on_print_state_changed_for_notification(lv_observer_t* observer,
 
         auto mode = SettingsManager::instance().get_completion_alert_mode();
 
-        spdlog::info("[PrintComplete] Print {} - on_print_status={}, mode={}",
-                     (current == PrintJobState::COMPLETE)    ? "complete"
-                     : (current == PrintJobState::CANCELLED) ? "cancelled"
-                                                             : "failed",
-                     on_print_status, static_cast<int>(mode));
+        spdlog::debug("[PrintComplete] Print {} - on_print_status={}, mode={}",
+                      (current == PrintJobState::COMPLETE)    ? "complete"
+                      : (current == PrintJobState::CANCELLED) ? "cancelled"
+                                                              : "failed",
+                      on_print_status, static_cast<int>(mode));
 
         // 1. Errors ALWAYS get a modal (high visibility needed)
         if (current == PrintJobState::ERROR) {

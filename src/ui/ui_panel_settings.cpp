@@ -23,6 +23,7 @@
 #include "ui_touch_calibration_overlay.h"
 #include "ui_update_queue.h"
 #include "ui_utils.h"
+#include "ui_wizard_hardware_selector.h"
 
 #include "app_globals.h"
 #include "config.h"
@@ -33,6 +34,7 @@
 #include "lvgl/src/others/translation/lv_translation.h"
 #include "moonraker_api.h"
 #include "moonraker_client.h"
+#include "printer_hardware.h"
 #include "printer_state.h"
 #include "runtime_config.h"
 #include "settings_manager.h"
@@ -354,6 +356,9 @@ void SettingsPanel::init_subjects() {
     UI_MANAGED_SUBJECT_STRING(update_current_version_subject_, update_current_version_buf_,
                               helix_version(), "update_current_version", subjects_);
 
+    // LED selection dropdown subject (index-based, populated in setup)
+    UI_MANAGED_SUBJECT_INT(led_select_subject_, 0, "led_select", subjects_);
+
     // Initialize visibility subjects (controls which settings are shown)
     // Touch calibration: show on touch displays (non-SDL) OR in test mode (for testing on desktop)
 #ifdef HELIX_DISPLAY_SDL
@@ -391,6 +396,8 @@ void SettingsPanel::init_subjects() {
     lv_xml_register_event_cb(nullptr, "on_dark_mode_changed", on_dark_mode_changed);
     lv_xml_register_event_cb(nullptr, "on_animations_changed", on_animations_changed);
     lv_xml_register_event_cb(nullptr, "on_gcode_3d_changed", on_gcode_3d_changed);
+    lv_xml_register_event_cb(nullptr, "on_led_select_changed",
+                             SettingsPanel::on_led_select_changed);
     lv_xml_register_event_cb(nullptr, "on_led_light_changed", on_led_light_changed);
     // Note: on_retraction_row_clicked is registered by RetractionSettingsOverlay
     lv_xml_register_event_cb(nullptr, "on_sounds_changed", on_sounds_changed);
@@ -484,7 +491,7 @@ void SettingsPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     setup_action_handlers();
     populate_info_rows();
 
-    spdlog::info("[{}] Setup complete", get_name());
+    spdlog::debug("[{}] Setup complete", get_name());
 }
 
 // ============================================================================
@@ -525,6 +532,10 @@ void SettingsPanel::setup_toggle_handlers() {
             spdlog::trace("[{}]   ✓ Animations toggle", get_name());
         }
     }
+
+    // === LED Selection Dropdown ===
+    // Populated later via populate_led_dropdown() after hardware discovery completes
+    // (same timing pattern as fetch_print_hours)
 
     // === LED Light Toggle ===
     // Event handler wired via XML <event_cb>, sync toggle with actual printer LED state
@@ -820,6 +831,26 @@ void SettingsPanel::fetch_print_hours() {
         });
 }
 
+void SettingsPanel::populate_led_dropdown() {
+    if (!panel_ || !subjects_initialized_) {
+        return;
+    }
+
+    lv_obj_t* led_select_row = lv_obj_find_by_name(panel_, "row_led_select");
+    if (!led_select_row) {
+        return;
+    }
+
+    wizard_populate_hardware_dropdown(
+        led_select_row, "dropdown", &led_select_subject_, led_items_,
+        [](MoonrakerAPI* a) -> const auto& { return a->hardware().leds(); }, nullptr, true,
+        helix::wizard::LED_STRIP,
+        [](const PrinterHardware& hw) { return hw.guess_main_led_strip(); }, "[Settings LED]",
+        helix::DeviceType::LED);
+    led_select_dropdown_ = lv_obj_find_by_name(led_select_row, "dropdown");
+    spdlog::debug("[{}] LED dropdown populated ({} items)", get_name(), led_items_.size());
+}
+
 // ============================================================================
 // EVENT HANDLERS
 // ============================================================================
@@ -887,6 +918,26 @@ void SettingsPanel::handle_display_sleep_changed(int index) {
 void SettingsPanel::handle_led_light_changed(bool enabled) {
     spdlog::info("[{}] LED light toggled: {}", get_name(), enabled ? "ON" : "OFF");
     SettingsManager::instance().set_led_enabled(enabled);
+}
+
+void SettingsPanel::handle_led_select_changed(int index) {
+    // led_items_ includes "None" at index 0 (inserted by wizard_populate_hardware_dropdown)
+    std::string led_name;
+    if (index > 0 && index < static_cast<int>(led_items_.size())) {
+        led_name = led_items_[index];
+    }
+    spdlog::info("[{}] LED selection changed: {} (index {})", get_name(),
+                 led_name.empty() ? "(none)" : led_name, index);
+
+    // Persist to config
+    Config* config = Config::get_instance();
+    if (config) {
+        config->set<std::string>(helix::wizard::LED_STRIP, led_name);
+        config->save();
+    }
+
+    // Update SettingsManager so toggle and other consumers use the new LED
+    SettingsManager::instance().set_configured_led(led_name);
 }
 
 void SettingsPanel::handle_sounds_changed(bool enabled) {
@@ -1195,6 +1246,14 @@ void SettingsPanel::on_display_sleep_changed(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_END();
 }
 
+void SettingsPanel::on_led_select_changed(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_led_select_changed");
+    auto* dropdown = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
+    int index = static_cast<int>(lv_dropdown_get_selected(dropdown));
+    get_global_settings_panel().handle_led_select_changed(index);
+    LVGL_SAFE_EVENT_CB_END();
+}
+
 void SettingsPanel::on_led_light_changed(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_led_light_changed");
     auto* toggle = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
@@ -1346,6 +1405,8 @@ void register_settings_panel_callbacks() {
     lv_xml_register_event_cb(nullptr, "on_animations_changed",
                              SettingsPanel::on_animations_changed);
     lv_xml_register_event_cb(nullptr, "on_gcode_3d_changed", SettingsPanel::on_gcode_3d_changed);
+    lv_xml_register_event_cb(nullptr, "on_led_select_changed",
+                             SettingsPanel::on_led_select_changed);
     lv_xml_register_event_cb(nullptr, "on_led_light_changed", SettingsPanel::on_led_light_changed);
     lv_xml_register_event_cb(nullptr, "on_sounds_changed", SettingsPanel::on_sounds_changed);
     lv_xml_register_event_cb(nullptr, "on_estop_confirm_changed",

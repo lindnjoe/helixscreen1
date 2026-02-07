@@ -22,12 +22,12 @@ void MoonrakerAPI::start_print(const std::string& filename, SuccessCallback on_s
 
     json params = {{"filename", filename}};
 
-    spdlog::info("[Moonraker API] Starting print: {}", filename);
+    spdlog::debug("[Moonraker API] Starting print: {}", filename);
 
     client_.send_jsonrpc(
         "printer.print.start", params,
         [on_success](json) {
-            spdlog::info("[Moonraker API] Print started successfully");
+            spdlog::debug("[Moonraker API] Print started successfully");
             on_success();
         },
         on_error);

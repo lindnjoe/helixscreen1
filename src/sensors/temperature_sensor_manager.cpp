@@ -159,7 +159,7 @@ void TemperatureSensorManager::discover(const std::vector<std::string>& klipper_
         lv_subject_set_int(&sensor_count_, static_cast<int>(sensors_.size()));
     }
 
-    spdlog::info("[TemperatureSensorManager] Discovered {} temperature sensors", sensors_.size());
+    spdlog::debug("[TemperatureSensorManager] Discovered {} temperature sensors", sensors_.size());
 
     // Update subjects to reflect new state
     update_subjects();

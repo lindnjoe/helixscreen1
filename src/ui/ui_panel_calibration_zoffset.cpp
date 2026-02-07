@@ -56,7 +56,7 @@ ZOffsetCalibrationPanel::~ZOffsetCalibrationPanel() {
 
     // Guard against static destruction order fiasco (spdlog may be gone)
     if (!StaticPanelRegistry::is_destroyed()) {
-        spdlog::debug("[ZOffsetCal] Destroyed");
+        spdlog::trace("[ZOffsetCal] Destroyed");
     }
 }
 

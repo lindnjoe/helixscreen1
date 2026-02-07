@@ -31,7 +31,7 @@ UsbError UsbBackendMock::start() {
     }
 
     running_ = true;
-    spdlog::info("[UsbBackendMock] Started - mock USB monitoring active");
+    spdlog::debug("[UsbBackendMock] Started - mock USB monitoring active");
 
     // Schedule demo drives to be added after UI is ready (1.5s delay)
     // This matches the timing previously done in subject_initializer.cpp

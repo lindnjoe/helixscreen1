@@ -167,8 +167,8 @@ void PrintPreparationManager::analyze_print_start_macro_internal() {
         api_,
         // Success callback - NOTE: runs on HTTP thread
         [self, alive](const helix::PrintStartAnalysis& analysis) {
-            spdlog::info("[PrintPreparationManager] PRINT_START analysis complete: {}",
-                         analysis.summary());
+            spdlog::debug("[PrintPreparationManager] PRINT_START analysis complete: {}",
+                          analysis.summary());
 
             // Defer shared state updates to main LVGL thread
             struct MacroAnalysisData {
@@ -803,7 +803,7 @@ void PrintPreparationManager::start_print(const std::string& filename,
     // Read checkbox states for logging and timelapse
     PrePrintOptions options = read_options_from_subjects();
 
-    spdlog::info(
+    spdlog::debug(
         "[PrintPreparationManager] Starting print: {} (pre-print options: mesh={}, qgl={}, "
         "z_tilt={}, clean={}, timelapse={})",
         filename_to_print, options.bed_mesh, options.qgl, options.z_tilt, options.nozzle_clean,
@@ -1511,7 +1511,7 @@ void PrintPreparationManager::start_print_directly(const std::string& filename,
         filename,
         // Success callback
         [on_navigate_to_status, on_completion]() {
-            spdlog::info("[PrintPreparationManager] Print started successfully");
+            spdlog::debug("[PrintPreparationManager] Print started successfully");
 
             if (on_navigate_to_status) {
                 on_navigate_to_status();

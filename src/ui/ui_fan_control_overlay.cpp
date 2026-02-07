@@ -40,7 +40,7 @@ FanControlOverlay::FanControlOverlay(PrinterState& printer_state) : printer_stat
 FanControlOverlay::~FanControlOverlay() {
     // LVGL may already be destroyed during static destruction
     if (!lv_is_initialized()) {
-        spdlog::debug("[FanControlOverlay] Destroyed (LVGL already deinit)");
+        spdlog::trace("[FanControlOverlay] Destroyed (LVGL already deinit)");
         return;
     }
 
@@ -48,7 +48,7 @@ FanControlOverlay::~FanControlOverlay() {
     animated_fan_dials_.clear();
     auto_fan_cards_.clear();
 
-    spdlog::debug("[FanControlOverlay] Destroyed");
+    spdlog::trace("[FanControlOverlay] Destroyed");
 }
 
 // ============================================================================

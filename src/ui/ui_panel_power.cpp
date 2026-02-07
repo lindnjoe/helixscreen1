@@ -31,7 +31,7 @@ PowerPanel::~PowerPanel() {
     deinit_subjects();
     // Guard against static destruction order fiasco (spdlog may be gone)
     if (!StaticPanelRegistry::is_destroyed()) {
-        spdlog::debug("[PowerPanel] Destroyed");
+        spdlog::trace("[PowerPanel] Destroyed");
     }
 }
 

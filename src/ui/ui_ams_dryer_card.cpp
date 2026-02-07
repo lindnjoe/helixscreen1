@@ -32,7 +32,7 @@ AmsDryerCard::AmsDryerCard() {
 
 AmsDryerCard::~AmsDryerCard() {
     cleanup();
-    spdlog::debug("[AmsDryerCard] Destroyed");
+    spdlog::trace("[AmsDryerCard] Destroyed");
 }
 
 AmsDryerCard::AmsDryerCard(AmsDryerCard&& other) noexcept

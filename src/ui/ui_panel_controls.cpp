@@ -341,7 +341,7 @@ void ControlsPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     // Populate secondary temperature sensors on initial setup
     populate_secondary_temps();
 
-    spdlog::info("[{}] Setup complete", get_name());
+    spdlog::debug("[{}] Setup complete", get_name());
 }
 
 void ControlsPanel::on_activate() {

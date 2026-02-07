@@ -54,7 +54,7 @@ SensorSettingsOverlay::SensorSettingsOverlay() {
 }
 
 SensorSettingsOverlay::~SensorSettingsOverlay() {
-    spdlog::debug("[{}] Destroyed", get_name());
+    spdlog::trace("[{}] Destroyed", get_name());
 }
 
 // ============================================================================

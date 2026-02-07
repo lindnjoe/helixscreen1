@@ -24,7 +24,7 @@ PrintSelectListView::PrintSelectListView() {
 
 PrintSelectListView::~PrintSelectListView() {
     cleanup();
-    spdlog::debug("[PrintSelectListView] Destroyed");
+    spdlog::trace("[PrintSelectListView] Destroyed");
 }
 
 PrintSelectListView::PrintSelectListView(PrintSelectListView&& other) noexcept

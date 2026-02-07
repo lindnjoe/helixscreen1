@@ -112,12 +112,12 @@ void PrinterTemperatureState::update_from_status(const nlohmann::json& status) {
 
 void PrinterTemperatureState::reset_for_testing() {
     if (!subjects_initialized_) {
-        spdlog::debug("[PrinterTemperatureState] reset_for_testing: subjects not initialized, "
+        spdlog::trace("[PrinterTemperatureState] reset_for_testing: subjects not initialized, "
                       "nothing to reset");
         return;
     }
 
-    spdlog::debug(
+    spdlog::trace(
         "[PrinterTemperatureState] reset_for_testing: Deinitializing subjects to clear observers");
 
     // Use SubjectManager for automatic subject cleanup

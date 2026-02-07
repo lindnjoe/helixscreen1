@@ -111,7 +111,7 @@ void destroy_overlay_internal() {
         // g_spinner and g_label are children of g_overlay and were destroyed with it
         g_spinner = nullptr;
         g_label = nullptr;
-        spdlog::debug("[BusyOverlay] Destroyed overlay");
+        spdlog::trace("[BusyOverlay] Destroyed overlay");
     }
 }
 

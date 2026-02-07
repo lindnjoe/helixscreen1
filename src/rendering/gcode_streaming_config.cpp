@@ -46,7 +46,7 @@ GCodeStreamingMode get_gcode_streaming_mode() {
             return GCodeStreamingMode::OFF;
         }
         // Default to AUTO for any other value
-        spdlog::debug("[GCodeStreaming] Mode from config: AUTO");
+        spdlog::trace("[GCodeStreaming] Mode from config: AUTO");
     }
 
     return GCodeStreamingMode::AUTO;
@@ -109,7 +109,7 @@ bool should_use_gcode_streaming(size_t file_size_bytes) {
 
         bool should_stream = file_size_bytes > threshold_bytes;
 
-        spdlog::debug("[GCodeStreaming] AUTO decision: {}KB file {} {}KB threshold ({}MB RAM, "
+        spdlog::trace("[GCodeStreaming] AUTO decision: {}KB file {} {}KB threshold ({}MB RAM, "
                       "{}%)",
                       file_size_bytes / 1024, should_stream ? ">" : "<=", threshold_bytes / 1024,
                       mem.available_kb / 1024, threshold_pct);

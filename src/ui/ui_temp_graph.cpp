@@ -736,7 +736,7 @@ void ui_temp_graph_destroy(ui_temp_graph_t* graph) {
     }
 
     // graph_ptr automatically freed via ~unique_ptr()
-    spdlog::debug("[TempGraph] Destroyed");
+    spdlog::trace("[TempGraph] Destroyed");
 }
 
 // Get underlying chart widget

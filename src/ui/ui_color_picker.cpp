@@ -52,7 +52,7 @@ ColorPicker::ColorPicker() {
 ColorPicker::~ColorPicker() {
     // Modal destructor will call hide() if visible
     deinit_subjects();
-    spdlog::debug("[ColorPicker] Destroyed");
+    spdlog::trace("[ColorPicker] Destroyed");
 }
 
 ColorPicker::ColorPicker(ColorPicker&& other) noexcept

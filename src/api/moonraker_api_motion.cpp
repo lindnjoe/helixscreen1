@@ -640,10 +640,10 @@ void MoonrakerAPI::update_safety_limits_from_printer(SuccessCallback on_success,
                 if (build_volume_updated) {
                     hardware().set_build_volume(build_vol);
                     notify_build_volume_changed();
-                    spdlog::info("[Moonraker API] Build volume from stepper config: "
-                                 "X[{:.0f},{:.0f}] Y[{:.0f},{:.0f}] Z[0,{:.0f}]",
-                                 build_vol.x_min, build_vol.x_max, build_vol.y_min, build_vol.y_max,
-                                 build_vol.z_max);
+                    spdlog::debug("[Moonraker API] Build volume from stepper config: "
+                                  "X[{:.0f},{:.0f}] Y[{:.0f},{:.0f}] Z[0,{:.0f}]",
+                                  build_vol.x_min, build_vol.x_max, build_vol.y_min,
+                                  build_vol.y_max, build_vol.z_max);
                 }
 
                 // Extract temperature limits from heater configurations

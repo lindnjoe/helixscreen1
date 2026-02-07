@@ -31,7 +31,7 @@ FilamentRunoutHandler::~FilamentRunoutHandler() {
     // Signal async callbacks to abort
     alive_->store(false);
 
-    spdlog::debug("[FilamentRunoutHandler] Destroyed");
+    spdlog::trace("[FilamentRunoutHandler] Destroyed");
 }
 
 // ============================================================================

@@ -361,8 +361,8 @@ static void gcode_viewer_draw_cb(lv_event_t* e) {
                 lv_color_t color = lv_color_hex(static_cast<uint32_t>(
                     std::strtol(st->gcode_file->filament_color_hex.c_str() + 1, nullptr, 16)));
                 st->layer_renderer_2d_->set_extrusion_color(color);
-                spdlog::info("[GCode Viewer] 2D renderer using filament color: {}",
-                             st->gcode_file->filament_color_hex);
+                spdlog::debug("[GCode Viewer] 2D renderer using filament color: {}",
+                              st->gcode_file->filament_color_hex);
             }
 
             // Apply any stored content offset
@@ -370,7 +370,7 @@ static void gcode_viewer_draw_cb(lv_event_t* e) {
                 st->layer_renderer_2d_->set_content_offset_y(st->content_offset_y_percent_);
             }
 
-            spdlog::info("[GCode Viewer] Initialized 2D layer renderer ({}x{})", width, height);
+            spdlog::debug("[GCode Viewer] Initialized 2D layer renderer ({}x{})", width, height);
         }
 
         // Use stored print progress layer (set via ui_gcode_viewer_set_print_progress)
@@ -1107,8 +1107,9 @@ static void ui_gcode_viewer_load_file_async(lv_obj_t* obj, const char* file_path
                     std::make_unique<helix::gcode::ParsedGCodeFile>(parser.finalize());
                 result->gcode_file->filename = path;
 
-                spdlog::info("[GCode Viewer] Parsed {} layers, {} segments",
-                             result->gcode_file->layers.size(), result->gcode_file->total_segments);
+                spdlog::debug("[GCode Viewer] Parsed {} layers, {} segments",
+                              result->gcode_file->layers.size(),
+                              result->gcode_file->total_segments);
 
 #ifdef ENABLE_TINYGL_3D
                 // PHASE 2: Build 3D geometry (slow, 1-5s for large files)

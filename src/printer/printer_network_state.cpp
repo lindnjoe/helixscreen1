@@ -67,12 +67,12 @@ void PrinterNetworkState::deinit_subjects() {
 
 void PrinterNetworkState::reset_for_testing() {
     if (!subjects_initialized_) {
-        spdlog::debug("[PrinterNetworkState] reset_for_testing: subjects not initialized, "
+        spdlog::trace("[PrinterNetworkState] reset_for_testing: subjects not initialized, "
                       "nothing to reset");
         return;
     }
 
-    spdlog::debug(
+    spdlog::trace(
         "[PrinterNetworkState] reset_for_testing: Deinitializing subjects to clear observers");
 
     // Use SubjectManager for automatic subject cleanup
@@ -84,7 +84,13 @@ void PrinterNetworkState::reset_for_testing() {
 
 void PrinterNetworkState::set_printer_connection_state_internal(int state, const char* message) {
     // Called from main thread via ui_async_call
-    spdlog::info("[PrinterNetworkState] Printer connection state changed: {} - {}", state, message);
+    // Log "Connected" at info level, transitional states at debug to reduce noise
+    if (state == static_cast<int>(ConnectionState::CONNECTED)) {
+        spdlog::info("[PrinterNetworkState] Printer connection state: Connected");
+    } else {
+        spdlog::debug("[PrinterNetworkState] Printer connection state changed: {} - {}", state,
+                      message);
+    }
 
     // Track if we've ever successfully connected
     if (state == static_cast<int>(ConnectionState::CONNECTED) && !was_ever_connected_) {
@@ -113,8 +119,8 @@ void PrinterNetworkState::set_network_status(int status) {
 void PrinterNetworkState::set_klippy_state_internal(KlippyState state) {
     const char* state_names[] = {"READY", "STARTUP", "SHUTDOWN", "ERROR"};
     int state_int = static_cast<int>(state);
-    spdlog::info("[PrinterNetworkState] Klippy state changed: {} ({})", state_names[state_int],
-                 state_int);
+    spdlog::debug("[PrinterNetworkState] Klippy state changed: {} ({})", state_names[state_int],
+                  state_int);
     lv_subject_set_int(&klippy_state_, state_int);
     update_nav_buttons_enabled();
 }

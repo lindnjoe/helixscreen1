@@ -49,12 +49,12 @@ void PrinterPluginStatusState::deinit_subjects() {
 
 void PrinterPluginStatusState::reset_for_testing() {
     if (!subjects_initialized_) {
-        spdlog::debug("[PrinterPluginStatusState] reset_for_testing: subjects not initialized, "
+        spdlog::trace("[PrinterPluginStatusState] reset_for_testing: subjects not initialized, "
                       "nothing to reset");
         return;
     }
 
-    spdlog::debug(
+    spdlog::trace(
         "[PrinterPluginStatusState] reset_for_testing: Deinitializing subjects to clear observers");
 
     // Use SubjectManager for automatic subject cleanup

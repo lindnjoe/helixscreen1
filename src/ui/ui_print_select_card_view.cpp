@@ -42,7 +42,7 @@ PrintSelectCardView::PrintSelectCardView() {
 
 PrintSelectCardView::~PrintSelectCardView() {
     cleanup();
-    spdlog::debug("[PrintSelectCardView] Destroyed");
+    spdlog::trace("[PrintSelectCardView] Destroyed");
 }
 
 PrintSelectCardView::PrintSelectCardView(PrintSelectCardView&& other) noexcept

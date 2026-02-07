@@ -164,7 +164,7 @@ void PrintStartCollector::start() {
     // Run first update immediately
     update_eta_display();
 
-    spdlog::info("[PrintStartCollector] Started monitoring (handler: {})", handler_name_);
+    spdlog::debug("[PrintStartCollector] Started monitoring (handler: {})", handler_name_);
 }
 
 void PrintStartCollector::stop() {
@@ -195,7 +195,7 @@ void PrintStartCollector::stop() {
     if (was_active) {
         state_.clear_print_start_time_left();
         state_.reset_print_start_state();
-        spdlog::info("[PrintStartCollector] Stopped monitoring");
+        spdlog::debug("[PrintStartCollector] Stopped monitoring");
     }
 }
 
@@ -384,7 +384,7 @@ void PrintStartCollector::on_gcode_response(const json& msg) {
     // Check for completion (layer 1 indicator)
     if (is_completion_marker(line)) {
         update_phase(PrintStartPhase::COMPLETE, "Starting Print...");
-        spdlog::info("[PrintStartCollector] Print start complete - layer 1 detected");
+        spdlog::debug("[PrintStartCollector] Print start complete - layer 1 detected");
         // Note: The caller (main.cpp) should stop the collector when print state becomes PRINTING
         return;
     }
@@ -504,6 +504,8 @@ void PrintStartCollector::update_phase(PrintStartPhase phase, const char* messag
     bool should_save = false;
     {
         std::lock_guard<std::mutex> lock(state_mutex_);
+        if (phase == PrintStartPhase::COMPLETE && current_phase_ == PrintStartPhase::COMPLETE)
+            return;
         current_phase_ = phase;
 
         // Record phase enter timestamp (skip IDLE and INITIALIZING)
@@ -535,6 +537,8 @@ void PrintStartCollector::update_phase(PrintStartPhase phase, const std::string&
     bool should_save = false;
     {
         std::lock_guard<std::mutex> lock(state_mutex_);
+        if (phase == PrintStartPhase::COMPLETE && current_phase_ == PrintStartPhase::COMPLETE)
+            return;
         current_phase_ = phase;
         detected_phases_.insert(phase);
 
@@ -695,8 +699,8 @@ void PrintStartCollector::load_prediction_history() {
     predictor_.load_entries(entries);
 
     if (!entries.empty()) {
-        spdlog::info("[PrintStartCollector] Loaded {} prediction entries (predicted total: {}s)",
-                     entries.size(), predictor_.predicted_total());
+        spdlog::debug("[PrintStartCollector] Loaded {} prediction entries (predicted total: {}s)",
+                      entries.size(), predictor_.predicted_total());
     }
 }
 
@@ -766,6 +770,7 @@ void PrintStartCollector::save_prediction_entry() {
         cfg->set<json>(PREPRINT_HISTORY_PATH, entries_json);
         cfg->save();
 
-        spdlog::info("[PrintStartCollector] Saved prediction history ({} entries)", entries.size());
+        spdlog::debug("[PrintStartCollector] Saved prediction history ({} entries)",
+                      entries.size());
     });
 }

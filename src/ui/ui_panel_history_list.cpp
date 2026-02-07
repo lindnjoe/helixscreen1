@@ -63,7 +63,7 @@ HistoryListPanel::~HistoryListPanel() {
     }
     // Guard against static destruction order fiasco (spdlog may be gone)
     if (!StaticPanelRegistry::is_destroyed()) {
-        spdlog::debug("[HistoryListPanel] Destroyed");
+        spdlog::trace("[HistoryListPanel] Destroyed");
     }
 }
 

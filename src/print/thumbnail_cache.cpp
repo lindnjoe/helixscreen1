@@ -32,9 +32,9 @@ static size_t calculate_dynamic_max_size(const std::string& cache_dir, size_t co
         // Clamp to min/configured_max bounds
         size_t clamped = std::clamp(dynamic_size, ThumbnailCache::MIN_CACHE_SIZE, configured_max);
 
-        spdlog::info("[ThumbnailCache] Available disk: {} MB, cache limit: {} MB (max: {} MB)",
-                     available / (1024 * 1024), clamped / (1024 * 1024),
-                     configured_max / (1024 * 1024));
+        spdlog::debug("[ThumbnailCache] Available disk: {} MB, cache limit: {} MB (max: {} MB)",
+                      available / (1024 * 1024), clamped / (1024 * 1024),
+                      configured_max / (1024 * 1024));
 
         return clamped;
     } catch (const std::filesystem::filesystem_error& e) {
@@ -125,7 +125,7 @@ std::string ThumbnailCache::determine_cache_dir() {
     if (home && home[0] != '\0') {
         std::string cache_base = std::string(home) + "/.cache/helix/" + CACHE_SUBDIR;
         if (try_create_cache_dir(cache_base)) {
-            spdlog::info("[ThumbnailCache] Using HOME/.cache: {}", cache_base);
+            spdlog::debug("[ThumbnailCache] Using HOME/.cache: {}", cache_base);
             return cache_base;
         }
         spdlog::warn("[ThumbnailCache] Cannot use ~/.cache");
@@ -234,9 +234,9 @@ void ThumbnailCache::load_config() {
         disk_critical_ = disk_low_ / 2;
     }
 
-    spdlog::info("[ThumbnailCache] Config loaded: max={} MB, critical={} MB, low={} MB",
-                 configured_max_ / (1024 * 1024), disk_critical_ / (1024 * 1024),
-                 disk_low_ / (1024 * 1024));
+    spdlog::debug("[ThumbnailCache] Config loaded: max={} MB, critical={} MB, low={} MB",
+                  configured_max_ / (1024 * 1024), disk_critical_ / (1024 * 1024),
+                  disk_low_ / (1024 * 1024));
 }
 
 std::string ThumbnailCache::compute_hash(const std::string& path) {

@@ -202,7 +202,7 @@ ScrewsTiltPanel::~ScrewsTiltPanel() {
 
     // Guard against static destruction order fiasco (spdlog may be gone)
     if (!StaticPanelRegistry::is_destroyed()) {
-        spdlog::debug("[ScrewsTilt] Destroyed");
+        spdlog::trace("[ScrewsTilt] Destroyed");
     }
 }
 
@@ -352,7 +352,7 @@ void ScrewsTiltPanel::start_probing() {
         [this, alive](const std::vector<ScrewTiltResult>& results) {
             // Check if panel was destroyed or cleanup was called
             if (!alive->load()) {
-                spdlog::debug("[ScrewsTilt] Ignoring results - panel destroyed");
+                spdlog::trace("[ScrewsTilt] Ignoring results - panel destroyed");
                 return;
             }
             if (cleanup_called()) {
@@ -364,7 +364,7 @@ void ScrewsTiltPanel::start_probing() {
         [this, alive](const MoonrakerError& err) {
             // Check if panel was destroyed or cleanup was called
             if (!alive->load()) {
-                spdlog::debug("[ScrewsTilt] Ignoring error - panel destroyed");
+                spdlog::trace("[ScrewsTilt] Ignoring error - panel destroyed");
                 return;
             }
             if (cleanup_called()) {

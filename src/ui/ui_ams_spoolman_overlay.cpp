@@ -54,7 +54,7 @@ AmsSpoolmanOverlay::~AmsSpoolmanOverlay() {
         lv_subject_deinit(&sync_enabled_subject_);
         lv_subject_deinit(&refresh_interval_subject_);
     }
-    spdlog::debug("[{}] Destroyed", get_name());
+    spdlog::trace("[{}] Destroyed", get_name());
 }
 
 // ============================================================================

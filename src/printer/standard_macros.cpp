@@ -299,8 +299,8 @@ void StandardMacros::init(const helix::PrinterDiscovery& hardware) {
             break;
         }
     }
-    spdlog::info("[StandardMacros] Initialized: {} configured, {} detected, {} fallback, {} empty",
-                 configured, detected, fallback, empty);
+    spdlog::debug("[StandardMacros] Initialized: {} configured, {} detected, {} fallback, {} empty",
+                  configured, detected, fallback, empty);
 }
 
 void StandardMacros::auto_detect(const helix::PrinterDiscovery& hardware) {

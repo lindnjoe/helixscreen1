@@ -38,7 +38,7 @@ AmsSlotEditPopup::~AmsSlotEditPopup() {
         lv_subject_deinit(&can_unload_subject_);
         subjects_initialized_ = false;
     }
-    spdlog::debug("[AmsSlotEditPopup] Destroyed");
+    spdlog::trace("[AmsSlotEditPopup] Destroyed");
 }
 
 AmsSlotEditPopup::AmsSlotEditPopup(AmsSlotEditPopup&& other) noexcept

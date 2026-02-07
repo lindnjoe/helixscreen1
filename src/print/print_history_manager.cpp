@@ -109,7 +109,7 @@ void PrintHistoryManager::remove_observer(HistoryChangedCallback* cb) {
 // ============================================================================
 
 void PrintHistoryManager::on_history_fetched(std::vector<PrintHistoryJob>&& jobs) {
-    spdlog::info("[HistoryManager] Fetched {} jobs", jobs.size());
+    spdlog::debug("[HistoryManager] Fetched {} jobs", jobs.size());
 
     cached_jobs_ = std::move(jobs);
     build_filename_stats();

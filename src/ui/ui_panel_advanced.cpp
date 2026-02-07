@@ -91,7 +91,7 @@ void AdvancedPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     // Event handlers are now declaratively bound via XML event_cb elements
     // No imperative lv_obj_add_event_cb() calls needed
 
-    spdlog::info("[{}] Setup complete", get_name());
+    spdlog::debug("[{}] Setup complete", get_name());
 }
 
 void AdvancedPanel::on_activate() {

@@ -17,7 +17,7 @@
 std::unique_ptr<WifiBackend> WifiBackend::create(bool silent) {
     // In test mode, always use mock unless --real-wifi was specified
     if (get_runtime_config()->should_mock_wifi()) {
-        spdlog::info("[WifiBackend] Test mode: using mock backend");
+        spdlog::debug("[WifiBackend] Test mode: using mock backend");
         auto mock = std::make_unique<WifiBackendMock>();
         mock->set_silent(silent);
         mock->start();

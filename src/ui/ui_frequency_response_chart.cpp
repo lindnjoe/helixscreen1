@@ -254,7 +254,7 @@ void ui_frequency_response_chart_destroy(ui_frequency_response_chart_t* chart) {
         lv_obj_del(chart_ptr->root);
     }
 
-    spdlog::debug("[FreqChart] Destroyed");
+    spdlog::trace("[FreqChart] Destroyed");
 }
 
 // ============================================================================

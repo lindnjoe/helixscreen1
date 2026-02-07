@@ -628,7 +628,7 @@ void GCodeLayerRenderer::render_layers_to_cache(int from_layer, int to_layer) {
         }
     }
 
-    spdlog::debug("[GCodeLayerRenderer] Rendered layers {}-{}: {} segments to cache (direct), "
+    spdlog::trace("[GCodeLayerRenderer] Rendered layers {}-{}: {} segments to cache (direct), "
                   "color=#{:02X}{:02X}{:02X}, buf={}x{} stride={}",
                   from_layer, to_layer, segments_rendered, base_r, base_g, base_b, cached_width_,
                   cached_height_, cache_buf_ ? cache_buf_->header.stride : 0);
@@ -736,7 +736,7 @@ void GCodeLayerRenderer::render_ghost_layers(int from_layer, int to_layer) {
     widget_offset_x_ = saved_offset_x;
     widget_offset_y_ = saved_offset_y;
 
-    spdlog::debug("[GCodeLayerRenderer] Rendered ghost layers {}-{}: {} segments", from_layer,
+    spdlog::trace("[GCodeLayerRenderer] Rendered ghost layers {}-{}: {} segments", from_layer,
                   to_layer, segments_rendered);
     helix::MemoryMonitor::log_now("gcode_ghost_render_done");
 }
@@ -914,7 +914,7 @@ void GCodeLayerRenderer::render(lv_layer_t* layer, const lv_area_t* widget_area)
 
     // Log performance if layer changed or slow render
     if (current_layer_ != last_rendered_layer_ || last_render_time_ms_ > 50) {
-        spdlog::debug("[GCodeLayerRenderer] Layer {}: {}ms (cached_up_to={}, lpf={})",
+        spdlog::trace("[GCodeLayerRenderer] Layer {}: {}ms (cached_up_to={}, lpf={})",
                       current_layer_, last_render_time_ms_, cached_up_to_layer_, layers_per_frame_);
         last_rendered_layer_ = current_layer_;
     }
@@ -1386,8 +1386,8 @@ void GCodeLayerRenderer::start_background_ghost_render() {
     // Launch background thread
     ghost_thread_ = std::thread(&GCodeLayerRenderer::background_ghost_render_thread, this);
 
-    spdlog::info("[GCodeLayerRenderer] Started background ghost render thread ({}x{})", width,
-                 height);
+    spdlog::debug("[GCodeLayerRenderer] Started background ghost render thread ({}x{})", width,
+                  height);
 }
 
 void GCodeLayerRenderer::cancel_background_ghost_render() {
@@ -1539,7 +1539,7 @@ void GCodeLayerRenderer::background_ghost_render_thread() {
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                        std::chrono::steady_clock::now() - start_time)
                        .count();
-    spdlog::info(
+    spdlog::debug(
         "[GCodeLayerRenderer] Background ghost render complete: {} layers, {} segments in {}ms",
         total_layers, segments_rendered, elapsed);
 }
@@ -1711,8 +1711,8 @@ void GCodeLayerRenderer::load_config() {
     } else {
         // Adaptive mode - start with default, adjust based on render time
         layers_per_frame_ = DEFAULT_LAYERS_PER_FRAME;
-        spdlog::info("[GCodeLayerRenderer] Using adaptive layers_per_frame (starting at {})",
-                     layers_per_frame_);
+        spdlog::debug("[GCodeLayerRenderer] Using adaptive layers_per_frame (starting at {})",
+                      layers_per_frame_);
     }
 
     // Load adaptive target (only used when config_layers_per_frame_ == 0)

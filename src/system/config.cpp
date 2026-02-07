@@ -459,7 +459,7 @@ json& Config::get_json(const std::string& json_path) {
 }
 
 bool Config::save() {
-    spdlog::debug("[Config] Saving config to {}", path);
+    spdlog::trace("[Config] Saving config to {}", path);
 
     try {
         std::ofstream o(path);
@@ -478,7 +478,7 @@ bool Config::save() {
         }
 
         o.close();
-        spdlog::debug("[Config] saved successfully to {}", path);
+        spdlog::trace("[Config] saved successfully to {}", path);
         return true;
 
     } catch (const std::exception& e) {

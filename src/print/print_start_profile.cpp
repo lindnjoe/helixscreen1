@@ -186,7 +186,7 @@ bool PrintStartProfile::try_match_pattern(const std::string& line, MatchResult& 
             result.phase = rp.phase;
             result.message = substitute_captures(rp.message_template, match);
             result.progress = rp.weight; // Caller interprets based on progress_mode
-            spdlog::debug("[PrintStartProfile] Pattern match: '{}' -> phase={}, msg='{}'", line,
+            spdlog::trace("[PrintStartProfile] Pattern match: '{}' -> phase={}, msg='{}'", line,
                           static_cast<int>(result.phase), result.message);
             return true;
         }

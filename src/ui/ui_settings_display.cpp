@@ -54,7 +54,7 @@ DisplaySettingsOverlay::~DisplaySettingsOverlay() {
         lv_subject_deinit(&brightness_value_subject_);
         lv_subject_deinit(&theme_apply_disabled_subject_);
     }
-    spdlog::debug("[{}] Destroyed", get_name());
+    spdlog::trace("[{}] Destroyed", get_name());
 }
 
 // ============================================================================

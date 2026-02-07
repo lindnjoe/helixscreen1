@@ -60,7 +60,7 @@ PIDCalibrationPanel::~PIDCalibrationPanel() {
 
     // Guard against static destruction order fiasco (spdlog may be gone)
     if (!StaticPanelRegistry::is_destroyed()) {
-        spdlog::debug("[PIDCal] Destroyed");
+        spdlog::trace("[PIDCal] Destroyed");
     }
 }
 

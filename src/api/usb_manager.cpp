@@ -43,7 +43,7 @@ bool UsbManager::start() {
         return false;
     }
 
-    spdlog::info("[UsbManager] Started successfully");
+    spdlog::debug("[UsbManager] Started successfully");
     return true;
 }
 

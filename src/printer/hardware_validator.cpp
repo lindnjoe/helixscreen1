@@ -137,7 +137,7 @@ HardwareValidationResult HardwareValidator::validate(Config* config,
                      result.critical_missing.size(), result.expected_missing.size(),
                      result.newly_discovered.size(), result.changed_from_last_session.size());
     } else {
-        spdlog::info("[HardwareValidator] Validation complete: no issues found");
+        spdlog::debug("[HardwareValidator] Validation complete: no issues found");
     }
 
     return result;

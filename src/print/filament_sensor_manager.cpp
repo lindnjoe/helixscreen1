@@ -171,7 +171,7 @@ void FilamentSensorManager::discover_sensors(const std::vector<std::string>& kli
             }
             if (!runout_already_assigned) {
                 config.role = FilamentSensorRole::RUNOUT;
-                spdlog::info(
+                spdlog::debug(
                     "[FilamentSensorManager] Auto-assigned RUNOUT role to '{}' based on name",
                     sensor_name);
             }
@@ -568,10 +568,10 @@ void FilamentSensorManager::update_from_status(const json& status) {
                     spdlog::warn("[FilamentSensorManager] RUNOUT: {} ({}) filament gone",
                                  sensor.sensor_name, role_to_config_string(sensor.role));
                 } else {
-                    spdlog::info("[FilamentSensorManager] Sensor {} state changed: {} -> {}",
-                                 sensor.sensor_name,
-                                 old_state.filament_detected ? "detected" : "empty",
-                                 state.filament_detected ? "detected" : "empty");
+                    spdlog::debug("[FilamentSensorManager] Sensor {} state changed: {} -> {}",
+                                  sensor.sensor_name,
+                                  old_state.filament_detected ? "detected" : "empty",
+                                  state.filament_detected ? "detected" : "empty");
                 }
 
                 // Queue notification for after lock release

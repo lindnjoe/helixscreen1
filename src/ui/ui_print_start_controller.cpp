@@ -52,7 +52,7 @@ PrintStartController::~PrintStartController() {
             color_mismatch_modal_ = nullptr;
         }
     }
-    spdlog::debug("[PrintStartController] Destroyed");
+    spdlog::trace("[PrintStartController] Destroyed");
 }
 
 // ============================================================================
@@ -206,8 +206,8 @@ void PrintStartController::execute_print_start() {
                 // This bypasses Moonraker metadata lookup which doesn't have USB file info
                 if (!thumbnail_path.empty()) {
                     helix::get_active_print_media_manager().set_thumbnail_path(thumbnail_path);
-                    spdlog::info("[PrintStartController] Set extracted thumbnail path: {}",
-                                 thumbnail_path);
+                    spdlog::debug("[PrintStartController] Set extracted thumbnail path: {}",
+                                  thumbnail_path);
                 }
 
                 spdlog::debug(
@@ -225,7 +225,7 @@ void PrintStartController::execute_print_start() {
                 auto& status_panel = get_global_print_status_panel();
 
                 if (success) {
-                    spdlog::info("[PrintStartController] Print started successfully");
+                    spdlog::debug("[PrintStartController] Print started successfully");
                     status_panel.end_preparing(true);
                 } else if (!error.empty()) {
                     NOTIFY_ERROR("Print preparation failed: {}", error);

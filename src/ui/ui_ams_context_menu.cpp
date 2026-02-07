@@ -47,7 +47,7 @@ AmsContextMenu::~AmsContextMenu() {
         lv_subject_deinit(&slot_can_load_subject_);
         subject_initialized_ = false;
     }
-    spdlog::debug("[AmsContextMenu] Destroyed");
+    spdlog::trace("[AmsContextMenu] Destroyed");
 }
 
 AmsContextMenu::AmsContextMenu(AmsContextMenu&& other) noexcept

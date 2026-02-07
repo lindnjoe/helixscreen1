@@ -119,7 +119,7 @@ void PrinterPrintState::reset_for_new_print() {
     lv_subject_set_int(&print_elapsed_, 0);
     lv_subject_set_int(&print_time_left_, 0);
     estimated_print_time_ = 0;
-    spdlog::debug("[PrinterPrintState] Reset print progress for new print");
+    spdlog::trace("[PrinterPrintState] Reset print progress for new print");
 }
 
 void PrinterPrintState::update_from_status(const nlohmann::json& status) {
@@ -149,7 +149,8 @@ void PrinterPrintState::update_from_status(const nlohmann::json& status) {
                     spdlog::info("[PrinterPrintState] Print completed - setting outcome=COMPLETE");
                     lv_subject_set_int(&print_outcome_, static_cast<int>(PrintOutcome::COMPLETE));
                 } else if (new_state == PrintJobState::CANCELLED) {
-                    spdlog::info("[PrinterPrintState] Print cancelled - setting outcome=CANCELLED");
+                    spdlog::debug(
+                        "[PrinterPrintState] Print cancelled - setting outcome=CANCELLED");
                     lv_subject_set_int(&print_outcome_, static_cast<int>(PrintOutcome::CANCELLED));
                 } else if (new_state == PrintJobState::ERROR) {
                     spdlog::info("[PrinterPrintState] Print error - setting outcome=ERROR");
@@ -169,9 +170,9 @@ void PrinterPrintState::update_from_status(const nlohmann::json& status) {
             // Always update print_state_enum to reflect true Moonraker state
             // (print_outcome handles UI persistence for terminal states)
             if (new_state != current_state) {
-                spdlog::info("[PrinterPrintState] print_stats.state: '{}' -> enum {} (was {})",
-                             state_str, static_cast<int>(new_state),
-                             static_cast<int>(current_state));
+                spdlog::debug("[PrinterPrintState] print_stats.state: '{}' -> enum {} (was {})",
+                              state_str, static_cast<int>(new_state),
+                              static_cast<int>(current_state));
                 lv_subject_set_int(&print_state_enum_, static_cast<int>(new_state));
             }
 
@@ -288,7 +289,7 @@ void PrinterPrintState::update_print_show_progress() {
 
     if (lv_subject_get_int(&print_show_progress_) != new_value) {
         lv_subject_set_int(&print_show_progress_, new_value);
-        spdlog::debug(
+        spdlog::trace(
             "[PrinterPrintState] print_show_progress updated: {} (active={}, starting={})",
             new_value, is_active, is_starting);
     }
@@ -300,7 +301,7 @@ void PrinterPrintState::update_print_show_progress() {
 
 void PrinterPrintState::set_print_outcome(PrintOutcome outcome) {
     lv_subject_set_int(&print_outcome_, static_cast<int>(outcome));
-    spdlog::info("[PrinterPrintState] Print outcome set to: {}", static_cast<int>(outcome));
+    spdlog::debug("[PrinterPrintState] Print outcome set to: {}", static_cast<int>(outcome));
 }
 
 void PrinterPrintState::set_print_thumbnail_path(const std::string& path) {
@@ -316,7 +317,7 @@ void PrinterPrintState::set_print_thumbnail_path(const std::string& path) {
 
 void PrinterPrintState::set_print_display_filename(const std::string& name) {
     // Display filename is set from PrintStatusPanel's main-thread callback.
-    spdlog::debug("[PrinterPrintState] Setting print display filename: {}", name);
+    spdlog::trace("[PrinterPrintState] Setting print display filename: {}", name);
     lv_subject_copy_string(&print_display_filename_, name.c_str());
 }
 
@@ -326,7 +327,7 @@ void PrinterPrintState::set_print_layer_total(int total) {
 
 void PrinterPrintState::set_print_start_state(PrintStartPhase phase, const char* message,
                                               int progress) {
-    spdlog::debug("[PrinterPrintState] Print start: phase={}, message='{}', progress={}%",
+    spdlog::trace("[PrinterPrintState] Print start: phase={}, message='{}', progress={}%",
                   static_cast<int>(phase), message ? message : "", progress);
 
     // CRITICAL: Defer to main thread via helix::async::invoke to avoid LVGL assertion
@@ -358,7 +359,7 @@ void PrinterPrintState::reset_print_start_state() {
     helix::async::invoke([this]() {
         int phase = lv_subject_get_int(&print_start_phase_);
         if (phase != static_cast<int>(PrintStartPhase::IDLE)) {
-            spdlog::info("[PrinterPrintState] Resetting print start state to IDLE");
+            spdlog::debug("[PrinterPrintState] Resetting print start state to IDLE");
             lv_subject_set_int(&print_start_phase_, static_cast<int>(PrintStartPhase::IDLE));
             lv_subject_copy_string(&print_start_message_, "");
             lv_subject_set_int(&print_start_progress_, 0);
@@ -406,7 +407,7 @@ int PrinterPrintState::get_estimated_print_time() const {
 void PrinterPrintState::set_print_in_progress_internal(bool in_progress) {
     int new_value = in_progress ? 1 : 0;
     if (lv_subject_get_int(&print_in_progress_) != new_value) {
-        spdlog::debug("[PrinterPrintState] Print in progress: {}", in_progress);
+        spdlog::trace("[PrinterPrintState] Print in progress: {}", in_progress);
         lv_subject_set_int(&print_in_progress_, new_value);
     }
 }

@@ -35,7 +35,7 @@ WiFiError WifiBackendMock::start() {
     }
 
     running_ = true;
-    spdlog::info("[WifiBackend] Mock backend started (simulator mode)");
+    spdlog::debug("[WifiBackend] Mock backend started (simulator mode)");
     return WiFiErrorHelper::success();
 }
 

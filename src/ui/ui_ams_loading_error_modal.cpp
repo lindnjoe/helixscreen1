@@ -19,7 +19,7 @@ AmsLoadingErrorModal::AmsLoadingErrorModal() {
 }
 
 AmsLoadingErrorModal::~AmsLoadingErrorModal() {
-    spdlog::debug("[AmsLoadingErrorModal] Destroyed");
+    spdlog::trace("[AmsLoadingErrorModal] Destroyed");
 }
 
 // ============================================================================

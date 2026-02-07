@@ -263,7 +263,7 @@ class PanelBase : public IPanelLifecycle {
         }
         subjects.deinit_all();
         subjects_initialized_ = false;
-        spdlog::debug("[{}] Subjects deinitialized", get_name());
+        spdlog::trace("[{}] Subjects deinitialized", get_name());
     }
 
     //

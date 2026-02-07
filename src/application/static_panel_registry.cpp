@@ -43,7 +43,7 @@ void StaticPanelRegistry::destroy_all() {
         return;
     }
 
-    spdlog::debug("[StaticPanelRegistry] Destroying {} panels in reverse order...",
+    spdlog::trace("[StaticPanelRegistry] Destroying {} panels in reverse order...",
                   destroyers_.size());
 
     // Set flag so lv_obj_safe_delete() skips deletion during this window
@@ -61,5 +61,5 @@ void StaticPanelRegistry::destroy_all() {
 
     destroyers_.clear();
     s_destroying_all_.store(false, std::memory_order_release);
-    spdlog::debug("[StaticPanelRegistry] All panels destroyed");
+    spdlog::trace("[StaticPanelRegistry] All panels destroyed");
 }

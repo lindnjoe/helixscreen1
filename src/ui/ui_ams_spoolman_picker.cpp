@@ -26,7 +26,7 @@ AmsSpoolmanPicker::AmsSpoolmanPicker() {
 AmsSpoolmanPicker::~AmsSpoolmanPicker() {
     hide();
     deinit_subjects();
-    spdlog::debug("[AmsSpoolmanPicker] Destroyed");
+    spdlog::trace("[AmsSpoolmanPicker] Destroyed");
 }
 
 AmsSpoolmanPicker::AmsSpoolmanPicker(AmsSpoolmanPicker&& other) noexcept
@@ -219,7 +219,7 @@ void AmsSpoolmanPicker::populate_spools() {
         [this, weak_guard](const std::vector<SpoolInfo>& spools) {
             // Check if picker still exists and subjects are valid
             if (weak_guard.expired() || !picker_ || !subjects_initialized_) {
-                spdlog::debug("[AmsSpoolmanPicker] Callback ignored - picker destroyed or moved");
+                spdlog::trace("[AmsSpoolmanPicker] Callback ignored - picker destroyed or moved");
                 return;
             }
 

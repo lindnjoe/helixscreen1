@@ -62,7 +62,7 @@ InputShaperPanel::~InputShaperPanel() {
 
     // Guard against static destruction order fiasco (spdlog may be gone)
     if (!StaticPanelRegistry::is_destroyed()) {
-        spdlog::debug("[InputShaper] Destroyed");
+        spdlog::trace("[InputShaper] Destroyed");
     }
 }
 

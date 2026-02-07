@@ -57,12 +57,12 @@ void PrinterCalibrationState::deinit_subjects() {
 
 void PrinterCalibrationState::reset_for_testing() {
     if (!subjects_initialized_) {
-        spdlog::debug("[PrinterCalibrationState] reset_for_testing: subjects not initialized, "
+        spdlog::trace("[PrinterCalibrationState] reset_for_testing: subjects not initialized, "
                       "nothing to reset");
         return;
     }
 
-    spdlog::debug(
+    spdlog::trace(
         "[PrinterCalibrationState] reset_for_testing: Deinitializing subjects to clear observers");
 
     // Use SubjectManager for automatic subject cleanup

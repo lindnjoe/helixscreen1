@@ -358,7 +358,7 @@ void NetworkSettingsOverlay::on_activate() {
         wifi_manager_->start_scan([self, weak_mgr](const std::vector<WiFiNetwork>& networks) {
             // Check if manager still exists
             if (weak_mgr.expired()) {
-                spdlog::debug("[NetworkSettingsOverlay] WiFiManager destroyed, ignoring callback");
+                spdlog::trace("[NetworkSettingsOverlay] WiFiManager destroyed, ignoring callback");
                 return;
             }
 
