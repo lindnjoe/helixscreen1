@@ -689,8 +689,9 @@ void PrintStatusPanel::update_all_displays() {
                   total_layers_);
     lv_subject_copy_string(&layer_text_subject_, layer_text_buf_);
 
-    // Time displays - during Preparing, the preprint observers own these
-    if (current_state_ != PrintState::Preparing) {
+    // Time displays - Preparing: preprint observers own these.
+    // Complete: on_print_state_changed sets frozen final values, don't overwrite.
+    if (current_state_ != PrintState::Preparing && current_state_ != PrintState::Complete) {
         // elapsed_seconds_ is wall-clock time from Moonraker total_duration (includes prep)
         format_time(elapsed_seconds_, elapsed_buf_, sizeof(elapsed_buf_));
         lv_subject_copy_string(&elapsed_subject_, elapsed_buf_);
@@ -1182,6 +1183,7 @@ void PrintStatusPanel::on_print_state_changed(PrintJobState job_state) {
             // elapsed_seconds_ is wall-clock from Moonraker total_duration (includes prep)
             format_time(elapsed_seconds_, elapsed_buf_, sizeof(elapsed_buf_));
             lv_subject_copy_string(&elapsed_subject_, elapsed_buf_);
+            remaining_seconds_ = 0;
             format_time(0, remaining_buf_, sizeof(remaining_buf_));
             lv_subject_copy_string(&remaining_subject_, remaining_buf_);
 
@@ -1341,6 +1343,16 @@ void PrintStatusPanel::on_print_duration_changed(int seconds) {
         return;
     }
 
+    // Guard: preserve final elapsed time after print completion.
+    // print_outcome persists through the standby transition, preventing
+    // the 0-second duration from Moonraker's idle status from clobbering
+    // the final elapsed time shown alongside the "Print Complete" badge.
+    auto outcome =
+        static_cast<PrintOutcome>(lv_subject_get_int(printer_state_.get_print_outcome_subject()));
+    if (outcome != PrintOutcome::NONE) {
+        return;
+    }
+
     elapsed_seconds_ = seconds;
 
     // Guard: subjects may not be initialized if called from constructor's observer setup
@@ -1364,6 +1376,13 @@ void PrintStatusPanel::on_print_time_left_changed(int seconds) {
     // Guard: preserve final values when in Complete state
     if (current_state_ == PrintState::Complete) {
         spdlog::trace("[{}] Ignoring time_left update ({}) in Complete state", get_name(), seconds);
+        return;
+    }
+
+    // Guard: preserve final remaining time after print completion (see on_print_duration_changed)
+    auto outcome =
+        static_cast<PrintOutcome>(lv_subject_get_int(printer_state_.get_print_outcome_subject()));
+    if (outcome != PrintOutcome::NONE) {
         return;
     }
 
@@ -1415,6 +1434,26 @@ void PrintStatusPanel::on_print_start_phase_changed(int phase) {
             format_time(total_remaining, remaining_buf_, sizeof(remaining_buf_));
             lv_subject_copy_string(&remaining_subject_, remaining_buf_);
         }
+    } else if (current_state_ == PrintState::Preparing) {
+        // Preparation complete (phase returned to IDLE). Restore current_state_ from
+        // the actual Moonraker print state. Without this, current_state_ stays stuck at
+        // Preparing because on_print_state_changed only fires on state CHANGES and
+        // Moonraker has been reporting PRINTING the whole time.
+        auto job_state = static_cast<PrintJobState>(
+            lv_subject_get_int(printer_state_.get_print_state_enum_subject()));
+        switch (job_state) {
+        case PrintJobState::PRINTING:
+            set_state(PrintState::Printing);
+            break;
+        case PrintJobState::PAUSED:
+            set_state(PrintState::Paused);
+            break;
+        default:
+            set_state(PrintState::Idle);
+            break;
+        }
+        spdlog::debug("[{}] Restored state to {} after preparation complete", get_name(),
+                      static_cast<int>(current_state_));
     }
     spdlog::debug("[{}] Print start phase changed: {} (visible={})", get_name(), phase, preparing);
 }
