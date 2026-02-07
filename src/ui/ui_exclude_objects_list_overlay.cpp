@@ -170,8 +170,15 @@ void ExcludeObjectsListOverlay::on_deactivate() {
     excluded_observer_.reset();
     defined_observer_.reset();
 
-    // Cancel any in-progress thumbnail render and free buffers
-    cleanup_thumbnails();
+    // Cancel any in-progress thumbnail render (but DON'T free draw buffers yet —
+    // the overlay widget tree is still alive during the slide-out animation and
+    // lv_image widgets reference the draw buffers. Freeing now would cause LVGL
+    // to read freed memory as file paths. Buffers are freed on next on_activate
+    // via start_thumbnail_render, or in the destructor.)
+    if (thumbnail_renderer_) {
+        thumbnail_renderer_->cancel();
+        thumbnail_renderer_.reset();
+    }
 }
 
 // ============================================================================
@@ -225,6 +232,18 @@ void ExcludeObjectsListOverlay::start_thumbnail_render() {
 
             spdlog::debug("[{}] Thumbnails ready: {} objects", get_name(),
                           result->thumbnails.size());
+
+            // Clear list first to destroy lv_image widgets referencing old draw buffers,
+            // then free the old buffers before creating new ones
+            if (objects_list_) {
+                lv_obj_clean(objects_list_);
+            }
+            for (auto& [name, buf] : object_thumbnails_) {
+                if (buf) {
+                    lv_draw_buf_destroy(buf);
+                }
+            }
+            object_thumbnails_.clear();
 
             // Convert raw pixel buffers to LVGL draw buffers
             for (auto& thumb : result->thumbnails) {
@@ -317,24 +336,12 @@ lv_obj_t* ExcludeObjectsListOverlay::create_object_row(lv_obj_t* parent, const s
     lv_obj_set_style_bg_opa(row, LV_OPA_COVER, 0);
     lv_obj_remove_flag(row, LV_OBJ_FLAG_SCROLLABLE);
 
-    // Thumbnail image (if available)
+    // Thumbnail image (if available) — no background container, transparent blend
     auto thumb_it = object_thumbnails_.find(name);
     if (thumb_it != object_thumbnails_.end() && thumb_it->second) {
-        // Thumbnail container with dark background for contrast
-        lv_obj_t* thumb_container = lv_obj_create(row);
-        lv_obj_set_size(thumb_container, kThumbnailSize, kThumbnailSize);
-        lv_obj_set_style_radius(thumb_container, 4, 0);
-        lv_obj_set_style_bg_color(thumb_container, lv_color_hex(0x1A1A1A), 0);
-        lv_obj_set_style_bg_opa(thumb_container, LV_OPA_COVER, 0);
-        lv_obj_set_style_pad_all(thumb_container, 0, 0);
-        lv_obj_remove_flag(thumb_container, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_remove_flag(thumb_container, LV_OBJ_FLAG_CLICKABLE);
-        lv_obj_add_flag(thumb_container, LV_OBJ_FLAG_EVENT_BUBBLE);
-
-        // Thumbnail image
-        lv_obj_t* img = lv_image_create(thumb_container);
+        lv_obj_t* img = lv_image_create(row);
         lv_image_set_src(img, thumb_it->second);
-        lv_obj_center(img);
+        lv_obj_set_size(img, kThumbnailSize, kThumbnailSize);
         lv_obj_remove_flag(img, LV_OBJ_FLAG_CLICKABLE);
         lv_obj_add_flag(img, LV_OBJ_FLAG_EVENT_BUBBLE);
     }
@@ -352,7 +359,7 @@ lv_obj_t* ExcludeObjectsListOverlay::create_object_row(lv_obj_t* parent, const s
     } else if (is_current) {
         lv_obj_set_style_bg_color(dot, theme_manager_get_color("success"), 0);
     } else {
-        lv_obj_set_style_bg_color(dot, theme_manager_get_color("text_muted"), 0);
+        lv_obj_set_style_bg_color(dot, theme_manager_get_color("success"), 0);
     }
     lv_obj_set_style_bg_opa(dot, LV_OPA_COVER, 0);
 
