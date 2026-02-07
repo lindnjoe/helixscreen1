@@ -234,11 +234,12 @@ HelixScreen is an **add-on** to existing Klipper installations. We don't ship cu
 
 Same procedures as MainsailOS - the curl|sh installer works identically.
 
-**Additional check:** Verify KIAUH doesn't interfere:
+**Additional check:** Verify KIAUH extension works:
 ```bash
-# KIAUH should not show HelixScreen as installed (until we add KIAUH extension)
+# Copy extension into KIAUH's extensions directory
+cp -r ~/helixscreen/scripts/kiauh/helixscreen ~/kiauh/kiauh/extensions/
 ~/kiauh/kiauh.sh
-# Navigate to menus - HelixScreen won't appear yet
+# Navigate to Extensions menu - HelixScreen should appear
 ```
 
 ---
