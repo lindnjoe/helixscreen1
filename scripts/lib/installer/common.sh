@@ -57,9 +57,9 @@ setup_colors() {
 setup_colors
 
 # Logging functions
-log_info() { echo "${CYAN}[INFO]${NC} $1"; }
-log_success() { echo "${GREEN}[OK]${NC} $1"; }
-log_warn() { echo "${YELLOW}[WARN]${NC} $1"; }
+log_info() { echo "${CYAN}[INFO]${NC} $1" >&2; }
+log_success() { echo "${GREEN}[OK]${NC} $1" >&2; }
+log_warn() { echo "${YELLOW}[WARN]${NC} $1" >&2; }
 log_error() { echo "${RED}[ERROR]${NC} $1" >&2; }
 
 # Error handler - cleanup and report what went wrong

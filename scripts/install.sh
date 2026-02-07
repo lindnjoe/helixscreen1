@@ -44,16 +44,8 @@ SERVICE_NAME="helixscreen"
 # Well-known paths (used by uninstall, clean, stop_service)
 # AD5M: /opt/helixscreen or /root/printer_software/helixscreen
 # K1: /usr/data/helixscreen
-# Pi: ~/helixscreen (klipper ecosystem) or /opt/helixscreen (fallback)
+# Pi: /opt/helixscreen
 HELIX_INSTALL_DIRS="/root/printer_software/helixscreen /opt/helixscreen /usr/data/helixscreen"
-
-# Dynamically add home-dir-based install paths for Pi users
-# This catches ~/helixscreen installs regardless of username
-for _hdir in /home/*/helixscreen; do
-    [ -d "$_hdir" ] || continue
-    HELIX_INSTALL_DIRS="$_hdir $HELIX_INSTALL_DIRS"
-done
-unset _hdir
 
 # Init script locations vary by platform/firmware
 # AD5M Klipper Mod: S80, AD5M Forge-X: S90, K1: S99
@@ -91,9 +83,9 @@ setup_colors() {
 setup_colors
 
 # Logging functions
-log_info() { echo "${CYAN}[INFO]${NC} $1"; }
-log_success() { echo "${GREEN}[OK]${NC} $1"; }
-log_warn() { echo "${YELLOW}[WARN]${NC} $1"; }
+log_info() { echo "${CYAN}[INFO]${NC} $1" >&2; }
+log_success() { echo "${GREEN}[OK]${NC} $1" >&2; }
+log_warn() { echo "${YELLOW}[WARN]${NC} $1" >&2; }
 log_error() { echo "${RED}[ERROR]${NC} $1" >&2; }
 
 # Error handler - cleanup and report what went wrong
@@ -206,7 +198,6 @@ print_post_install_commands() {
 # we respect their choice over auto-detection.
 _USER_INSTALL_DIR="${INSTALL_DIR}"
 [ "$_USER_INSTALL_DIR" = "/opt/helixscreen" ] && _USER_INSTALL_DIR=""
-
 INIT_SCRIPT_DEST=""
 PREVIOUS_UI_SCRIPT=""
 AD5M_FIRMWARE=""
@@ -1050,16 +1041,13 @@ uninstall_forgex() {
 # Known competing screen UIs to stop
 # Includes: GuppyScreen (AD5M/K1), Grumpyscreen (K1/Simple AF), KlipperScreen, FeatherScreen
 COMPETING_UIS="guppyscreen GuppyScreen grumpyscreen Grumpyscreen KlipperScreen klipperscreen featherscreen FeatherScreen"
-
-# State file tracking services we disabled (for clean uninstall re-enablement)
-DISABLED_SERVICES_FILE="${INSTALL_DIR}/config/.disabled_services"
-
 # Record a disabled service for later re-enablement
 # Args: $1 = type ("systemd" or "sysv-chmod"), $2 = target (service name or script path)
 record_disabled_service() {
     local type="$1"
     local target="$2"
     local entry="${type}:${target}"
+    local state_file="${INSTALL_DIR}/config/.disabled_services"
 
     # Ensure config directory exists
     if [ -n "${INSTALL_DIR:-}" ] && [ ! -d "${INSTALL_DIR}/config" ]; then
@@ -1067,11 +1055,11 @@ record_disabled_service() {
     fi
 
     # Don't duplicate entries
-    if [ -f "$DISABLED_SERVICES_FILE" ] && grep -qF "$entry" "$DISABLED_SERVICES_FILE" 2>/dev/null; then
+    if [ -f "$state_file" ] && grep -qF "$entry" "$state_file" 2>/dev/null; then
         return 0
     fi
 
-    echo "$entry" | $SUDO tee -a "$DISABLED_SERVICES_FILE" >/dev/null
+    echo "$entry" | $SUDO tee -a "$state_file" >/dev/null
 }
 
 # Stop ForgeX-specific competing UIs (stock FlashForge firmware UI)
