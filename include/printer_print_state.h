@@ -123,9 +123,14 @@ class PrinterPrintState {
         return &print_layer_total_;
     }
 
-    /// Elapsed print time in seconds
+    /// Elapsed print time in seconds (extrusion time only, from Moonraker print_duration)
     lv_subject_t* get_print_duration_subject() {
         return &print_duration_;
+    }
+
+    /// Wall-clock elapsed time in seconds (from Moonraker total_duration, includes prep)
+    lv_subject_t* get_print_elapsed_subject() {
+        return &print_elapsed_;
     }
 
     /// Estimated remaining time in seconds
@@ -310,7 +315,8 @@ class PrinterPrintState {
     lv_subject_t print_layer_total_{};   // Total layers
 
     // Print time tracking subjects (in seconds)
-    lv_subject_t print_duration_{};  // Elapsed time
+    lv_subject_t print_duration_{};  // Extrusion-only elapsed time (Moonraker print_duration)
+    lv_subject_t print_elapsed_{};   // Wall-clock elapsed time (Moonraker total_duration)
     lv_subject_t print_time_left_{}; // Estimated remaining
 
     // Print start progress subjects

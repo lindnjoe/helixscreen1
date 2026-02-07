@@ -333,7 +333,8 @@ class PrintStatusPanel : public OverlayBase {
     int elapsed_seconds_ = 0;
     int remaining_seconds_ = 0;
     int preprint_remaining_seconds_ = 0;
-    int preprint_elapsed_seconds_ = 0; ///< Total pre-print elapsed time (frozen on print start)
+    int preprint_elapsed_seconds_ =
+        0; ///< Pre-print elapsed time (used only during Preparing state)
     int nozzle_current_ = 0;
     int nozzle_target_ = 0;
     int bed_current_ = 0;

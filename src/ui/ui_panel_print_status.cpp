@@ -107,9 +107,9 @@ PrintStatusPanel::PrintStatusPanel(PrinterState& printer_state, MoonrakerAPI* ap
         printer_state_.get_print_layer_current_subject(), this,
         [](PrintStatusPanel* self, int layer) { self->on_print_layer_changed(layer); });
 
-    // Subscribe to print time tracking
+    // Subscribe to wall-clock elapsed time (total_duration includes prep time)
     print_duration_observer_ = observe_int_sync<PrintStatusPanel>(
-        printer_state_.get_print_duration_subject(), this,
+        printer_state_.get_print_elapsed_subject(), this,
         [](PrintStatusPanel* self, int seconds) { self->on_print_duration_changed(seconds); });
     print_time_left_observer_ = observe_int_sync<PrintStatusPanel>(
         printer_state_.get_print_time_left_subject(), this,
@@ -691,8 +691,8 @@ void PrintStatusPanel::update_all_displays() {
 
     // Time displays - during Preparing, the preprint observers own these
     if (current_state_ != PrintState::Preparing) {
-        int total_elapsed = preprint_elapsed_seconds_ + elapsed_seconds_;
-        format_time(total_elapsed, elapsed_buf_, sizeof(elapsed_buf_));
+        // elapsed_seconds_ is wall-clock time from Moonraker total_duration (includes prep)
+        format_time(elapsed_seconds_, elapsed_buf_, sizeof(elapsed_buf_));
         lv_subject_copy_string(&elapsed_subject_, elapsed_buf_);
 
         format_time(remaining_seconds_, remaining_buf_, sizeof(remaining_buf_));
@@ -1178,9 +1178,9 @@ void PrintStatusPanel::on_print_state_changed(PrintJobState job_state) {
                 lv_subject_copy_string(&progress_text_subject_, progress_text_buf_);
             }
 
-            // Freeze final elapsed time (preprint + print) and zero remaining
-            int total_elapsed = preprint_elapsed_seconds_ + elapsed_seconds_;
-            format_time(total_elapsed, elapsed_buf_, sizeof(elapsed_buf_));
+            // Freeze final elapsed time and zero remaining
+            // elapsed_seconds_ is wall-clock from Moonraker total_duration (includes prep)
+            format_time(elapsed_seconds_, elapsed_buf_, sizeof(elapsed_buf_));
             lv_subject_copy_string(&elapsed_subject_, elapsed_buf_);
             format_time(0, remaining_buf_, sizeof(remaining_buf_));
             lv_subject_copy_string(&remaining_subject_, remaining_buf_);
@@ -1188,10 +1188,8 @@ void PrintStatusPanel::on_print_state_changed(PrintJobState job_state) {
             // Trigger celebratory animation on the success badge
             animate_print_complete();
 
-            spdlog::info(
-                "[{}] Print complete! Final progress: {}%, elapsed: {}s ({}s preprint + {}s print)",
-                get_name(), current_progress_, total_elapsed, preprint_elapsed_seconds_,
-                elapsed_seconds_);
+            spdlog::info("[{}] Print complete! Final progress: {}%, elapsed: {}s wall-clock",
+                         get_name(), current_progress_, elapsed_seconds_);
         }
 
         // Show print cancelled overlay when entering Cancelled state
@@ -1350,19 +1348,16 @@ void PrintStatusPanel::on_print_duration_changed(int seconds) {
         return;
     }
 
-    // During pre-print, the preprint elapsed observer owns the elapsed display.
-    // Moonraker's print_duration is 0 during preparation and would overwrite
-    // the preprint elapsed time, causing flickering.
+    // During pre-print with collector running, the preprint elapsed observer owns
+    // the elapsed display for more granular phase-level tracking.
     if (current_state_ == PrintState::Preparing) {
         return;
     }
 
-    // Include preprint time so elapsed reflects total wall-clock time
-    int total_elapsed = preprint_elapsed_seconds_ + elapsed_seconds_;
-    format_time(total_elapsed, elapsed_buf_, sizeof(elapsed_buf_));
+    // total_duration from Moonraker already includes prep time (wall-clock elapsed)
+    format_time(elapsed_seconds_, elapsed_buf_, sizeof(elapsed_buf_));
     lv_subject_copy_string(&elapsed_subject_, elapsed_buf_);
-    spdlog::trace("[{}] Print duration updated: {}s print + {}s preprint = {}s total", get_name(),
-                  seconds, preprint_elapsed_seconds_, total_elapsed);
+    spdlog::trace("[{}] Elapsed updated: {}s (wall-clock from Moonraker)", get_name(), seconds);
 }
 
 void PrintStatusPanel::on_print_time_left_changed(int seconds) {

@@ -29,9 +29,10 @@
  * - print_layer_current_ (int): from print_stats.info.current_layer
  * - print_layer_total_ (int): from print_stats.info.total_layer OR set via API
  *
- * Time Tracking (2):
- * - print_duration_ (int seconds): from print_stats.print_duration
- * - print_time_left_ (int seconds): calculated as total_duration - print_duration
+ * Time Tracking (3):
+ * - print_duration_ (int seconds): from print_stats.print_duration (extrusion only)
+ * - print_elapsed_ (int seconds): from print_stats.total_duration (wall-clock elapsed)
+ * - print_time_left_ (int seconds): estimated from total_duration and progress
  *
  * Print Start Phases (3):
  * - print_start_phase_ (int): PrintStartPhase enum (0-10)
@@ -549,37 +550,69 @@ TEST_CASE("Print characterization: time tracking from JSON", "[characterization]
         REQUIRE(lv_subject_get_int(state.get_print_duration_subject()) == 3600);
     }
 
-    SECTION("time_left calculated from total_duration - print_duration") {
-        // First set print_duration
-        json status1 = {{"print_stats", {{"print_duration", 3600.0}}}};
+    SECTION("print_elapsed updates from print_stats.total_duration") {
+        json status = {{"print_stats", {{"total_duration", 360.0}}}};
+        state.update_from_status(status);
+
+        // total_duration = wall-clock elapsed since job started
+        REQUIRE(lv_subject_get_int(state.get_print_elapsed_subject()) == 360);
+    }
+
+    SECTION("time_left estimated from progress and total_duration") {
+        // Set progress to 50%
+        json status1 = {{"virtual_sdcard", {{"progress", 0.5}}}};
         state.update_from_status(status1);
 
-        // Then set total_duration (time_left is calculated)
-        json status2 = {{"print_stats", {{"total_duration", 7200.0}}}};
+        // Set total_duration (wall-clock elapsed)
+        json status2 = {{"print_stats", {{"total_duration", 3600.0}}}};
         state.update_from_status(status2);
 
-        // time_left = 7200 - 3600 = 3600 seconds
+        // remaining = total_elapsed * (100 - progress) / progress
+        // remaining = 3600 * (100 - 50) / 50 = 3600
         REQUIRE(lv_subject_get_int(state.get_print_time_left_subject()) == 3600);
     }
 
-    SECTION("time_left cannot go negative") {
-        // Set duration greater than total (edge case)
-        json status1 = {{"print_stats", {{"print_duration", 5000.0}}}};
-        state.update_from_status(status1);
+    SECTION("time_left zero when progress is 100%") {
+        json status = {{"virtual_sdcard", {{"progress", 1.0}}},
+                       {"print_stats", {{"total_duration", 7200.0}}}};
+        state.update_from_status(status);
 
-        json status2 = {{"print_stats", {{"total_duration", 3000.0}}}};
-        state.update_from_status(status2);
-
-        // time_left should be clamped to 0
         REQUIRE(lv_subject_get_int(state.get_print_time_left_subject()) == 0);
     }
 
-    SECTION("both duration and total in same update") {
-        json status = {{"print_stats", {{"print_duration", 1800.0}, {"total_duration", 5400.0}}}};
+    SECTION("time_left not updated when progress is below 5%") {
+        // Low progress values give noisy estimates, so we require >= 5%
+        json status1 = {{"virtual_sdcard", {{"progress", 0.03}}}};
+        state.update_from_status(status1);
+
+        json status2 = {{"print_stats", {{"total_duration", 360.0}}}};
+        state.update_from_status(status2);
+
+        // time_left stays at 0 (progress too low for reliable estimate)
+        REQUIRE(lv_subject_get_int(state.get_print_time_left_subject()) == 0);
+    }
+
+    SECTION("time_left not updated when progress is 0") {
+        // With no progress, remaining cannot be estimated
+        json status = {{"print_stats", {{"total_duration", 360.0}}}};
+        state.update_from_status(status);
+
+        // time_left stays at 0
+        REQUIRE(lv_subject_get_int(state.get_print_time_left_subject()) == 0);
+    }
+
+    SECTION("both duration and total in same update with progress") {
+        // Set progress first
+        json progress_status = {{"virtual_sdcard", {{"progress", 0.25}}}};
+        state.update_from_status(progress_status);
+
+        json status = {{"print_stats", {{"print_duration", 1800.0}, {"total_duration", 2000.0}}}};
         state.update_from_status(status);
 
         REQUIRE(lv_subject_get_int(state.get_print_duration_subject()) == 1800);
-        REQUIRE(lv_subject_get_int(state.get_print_time_left_subject()) == 3600);
+        REQUIRE(lv_subject_get_int(state.get_print_elapsed_subject()) == 2000);
+        // remaining = 2000 * (100 - 25) / 25 = 6000
+        REQUIRE(lv_subject_get_int(state.get_print_time_left_subject()) == 6000);
     }
 }
 

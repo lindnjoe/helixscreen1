@@ -68,8 +68,8 @@ static void cleanup_helix_temp_file(const std::string& filename) {
 static void show_rich_completion_modal(PrintJobState state, const char* filename) {
     auto& printer_state = get_printer_state();
 
-    // Get print stats
-    int duration_secs = lv_subject_get_int(printer_state.get_print_duration_subject());
+    // Get print stats (wall-clock elapsed including prep time)
+    int duration_secs = lv_subject_get_int(printer_state.get_print_elapsed_subject());
     int total_layers = lv_subject_get_int(printer_state.get_print_layer_total_subject());
 
     // Determine icon colors and title based on state

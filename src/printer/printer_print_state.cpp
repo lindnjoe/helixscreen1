@@ -60,6 +60,7 @@ void PrinterPrintState::init_subjects(bool register_xml) {
 
     // Print time tracking subjects
     INIT_SUBJECT_INT(print_duration, 0, subjects_, register_xml);
+    INIT_SUBJECT_INT(print_elapsed, 0, subjects_, register_xml);
     INIT_SUBJECT_INT(print_time_left, 0, subjects_, register_xml);
 
     // Print start progress subjects
@@ -114,6 +115,7 @@ void PrinterPrintState::reset_for_new_print() {
     lv_subject_set_int(&print_progress_, 0);
     lv_subject_set_int(&print_layer_current_, 0);
     lv_subject_set_int(&print_duration_, 0);
+    lv_subject_set_int(&print_elapsed_, 0);
     lv_subject_set_int(&print_time_left_, 0);
     spdlog::debug("[PrinterPrintState] Reset print progress for new print");
 }
@@ -241,16 +243,25 @@ void PrinterPrintState::update_from_status(const nlohmann::json& status) {
 
         // Update print time tracking (elapsed and remaining)
         if (stats.contains("print_duration") && stats["print_duration"].is_number()) {
-            int elapsed_seconds = static_cast<int>(stats["print_duration"].get<double>());
-            lv_subject_set_int(&print_duration_, elapsed_seconds);
+            int print_seconds = static_cast<int>(stats["print_duration"].get<double>());
+            lv_subject_set_int(&print_duration_, print_seconds);
         }
 
+        // total_duration = wall-clock elapsed since job started (includes prep, pauses)
         if (stats.contains("total_duration") && stats["total_duration"].is_number()) {
-            // total_duration is the estimated total time, calculate remaining
-            int total_seconds = static_cast<int>(stats["total_duration"].get<double>());
-            int elapsed_seconds = lv_subject_get_int(&print_duration_);
-            int remaining_seconds = std::max(0, total_seconds - elapsed_seconds);
-            lv_subject_set_int(&print_time_left_, remaining_seconds);
+            int total_elapsed = static_cast<int>(stats["total_duration"].get<double>());
+            lv_subject_set_int(&print_elapsed_, total_elapsed);
+
+            // Estimate remaining from progress: elapsed * (1 - progress) / progress
+            // Requires >= 5% progress to avoid noisy estimates at low progress values
+            int progress = lv_subject_get_int(&print_progress_);
+            if (progress >= 5 && progress < 100) {
+                int remaining = static_cast<int>(static_cast<double>(total_elapsed) *
+                                                 (100 - progress) / progress);
+                lv_subject_set_int(&print_time_left_, remaining);
+            } else if (progress >= 100) {
+                lv_subject_set_int(&print_time_left_, 0);
+            }
         }
     }
 }

@@ -464,6 +464,9 @@ class PrinterState {
     lv_subject_t* get_print_duration_subject() {
         return print_domain_.get_print_duration_subject();
     }
+    lv_subject_t* get_print_elapsed_subject() {
+        return print_domain_.get_print_elapsed_subject();
+    }
     lv_subject_t* get_print_time_left_subject() {
         return print_domain_.get_print_time_left_subject();
     }

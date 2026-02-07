@@ -2052,7 +2052,7 @@ void MoonrakerClientMock::dispatch_enhanced_print_status() {
                     {{"state", get_print_state_string()},
                      {"filename", filename},
                      {"print_duration", elapsed},
-                     {"total_duration", total_time}, // Bug fix: was using elapsed, should be total
+                     {"total_duration", elapsed}, // Wall-clock elapsed (matches real Moonraker)
                      {"filament_used", 0.0},
                      {"message", ""},
                      {"info", {{"current_layer", current_layer}, {"total_layer", total_layers}}}}},
@@ -2779,7 +2779,7 @@ void MoonrakerClientMock::temperature_simulation_loop() {
              {{"state", print_state_str},
               {"filename", filename},
               {"print_duration", elapsed},
-              {"total_duration", total_time}, // Bug fix: was using elapsed, should be total
+              {"total_duration", elapsed}, // Wall-clock elapsed (matches real Moonraker)
               {"filament_used", 0.0},
               {"message", ""},
               {"info", {{"current_layer", current_layer}, {"total_layer", total_layers}}}}},
