@@ -51,8 +51,8 @@ std::string HumiditySensorManager::category_name() const {
 void HumiditySensorManager::discover(const std::vector<std::string>& klipper_objects) {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
 
-    spdlog::info("[HumiditySensorManager] Discovering humidity sensors from {} objects",
-                 klipper_objects.size());
+    spdlog::debug("[HumiditySensorManager] Discovering humidity sensors from {} objects",
+                  klipper_objects.size());
 
     // Clear existing sensors
     sensors_.clear();
@@ -254,7 +254,7 @@ void HumiditySensorManager::init_subjects() {
         return;
     }
 
-    spdlog::debug("[HumiditySensorManager] Initializing subjects");
+    spdlog::trace("[HumiditySensorManager] Initializing subjects");
 
     // Initialize subjects with SubjectManager for automatic cleanup
     // -1 = no sensor assigned, 0+ = humidity x 10
@@ -269,7 +269,7 @@ void HumiditySensorManager::init_subjects() {
                               "chamber_humidity_text", subjects_);
 
     subjects_initialized_ = true;
-    spdlog::debug("[HumiditySensorManager] Subjects initialized");
+    spdlog::trace("[HumiditySensorManager] Subjects initialized");
 }
 
 void HumiditySensorManager::deinit_subjects() {
@@ -277,10 +277,10 @@ void HumiditySensorManager::deinit_subjects() {
         return;
     }
 
-    spdlog::debug("[HumiditySensorManager] Deinitializing subjects");
+    spdlog::trace("[HumiditySensorManager] Deinitializing subjects");
     subjects_.deinit_all();
     subjects_initialized_ = false;
-    spdlog::debug("[HumiditySensorManager] Subjects deinitialized");
+    spdlog::trace("[HumiditySensorManager] Subjects deinitialized");
 }
 
 // ============================================================================

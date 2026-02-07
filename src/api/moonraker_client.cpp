@@ -704,7 +704,7 @@ SubscriptionId MoonrakerClient::register_notify_update(std::function<void(json)>
         std::lock_guard<std::mutex> lock(callbacks_mutex_);
         notify_callbacks_.emplace(id, cb);
     }
-    spdlog::debug("[Moonraker Client] Registered notify callback with ID {}", id);
+    spdlog::trace("[Moonraker Client] Registered notify callback with ID {}", id);
     return id;
 }
 

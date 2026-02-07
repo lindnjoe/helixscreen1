@@ -138,7 +138,7 @@ void AmsState::init_subjects(bool register_xml) {
         return;
     }
 
-    spdlog::debug("[AMS State] Initializing subjects");
+    spdlog::trace("[AMS State] Initializing subjects");
 
     // System-level subjects
     INIT_SUBJECT_INT(ams_type, static_cast<int>(AmsType::NONE), subjects_, register_xml);
@@ -292,13 +292,13 @@ void AmsState::deinit_subjects() {
         return;
     }
 
-    spdlog::debug("[AMS State] Deinitializing subjects");
+    spdlog::trace("[AMS State] Deinitializing subjects");
 
     // Use SubjectManager for automatic cleanup of all registered subjects
     subjects_.deinit_all();
 
     initialized_ = false;
-    spdlog::debug("[AMS State] Subjects deinitialized");
+    spdlog::trace("[AMS State] Subjects deinitialized");
 }
 
 void AmsState::init_backend_from_hardware(const helix::PrinterDiscovery& hardware,

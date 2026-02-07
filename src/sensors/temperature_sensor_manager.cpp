@@ -51,8 +51,8 @@ std::string TemperatureSensorManager::category_name() const {
 void TemperatureSensorManager::discover(const std::vector<std::string>& klipper_objects) {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
 
-    spdlog::info("[TemperatureSensorManager] Discovering temperature sensors from {} objects",
-                 klipper_objects.size());
+    spdlog::debug("[TemperatureSensorManager] Discovering temperature sensors from {} objects",
+                  klipper_objects.size());
 
     // Clear existing sensors
     sensors_.clear();
@@ -305,12 +305,12 @@ void TemperatureSensorManager::init_subjects() {
         return;
     }
 
-    spdlog::debug("[TemperatureSensorManager] Initializing subjects");
+    spdlog::trace("[TemperatureSensorManager] Initializing subjects");
 
     UI_MANAGED_SUBJECT_INT(sensor_count_, 0, "temp_sensor_count", subjects_);
 
     subjects_initialized_ = true;
-    spdlog::debug("[TemperatureSensorManager] Subjects initialized");
+    spdlog::trace("[TemperatureSensorManager] Subjects initialized");
 }
 
 void TemperatureSensorManager::deinit_subjects() {
@@ -318,14 +318,14 @@ void TemperatureSensorManager::deinit_subjects() {
         return;
     }
 
-    spdlog::debug("[TemperatureSensorManager] Deinitializing subjects");
+    spdlog::trace("[TemperatureSensorManager] Deinitializing subjects");
 
     // Clear dynamic subjects (their destructors handle lv_subject_deinit)
     temp_subjects_.clear();
 
     subjects_.deinit_all();
     subjects_initialized_ = false;
-    spdlog::debug("[TemperatureSensorManager] Subjects deinitialized");
+    spdlog::trace("[TemperatureSensorManager] Subjects deinitialized");
 }
 
 // ============================================================================

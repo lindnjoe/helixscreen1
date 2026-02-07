@@ -113,7 +113,8 @@ void PrinterLedState::reset_for_testing() {
         return;
     }
 
-    spdlog::info("[PrinterLedState] reset_for_testing: Deinitializing subjects to clear observers");
+    spdlog::debug(
+        "[PrinterLedState] reset_for_testing: Deinitializing subjects to clear observers");
 
     // Use SubjectManager for automatic subject cleanup
     subjects_.deinit_all();

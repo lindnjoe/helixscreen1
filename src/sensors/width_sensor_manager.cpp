@@ -51,8 +51,8 @@ std::string WidthSensorManager::category_name() const {
 void WidthSensorManager::discover(const std::vector<std::string>& klipper_objects) {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
 
-    spdlog::info("[WidthSensorManager] Discovering width sensors from {} objects",
-                 klipper_objects.size());
+    spdlog::debug("[WidthSensorManager] Discovering width sensors from {} objects",
+                  klipper_objects.size());
 
     // Clear existing sensors
     sensors_.clear();
@@ -242,7 +242,7 @@ void WidthSensorManager::init_subjects() {
         return;
     }
 
-    spdlog::debug("[WidthSensorManager] Initializing subjects");
+    spdlog::trace("[WidthSensorManager] Initializing subjects");
 
     // Initialize subjects with SubjectManager for automatic cleanup
     // -1 = no sensor assigned, 0+ = diameter in mm * 1000
@@ -253,7 +253,7 @@ void WidthSensorManager::init_subjects() {
                               subjects_);
 
     subjects_initialized_ = true;
-    spdlog::debug("[WidthSensorManager] Subjects initialized");
+    spdlog::trace("[WidthSensorManager] Subjects initialized");
 }
 
 void WidthSensorManager::deinit_subjects() {
@@ -261,10 +261,10 @@ void WidthSensorManager::deinit_subjects() {
         return;
     }
 
-    spdlog::debug("[WidthSensorManager] Deinitializing subjects");
+    spdlog::trace("[WidthSensorManager] Deinitializing subjects");
     subjects_.deinit_all();
     subjects_initialized_ = false;
-    spdlog::debug("[WidthSensorManager] Subjects deinitialized");
+    spdlog::trace("[WidthSensorManager] Subjects deinitialized");
 }
 
 // ============================================================================

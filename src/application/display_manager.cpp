@@ -92,7 +92,7 @@ bool DisplayManager::init(const Config& config) {
         return false;
     }
 
-    spdlog::info("[DisplayManager] Using backend: {}", m_backend->name());
+    spdlog::debug("[DisplayManager] Using backend: {}", m_backend->name());
 
     // Determine display dimensions
     m_width = config.width;

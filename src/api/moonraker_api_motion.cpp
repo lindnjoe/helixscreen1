@@ -586,7 +586,7 @@ void MoonrakerAPI::update_safety_limits_from_printer(SuccessCallback on_success,
                     double max_velocity_mm_s = settings["printer"]["max_velocity"].get<double>();
                     safety_limits_.max_feedrate_mm_min = max_velocity_mm_s * 60.0;
                     updated = true;
-                    spdlog::info(
+                    spdlog::debug(
                         "[Moonraker API] Updated max_feedrate from printer config: {} mm/min",
                         safety_limits_.max_feedrate_mm_min);
                 }
@@ -672,24 +672,24 @@ void MoonrakerAPI::update_safety_limits_from_printer(SuccessCallback on_success,
                             double min_extrude = value["min_extrude_temp"].get<double>();
                             safety_limits_.min_extrude_temp_celsius = min_extrude;
                             updated = true;
-                            spdlog::info("[Moonraker API] min_extrude_temp from config: {}°C",
-                                         min_extrude);
+                            spdlog::debug("[Moonraker API] min_extrude_temp from config: {}°C",
+                                          min_extrude);
                         }
                     }
                 }
 
                 if (updated) {
-                    spdlog::info(
+                    spdlog::debug(
                         "[Moonraker API] Updated safety limits from printer configuration:");
-                    spdlog::info("[Moonraker API]   Temperature: {} to {}°C",
-                                 safety_limits_.min_temperature_celsius,
-                                 safety_limits_.max_temperature_celsius);
-                    spdlog::info("[Moonraker API]   Position: {} to {}mm",
-                                 safety_limits_.min_absolute_position_mm,
-                                 safety_limits_.max_absolute_position_mm);
-                    spdlog::info("[Moonraker API]   Feedrate: {} to {} mm/min",
-                                 safety_limits_.min_feedrate_mm_min,
-                                 safety_limits_.max_feedrate_mm_min);
+                    spdlog::debug("[Moonraker API]   Temperature: {} to {}°C",
+                                  safety_limits_.min_temperature_celsius,
+                                  safety_limits_.max_temperature_celsius);
+                    spdlog::debug("[Moonraker API]   Position: {} to {}mm",
+                                  safety_limits_.min_absolute_position_mm,
+                                  safety_limits_.max_absolute_position_mm);
+                    spdlog::debug("[Moonraker API]   Feedrate: {} to {} mm/min",
+                                  safety_limits_.min_feedrate_mm_min,
+                                  safety_limits_.max_feedrate_mm_min);
                 } else {
                     spdlog::debug("[Moonraker API] No safety limit overrides found in printer "
                                   "config, using defaults");

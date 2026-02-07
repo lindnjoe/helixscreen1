@@ -98,8 +98,8 @@ void ColorSensorManager::discover_from_moonraker(const nlohmann::json& moonraker
         }
     }
 
-    spdlog::info("[ColorSensorManager] Discovering color sensors from {} device IDs",
-                 device_ids.size());
+    spdlog::debug("[ColorSensorManager] Discovering color sensors from {} device IDs",
+                  device_ids.size());
 
     // Clear existing sensors
     sensors_.clear();
@@ -282,7 +282,7 @@ void ColorSensorManager::init_subjects() {
         return;
     }
 
-    spdlog::debug("[ColorSensorManager] Initializing subjects");
+    spdlog::trace("[ColorSensorManager] Initializing subjects");
 
     // Initialize subjects with SubjectManager for automatic cleanup
     // Empty string = no sensor assigned
@@ -293,7 +293,7 @@ void ColorSensorManager::init_subjects() {
     UI_MANAGED_SUBJECT_INT(sensor_count_, 0, "color_sensor_count", subjects_);
 
     subjects_initialized_ = true;
-    spdlog::debug("[ColorSensorManager] Subjects initialized");
+    spdlog::trace("[ColorSensorManager] Subjects initialized");
 }
 
 void ColorSensorManager::deinit_subjects() {
@@ -301,10 +301,10 @@ void ColorSensorManager::deinit_subjects() {
         return;
     }
 
-    spdlog::debug("[ColorSensorManager] Deinitializing subjects");
+    spdlog::trace("[ColorSensorManager] Deinitializing subjects");
     subjects_.deinit_all();
     subjects_initialized_ = false;
-    spdlog::debug("[ColorSensorManager] Subjects deinitialized");
+    spdlog::trace("[ColorSensorManager] Subjects deinitialized");
 }
 
 // ============================================================================

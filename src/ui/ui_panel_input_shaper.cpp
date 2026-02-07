@@ -68,7 +68,7 @@ InputShaperPanel::~InputShaperPanel() {
 
 void init_input_shaper_row_handler() {
     lv_xml_register_event_cb(nullptr, "on_input_shaper_row_clicked", on_input_shaper_row_clicked);
-    spdlog::debug("[InputShaper] Row click callback registered");
+    spdlog::trace("[InputShaper] Row click callback registered");
 }
 
 /**

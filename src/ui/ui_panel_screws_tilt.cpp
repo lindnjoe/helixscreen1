@@ -51,7 +51,7 @@ void destroy_screws_tilt_panel() {
 
 void init_screws_tilt_row_handler() {
     lv_xml_register_event_cb(nullptr, "on_screws_tilt_row_clicked", on_screws_tilt_row_clicked);
-    spdlog::debug("[ScrewsTilt] Row click callback registered");
+    spdlog::trace("[ScrewsTilt] Row click callback registered");
 }
 
 /**

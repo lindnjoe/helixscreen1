@@ -626,8 +626,8 @@ bool Application::register_widgets() {
 
     // Log system memory info
     auto mem = helix::get_system_memory_info();
-    spdlog::info("[Application] System memory: total={}MB, available={}MB", mem.total_kb / 1024,
-                 mem.available_mb());
+    spdlog::debug("[Application] System memory: total={}MB, available={}MB", mem.total_kb / 1024,
+                  mem.available_mb());
 
     spdlog::debug("[Application] Widgets registered");
     return true;
@@ -649,7 +649,7 @@ bool Application::init_translations() {
             "[Application] Failed to load LVGL translations - UI will use English defaults");
         // Not fatal - English will work via fallback (tag = English text)
     } else {
-        spdlog::info("[Application] LVGL translations loaded successfully");
+        spdlog::debug("[Application] LVGL translations loaded successfully");
     }
 
     // Initialize lv_i18n translation system (for plural forms and runtime lookups)
@@ -658,7 +658,7 @@ bool Application::init_translations() {
         spdlog::warn(
             "[Application] Failed to initialize lv_i18n - plural translations unavailable");
     } else {
-        spdlog::info("[Application] lv_i18n initialized successfully");
+        spdlog::debug("[Application] lv_i18n initialized successfully");
     }
 
     // Set initial language from config (sync both systems)
@@ -858,7 +858,7 @@ bool Application::init_moonraker() {
 }
 
 bool Application::init_plugins() {
-    spdlog::info("[Application] Initializing plugin system");
+    spdlog::debug("[Application] Initializing plugin system");
 
     m_plugin_manager = std::make_unique<helix::plugin::PluginManager>();
 
@@ -870,7 +870,7 @@ bool Application::init_plugins() {
     auto enabled_plugins =
         m_config->get<std::vector<std::string>>("/plugins/enabled", std::vector<std::string>{});
     m_plugin_manager->set_enabled_plugins(enabled_plugins);
-    spdlog::info("[Application] Enabled plugins from config: {}", enabled_plugins.size());
+    spdlog::debug("[Application] Enabled plugins from config: {}", enabled_plugins.size());
 
     // Discover plugins in the plugins directory
     if (!m_plugin_manager->discover_plugins("plugins")) {
@@ -928,7 +928,7 @@ bool Application::init_plugins() {
     }
 
     auto loaded = m_plugin_manager->get_loaded_plugins();
-    spdlog::info("[Application] {} plugin(s) loaded successfully", loaded.size());
+    spdlog::debug("[Application] {} plugin(s) loaded successfully", loaded.size());
 
     helix::MemoryMonitor::log_now("after_plugins_loaded");
     return all_loaded;
@@ -1380,7 +1380,7 @@ void Application::setup_discovery_callbacks() {
 
                         ui_queue_update([min_temp, max_temp, min_extrude]() {
                             get_global_filament_panel().set_limits(min_temp, max_temp, min_extrude);
-                            spdlog::info("[Application] Safety limits propagated to panels");
+                            spdlog::debug("[Application] Safety limits propagated to panels");
                         });
                     },
                     [](const MoonrakerError& err) {
@@ -1621,7 +1621,7 @@ void Application::init_action_prompt() {
             }
         });
 
-    spdlog::info("[Application] Action prompt system initialized");
+    spdlog::debug("[Application] Action prompt system initialized");
 }
 
 void Application::check_wifi_availability() {

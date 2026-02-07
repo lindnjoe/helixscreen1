@@ -87,7 +87,7 @@ void PrinterPrintState::deinit_subjects() {
         return;
     }
 
-    spdlog::debug("[PrinterPrintState] Deinitializing subjects");
+    spdlog::trace("[PrinterPrintState] Deinitializing subjects");
     subjects_.deinit_all();
     subjects_initialized_ = false;
 }
@@ -99,7 +99,7 @@ void PrinterPrintState::reset_for_testing() {
         return;
     }
 
-    spdlog::info(
+    spdlog::debug(
         "[PrinterPrintState] reset_for_testing: Deinitializing subjects to clear observers");
 
     // Use SubjectManager for automatic subject cleanup

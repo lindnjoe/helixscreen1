@@ -594,8 +594,8 @@ void PrintSelectPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
                     bool is_printer_source =
                         !self->usb_source_ || !self->usb_source_->is_usb_active();
                     if (self->file_list_.empty() && is_printer_source) {
-                        spdlog::info("[{}] Connection established, refreshing file list",
-                                     self->get_name());
+                        spdlog::debug("[{}] Connection established, refreshing file list",
+                                      self->get_name());
                         self->refresh_files();
                     }
 

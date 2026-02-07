@@ -109,7 +109,7 @@ void PrinterState::reset_for_testing() {
         return; // Nothing to reset
     }
 
-    spdlog::info("[PrinterState] reset_for_testing: Deinitializing subjects to clear observers");
+    spdlog::debug("[PrinterState] reset_for_testing: Deinitializing subjects to clear observers");
 
     // Reset temperature state component
     temperature_state_.reset_for_testing();

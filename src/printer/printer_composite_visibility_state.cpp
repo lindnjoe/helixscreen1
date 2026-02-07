@@ -56,8 +56,8 @@ void PrinterCompositeVisibilityState::reset_for_testing() {
         return;
     }
 
-    spdlog::info("[PrinterCompositeVisibilityState] reset_for_testing: Deinitializing subjects to "
-                 "clear observers");
+    spdlog::debug("[PrinterCompositeVisibilityState] reset_for_testing: Deinitializing subjects to "
+                  "clear observers");
 
     // Use SubjectManager for automatic subject cleanup
     subjects_.deinit_all();

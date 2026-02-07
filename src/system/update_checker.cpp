@@ -261,7 +261,7 @@ void UpdateChecker::init() {
 
     init_subjects();
 
-    spdlog::info("[UpdateChecker] Initialized");
+    spdlog::debug("[UpdateChecker] Initialized");
     initialized_ = true;
 }
 

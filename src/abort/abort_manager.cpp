@@ -78,7 +78,7 @@ void AbortManager::deinit_subjects() {
     subjects_.deinit_all();
 
     subjects_initialized_ = false;
-    spdlog::debug("[AbortManager] Subjects deinitialized");
+    spdlog::trace("[AbortManager] Subjects deinitialized");
 }
 
 // ============================================================================

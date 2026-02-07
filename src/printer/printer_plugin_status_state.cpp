@@ -54,7 +54,7 @@ void PrinterPluginStatusState::reset_for_testing() {
         return;
     }
 
-    spdlog::info(
+    spdlog::debug(
         "[PrinterPluginStatusState] reset_for_testing: Deinitializing subjects to clear observers");
 
     // Use SubjectManager for automatic subject cleanup

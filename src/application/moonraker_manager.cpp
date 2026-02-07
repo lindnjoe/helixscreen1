@@ -411,8 +411,8 @@ void MoonrakerManager::init_print_start_collector() {
         if (!profile_name.empty()) {
             auto profile = PrintStartProfile::load(profile_name);
             m_print_start_collector->set_profile(profile);
-            spdlog::info("[MoonrakerManager] Loaded print start profile '{}' for printer '{}'",
-                         profile_name, printer_type);
+            spdlog::debug("[MoonrakerManager] Loaded print start profile '{}' for printer '{}'",
+                          profile_name, printer_type);
         } else {
             spdlog::debug(
                 "[MoonrakerManager] No print start profile for printer '{}', using default",

@@ -155,8 +155,9 @@ void PrintPreparationManager::analyze_print_start_macro_internal() {
     }
 
     macro_analysis_in_progress_ = true;
-    spdlog::info("[PrintPreparationManager] Starting PRINT_START macro analysis (attempt {} of {})",
-                 macro_analysis_retry_count_ + 1, MAX_MACRO_ANALYSIS_RETRIES + 1);
+    spdlog::debug(
+        "[PrintPreparationManager] Starting PRINT_START macro analysis (attempt {} of {})",
+        macro_analysis_retry_count_ + 1, MAX_MACRO_ANALYSIS_RETRIES + 1);
 
     auto* self = this;
     auto alive = alive_guard_; // Capture shared_ptr to detect destruction

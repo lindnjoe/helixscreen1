@@ -75,7 +75,7 @@ bool WifiBackendMock::is_running() const {
 void WifiBackendMock::register_event_callback(const std::string& name,
                                               std::function<void(const std::string&)> callback) {
     callbacks_[name] = callback;
-    spdlog::debug("[WifiBackend] Mock: Registered callback for '{}'", name);
+    spdlog::trace("[WifiBackend] Mock: Registered callback for '{}'", name);
 }
 
 void WifiBackendMock::fire_event(const std::string& event_name, const std::string& data) {

@@ -179,7 +179,7 @@ bool PluginManager::load_all() {
         return false;
     }
 
-    spdlog::info("[plugin] Loading {} plugins in dependency order", load_order_.size());
+    spdlog::debug("[plugin] Loading {} plugins in dependency order", load_order_.size());
 
     int loaded_count = 0;
     for (const auto& plugin_id : load_order_) {
@@ -188,7 +188,7 @@ bool PluginManager::load_all() {
         }
     }
 
-    spdlog::info("[plugin] Loaded {} of {} plugins", loaded_count, load_order_.size());
+    spdlog::debug("[plugin] Loaded {} of {} plugins", loaded_count, load_order_.size());
     return loaded_count == static_cast<int>(load_order_.size());
 }
 
@@ -417,7 +417,7 @@ bool PluginManager::disable_plugin(const std::string& plugin_id) {
 // ============================================================================
 
 void PluginManager::on_moonraker_connected() {
-    spdlog::info("[plugin] Moonraker connected, applying deferred subscriptions");
+    spdlog::debug("[plugin] Moonraker connected, applying deferred subscriptions");
 
     for (auto& [plugin_id, loaded] : loaded_) {
         if (loaded.api) {

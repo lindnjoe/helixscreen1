@@ -101,7 +101,7 @@ void FilamentSensorManager::init_subjects() {
         return;
     }
 
-    spdlog::debug("[FilamentSensorManager] Initializing subjects");
+    spdlog::trace("[FilamentSensorManager] Initializing subjects");
 
     // Initialize all subjects with SubjectManager for automatic cleanup
     // -1 = no sensor, 0 = no filament/not triggered, 1 = filament detected/triggered
@@ -116,7 +116,7 @@ void FilamentSensorManager::init_subjects() {
     UI_MANAGED_SUBJECT_INT(sensor_count_, 0, "filament_sensor_count", subjects_);
 
     subjects_initialized_ = true;
-    spdlog::debug("[FilamentSensorManager] Subjects initialized");
+    spdlog::trace("[FilamentSensorManager] Subjects initialized");
 }
 
 void FilamentSensorManager::deinit_subjects() {
@@ -124,13 +124,13 @@ void FilamentSensorManager::deinit_subjects() {
         return;
     }
 
-    spdlog::debug("[FilamentSensorManager] Deinitializing subjects");
+    spdlog::trace("[FilamentSensorManager] Deinitializing subjects");
 
     // Deinitialize all subjects to disconnect observers before lv_deinit()
     subjects_.deinit_all();
 
     subjects_initialized_ = false;
-    spdlog::debug("[FilamentSensorManager] Subjects deinitialized");
+    spdlog::trace("[FilamentSensorManager] Subjects deinitialized");
 }
 
 void FilamentSensorManager::discover_sensors(const std::vector<std::string>& klipper_sensor_names) {
@@ -140,7 +140,7 @@ void FilamentSensorManager::discover_sensors(const std::vector<std::string>& kli
     // This ensures we wait for sensor state to stabilize AFTER connection is established
     startup_time_ = std::chrono::steady_clock::now();
 
-    spdlog::info("[FilamentSensorManager] Discovering {} sensors", klipper_sensor_names.size());
+    spdlog::debug("[FilamentSensorManager] Discovering {} sensors", klipper_sensor_names.size());
 
     // Clear existing sensors but preserve state for reconnection
     sensors_.clear();
@@ -211,7 +211,7 @@ void FilamentSensorManager::discover_sensors(const std::vector<std::string>& kli
         lv_subject_set_int(&sensor_count_, static_cast<int>(sensors_.size()));
     }
 
-    spdlog::info("[FilamentSensorManager] Discovered {} filament sensors", sensors_.size());
+    spdlog::debug("[FilamentSensorManager] Discovered {} filament sensors", sensors_.size());
 }
 
 bool FilamentSensorManager::has_sensors() const {
@@ -287,10 +287,10 @@ void FilamentSensorManager::load_config_from_file() {
     update_subjects();
 
     // Log final state of all sensors at INFO for debugging
-    spdlog::info("[FilamentSensorManager] Config loaded, master_enabled={}", master_enabled_);
+    spdlog::debug("[FilamentSensorManager] Config loaded, master_enabled={}", master_enabled_);
     for (const auto& sensor : sensors_) {
-        spdlog::info("[FilamentSensorManager]   {} -> role={}, enabled={}", sensor.klipper_name,
-                     role_to_config_string(sensor.role), sensor.enabled);
+        spdlog::debug("[FilamentSensorManager]   {} -> role={}, enabled={}", sensor.klipper_name,
+                      role_to_config_string(sensor.role), sensor.enabled);
     }
 }
 
@@ -602,7 +602,7 @@ void FilamentSensorManager::update_from_status(const json& status) {
             } else {
                 // Defer subject updates to main LVGL thread via ui_async_call()
                 // This avoids the "Invalidate area not allowed during rendering" assertion
-                spdlog::info("[FilamentSensorManager] async_mode: deferring via ui_async_call");
+                spdlog::debug("[FilamentSensorManager] async_mode: deferring via ui_async_call");
                 ui_async_call(async_update_subjects_callback, nullptr);
             }
         }

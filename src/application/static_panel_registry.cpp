@@ -53,7 +53,7 @@ void StaticPanelRegistry::destroy_all() {
     // This ensures dependencies are respected: panels created later
     // (which may depend on earlier ones) are destroyed first
     for (auto it = destroyers_.rbegin(); it != destroyers_.rend(); ++it) {
-        spdlog::debug("[StaticPanelRegistry] Destroying: {}", it->name);
+        spdlog::trace("[StaticPanelRegistry] Destroying: {}", it->name);
         if (it->destroy_fn) {
             it->destroy_fn();
         }

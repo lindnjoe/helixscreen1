@@ -1064,8 +1064,8 @@ void theme_manager_init(lv_display_t* display, bool use_dark_mode_param) {
 
     if (current_theme) {
         lv_display_set_theme(display, current_theme);
-        spdlog::info("[Theme] Initialized HelixScreen theme: {} mode",
-                     use_dark_mode ? "dark" : "light");
+        spdlog::debug("[Theme] Initialized HelixScreen theme: {} mode",
+                      use_dark_mode ? "dark" : "light");
         spdlog::trace("[Theme] Colors: primary={}, screen={}, card={}", mode_palette.primary,
                       mode_palette.screen_bg, mode_palette.card_bg);
     } else {

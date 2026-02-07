@@ -50,8 +50,8 @@ std::string AccelSensorManager::category_name() const {
 void AccelSensorManager::discover_from_config(const nlohmann::json& config_keys) {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
 
-    spdlog::info("[AccelSensorManager] Discovering accelerometer sensors from {} config keys",
-                 config_keys.size());
+    spdlog::debug("[AccelSensorManager] Discovering accelerometer sensors from {} config keys",
+                  config_keys.size());
 
     // Clear existing sensors
     sensors_.clear();
@@ -238,7 +238,7 @@ void AccelSensorManager::init_subjects() {
         return;
     }
 
-    spdlog::debug("[AccelSensorManager] Initializing subjects");
+    spdlog::trace("[AccelSensorManager] Initializing subjects");
 
     // Initialize subjects with SubjectManager for automatic cleanup
     // -1 = no sensor discovered, 0 = disconnected, 1 = connected
@@ -246,7 +246,7 @@ void AccelSensorManager::init_subjects() {
     UI_MANAGED_SUBJECT_INT(sensor_count_, 0, "accel_count", subjects_);
 
     subjects_initialized_ = true;
-    spdlog::debug("[AccelSensorManager] Subjects initialized");
+    spdlog::trace("[AccelSensorManager] Subjects initialized");
 }
 
 void AccelSensorManager::deinit_subjects() {
@@ -254,10 +254,10 @@ void AccelSensorManager::deinit_subjects() {
         return;
     }
 
-    spdlog::debug("[AccelSensorManager] Deinitializing subjects");
+    spdlog::trace("[AccelSensorManager] Deinitializing subjects");
     subjects_.deinit_all();
     subjects_initialized_ = false;
-    spdlog::debug("[AccelSensorManager] Subjects deinitialized");
+    spdlog::trace("[AccelSensorManager] Subjects deinitialized");
 }
 
 // ============================================================================

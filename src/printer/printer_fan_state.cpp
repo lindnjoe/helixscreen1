@@ -111,7 +111,8 @@ void PrinterFanState::reset_for_testing() {
         return;
     }
 
-    spdlog::info("[PrinterFanState] reset_for_testing: Deinitializing subjects to clear observers");
+    spdlog::debug(
+        "[PrinterFanState] reset_for_testing: Deinitializing subjects to clear observers");
 
     // Deinit per-fan speed subjects (unique_ptr handles memory, we just need to deinit)
     for (auto& [name, subject_ptr] : fan_speed_subjects_) {
@@ -223,8 +224,8 @@ void PrinterFanState::init_fans(const std::vector<std::string>& fan_objects,
 
     // Initialize and bump version to notify UI
     lv_subject_set_int(&fans_version_, lv_subject_get_int(&fans_version_) + 1);
-    spdlog::info("[PrinterFanState] Initialized {} fans with {} speed subjects (version {})",
-                 fans_.size(), fan_speed_subjects_.size(), lv_subject_get_int(&fans_version_));
+    spdlog::debug("[PrinterFanState] Initialized {} fans with {} speed subjects (version {})",
+                  fans_.size(), fan_speed_subjects_.size(), lv_subject_get_int(&fans_version_));
 }
 
 void PrinterFanState::update_fan_speed(const std::string& object_name, double speed) {

@@ -105,7 +105,7 @@ void MemoryProfiler::init(bool enable_periodic) {
     int64_t rss_kb = 0, hwm_kb = 0;
     if (read_memory_stats(rss_kb, hwm_kb)) {
         g_baseline_rss_kb = rss_kb;
-        spdlog::info("[Memory Profiling] baseline RSS={}KB", rss_kb);
+        spdlog::debug("[Memory Profiling] baseline RSS={}KB", rss_kb);
     }
 
     // Install SIGUSR1 handler for on-demand snapshots
@@ -114,8 +114,8 @@ void MemoryProfiler::init(bool enable_periodic) {
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = SA_RESTART;
     if (sigaction(SIGUSR1, &sa, nullptr) == 0) {
-        spdlog::info("[Memory Profiling] SIGUSR1 handler installed (kill -USR1 {} for snapshot)",
-                     getpid());
+        spdlog::debug("[Memory Profiling] SIGUSR1 handler installed (kill -USR1 {} for snapshot)",
+                      getpid());
     }
 
     g_periodic_enabled.store(enable_periodic, std::memory_order_release);

@@ -65,7 +65,7 @@ void PrinterCapabilitiesState::reset_for_testing() {
         return;
     }
 
-    spdlog::info(
+    spdlog::debug(
         "[PrinterCapabilitiesState] reset_for_testing: Deinitializing subjects to clear observers");
 
     // Use SubjectManager for automatic subject cleanup
@@ -108,20 +108,20 @@ void PrinterCapabilitiesState::set_hardware(const PrinterDiscovery& hardware,
 
     // Spoolman requires async check - default to 0, updated separately via set_spoolman_available()
 
-    spdlog::info("[PrinterCapabilitiesState] Hardware set: probe={}, heater_bed={}, LED={}, "
-                 "accelerometer={}, speaker={}, timelapse={}, fw_retraction={}, chamber_sensor={}",
-                 hardware.has_probe(), hardware.has_heater_bed(), hardware.has_led(),
-                 hardware.has_accelerometer(), hardware.has_speaker(), hardware.has_timelapse(),
-                 hardware.has_firmware_retraction(), hardware.has_chamber_sensor());
-    spdlog::info("[PrinterCapabilitiesState] Hardware set (with overrides): {}",
-                 overrides.summary());
+    spdlog::debug("[PrinterCapabilitiesState] Hardware set: probe={}, heater_bed={}, LED={}, "
+                  "accelerometer={}, speaker={}, timelapse={}, fw_retraction={}, chamber_sensor={}",
+                  hardware.has_probe(), hardware.has_heater_bed(), hardware.has_led(),
+                  hardware.has_accelerometer(), hardware.has_speaker(), hardware.has_timelapse(),
+                  hardware.has_firmware_retraction(), hardware.has_chamber_sensor());
+    spdlog::debug("[PrinterCapabilitiesState] Hardware set (with overrides): {}",
+                  overrides.summary());
 }
 
 void PrinterCapabilitiesState::set_spoolman_available(bool available) {
     // Thread-safe: Use helix::async::invoke to update LVGL subject from any thread
     helix::async::invoke([this, available]() {
         lv_subject_set_int(&printer_has_spoolman_, available ? 1 : 0);
-        spdlog::info("[PrinterCapabilitiesState] Spoolman availability set: {}", available);
+        spdlog::debug("[PrinterCapabilitiesState] Spoolman availability set: {}", available);
     });
 }
 

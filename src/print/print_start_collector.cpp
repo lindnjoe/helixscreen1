@@ -572,7 +572,7 @@ void PrintStartCollector::set_profile(std::shared_ptr<PrintStartProfile> profile
     }
     profile_ = std::move(profile);
     if (profile_) {
-        spdlog::info("[PrintStartCollector] Using profile: {}", profile_->name());
+        spdlog::debug("[PrintStartCollector] Using profile: {}", profile_->name());
     } else {
         spdlog::info("[PrintStartCollector] No profile set, signal/pattern matching disabled");
     }

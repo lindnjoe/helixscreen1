@@ -224,13 +224,13 @@ void SettingsManager::deinit_subjects() {
         return;
     }
 
-    spdlog::debug("[SettingsManager] Deinitializing subjects");
+    spdlog::trace("[SettingsManager] Deinitializing subjects");
 
     // Use SubjectManager for RAII cleanup of all registered subjects
     subjects_.deinit_all();
 
     subjects_initialized_ = false;
-    spdlog::debug("[SettingsManager] Subjects deinitialized");
+    spdlog::trace("[SettingsManager] Subjects deinitialized");
 }
 
 void SettingsManager::set_moonraker_client(MoonrakerClient* client) {

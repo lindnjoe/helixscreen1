@@ -19,7 +19,7 @@ OverlayBase::~OverlayBase() {
     // Guard against Static Destruction Order Fiasco: spdlog may already be
     // destroyed if this overlay wasn't registered with StaticPanelRegistry.
     if (!NavigationManager::is_destroyed()) {
-        spdlog::debug("[OverlayBase] Destroyed");
+        spdlog::trace("[OverlayBase] Destroyed");
     }
 }
 

@@ -38,7 +38,7 @@ void PrinterExcludedObjectsState::deinit_subjects() {
         return;
     }
 
-    spdlog::debug("[PrinterExcludedObjectsState] Deinitializing subjects");
+    spdlog::trace("[PrinterExcludedObjectsState] Deinitializing subjects");
     subjects_.deinit_all();
     subjects_initialized_ = false;
 }
@@ -50,8 +50,8 @@ void PrinterExcludedObjectsState::reset_for_testing() {
         return;
     }
 
-    spdlog::info("[PrinterExcludedObjectsState] reset_for_testing: Deinitializing subjects to "
-                 "clear observers");
+    spdlog::debug("[PrinterExcludedObjectsState] reset_for_testing: Deinitializing subjects to "
+                  "clear observers");
 
     // Clear the excluded objects set
     excluded_objects_.clear();

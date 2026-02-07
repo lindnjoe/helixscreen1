@@ -35,7 +35,7 @@ void MemoryMonitor::start(int interval_ms) {
 
     monitor_thread_ = std::thread([this]() { monitor_loop(); });
 
-    spdlog::info("[MemoryMonitor] Started (interval={}ms)", interval_ms);
+    spdlog::debug("[MemoryMonitor] Started (interval={}ms)", interval_ms);
 }
 
 void MemoryMonitor::stop() {

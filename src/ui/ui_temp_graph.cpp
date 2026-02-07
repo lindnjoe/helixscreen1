@@ -805,7 +805,7 @@ int ui_temp_graph_add_series(ui_temp_graph_t* graph, const char* name, lv_color_
 
     graph->series_count++;
 
-    spdlog::debug("[TempGraph] Added series {} '{}' (slot {}, color 0x{:06X})", meta->id,
+    spdlog::trace("[TempGraph] Added series {} '{}' (slot {}, color 0x{:06X})", meta->id,
                   meta->name, slot, lv_color_to_u32(color));
 
     return meta->id;
@@ -1078,7 +1078,7 @@ void ui_temp_graph_set_series_gradient(ui_temp_graph_t* graph, int series_id, lv
 
     lv_obj_invalidate(graph->chart);
 
-    spdlog::debug("[TempGraph] Series {} gradient: bottom={}%, top={}%", series_id,
+    spdlog::trace("[TempGraph] Series {} gradient: bottom={}%, top={}%", series_id,
                   (bottom_opa * 100) / 255, (top_opa * 100) / 255);
 }
 

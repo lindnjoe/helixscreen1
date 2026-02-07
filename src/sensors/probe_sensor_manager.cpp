@@ -50,8 +50,8 @@ std::string ProbeSensorManager::category_name() const {
 void ProbeSensorManager::discover(const std::vector<std::string>& klipper_objects) {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
 
-    spdlog::info("[ProbeSensorManager] Discovering probe sensors from {} objects",
-                 klipper_objects.size());
+    spdlog::debug("[ProbeSensorManager] Discovering probe sensors from {} objects",
+                  klipper_objects.size());
 
     // Clear existing sensors
     sensors_.clear();
@@ -242,7 +242,7 @@ void ProbeSensorManager::init_subjects() {
         return;
     }
 
-    spdlog::debug("[ProbeSensorManager] Initializing subjects");
+    spdlog::trace("[ProbeSensorManager] Initializing subjects");
 
     // Initialize subjects with SubjectManager for automatic cleanup
     // -1 = no sensor assigned
@@ -252,7 +252,7 @@ void ProbeSensorManager::init_subjects() {
     UI_MANAGED_SUBJECT_INT(sensor_count_, 0, "probe_count", subjects_);
 
     subjects_initialized_ = true;
-    spdlog::debug("[ProbeSensorManager] Subjects initialized");
+    spdlog::trace("[ProbeSensorManager] Subjects initialized");
 }
 
 void ProbeSensorManager::deinit_subjects() {
@@ -260,10 +260,10 @@ void ProbeSensorManager::deinit_subjects() {
         return;
     }
 
-    spdlog::debug("[ProbeSensorManager] Deinitializing subjects");
+    spdlog::trace("[ProbeSensorManager] Deinitializing subjects");
     subjects_.deinit_all();
     subjects_initialized_ = false;
-    spdlog::debug("[ProbeSensorManager] Subjects deinitialized");
+    spdlog::trace("[ProbeSensorManager] Subjects deinitialized");
 }
 
 // ============================================================================

@@ -300,7 +300,7 @@ int ui_frequency_response_chart_add_series(ui_frequency_response_chart_t* chart,
         }
     }
 
-    spdlog::debug("[FreqChart] Added series {} '{}' (slot {}, color 0x{:06X})", series->id,
+    spdlog::trace("[FreqChart] Added series {} '{}' (slot {}, color 0x{:06X})", series->id,
                   series->name, slot, lv_color_to_u32(color) & 0xFFFFFF);
 
     return series->id;

@@ -112,7 +112,7 @@ HardwareValidationResult HardwareValidator::validate(Config* config,
                                                      const helix::PrinterDiscovery& hardware) {
     HardwareValidationResult result;
 
-    spdlog::info("[HardwareValidator] Starting hardware validation...");
+    spdlog::debug("[HardwareValidator] Starting hardware validation...");
 
     // Step 1: Check critical hardware exists
     validate_critical_hardware(hardware, result);

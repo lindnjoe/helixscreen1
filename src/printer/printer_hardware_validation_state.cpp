@@ -63,8 +63,8 @@ void PrinterHardwareValidationState::reset_for_testing() {
         return;
     }
 
-    spdlog::info("[PrinterHardwareValidationState] reset_for_testing: Deinitializing subjects to "
-                 "clear observers");
+    spdlog::debug("[PrinterHardwareValidationState] reset_for_testing: Deinitializing subjects to "
+                  "clear observers");
 
     // Clear the validation result
     hardware_validation_result_ = HardwareValidationResult{};

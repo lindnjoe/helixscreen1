@@ -272,7 +272,7 @@ void StandardMacros::init(const helix::PrinterDiscovery& hardware) {
     for (auto& slot : slots_) {
         if (!slot.fallback_macro.empty()) {
             if (!hardware.has_helix_macro(slot.fallback_macro)) {
-                spdlog::debug("[StandardMacros] Fallback {} not installed for {}",
+                spdlog::trace("[StandardMacros] Fallback {} not installed for {}",
                               slot.fallback_macro, slot.slot_name);
                 slot.fallback_macro.clear();
             }
@@ -312,7 +312,7 @@ void StandardMacros::auto_detect(const helix::PrinterDiscovery& hardware) {
             auto index = static_cast<size_t>(pattern_def.slot);
             if (index < slots_.size()) {
                 slots_[index].detected_macro = detected;
-                spdlog::debug("[StandardMacros] Detected {} -> {}", slots_[index].slot_name,
+                spdlog::trace("[StandardMacros] Detected {} -> {}", slots_[index].slot_name,
                               detected);
             }
         }

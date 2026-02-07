@@ -316,7 +316,7 @@ Modal::~Modal() {
         // dialog_ is a child of backdrop_ and was destroyed with it
         dialog_ = nullptr;
     }
-    spdlog::debug("[Modal] Destroyed");
+    spdlog::trace("[Modal] Destroyed");
 }
 
 // ============================================================================
