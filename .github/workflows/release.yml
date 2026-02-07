@@ -376,3 +376,91 @@ jobs:
         fail_on_unmatched_files: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ============================================================================
+  # Upload release artifacts to R2 for auto-update
+  # ============================================================================
+  upload-r2:
+    name: Upload to R2
+    runs-on: ubuntu-latest
+    needs: [release]
+    # Run for all tagged releases (including prereleases)
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+
+    - name: Flatten release files
+      run: |
+        mkdir -p release-files
+        find artifacts -name '*.tar.gz' -exec mv {} release-files/ \;
+        echo "Release files:"
+        ls -lh release-files/
+
+    - name: Extract version from tag
+      id: version
+      run: |
+        # Strip 'v' prefix: v0.9.5 -> 0.9.5
+        VERSION="${GITHUB_REF_NAME#v}"
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "tag=$GITHUB_REF_NAME" >> $GITHUB_OUTPUT
+        echo "Version: $VERSION (tag: $GITHUB_REF_NAME)"
+
+    - name: Generate release notes
+      id: notes
+      run: |
+        TAG_MESSAGE=$(git tag -l --format='%(contents:subject)' "$GITHUB_REF_NAME" 2>/dev/null || echo "")
+        if [ -z "$TAG_MESSAGE" ]; then
+          TAG_MESSAGE="Release $GITHUB_REF_NAME"
+        fi
+        echo "notes=$TAG_MESSAGE" >> $GITHUB_OUTPUT
+
+    - name: Validate R2 configuration
+      run: |
+        if [ -z "${{ vars.R2_PUBLIC_URL }}" ]; then
+          echo "::error::R2_PUBLIC_URL repository variable is not configured"
+          exit 1
+        fi
+
+    - name: Generate manifest
+      run: |
+        chmod +x scripts/generate-manifest.sh
+        scripts/generate-manifest.sh \
+          --version "${{ steps.version.outputs.version }}" \
+          --tag "${{ steps.version.outputs.tag }}" \
+          --notes "${{ steps.notes.outputs.notes }}" \
+          --dir release-files \
+          --base-url "${{ vars.R2_PUBLIC_URL }}/dev" \
+          --output release-files/manifest.json
+        echo "Generated manifest:"
+        cat release-files/manifest.json | jq .
+
+    - name: Upload to R2
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+      run: |
+        BUCKET="${{ vars.R2_BUCKET_NAME || 'helixscreen-releases' }}"
+
+        # Upload all tarballs
+        for tarball in release-files/*.tar.gz; do
+          filename=$(basename "$tarball")
+          echo "Uploading dev/$filename..."
+          aws s3 cp "$tarball" "s3://${BUCKET}/dev/$filename" \
+            --endpoint-url "$R2_ENDPOINT"
+        done
+
+        # Upload manifest
+        echo "Uploading dev/manifest.json..."
+        aws s3 cp release-files/manifest.json "s3://${BUCKET}/dev/manifest.json" \
+          --endpoint-url "$R2_ENDPOINT" \
+          --content-type "application/json"
+
+        echo "Upload complete! Manifest: ${{ vars.R2_PUBLIC_URL }}/dev/manifest.json"

@@ -818,3 +818,16 @@ TEST_CASE("UpdateChecker blocks download during print", "[update_checker]") {
 
     checker.shutdown();
 }
+
+TEST_CASE("UpdateChecker platform key defaults to pi in native build",
+          "[update_checker][platform]") {
+    auto& checker = UpdateChecker::instance();
+    checker.init();
+
+    auto name = checker.get_platform_asset_name();
+    // In native builds (no HELIX_PLATFORM_* define), defaults to "pi"
+    // Asset name format: helixscreen-{platform}-v{version}.tar.gz
+    REQUIRE(name.find("helixscreen-pi-") == 0);
+
+    checker.shutdown();
+}

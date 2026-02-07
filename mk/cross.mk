@@ -57,7 +57,7 @@ else ifeq ($(PLATFORM_TARGET),pi32)
     TARGET_TRIPLE := arm-linux-gnueabihf
     TARGET_CFLAGS := -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard \
         -I/usr/arm-linux-gnueabihf/include -I/usr/include/libdrm \
-        -Wno-error=conversion -Wno-error=sign-conversion -DHELIX_RELEASE_BUILD
+        -Wno-error=conversion -Wno-error=sign-conversion -DHELIX_RELEASE_BUILD -DHELIX_PLATFORM_PI32
     DISPLAY_BACKEND := drm
     ENABLE_SDL := no
     ENABLE_TINYGL_3D := yes
@@ -88,7 +88,7 @@ else ifeq ($(PLATFORM_TARGET),ad5m)
     # NOTE: AD5M framebuffer is 32bpp (ARGB8888), as is lv_conf.h (LV_COLOR_DEPTH=32)
     TARGET_CFLAGS := -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard -mtune=cortex-a7 \
         -Os -flto -ffunction-sections -fdata-sections \
-        -Wno-error=conversion -Wno-error=sign-conversion -DHELIX_RELEASE_BUILD
+        -Wno-error=conversion -Wno-error=sign-conversion -DHELIX_RELEASE_BUILD -DHELIX_PLATFORM_AD5M
     # -Wl,--gc-sections: Remove unused sections during linking (works with -ffunction-sections)
     # -flto: Must match compiler flag for LTO to work
     # -static: Fully static binary - no runtime dependencies on system libs
@@ -142,7 +142,7 @@ else ifeq ($(PLATFORM_TARGET),k1)
         -Os -flto=auto -ffunction-sections -fdata-sections \
         -fomit-frame-pointer -fno-unwind-tables -fno-asynchronous-unwind-tables \
         -fmerge-all-constants -fno-ident \
-        -Wno-error=conversion -Wno-error=sign-conversion -DHELIX_RELEASE_BUILD
+        -Wno-error=conversion -Wno-error=sign-conversion -DHELIX_RELEASE_BUILD -DHELIX_PLATFORM_K1
     # Linker flags:
     # -Wl,--gc-sections: Remove unused sections (works with -ffunction-sections)
     # -flto=auto: Match compiler LTO flag, uses all CPUs

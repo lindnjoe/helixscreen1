@@ -142,94 +142,41 @@ if [[ "$PLATFORM" == "all" ]]; then
     echo -e "${GREEN}Found platforms: ${PLATFORMS[*]}${NC}"
 else
     # Validate platform
-    if [[ ! "$PLATFORM" =~ ^(pi|ad5m|k1)$ ]]; then
-        echo -e "${RED}Error: Invalid platform '$PLATFORM'. Must be pi, ad5m, k1, or all${NC}" >&2
+    if [[ ! "$PLATFORM" =~ ^(pi|pi32|ad5m|k1)$ ]]; then
+        echo -e "${RED}Error: Invalid platform '$PLATFORM'. Must be pi, pi32, ad5m, k1, or all${NC}" >&2
         exit 1
     fi
     PLATFORMS=("$PLATFORM")
 fi
 
-# Determine sha256 command
-if command -v shasum &> /dev/null; then
-    SHA256_CMD="shasum -a 256"
-elif command -v sha256sum &> /dev/null; then
-    SHA256_CMD="sha256sum"
-else
-    echo -e "${RED}Error: Neither shasum nor sha256sum found${NC}" >&2
-    exit 1
-fi
-
-# Build assets map
-declare -A ASSETS
+# Rename tarballs with version
 for plat in "${PLATFORMS[@]}"; do
-    # Find the tarball for this platform
-    tarball_pattern="$BUILD_DIR/helixscreen-${plat}-*.tar.gz"
-    found=false
-
-    for tarball in $tarball_pattern; do
+    for tarball in "$BUILD_DIR"/helixscreen-"${plat}"-*.tar.gz; do
         if [[ -f "$tarball" ]]; then
-            found=true
-            filename=$(basename "$tarball")
-
-            # Compute SHA256
-            echo -e "${YELLOW}Computing SHA256 for $filename...${NC}"
-            sha256=$($SHA256_CMD "$tarball" | awk '{print $1}')
-
-            # New filename with version
-            new_filename="helixscreen-${plat}-v${VERSION}.tar.gz"
-
-            # Store asset info
-            ASSETS["${plat}_file"]="$tarball"
-            ASSETS["${plat}_new_name"]="$new_filename"
-            ASSETS["${plat}_sha256"]="$sha256"
-            ASSETS["${plat}_url"]="${R2_PUBLIC_URL}/${CHANNEL}/${new_filename}"
-
-            echo -e "${GREEN}  SHA256: $sha256${NC}"
+            new_name="$BUILD_DIR/helixscreen-${plat}-v${VERSION}.tar.gz"
+            if [[ "$tarball" != "$new_name" ]]; then
+                mv "$tarball" "$new_name"
+                echo -e "${YELLOW}Renamed $(basename "$tarball") -> $(basename "$new_name")${NC}"
+            fi
             break
         fi
     done
-
-    if [[ "$found" == "false" ]]; then
-        echo -e "${RED}Error: No tarball found for platform '$plat' in $BUILD_DIR${NC}" >&2
-        exit 1
-    fi
 done
 
-# Generate manifest.json
-GIT_SHORT_SHA=$(git rev-parse --short HEAD)
-PUBLISHED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-TAG="v${VERSION}"
+# Generate manifest using shared script
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+MANIFEST_FILE=$(mktemp)
 
-# Build JSON assets object
-ASSETS_JSON="{"
-first=true
-for plat in "${PLATFORMS[@]}"; do
-    if [[ "$first" == "false" ]]; then
-        ASSETS_JSON+=","
-    fi
-    first=false
+"$SCRIPT_DIR/generate-manifest.sh" \
+    --version "$VERSION" \
+    --tag "v${VERSION}" \
+    --notes "Dev build from $(git rev-parse --short HEAD)" \
+    --dir "$BUILD_DIR" \
+    --base-url "${R2_PUBLIC_URL}/${CHANNEL}" \
+    --output "$MANIFEST_FILE"
 
-    ASSETS_JSON+="\"${plat}\":{"
-    ASSETS_JSON+="\"url\":\"${ASSETS[${plat}_url]}\","
-    ASSETS_JSON+="\"sha256\":\"${ASSETS[${plat}_sha256]}\""
-    ASSETS_JSON+="}"
-done
-ASSETS_JSON+="}"
-
-# Create full manifest
-MANIFEST=$(jq -n \
-    --arg version "$VERSION" \
-    --arg tag "$TAG" \
-    --arg notes "Dev build from $GIT_SHORT_SHA" \
-    --arg published_at "$PUBLISHED_AT" \
-    --argjson assets "$ASSETS_JSON" \
-    '{
-        version: $version,
-        tag: $tag,
-        notes: $notes,
-        published_at: $published_at,
-        assets: $assets
-    }')
+MANIFEST=$(cat "$MANIFEST_FILE")
+rm -f "$MANIFEST_FILE"
 
 echo ""
 echo -e "${GREEN}Generated manifest:${NC}"
@@ -245,15 +192,16 @@ if [[ "$DRY_RUN" == "true" ]]; then
     echo -e "${YELLOW}DRY RUN - Would execute the following commands:${NC}"
     echo ""
 
-    for plat in "${PLATFORMS[@]}"; do
-        source_file="${ASSETS[${plat}_file]}"
-        dest_name="${ASSETS[${plat}_new_name]}"
-        echo "aws s3 cp \"$source_file\" \"s3://${R2_BUCKET_NAME}/${CHANNEL}/${dest_name}\" --endpoint-url \"$R2_ENDPOINT\""
+    for tarball in "$BUILD_DIR"/helixscreen-*-*.tar.gz; do
+        if [[ -f "$tarball" ]]; then
+            filename=$(basename "$tarball")
+            echo "aws s3 cp \"$tarball\" \"s3://${R2_BUCKET_NAME}/${CHANNEL}/${filename}\" --endpoint-url \"$R2_ENDPOINT\""
+        fi
     done
 
     echo ""
     echo "# Upload manifest.json"
-    echo "echo '$MANIFEST' | aws s3 cp - \"s3://${R2_BUCKET_NAME}/${CHANNEL}/manifest.json\" --endpoint-url \"$R2_ENDPOINT\" --content-type \"application/json\""
+    echo "echo '<manifest>' | aws s3 cp - \"s3://${R2_BUCKET_NAME}/${CHANNEL}/manifest.json\" --endpoint-url \"$R2_ENDPOINT\" --content-type \"application/json\""
 
     echo ""
     echo -e "${GREEN}Manifest would be available at: ${R2_PUBLIC_URL}/${CHANNEL}/manifest.json${NC}"
@@ -261,14 +209,14 @@ else
     echo ""
     echo -e "${GREEN}Uploading tarballs...${NC}"
 
-    for plat in "${PLATFORMS[@]}"; do
-        source_file="${ASSETS[${plat}_file]}"
-        dest_name="${ASSETS[${plat}_new_name]}"
-
-        echo -e "${YELLOW}Uploading ${CHANNEL}/${dest_name}...${NC}"
-        aws s3 cp "$source_file" "s3://${R2_BUCKET_NAME}/${CHANNEL}/${dest_name}" \
-            --endpoint-url "$R2_ENDPOINT"
-        echo -e "${GREEN}  Uploaded successfully${NC}"
+    for tarball in "$BUILD_DIR"/helixscreen-*-*.tar.gz; do
+        if [[ -f "$tarball" ]]; then
+            filename=$(basename "$tarball")
+            echo -e "${YELLOW}Uploading ${CHANNEL}/${filename}...${NC}"
+            aws s3 cp "$tarball" "s3://${R2_BUCKET_NAME}/${CHANNEL}/${filename}" \
+                --endpoint-url "$R2_ENDPOINT"
+            echo -e "${GREEN}  Uploaded successfully${NC}"
+        fi
     done
 
     echo ""

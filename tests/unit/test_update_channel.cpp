@@ -400,6 +400,10 @@ TEST_CASE("Dev channel parses manifest JSON", "[update_channel][dev]") {
             "k1": {
                 "url": "https://bucket.example.com/helixscreen-k1-v0.9.4-dev.1.tar.gz",
                 "sha256": "jkl345mno678"
+            },
+            "pi32": {
+                "url": "https://bucket.example.com/helixscreen-pi32-v0.9.4-dev.1.tar.gz",
+                "sha256": "pi32hash456"
             }
         }
     })";
@@ -433,6 +437,15 @@ TEST_CASE("Dev channel parses manifest JSON", "[update_channel][dev]") {
         REQUIRE(info.valid);
         REQUIRE(info.asset_url.find("k1") != std::string::npos);
         REQUIRE(info.sha256 == "jkl345mno678");
+    }
+
+    SECTION("parses valid manifest for pi32 platform") {
+        DevManifestInfo info;
+        std::string error;
+        REQUIRE(parse_dev_manifest(valid_manifest, "pi32", info, error));
+        REQUIRE(info.valid);
+        REQUIRE(info.asset_url.find("pi32") != std::string::npos);
+        REQUIRE(info.sha256 == "pi32hash456");
     }
 
     SECTION("missing version field returns error") {
@@ -506,6 +519,8 @@ TEST_CASE("Platform asset selection from release assets", "[update_channel][asse
          "browser_download_url": "https://ad5m-url"},
         {"name": "helixscreen-k1-v1.0.0.tar.gz",
          "browser_download_url": "https://k1-url"},
+        {"name": "helixscreen-pi32-v1.0.0.tar.gz",
+         "browser_download_url": "https://pi32-url"},
         {"name": "checksums.txt",
          "browser_download_url": "https://checksums-url"}
     ])";
@@ -530,6 +545,13 @@ TEST_CASE("Platform asset selection from release assets", "[update_channel][asse
         std::string error;
         auto url = select_platform_asset(multi_assets, "helixscreen-k1-", error);
         REQUIRE(url == "https://k1-url");
+        REQUIRE(error.empty());
+    }
+
+    SECTION("selects correct pi32 asset from multi-platform release") {
+        std::string error;
+        auto url = select_platform_asset(multi_assets, "helixscreen-pi32-", error);
+        REQUIRE(url == "https://pi32-url");
         REQUIRE(error.empty());
     }
 
