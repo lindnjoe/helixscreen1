@@ -587,12 +587,12 @@ bool PrinterState::can_start_new_print() const {
 
 void PrinterState::set_kinematics(const std::string& kinematics) {
     // Determine if the bed moves on Z based on kinematics type:
-    // - CoreXY/CoreXZ: bed typically moves on Z (Voron 0/Trident, Bambu, AD5M, etc.)
+    // - CoreXY: bed typically moves on Z (Voron 0/Trident, Bambu, AD5M, etc.)
     //   Exception: Voron 2.4 and similar with quad_gantry_level have gantry-Z
+    // - CoreXZ: gantry moves on Z (Voron Switchwire, etc.) — NOT bed-moves
     // - Cartesian: gantry typically moves on Z (Ender 3, Prusa i3, etc.)
     // - Delta: effector moves on Z, bed is stationary
-    bool is_corexy_family = (kinematics.find("corexy") != std::string::npos ||
-                             kinematics.find("corexz") != std::string::npos);
+    bool is_corexy_family = (kinematics.find("corexy") != std::string::npos);
 
     // CoreXY with QGL = gantry moves on Z (e.g. Voron 2.4), otherwise bed moves
     bool has_qgl = lv_subject_get_int(capabilities_state_.get_printer_has_qgl_subject()) != 0;

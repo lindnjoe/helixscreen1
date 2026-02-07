@@ -286,9 +286,9 @@ TEST_CASE("Capabilities characterization: set_kinematics updates printer_bed_mov
         REQUIRE(lv_subject_get_int(subject) == 0);
     }
 
-    SECTION("corexz kinematics sets bed_moves to 1 (bed moves on Z)") {
+    SECTION("corexz kinematics sets bed_moves to 0 (gantry moves on Z, e.g. Switchwire)") {
         state.set_kinematics("corexz");
-        REQUIRE(lv_subject_get_int(subject) == 1);
+        REQUIRE(lv_subject_get_int(subject) == 0);
     }
 
     SECTION("delta kinematics sets bed_moves to 0") {

@@ -1224,10 +1224,10 @@ TEST_CASE("PrinterState: set_kinematics handles kinematics variations", "[state]
     state.reset_for_testing();
     state.init_subjects(false);
 
-    SECTION("corexz - bed moves on Z") {
-        // CoreXZ contains "corexz", so bed moves
+    SECTION("corexz - gantry moves on Z (Voron Switchwire)") {
+        // CoreXZ has gantry-Z, not bed-Z
         state.set_kinematics("corexz");
-        REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 1);
+        REQUIRE(lv_subject_get_int(state.get_printer_bed_moves_subject()) == 0);
     }
 
     SECTION("hybrid_corexy - bed moves (contains corexy)") {
