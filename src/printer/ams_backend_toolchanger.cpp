@@ -61,46 +61,54 @@ AmsBackendToolChanger::~AmsBackendToolChanger() {
 // ============================================================================
 
 AmsError AmsBackendToolChanger::start() {
-    std::lock_guard<std::mutex> lock(mutex_);
+    bool should_emit = false;
 
-    if (running_) {
-        return AmsErrorHelper::success();
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        if (running_) {
+            return AmsErrorHelper::success();
+        }
+
+        if (!client_) {
+            spdlog::error("[AMS ToolChanger] Cannot start: MoonrakerClient is null");
+            return AmsErrorHelper::not_connected("MoonrakerClient not provided");
+        }
+
+        if (!api_) {
+            spdlog::error("[AMS ToolChanger] Cannot start: MoonrakerAPI is null");
+            return AmsErrorHelper::not_connected("MoonrakerAPI not provided");
+        }
+
+        if (tool_names_.empty()) {
+            spdlog::error("[AMS ToolChanger] Cannot start: No tools discovered. "
+                          "Call set_discovered_tools() before start()");
+            return AmsErrorHelper::not_connected("No tools discovered");
+        }
+
+        // Register for status update notifications from Moonraker
+        // Tool changer state comes via notify_status_update when toolchanger.* changes
+        SubscriptionId id = client_->register_notify_update(
+            [this](const nlohmann::json& notification) { handle_status_update(notification); });
+
+        if (id == INVALID_SUBSCRIPTION_ID) {
+            spdlog::error("[AMS ToolChanger] Failed to register for status updates");
+            return AmsErrorHelper::not_connected("Failed to subscribe to Moonraker updates");
+        }
+
+        // RAII guard - automatically unsubscribes when backend is destroyed or stop() called
+        subscription_ = SubscriptionGuard(client_, id);
+
+        running_ = true;
+        spdlog::info("[AMS ToolChanger] Backend started, subscription ID: {}", id);
+
+        should_emit = true;
+    } // Release lock before emitting
+
+    // Emit initial state event OUTSIDE the lock to avoid deadlock
+    if (should_emit) {
+        emit_event(EVENT_STATE_CHANGED);
     }
-
-    if (!client_) {
-        spdlog::error("[AMS ToolChanger] Cannot start: MoonrakerClient is null");
-        return AmsErrorHelper::not_connected("MoonrakerClient not provided");
-    }
-
-    if (!api_) {
-        spdlog::error("[AMS ToolChanger] Cannot start: MoonrakerAPI is null");
-        return AmsErrorHelper::not_connected("MoonrakerAPI not provided");
-    }
-
-    if (tool_names_.empty()) {
-        spdlog::error("[AMS ToolChanger] Cannot start: No tools discovered. "
-                      "Call set_discovered_tools() before start()");
-        return AmsErrorHelper::not_connected("No tools discovered");
-    }
-
-    // Register for status update notifications from Moonraker
-    // Tool changer state comes via notify_status_update when toolchanger.* changes
-    SubscriptionId id = client_->register_notify_update(
-        [this](const nlohmann::json& notification) { handle_status_update(notification); });
-
-    if (id == INVALID_SUBSCRIPTION_ID) {
-        spdlog::error("[AMS ToolChanger] Failed to register for status updates");
-        return AmsErrorHelper::not_connected("Failed to subscribe to Moonraker updates");
-    }
-
-    // RAII guard - automatically unsubscribes when backend is destroyed or stop() called
-    subscription_ = SubscriptionGuard(client_, id);
-
-    running_ = true;
-    spdlog::info("[AMS ToolChanger] Backend started, subscription ID: {}", id);
-
-    // Emit initial state event (state may be empty until first Moonraker update)
-    emit_event(EVENT_STATE_CHANGED);
 
     return AmsErrorHelper::success();
 }
