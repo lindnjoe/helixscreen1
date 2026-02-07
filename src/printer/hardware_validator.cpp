@@ -11,6 +11,7 @@
 #include "printer_discovery.h"
 #include "printer_hardware.h"
 #include "spdlog/spdlog.h"
+#include "wizard_config_paths.h"
 
 #include <algorithm>
 #include <chrono>
@@ -541,7 +542,7 @@ void HardwareValidator::validate_new_hardware(Config* config,
     std::string configured_led;
     if (config) {
         try {
-            configured_led = config->get<std::string>(config->df() + "leds/strip", "");
+            configured_led = config->get<std::string>(helix::wizard::LED_STRIP, "");
         } catch (...) {
         }
     }
