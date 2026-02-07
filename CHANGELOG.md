@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Beta and dev update channels with UI toggle and R2 upload script
 - Beta feature wrapper component with badge indicator
 - 32-bit ARM (armv7l) Raspberry Pi build target (#10)
+- Auto-publish tagged releases to R2 with platform detection
+- Exclude object G-code parsing and status dispatch in mock mode
 
 ### Fixed
 - Use-after-free race in wpa_supplicant backend shutdown (#8)
@@ -30,6 +32,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Invalid text_secondary color token replaced with text_muted
 - KIAUH metadata wrapper key and moonraker updater path (#3)
 - Installer sparse checkout for updater repo (#11)
+- Output_pin lights detected as LEDs with fallback to first LED (#14)
+- Percentage rounding instead of truncating to fix float precision (#14)
+- Z offset display sync when print tune overlay opens (#14)
+- CoreXZ treated as gantry-moves-Z instead of bed-moves (#14)
 
 ### Changed
 - Log levels cleaned up: INFO is concise, DEBUG is useful without per-layer/shutdown spam
@@ -152,6 +158,7 @@ Initial tagged release. Foundation for all subsequent development.
 - Automated GitHub Actions release pipeline
 - One-liner installation script with platform auto-detection
 
+[0.9.5]: https://github.com/prestonbrown/helixscreen/compare/v0.9.4...v0.9.5
 [0.9.4]: https://github.com/prestonbrown/helixscreen/compare/v0.9.3...v0.9.4
 [0.9.3]: https://github.com/prestonbrown/helixscreen/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/prestonbrown/helixscreen/compare/v0.9.1...v0.9.2
