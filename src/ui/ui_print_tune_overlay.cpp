@@ -290,6 +290,10 @@ void PrintTuneOverlay::sync_sliders_to_state() {
     speed_percent_ = speed;
     flow_percent_ = flow;
 
+    // Sync Z offset from PrinterState
+    int z_offset_microns = lv_subject_get_int(printer_state_->get_gcode_z_offset_subject());
+    update_z_offset_display(z_offset_microns);
+
     // Update displays
     update_display();
 
