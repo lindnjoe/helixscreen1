@@ -263,7 +263,7 @@ std::string duration_padded(int total_seconds);
  *
  * Contains all the information needed to display a heater status:
  * - temp: formatted temperature string (e.g., "150°C" or "150 / 200°C")
- * - status: semantic status ("Off", "Heating...", or "Ready")
+ * - status: semantic status ("Off", "Heating...", "Ready", or "Cooling")
  * - pct: percentage towards target (0-100, clamped)
  */
 struct HeaterDisplayResult {
@@ -278,10 +278,11 @@ struct HeaterDisplayResult {
  * Takes current and target temperatures in centi-degrees (100 = 1°C) and
  * produces a consistent display result used across all heater displays.
  *
- * Status logic:
+ * Status logic (2°C tolerance, matches get_heating_state_color):
  * - target <= 0: "Off"
- * - pct >= 98: "Ready"
- * - else: "Heating..."
+ * - current < target - 2: "Heating..."
+ * - current > target + 2: "Cooling"
+ * - within ±2°C: "Ready"
  *
  * @param current_centi Current temperature in centi-degrees
  * @param target_centi Target temperature in centi-degrees (0 = off)

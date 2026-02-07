@@ -263,13 +263,16 @@ HeaterDisplayResult heater_display(int current_centi, int target_centi) {
         result.pct = std::clamp(pct, 0, 100);
     }
 
-    // Determine status
+    // Determine status using same tolerance logic as get_heating_state_color()
+    constexpr int tolerance_deg = 2;
     if (target_centi <= 0) {
         result.status = "Off";
-    } else if (result.pct >= 98) {
-        result.status = "Ready";
-    } else {
+    } else if (current_deg < target_deg - tolerance_deg) {
         result.status = "Heating...";
+    } else if (current_deg > target_deg + tolerance_deg) {
+        result.status = "Cooling";
+    } else {
+        result.status = "Ready";
     }
 
     return result;

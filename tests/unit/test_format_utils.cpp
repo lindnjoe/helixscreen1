@@ -271,12 +271,18 @@ TEST_CASE("heater_display() at temperature shows Ready", "[format_utils][heater_
     REQUIRE(result.pct == 99);
 }
 
+TEST_CASE("heater_display() cooling shows Cooling when above target",
+          "[format_utils][heater_display]") {
+    // 21000 centi = 210°C with 200°C target -> over by 10°C -> Cooling
+    auto result = heater_display(21000, 20000);
+    REQUIRE(result.pct == 100);
+    REQUIRE(result.status == "Cooling");
+}
+
 TEST_CASE("heater_display() percentage clamps to 0-100", "[format_utils][heater_display]") {
     SECTION("over target clamps to 100") {
-        // 21000 centi = 210°C with 200°C target -> should clamp to 100%
         auto result = heater_display(21000, 20000);
         REQUIRE(result.pct == 100);
-        REQUIRE(result.status == "Ready");
     }
 
     SECTION("negative temperature clamps to 0") {
@@ -287,18 +293,37 @@ TEST_CASE("heater_display() percentage clamps to 0-100", "[format_utils][heater_
 }
 
 TEST_CASE("heater_display() edge cases", "[format_utils][heater_display]") {
-    SECTION("exactly at 98% threshold shows Ready") {
-        // 19600 / 20000 = 98%
-        auto result = heater_display(19600, 20000);
-        REQUIRE(result.pct == 98);
+    SECTION("within tolerance of target shows Ready") {
+        // 199°C with 200°C target -> within ±2°C -> Ready
+        auto result = heater_display(19900, 20000);
+        REQUIRE(result.pct == 99);
         REQUIRE(result.status == "Ready");
     }
 
-    SECTION("just below 98% threshold shows Heating") {
-        // 19400 / 20000 = 97%
-        auto result = heater_display(19400, 20000);
-        REQUIRE(result.pct == 97);
+    SECTION("just outside heating tolerance shows Heating") {
+        // 197°C with 200°C target -> 197 < 200-2=198 -> Heating
+        auto result = heater_display(19700, 20000);
+        REQUIRE(result.pct == 98);
         REQUIRE(result.status == "Heating...");
+    }
+
+    SECTION("just outside cooling tolerance shows Cooling") {
+        // 203°C with 200°C target -> 203 > 200+2=202 -> Cooling
+        auto result = heater_display(20300, 20000);
+        REQUIRE(result.pct == 100);
+        REQUIRE(result.status == "Cooling");
+    }
+
+    SECTION("exactly at lower tolerance boundary shows Ready") {
+        // 198°C with 200°C target -> 198 >= 200-2 -> Ready
+        auto result = heater_display(19800, 20000);
+        REQUIRE(result.status == "Ready");
+    }
+
+    SECTION("exactly at upper tolerance boundary shows Ready") {
+        // 202°C with 200°C target -> 202 <= 200+2 -> Ready
+        auto result = heater_display(20200, 20000);
+        REQUIRE(result.status == "Ready");
     }
 
     SECTION("very low target temperature") {
@@ -306,6 +331,7 @@ TEST_CASE("heater_display() edge cases", "[format_utils][heater_display]") {
         auto result = heater_display(4000, 5000);
         REQUIRE(result.temp == "40 / 50°C");
         REQUIRE(result.pct == 80);
+        REQUIRE(result.status == "Heating...");
     }
 
     SECTION("zero current temperature") {
