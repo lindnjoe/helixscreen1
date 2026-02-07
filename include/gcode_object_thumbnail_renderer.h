@@ -143,6 +143,12 @@ class GCodeObjectThumbnailRenderer {
 
         // Shared projection params (FRONT view by default)
         ProjectionParams projection;
+
+        // Bounding box Z/Y ranges for depth shading
+        float z_min{0.0f};
+        float z_max{1.0f};
+        float y_min{0.0f};
+        float y_max{1.0f};
     };
 
     /**

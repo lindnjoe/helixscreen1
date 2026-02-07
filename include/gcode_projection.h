@@ -99,4 +99,62 @@ struct AutoFitResult {
 AutoFitResult compute_auto_fit(const AABB& bb, ViewMode view_mode, int canvas_width,
                                int canvas_height, float padding = 0.05f);
 
+// ============================================================================
+// DEPTH SHADING
+// ============================================================================
+
+/// Depth shading constants shared by all 2D renderers.
+/// Bottom of model = darker, top = brighter. Back = slightly darker than front.
+namespace depth_shading {
+
+constexpr float kMinBrightness = 0.4f;   ///< Brightness at bottom (Z min)
+constexpr float kBrightnessRange = 0.6f; ///< Added at top (total = 0.4 + 0.6 = 1.0)
+constexpr float kBackFadeMin = 0.85f;    ///< Brightness at back (Y max)
+constexpr float kBackFadeRange = 0.15f;  ///< Added at front (total = 0.85 + 0.15 = 1.0)
+
+} // namespace depth_shading
+
+/// Compute depth-based brightness factor for fake-3D shading in FRONT view.
+///
+/// Combines Z-height gradient (bottom=40%, top=100%) with subtle Y-depth fade
+/// (front=100%, back=85%). Used by both the full-scene layer renderer and
+/// per-object thumbnail renderer.
+///
+/// @param avg_z  Average Z of the segment
+/// @param z_min  Minimum Z of the model/object bounding box
+/// @param z_max  Maximum Z of the bounding box
+/// @param avg_y  Average Y of the segment
+/// @param y_min  Minimum Y of the model/object bounding box
+/// @param y_max  Maximum Y of the bounding box
+/// @return Brightness multiplier in [~0.34, 1.0]
+inline float compute_depth_brightness(float avg_z, float z_min, float z_max, float avg_y,
+                                      float y_min, float y_max) {
+    constexpr float kEpsilon = 0.001f;
+
+    // Z-height: bottom=40%, top=100%
+    float brightness = depth_shading::kMinBrightness;
+    float z_range = z_max - z_min;
+    if (z_range > kEpsilon) {
+        float norm_z = (avg_z - z_min) / z_range;
+        if (norm_z < 0.0f)
+            norm_z = 0.0f;
+        if (norm_z > 1.0f)
+            norm_z = 1.0f;
+        brightness = depth_shading::kMinBrightness + depth_shading::kBrightnessRange * norm_z;
+    }
+
+    // Y-depth: front (low Y) = 100%, back (high Y) = 85%
+    float y_range = y_max - y_min;
+    if (y_range > kEpsilon) {
+        float norm_y = (avg_y - y_min) / y_range;
+        if (norm_y < 0.0f)
+            norm_y = 0.0f;
+        if (norm_y > 1.0f)
+            norm_y = 1.0f;
+        brightness *= depth_shading::kBackFadeMin + depth_shading::kBackFadeRange * (1.0f - norm_y);
+    }
+
+    return brightness;
+}
+
 } // namespace helix::gcode

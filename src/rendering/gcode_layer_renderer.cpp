@@ -496,24 +496,10 @@ void GCodeLayerRenderer::render_layers_to_cache(int from_layer, int to_layer) {
             // Calculate color with depth shading for 3D-like appearance
             uint8_t r = base_r, g = base_g, b = base_b;
             if (depth_shading_ && view_mode_ == ViewMode::FRONT) {
-                // Calculate brightness factor based on Z position
-                float z_range = bounds_max_z_ - bounds_min_z_;
-                float avg_z = (seg.start.z + seg.end.z) / 2.0f;
-
-                float brightness = 0.4f;
-                if (z_range > 0.001f) {
-                    float normalized_z = (avg_z - bounds_min_z_) / z_range;
-                    brightness = 0.4f + 0.6f * normalized_z;
-                }
-
-                // Y-depth fade
-                float y_range = bounds_max_y_ - bounds_min_y_;
-                float avg_y = (seg.start.y + seg.end.y) / 2.0f;
-                if (y_range > 0.001f) {
-                    float normalized_y = (avg_y - bounds_min_y_) / y_range;
-                    float depth_fade = 0.85f + 0.15f * (1.0f - normalized_y);
-                    brightness *= depth_fade;
-                }
+                float avg_z = (seg.start.z + seg.end.z) * 0.5f;
+                float avg_y = (seg.start.y + seg.end.y) * 0.5f;
+                float brightness = compute_depth_brightness(avg_z, bounds_min_z_, bounds_max_z_,
+                                                            avg_y, bounds_min_y_, bounds_max_y_);
 
                 r = static_cast<uint8_t>(base_r * brightness);
                 g = static_cast<uint8_t>(base_g * brightness);
@@ -908,30 +894,11 @@ void GCodeLayerRenderer::render_segment(lv_layer_t* layer, const ToolpathSegment
 
     // Apply depth shading for 3D-like appearance
     if (depth_shading_ && view_mode_ == ViewMode::FRONT) {
-        // Calculate brightness factor based on Z position
-        // Bottom of model = darker (40%), top = brighter (100%)
-        float z_range = bounds_max_z_ - bounds_min_z_;
-        float avg_z = (seg.start.z + seg.end.z) / 2.0f;
+        float avg_z = (seg.start.z + seg.end.z) * 0.5f;
+        float avg_y = (seg.start.y + seg.end.y) * 0.5f;
+        float brightness = compute_depth_brightness(avg_z, bounds_min_z_, bounds_max_z_, avg_y,
+                                                    bounds_min_y_, bounds_max_y_);
 
-        float brightness = 0.4f; // Minimum brightness
-        if (z_range > 0.001f) {
-            float normalized_z = (avg_z - bounds_min_z_) / z_range;
-            brightness = 0.4f + 0.6f * normalized_z; // 40% to 100%
-        }
-
-        // Also add subtle Y-depth fade (back of model slightly darker)
-        // In 45° view, higher Y values are further back
-        float y_range = bounds_max_y_ - bounds_min_y_;
-        float avg_y = (seg.start.y + seg.end.y) / 2.0f;
-        if (y_range > 0.001f) {
-            float normalized_y = (avg_y - bounds_min_y_) / y_range;
-            // Front (low Y) = 100%, back (high Y) = 85%
-            float depth_fade = 0.85f + 0.15f * (1.0f - normalized_y);
-            brightness *= depth_fade;
-        }
-
-        // Apply brightness to color (scale RGB channels)
-        // LVGL 9: lv_color_t has direct .red, .green, .blue members
         uint8_t r = static_cast<uint8_t>(base_color.red * brightness);
         uint8_t g = static_cast<uint8_t>(base_color.green * brightness);
         uint8_t b = static_cast<uint8_t>(base_color.blue * brightness);

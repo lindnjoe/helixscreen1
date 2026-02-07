@@ -138,8 +138,21 @@ GCodeObjectThumbnailRenderer::render_impl(const ParsedGCodeFile* gcode, int thum
             world_to_pixel(ctx, seg.start.x, seg.start.y, seg.start.z, px0, py0);
             world_to_pixel(ctx, seg.end.x, seg.end.y, seg.end.z, px1, py1);
 
+            // Depth shading: shared with layer renderer (bottom darker, back darker)
+            float avg_z = (seg.start.z + seg.end.z) * 0.5f;
+            float avg_y = (seg.start.y + seg.end.y) * 0.5f;
+            float brightness =
+                compute_depth_brightness(avg_z, ctx.z_min, ctx.z_max, avg_y, ctx.y_min, ctx.y_max);
+
+            // Apply brightness to ARGB8888 color
+            uint8_t b = static_cast<uint8_t>((color & 0xFF) * brightness);
+            uint8_t g = static_cast<uint8_t>(((color >> 8) & 0xFF) * brightness);
+            uint8_t r = static_cast<uint8_t>(((color >> 16) & 0xFF) * brightness);
+            uint8_t a = (color >> 24) & 0xFF;
+            uint32_t shaded = b | (g << 8) | (r << 16) | (a << 24);
+
             // Draw the line
-            draw_line(ctx, px0, py0, px1, py1, color);
+            draw_line(ctx, px0, py0, px1, py1, shaded);
             ++segments_rendered;
         }
     }
@@ -201,6 +214,12 @@ GCodeObjectThumbnailRenderer::build_contexts(const ParsedGCodeFile* gcode, int t
         ctx.projection.canvas_width = thumb_width;
         ctx.projection.canvas_height = thumb_height;
 
+        // Store Z/Y ranges for depth shading (shared compute_depth_brightness handles zero-range)
+        ctx.z_min = bbox.min.z;
+        ctx.z_max = bbox.max.z;
+        ctx.y_min = bbox.min.y;
+        ctx.y_max = bbox.max.y;
+
         // Allocate and zero-fill pixel buffer (transparent black)
         size_t buf_size = static_cast<size_t>(ctx.height) * ctx.stride;
         ctx.pixels = std::make_unique<uint8_t[]>(buf_size);
@@ -249,7 +268,11 @@ void GCodeObjectThumbnailRenderer::draw_line(ObjectRenderContext& ctx, int x0, i
     int err = dx + dy;
 
     while (true) {
+        // Plot 2x2 block for thicker lines (put_pixel bounds-checks)
         put_pixel(ctx, x0, y0, color);
+        put_pixel(ctx, x0 + 1, y0, color);
+        put_pixel(ctx, x0, y0 + 1, color);
+        put_pixel(ctx, x0 + 1, y0 + 1, color);
 
         if (x0 == x1 && y0 == y1)
             break;
