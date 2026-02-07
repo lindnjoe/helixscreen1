@@ -52,6 +52,7 @@ fi
 # =============================================================================
 
 MDI_ICONS="0xF0026"      # alert (triangle-exclamation)
+MDI_ICONS+=",0xF0028"    # alert-circle
 MDI_ICONS+=",0xF0029"    # alert-octagon (emergency)
 MDI_ICONS+=",0xF05D8"    # animation (stacked rectangles - for settings)
 MDI_ICONS+=",0xF093A"    # animation-play (framerate/playback speed)

@@ -357,6 +357,7 @@
     <!-- ===================================================================== -->
     <!-- BEGIN GENERATED ICON CONSTS -->
     <str name="icon_alert" value="󰀦"/>
+    <str name="icon_alert_circle" value="󰀨"/>
     <str name="icon_alert_octagon" value="󰀩"/>
     <str name="icon_animation" value="󰗘"/>
     <str name="icon_animation_play" value="󰤺"/>

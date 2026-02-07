@@ -33,6 +33,7 @@ struct IconMapping {
 static const IconMapping ICON_MAP[] = {
     // Alert/Status icons
     {"alert",              "\xF3\xB0\x80\xA6"},  // F0026 alert/triangle-exclamation
+    {"alert_circle",       "\xF3\xB0\x80\xA8"},  // F0028 alert-circle
     {"alert_octagon",      "\xF3\xB0\x80\xA9"},  // F0029 alert-octagon
     {"alpha_a_circle",     "\xF3\xB0\xAF\xAC"},  // F0BEC alpha-a-circle (auto indicator)
     {"animation",          "\xF3\xB0\x97\x98"},  // F05D8 animation (stacked rectangles)
