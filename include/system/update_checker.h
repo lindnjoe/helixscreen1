@@ -194,6 +194,28 @@ class UpdateChecker {
     /** @brief Get platform key for current build ("pi", "ad5m", "k1") */
     static std::string get_platform_key();
 
+    /** @brief Check if a version is dismissed (user chose to ignore) */
+    bool is_version_dismissed(const std::string& version) const;
+
+    /** @brief Dismiss the current cached update version (persists to config) */
+    void dismiss_current_version();
+
+    /** @brief Start automatic update checking (15s initial, then 24h periodic) */
+    void start_auto_check();
+
+    /** @brief Stop automatic update checking */
+    void stop_auto_check();
+
+    // LVGL subjects for notification modal
+    lv_subject_t* release_notes_subject();
+    lv_subject_t* changelog_visible_subject();
+
+    /** @brief Show the update notification modal */
+    void show_update_notification();
+
+    /** @brief Hide the update notification modal */
+    void hide_update_notification();
+
   private:
     UpdateChecker() = default;
     ~UpdateChecker();
@@ -277,6 +299,17 @@ class UpdateChecker {
 
     /** @brief Validate downloaded tarball contains binary for correct architecture */
     bool validate_elf_architecture(const std::string& tarball_path);
+
+    // Auto-check timer
+    lv_timer_t* auto_check_timer_{nullptr};
+
+    // Notification modal
+    lv_obj_t* notify_modal_{nullptr};
+
+    // Notification subjects
+    lv_subject_t release_notes_subject_{};
+    lv_subject_t changelog_visible_subject_{};
+    char release_notes_buf_[2048]{};
 
     SubjectManager subjects_;
     bool subjects_initialized_{false};

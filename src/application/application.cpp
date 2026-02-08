@@ -1411,6 +1411,9 @@ void Application::setup_discovery_callbacks() {
 
             // Apply LED startup preference (turn on LED if user preference is enabled)
             SettingsManager::instance().apply_led_startup_preference();
+
+            // Start automatic update checks (15s initial delay, then every 24h)
+            UpdateChecker::instance().start_auto_check();
         });
     });
 }
@@ -1851,6 +1854,8 @@ void Application::shutdown() {
     // Deactivate UI and clear navigation registries
     NavigationManager::instance().shutdown();
 
+    // Stop auto-check timer before full shutdown
+    UpdateChecker::instance().stop_auto_check();
     // Shutdown UpdateChecker (cancels pending checks)
     UpdateChecker::instance().shutdown();
 

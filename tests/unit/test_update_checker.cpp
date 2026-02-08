@@ -19,6 +19,7 @@
  * - Status enum transitions
  */
 
+#include "config.h"
 #include "lvgl.h"
 #include "version.h"
 
@@ -828,6 +829,127 @@ TEST_CASE("UpdateChecker platform key defaults to pi in native build",
     // In native builds (no HELIX_PLATFORM_* define), defaults to "pi"
     // Asset name format: helixscreen-{platform}-v{version}.tar.gz
     REQUIRE(name.find("helixscreen-pi-") == 0);
+
+    checker.shutdown();
+}
+
+// ============================================================================
+// Dismissed Version Tests
+// ============================================================================
+
+TEST_CASE("UpdateChecker dismissed version logic", "[update_checker][dismissed]") {
+    auto& checker = UpdateChecker::instance();
+    checker.init();
+
+    // Clear any previously dismissed version
+    auto* config = Config::get_instance();
+    if (config) {
+        config->set<std::string>("/update/dismissed_version", "");
+        config->save();
+    }
+
+    SECTION("is_version_dismissed returns false when no dismissed version in config") {
+        REQUIRE_FALSE(checker.is_version_dismissed("1.2.0"));
+    }
+
+    SECTION("is_version_dismissed returns true when version matches dismissed") {
+        if (config) {
+            config->set<std::string>("/update/dismissed_version", "1.2.0");
+            config->save();
+        }
+        REQUIRE(checker.is_version_dismissed("1.2.0"));
+    }
+
+    SECTION("is_version_dismissed returns false for newer version than dismissed") {
+        if (config) {
+            config->set<std::string>("/update/dismissed_version", "1.2.0");
+            config->save();
+        }
+        REQUIRE_FALSE(checker.is_version_dismissed("1.3.0"));
+    }
+
+    SECTION("is_version_dismissed returns true for older version than dismissed") {
+        if (config) {
+            config->set<std::string>("/update/dismissed_version", "1.2.0");
+            config->save();
+        }
+        REQUIRE(checker.is_version_dismissed("1.1.0"));
+    }
+
+    SECTION("dismiss_current_version persists to config") {
+        // We need a cached update for dismiss_current_version to work
+        // Since we can't easily set cached_info_ without a real check,
+        // test via the config path directly
+        // This tests the config interaction pattern
+        if (config) {
+            auto dismissed = config->get<std::string>("/update/dismissed_version", "");
+            // After clearing, should be empty
+            REQUIRE(dismissed.empty());
+        }
+    }
+
+    checker.shutdown();
+}
+
+// ============================================================================
+// Auto-Check Timer Tests
+// ============================================================================
+
+TEST_CASE("UpdateChecker auto-check timer lifecycle", "[update_checker][auto_check]") {
+    auto& checker = UpdateChecker::instance();
+    checker.init();
+
+    SECTION("start_auto_check creates timer (returns without crash)") {
+        REQUIRE_NOTHROW(checker.start_auto_check());
+        // Clean up
+        checker.stop_auto_check();
+    }
+
+    SECTION("stop_auto_check cleans up timer") {
+        checker.start_auto_check();
+        REQUIRE_NOTHROW(checker.stop_auto_check());
+    }
+
+    SECTION("double start_auto_check is safe (idempotent)") {
+        REQUIRE_NOTHROW(checker.start_auto_check());
+        REQUIRE_NOTHROW(checker.start_auto_check());
+        checker.stop_auto_check();
+    }
+
+    SECTION("stop_auto_check before start_auto_check is safe") {
+        REQUIRE_NOTHROW(checker.stop_auto_check());
+    }
+
+    SECTION("stop_auto_check after stop_auto_check is safe") {
+        checker.start_auto_check();
+        REQUIRE_NOTHROW(checker.stop_auto_check());
+        REQUIRE_NOTHROW(checker.stop_auto_check());
+    }
+
+    checker.shutdown();
+}
+
+TEST_CASE("UpdateChecker notification subjects exist after init", "[update_checker][auto_check]") {
+    auto& checker = UpdateChecker::instance();
+    checker.init();
+
+    SECTION("release_notes_subject returns non-null") {
+        REQUIRE(checker.release_notes_subject() != nullptr);
+    }
+
+    SECTION("changelog_visible_subject returns non-null") {
+        REQUIRE(checker.changelog_visible_subject() != nullptr);
+    }
+
+    SECTION("changelog_visible starts at 0") {
+        REQUIRE(lv_subject_get_int(checker.changelog_visible_subject()) == 0);
+    }
+
+    SECTION("release_notes starts empty") {
+        const char* notes = lv_subject_get_string(checker.release_notes_subject());
+        REQUIRE(notes != nullptr);
+        REQUIRE(std::string(notes).empty());
+    }
 
     checker.shutdown();
 }

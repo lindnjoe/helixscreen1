@@ -15,6 +15,8 @@
 
 #include "system/update_checker.h"
 
+#include "ui_event_safety.h"
+#include "ui_panel_settings.h"
 #include "ui_update_queue.h"
 
 #include "app_globals.h"
@@ -245,6 +247,9 @@ UpdateChecker::~UpdateChecker() {
     }
 }
 
+// Forward declaration - defined before show_update_notification()
+static void register_notify_callbacks();
+
 // ============================================================================
 // Lifecycle
 // ============================================================================
@@ -260,6 +265,7 @@ void UpdateChecker::init() {
     download_cancelled_ = false;
 
     init_subjects();
+    register_notify_callbacks();
 
     spdlog::debug("[UpdateChecker] Initialized");
     initialized_ = true;
@@ -271,6 +277,9 @@ void UpdateChecker::shutdown() {
     }
 
     spdlog::debug("[UpdateChecker] Shutting down");
+
+    // Stop auto-check timer
+    stop_auto_check();
 
     // Signal cancellation
     cancelled_ = true;
@@ -324,6 +333,11 @@ void UpdateChecker::init_subjects() {
     UI_MANAGED_SUBJECT_STRING(download_text_subject_, download_text_buf_, "", "download_text",
                               subjects_);
 
+    // Notification subjects
+    UI_MANAGED_SUBJECT_STRING(release_notes_subject_, release_notes_buf_, "",
+                              "update_release_notes", subjects_);
+    UI_MANAGED_SUBJECT_INT(changelog_visible_subject_, 0, "update_changelog_visible", subjects_);
+
     subjects_initialized_ = true;
     spdlog::debug("[UpdateChecker] LVGL subjects initialized");
 }
@@ -352,6 +366,12 @@ lv_subject_t* UpdateChecker::download_progress_subject() {
 }
 lv_subject_t* UpdateChecker::download_text_subject() {
     return &download_text_subject_;
+}
+lv_subject_t* UpdateChecker::release_notes_subject() {
+    return &release_notes_subject_;
+}
+lv_subject_t* UpdateChecker::changelog_visible_subject() {
+    return &changelog_visible_subject_;
 }
 
 // ============================================================================
@@ -1041,6 +1061,204 @@ std::string UpdateChecker::get_platform_key() {
 #else
     return "pi";
 #endif
+}
+
+// ============================================================================
+// Dismissed Version
+// ============================================================================
+
+bool UpdateChecker::is_version_dismissed(const std::string& version) const {
+    auto* config = Config::get_instance();
+    if (!config) {
+        return false;
+    }
+
+    auto dismissed_str = config->get<std::string>("/update/dismissed_version", "");
+    if (dismissed_str.empty()) {
+        return false;
+    }
+
+    auto dismissed = helix::version::parse_version(dismissed_str);
+    auto check = helix::version::parse_version(version);
+
+    if (!dismissed || !check) {
+        return false;
+    }
+
+    // Dismissed if the version is <= the dismissed version
+    // (i.e., only a NEWER version than what was dismissed should trigger notification)
+    return *check <= *dismissed;
+}
+
+void UpdateChecker::dismiss_current_version() {
+    std::string version;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (cached_info_) {
+            version = cached_info_->version;
+        }
+    }
+
+    if (version.empty()) {
+        spdlog::warn("[UpdateChecker] dismiss_current_version called without cached update");
+        return;
+    }
+
+    auto* config = Config::get_instance();
+    if (!config) {
+        spdlog::error("[UpdateChecker] Cannot dismiss version: no config instance");
+        return;
+    }
+
+    config->set<std::string>("/update/dismissed_version", version);
+    config->save();
+    spdlog::info("[UpdateChecker] Dismissed version: {}", version);
+}
+
+// ============================================================================
+// Auto-Check Timer
+// ============================================================================
+
+void UpdateChecker::start_auto_check() {
+    if (auto_check_timer_) {
+        spdlog::debug("[UpdateChecker] Auto-check timer already running");
+        return;
+    }
+
+    spdlog::info("[UpdateChecker] Starting auto-check (15s initial delay, 24h periodic)");
+
+    // One-shot 15s timer for initial check after startup
+    auto_check_timer_ = lv_timer_create(
+        [](lv_timer_t* timer) {
+            auto* self = static_cast<UpdateChecker*>(lv_timer_get_user_data(timer));
+            if (self->shutting_down_.load())
+                return;
+
+            spdlog::info("[UpdateChecker] Auto-check: performing initial check");
+
+            // Perform check with notification callback
+            self->check_for_updates([self](Status status, std::optional<ReleaseInfo> info) {
+                if (status != Status::UpdateAvailable || !info) {
+                    return;
+                }
+
+                // Skip if version is dismissed
+                if (self->is_version_dismissed(info->version)) {
+                    spdlog::info("[UpdateChecker] Auto-check: version {} is dismissed",
+                                 info->version);
+                    return;
+                }
+
+                // Skip if printer is printing or paused
+                auto job_state = get_printer_state().get_print_job_state();
+                if (job_state == PrintJobState::PRINTING || job_state == PrintJobState::PAUSED) {
+                    spdlog::info("[UpdateChecker] Auto-check: skipping notification during print");
+                    return;
+                }
+
+                // Guard against shutdown race (callback queued before shutdown)
+                if (self->shutting_down_.load()) {
+                    return;
+                }
+
+                // Populate release notes subject
+                if (self->subjects_initialized_) {
+                    lv_subject_copy_string(&self->release_notes_subject_,
+                                           info->release_notes.c_str());
+                    lv_subject_set_int(&self->changelog_visible_subject_, 0);
+                }
+
+                // Show notification modal
+                self->show_update_notification();
+            });
+
+            // Convert to 24h periodic timer
+            lv_timer_set_period(timer, 24u * 60u * 60u * 1000u);
+            lv_timer_reset(timer);
+        },
+        15000, this);
+
+    lv_timer_set_repeat_count(auto_check_timer_, -1); // infinite repeats
+}
+
+void UpdateChecker::stop_auto_check() {
+    if (auto_check_timer_) {
+        lv_timer_delete(auto_check_timer_);
+        auto_check_timer_ = nullptr;
+        spdlog::debug("[UpdateChecker] Auto-check timer stopped");
+    }
+}
+
+// ============================================================================
+// Notification Modal Callbacks
+// ============================================================================
+
+static void on_update_notify_install(lv_event_t* /*e*/) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[UpdateChecker] on_update_notify_install");
+    spdlog::info("[UpdateChecker] User chose to install update");
+    UpdateChecker::instance().hide_update_notification();
+    get_global_settings_panel().show_update_download_modal();
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+static void on_update_notify_ignore(lv_event_t* /*e*/) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[UpdateChecker] on_update_notify_ignore");
+    spdlog::info("[UpdateChecker] User chose to ignore update");
+    UpdateChecker::instance().dismiss_current_version();
+    UpdateChecker::instance().hide_update_notification();
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+static void on_update_notify_dismiss(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[UpdateChecker] on_update_notify_dismiss");
+    // Only dismiss on backdrop click, not on child clicks that bubble up
+    auto* target = lv_event_get_target(e);
+    auto* current_target = lv_event_get_current_target(e);
+    if (target != current_target) {
+        return;
+    }
+    spdlog::info("[UpdateChecker] User dismissed update notification (remind later)");
+    UpdateChecker::instance().hide_update_notification();
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+static void on_update_toggle_changelog(lv_event_t* /*e*/) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[UpdateChecker] on_update_toggle_changelog");
+    auto* subject = UpdateChecker::instance().changelog_visible_subject();
+    int current = lv_subject_get_int(subject);
+    lv_subject_set_int(subject, current ? 0 : 1);
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+static bool s_notify_callbacks_registered = false;
+
+static void register_notify_callbacks() {
+    if (s_notify_callbacks_registered)
+        return;
+    lv_xml_register_event_cb(nullptr, "on_update_notify_install", on_update_notify_install);
+    lv_xml_register_event_cb(nullptr, "on_update_notify_ignore", on_update_notify_ignore);
+    lv_xml_register_event_cb(nullptr, "on_update_notify_dismiss", on_update_notify_dismiss);
+    lv_xml_register_event_cb(nullptr, "on_update_toggle_changelog", on_update_toggle_changelog);
+    s_notify_callbacks_registered = true;
+    spdlog::debug("[UpdateChecker] Notification callbacks registered");
+}
+
+void UpdateChecker::show_update_notification() {
+    spdlog::info("[UpdateChecker] Show update notification");
+    // Modal creation handled in step 3
+    if (!notify_modal_) {
+        notify_modal_ = static_cast<lv_obj_t*>(
+            lv_xml_create(lv_screen_active(), "update_notify_modal", nullptr));
+    }
+    if (notify_modal_) {
+        lv_obj_remove_flag(notify_modal_, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
+void UpdateChecker::hide_update_notification() {
+    if (notify_modal_) {
+        lv_obj_add_flag(notify_modal_, LV_OBJ_FLAG_HIDDEN);
+    }
 }
 
 std::string UpdateChecker::get_r2_base_url() const {
