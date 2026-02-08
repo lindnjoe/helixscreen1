@@ -94,19 +94,24 @@ static void indicator_draw_cb(lv_event_t* e) {
     lv_draw_line(layer, &line_dsc);
 
     // --- Tick marks and labels at -2, -1, 0, +1, +2 ---
-    const int tick_values[] = {2, 1, 0, -1, -2};
+    // Use string literals — lv_draw_label defers rendering, so stack buffers get stale
+    struct TickInfo {
+        int value;
+        const char* label;
+    };
+    static constexpr TickInfo ticks[] = {{2, "2"}, {1, "1"}, {0, "0"}, {-1, "-1"}, {-2, "-2"}};
     int32_t tick_half_w = w / 16; // Responsive tick width
     const lv_font_t* font = lv_font_get_default();
     int32_t font_h = lv_font_get_line_height(font);
 
-    for (int val : tick_values) {
-        int32_t y = microns_to_scale_y(val * 1000, scale_top, scale_bottom);
+    for (const auto& tick : ticks) {
+        int32_t y = microns_to_scale_y(tick.value * 1000, scale_top, scale_bottom);
 
         // Tick mark
         lv_draw_line_dsc_t tick_dsc;
         lv_draw_line_dsc_init(&tick_dsc);
         tick_dsc.color = muted_color;
-        tick_dsc.width = (val == 0) ? 2 : 1; // Bolder zero line
+        tick_dsc.width = (tick.value == 0) ? 2 : 1; // Bolder zero line
         tick_dsc.p1.x = scale_x - tick_half_w;
         tick_dsc.p1.y = y;
         tick_dsc.p2.x = scale_x + tick_half_w;
@@ -114,14 +119,12 @@ static void indicator_draw_cb(lv_event_t* e) {
         lv_draw_line(layer, &tick_dsc);
 
         // Label to the left of the tick
-        char buf[8];
-        lv_snprintf(buf, sizeof(buf), "%d", val);
         lv_draw_label_dsc_t lbl_dsc;
         lv_draw_label_dsc_init(&lbl_dsc);
         lbl_dsc.color = muted_color;
         lbl_dsc.font = font;
         lbl_dsc.align = LV_TEXT_ALIGN_RIGHT;
-        lbl_dsc.text = buf;
+        lbl_dsc.text = tick.label;
         lv_area_t lbl_area = {coords.x1 + 2, y - font_h / 2, scale_x - tick_half_w - 4,
                               y + font_h / 2};
         lv_draw_label(layer, &lbl_dsc, &lbl_area);
@@ -147,8 +150,8 @@ static void indicator_draw_cb(lv_event_t* e) {
     lv_draw_triangle(layer, &tri_dsc);
 
     // --- Nozzle icon to the right of the scale ---
-    int32_t nozzle_cx = coords.x1 + (w * 5) / 8; // 62.5% from left
-    int32_t nozzle_scale = LV_MAX(6, h / 8);     // Prominent nozzle
+    int32_t nozzle_cx = coords.x1 + (w * 5) / 8;    // 62.5% from left
+    int32_t nozzle_scale = LV_CLAMP(4, h / 16, 10); // Visible but fits within scale
     lv_color_t nozzle_color = theme_manager_get_color("text");
 
     if (data->use_faceted_toolhead) {
