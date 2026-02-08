@@ -5,6 +5,34 @@ All notable changes to HelixScreen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.6] - 2026-02-08
+
+### Added
+- Per-object G-code toolpath thumbnails in Print Objects overlay
+- AFC (Armored Turtle) support: live device state, tool mapping, endless spool, per-lane reset, maintenance and LED controls, quiet mode, and mock simulation
+- Active object count shown on layer progress line during printing
+- Change Host modal for switching Moonraker connection in settings
+- Z movement style override setting and E-Stop relocated to Motion section
+- K1 dynamic linking toolchain and build target
+- CDN-first installer downloads with GitHub fallback
+- Multi-channel R2 update distribution with GitHub API fallback
+
+### Fixed
+- Toasts now render on top layer instead of active screen (fixes toasts hidden behind overlays)
+- Print cancel timeout increased to 15s with active state observation for more reliable cancellation
+- Pre-print time estimates seeded from slicer data with blended early progress
+- Thread-safe slicer estimate seeding during print start
+- G-code viewer cache thrash from current_object changes during exclude-object prints
+- ForgeX startup framebuffer stomping by S99root init script
+- Wrong-platform binary install prevented with ELF architecture validation and safe rollback
+- Use-after-free crash on Print Objects overlay close
+- Isometric thumbnail rendering with shared projection, depth shading, and thicker lines
+- Install warning text centered in update download modal
+- Missing alert_circle icon codepoint
+- Settings About section consolidated with cleaner version row layout
+- Z baby step icons and color swatch labels
+- Exclude object mock mode: objects populated from G-code on print start with proper status dispatch
+
 ## [0.9.5] - 2026-02-07
 
 ### Added
@@ -158,6 +186,7 @@ Initial tagged release. Foundation for all subsequent development.
 - Automated GitHub Actions release pipeline
 - One-liner installation script with platform auto-detection
 
+[0.9.6]: https://github.com/prestonbrown/helixscreen/compare/v0.9.5...v0.9.6
 [0.9.5]: https://github.com/prestonbrown/helixscreen/compare/v0.9.4...v0.9.5
 [0.9.4]: https://github.com/prestonbrown/helixscreen/compare/v0.9.3...v0.9.4
 [0.9.3]: https://github.com/prestonbrown/helixscreen/compare/v0.9.2...v0.9.3
