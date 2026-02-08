@@ -42,6 +42,9 @@ static const char* COMPLETION_ALERT_OPTIONS_TEXT = "Off\nNotification\nAlert";
 static const char* BED_MESH_RENDER_MODE_OPTIONS_TEXT = "Auto\n3D View\n2D Heatmap";
 static const char* GCODE_RENDER_MODE_OPTIONS_TEXT = "Auto\n3D View\n2D Layers";
 
+// Z movement style options (Auto=0, Bed Moves=1, Nozzle Moves=2)
+static const char* Z_MOVEMENT_STYLE_OPTIONS_TEXT = "Auto\nBed Moves\nNozzle Moves";
+
 // Helper: Validate a timeout value against allowed options, snapping to nearest valid value
 template <size_t N>
 static int validate_timeout_option(int value, const int (&options)[N], int default_value,
@@ -205,6 +208,18 @@ void SettingsManager::init_subjects() {
     int lang_index = language_code_to_index(lang_code);
     UI_MANAGED_SUBJECT_INT(language_subject_, lang_index, "settings_language", subjects_);
     spdlog::debug("[SettingsManager] Language initialized to {} (index {})", lang_code, lang_index);
+
+    // Z movement style (default: 0 = Auto)
+    int z_movement_style = config->get<int>("/printer/z_movement_style", 0);
+    z_movement_style = std::clamp(z_movement_style, 0, 2);
+    UI_MANAGED_SUBJECT_INT(z_movement_style_subject_, z_movement_style, "settings_z_movement_style",
+                           subjects_);
+
+    // Apply Z movement override to printer state (ensures non-Auto setting takes
+    // effect even if set_kinematics() hasn't run yet, e.g. on reconnect)
+    if (z_movement_style != 0) {
+        get_printer_state().apply_effective_bed_moves();
+    }
 
     // Update channel (default: 0 = Stable)
     int update_channel = config->get<int>("/update/channel", 0);
@@ -933,4 +948,35 @@ void SettingsManager::set_update_channel(int channel) {
 
 const char* SettingsManager::get_update_channel_options() {
     return "Stable\nBeta\nDev";
+}
+
+// =============================================================================
+// Z MOVEMENT STYLE
+// =============================================================================
+
+ZMovementStyle SettingsManager::get_z_movement_style() const {
+    int val = lv_subject_get_int(const_cast<lv_subject_t*>(&z_movement_style_subject_));
+    return static_cast<ZMovementStyle>(std::clamp(val, 0, 2));
+}
+
+void SettingsManager::set_z_movement_style(ZMovementStyle style) {
+    int val = static_cast<int>(style);
+    val = std::clamp(val, 0, 2);
+    spdlog::info("[SettingsManager] set_z_movement_style({})",
+                 val == 0 ? "Auto" : (val == 1 ? "Bed Moves" : "Nozzle Moves"));
+
+    // 1. Update subject (UI reacts)
+    lv_subject_set_int(&z_movement_style_subject_, val);
+
+    // 2. Persist to config
+    Config* config = Config::get_instance();
+    config->set<int>("/printer/z_movement_style", val);
+    config->save();
+
+    // 3. Apply override to printer state
+    get_printer_state().apply_effective_bed_moves();
+}
+
+const char* SettingsManager::get_z_movement_style_options() {
+    return Z_MOVEMENT_STYLE_OPTIONS_TEXT;
 }

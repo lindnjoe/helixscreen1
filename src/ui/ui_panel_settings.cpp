@@ -128,6 +128,16 @@ static void on_bed_mesh_mode_changed(lv_event_t* e) {
     SettingsManager::instance().set_bed_mesh_render_mode(mode);
 }
 
+// Static callback for Z movement style dropdown
+static void on_z_movement_style_changed(lv_event_t* e) {
+    lv_obj_t* dropdown = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
+    int index = static_cast<int>(lv_dropdown_get_selected(dropdown));
+    auto style = static_cast<ZMovementStyle>(index);
+    spdlog::info("[SettingsPanel] Z movement style changed: {} ({})", index,
+                 index == 0 ? "Auto" : (index == 1 ? "Bed Moves" : "Nozzle Moves"));
+    SettingsManager::instance().set_z_movement_style(style);
+}
+
 // Static callback for G-code render mode dropdown
 static void on_gcode_mode_changed(lv_event_t* e) {
     lv_obj_t* dropdown = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
@@ -389,6 +399,7 @@ void SettingsPanel::init_subjects() {
                              on_display_sleep_dropdown_changed);
     lv_xml_register_event_cb(nullptr, "on_bed_mesh_mode_changed", on_bed_mesh_mode_changed);
     lv_xml_register_event_cb(nullptr, "on_gcode_mode_changed", on_gcode_mode_changed);
+    lv_xml_register_event_cb(nullptr, "on_z_movement_style_changed", on_z_movement_style_changed);
     lv_xml_register_event_cb(nullptr, "on_time_format_changed", on_time_format_changed);
     lv_xml_register_event_cb(nullptr, "on_language_changed", on_language_changed);
     lv_xml_register_event_cb(nullptr, "on_update_channel_changed", on_update_channel_changed);
@@ -586,6 +597,19 @@ void SettingsPanel::setup_toggle_handlers() {
             lv_dropdown_set_selected(completion_alert_dropdown_, static_cast<uint32_t>(mode));
             spdlog::trace("[{}]   ✓ Completion alert dropdown (mode={})", get_name(),
                           static_cast<int>(mode));
+        }
+    }
+
+    // === Z Movement Style Dropdown ===
+    // Event handler wired via XML <event_cb>, just set initial value here (options set in XML)
+    lv_obj_t* z_movement_row = lv_obj_find_by_name(panel_, "row_z_movement_style");
+    if (z_movement_row) {
+        lv_obj_t* z_movement_dropdown = lv_obj_find_by_name(z_movement_row, "dropdown");
+        if (z_movement_dropdown) {
+            auto style = settings.get_z_movement_style();
+            lv_dropdown_set_selected(z_movement_dropdown, static_cast<uint32_t>(style));
+            spdlog::trace("[{}]   ✓ Z movement style dropdown (style={})", get_name(),
+                          static_cast<int>(style));
         }
     }
 

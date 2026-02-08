@@ -19,6 +19,9 @@ enum class CompletionAlertMode { OFF = 0, NOTIFICATION = 1, ALERT = 2 };
 /** @brief Time display format (12-hour with AM/PM or 24-hour) */
 enum class TimeFormat { HOUR_12 = 0, HOUR_24 = 1 };
 
+/** @brief Z movement style override (Auto=detect from kinematics, or force) */
+enum class ZMovementStyle { AUTO = 0, BED_MOVES = 1, NOZZLE_MOVES = 2 };
+
 /**
  * @brief Application settings manager with reactive UI binding
  *
@@ -395,6 +398,24 @@ class SettingsManager {
     void apply_led_startup_preference();
 
     // =========================================================================
+    // Z MOVEMENT STYLE (override auto-detected bed vs nozzle movement)
+    // =========================================================================
+
+    /** @brief Get Z movement style override (Auto/Bed Moves/Nozzle Moves) */
+    ZMovementStyle get_z_movement_style() const;
+
+    /** @brief Set Z movement style override and apply to printer state */
+    void set_z_movement_style(ZMovementStyle style);
+
+    /** @brief Get dropdown options string "Auto\nBed Moves\nNozzle Moves" */
+    static const char* get_z_movement_style_options();
+
+    /** @brief Z movement style subject (integer: 0=Auto, 1=Bed Moves, 2=Nozzle Moves) */
+    lv_subject_t* subject_z_movement_style() {
+        return &z_movement_style_subject_;
+    }
+
+    // =========================================================================
     // INPUT SETTINGS (require restart)
     // =========================================================================
 
@@ -688,6 +709,7 @@ class SettingsManager {
     lv_subject_t scroll_throw_subject_;
     lv_subject_t scroll_limit_subject_;
     lv_subject_t update_channel_subject_;
+    lv_subject_t z_movement_style_subject_;
 
     // External references
     MoonrakerClient* moonraker_client_ = nullptr;

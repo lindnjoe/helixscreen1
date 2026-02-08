@@ -1185,6 +1185,18 @@ class PrinterState {
     void set_kinematics(const std::string& kinematics);
 
     /**
+     * @brief Apply effective bed_moves value based on Z movement style override
+     *
+     * Reads ZMovementStyle from SettingsManager and applies:
+     * - AUTO: uses auto_detected_bed_moves_ from kinematics detection
+     * - BED_MOVES: forces printer_bed_moves = true
+     * - NOZZLE_MOVES: forces printer_bed_moves = false
+     *
+     * Called from set_kinematics() and SettingsManager::set_z_movement_style().
+     */
+    void apply_effective_bed_moves();
+
+    /**
      * @brief Get bed_moves subject for XML binding
      *
      * Returns 1 if the printer's bed moves on Z axis (corexy, corexz),
@@ -1500,6 +1512,9 @@ class PrinterState {
     // Printer type and print start capabilities
     std::string printer_type_;                        ///< Selected printer type name
     PrintStartCapabilities print_start_capabilities_; ///< Cached capabilities for current type
+
+    /// Auto-detected bed_moves value from kinematics (before user override)
+    bool auto_detected_bed_moves_ = false;
 
     // ============================================================================
     // Thread-safe internal methods (called via lv_async_call from main thread)

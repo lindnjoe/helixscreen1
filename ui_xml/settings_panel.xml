@@ -79,11 +79,6 @@
                           description="Configure G10/G11 firmware retraction"
                           description_tag="Configure G10/G11 firmware retraction" callback="on_retraction_row_clicked"/>
     </lv_obj>
-    <!-- E-Stop Confirmation Toggle -->
-    <setting_toggle_row name="row_estop_confirm"
-                        label="E-Stop Confirmation" label_tag="E-Stop Confirmation" icon="alert_octagon"
-                        description="Require confirmation before emergency stop"
-                        description_tag="Require confirmation before emergency stop" callback="on_estop_confirm_changed"/>
     <!-- Macro Buttons (opens overlay for configuring quick buttons and standard macros) -->
     <setting_action_row name="row_macro_buttons"
                         label="Macro Buttons" label_tag="Macro Buttons" icon="script_text"
@@ -110,11 +105,23 @@
     <!-- MOTION SECTION -->
     <!-- ================================================================== -->
     <setting_section_header title="MOTION" title_tag="MOTION" icon="speed"/>
+    <!-- Z Movement Style Override (Auto / Bed Moves / Nozzle Moves) -->
+    <setting_dropdown_row name="row_z_movement_style"
+                          label="Z Movement" label_tag="Z Movement" icon="arrow_up_down"
+                          description="How Z-axis movement is displayed"
+                          description_tag="How Z-axis movement is displayed"
+                          options="Auto&#10;Bed Moves&#10;Nozzle Moves"
+                          callback="on_z_movement_style_changed"/>
     <!-- Machine Limits -->
     <setting_action_row name="row_machine_limits"
                         label="Machine Limits" label_tag="Machine Limits" icon="dashboard"
                         description="Velocity and acceleration limits"
                         description_tag="Velocity and acceleration limits" callback="on_machine_limits_clicked"/>
+    <!-- E-Stop Confirmation Toggle -->
+    <setting_toggle_row name="row_estop_confirm"
+                        label="E-Stop Confirmation" label_tag="E-Stop Confirmation" icon="alert_octagon"
+                        description="Require confirmation before emergency stop"
+                        description_tag="Require confirmation before emergency stop" callback="on_estop_confirm_changed"/>
     <!-- ================================================================== -->
     <!-- SYSTEM SECTION -->
     <!-- ================================================================== -->

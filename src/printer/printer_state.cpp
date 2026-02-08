@@ -29,6 +29,7 @@
 #include "moonraker_client.h" // For ConnectionState enum
 #include "probe_sensor_manager.h"
 #include "runtime_config.h"
+#include "settings_manager.h"
 #include "temperature_sensor_manager.h"
 #include "unit_conversions.h"
 #include "width_sensor_manager.h"
@@ -153,9 +154,10 @@ void PrinterState::reset_for_testing() {
     // Use SubjectManager for automatic subject cleanup
     subjects_.deinit_all();
 
-    // Reset printer type and capabilities to initial empty state
+    // Reset printer type, capabilities, and auto-detected state
     printer_type_.clear();
     print_start_capabilities_ = PrintStartCapabilities{};
+    auto_detected_bed_moves_ = false;
 
     subjects_initialized_ = false;
 }
@@ -596,9 +598,32 @@ void PrinterState::set_kinematics(const std::string& kinematics) {
 
     // CoreXY with QGL = gantry moves on Z (e.g. Voron 2.4), otherwise bed moves
     bool has_qgl = lv_subject_get_int(capabilities_state_.get_printer_has_qgl_subject()) != 0;
-    bool bed_moves_z = is_corexy_family && !has_qgl;
+    auto_detected_bed_moves_ = is_corexy_family && !has_qgl;
 
-    capabilities_state_.set_bed_moves(bed_moves_z);
+    // Apply with user override considered
+    apply_effective_bed_moves();
+}
+
+void PrinterState::apply_effective_bed_moves() {
+    auto style = SettingsManager::instance().get_z_movement_style();
+    bool effective;
+
+    switch (style) {
+    case ZMovementStyle::BED_MOVES:
+        effective = true;
+        break;
+    case ZMovementStyle::NOZZLE_MOVES:
+        effective = false;
+        break;
+    case ZMovementStyle::AUTO:
+    default:
+        effective = auto_detected_bed_moves_;
+        break;
+    }
+
+    capabilities_state_.set_bed_moves(effective);
+    spdlog::debug("[PrinterState] apply_effective_bed_moves: style={}, auto={}, effective={}",
+                  static_cast<int>(style), auto_detected_bed_moves_, effective);
 }
 
 // Note: Pending Z-offset delta methods are now delegated to motion_state_
