@@ -147,18 +147,22 @@ void GCodeLayerRenderer::reset_colors() {
 }
 
 void GCodeLayerRenderer::set_excluded_objects(const std::unordered_set<std::string>& names) {
+    if (names == excluded_objects_) {
+        return; // No change - skip expensive cache invalidation
+    }
     excluded_objects_ = names;
     invalidate_cache();
 }
 
 void GCodeLayerRenderer::set_highlighted_objects(const std::unordered_set<std::string>& names) {
-    if (names != highlighted_objects_) {
-        if (names.empty()) {
-            spdlog::debug("[GCodeLayerRenderer] Selection cleared");
-        } else {
-            for (const auto& name : names) {
-                spdlog::debug("[GCodeLayerRenderer] Selection brackets active for '{}'", name);
-            }
+    if (names == highlighted_objects_) {
+        return; // No change - skip expensive cache invalidation
+    }
+    if (names.empty()) {
+        spdlog::debug("[GCodeLayerRenderer] Selection cleared");
+    } else {
+        for (const auto& name : names) {
+            spdlog::debug("[GCodeLayerRenderer] Selection brackets active for '{}'", name);
         }
     }
     highlighted_objects_ = names;

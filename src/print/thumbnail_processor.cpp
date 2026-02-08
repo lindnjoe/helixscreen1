@@ -360,12 +360,12 @@ ProcessResult ThumbnailProcessor::do_process(const std::vector<uint8_t>& png_dat
     // ========================================================================
     // Step 2: Calculate output dimensions (preserve aspect ratio, cover target)
     // ========================================================================
-    // We want to scale so the image covers the target area while maintaining
-    // aspect ratio. This means taking the larger scale factor.
+    // Scale to fit within the target area while maintaining aspect ratio.
+    // Using min() ensures the image never exceeds the target dimensions.
 
     float scale_x = static_cast<float>(target.width) / src_width;
     float scale_y = static_cast<float>(target.height) / src_height;
-    float scale = std::max(scale_x, scale_y);
+    float scale = std::min(scale_x, scale_y);
 
     int out_width = static_cast<int>(src_width * scale);
     int out_height = static_cast<int>(src_height * scale);

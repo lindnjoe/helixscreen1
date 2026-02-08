@@ -1669,6 +1669,11 @@ void ui_gcode_viewer_set_excluded_objects(lv_obj_t* obj,
     if (!st)
         return;
 
+    // Skip if excluded set hasn't changed (avoids expensive cache invalidation)
+    if (object_names == st->excluded_objects) {
+        return;
+    }
+
     st->excluded_objects = object_names;
     st->renderer_->set_excluded_objects(object_names);
     if (st->layer_renderer_2d_) {
@@ -1796,6 +1801,11 @@ void ui_gcode_viewer_set_print_progress(lv_obj_t* obj, int current_layer) {
     gcode_viewer_state_t* st = get_state(obj);
     if (!st)
         return;
+
+    // Skip if layer hasn't changed (avoids unnecessary invalidation)
+    if (current_layer == st->print_progress_layer_) {
+        return;
+    }
 
     // Store the print progress layer for use by render callback
     st->print_progress_layer_ = current_layer;
