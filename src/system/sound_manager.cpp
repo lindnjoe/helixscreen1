@@ -4,6 +4,7 @@
 #include "sound_manager.h"
 
 #include "moonraker_client.h"
+#include "pwm_sound_backend.h"
 #include "runtime_config.h"
 #include "settings_manager.h"
 #include "sound_backend.h"
@@ -222,7 +223,7 @@ bool SoundManager::is_available() const {
 std::shared_ptr<SoundBackend> SoundManager::create_backend() {
     // Auto-detection order:
     // 1. SDL audio available (desktop build) -> SDLBackend
-    // 2. /sys/class/pwm/pwmchip0 exists -> PWMBackend (future)
+    // 2. /sys/class/pwm/pwmchip0 exists -> PWMBackend
     // 3. Moonraker connected -> M300Backend
     // 4. None -> sounds disabled
 
@@ -234,6 +235,14 @@ std::shared_ptr<SoundBackend> SoundManager::create_backend() {
     }
     spdlog::warn("[SoundManager] SDL audio init failed, falling back");
 #endif
+
+    // Try PWM sysfs backend (AD5M buzzer)
+    auto pwm_backend = std::make_shared<PWMSoundBackend>();
+    if (pwm_backend->initialize()) {
+        spdlog::info("[SoundManager] Using PWM sysfs backend ({})", pwm_backend->channel_path());
+        return pwm_backend;
+    }
+    spdlog::debug("[SoundManager] PWM sysfs not available, falling back");
 
     if (client_) {
         spdlog::debug("[SoundManager] Creating M300 backend via Moonraker");
