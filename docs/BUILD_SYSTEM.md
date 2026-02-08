@@ -168,6 +168,32 @@ TARGET_LDFLAGS := -lstdc++fs  # GCC 8 requires this for std::filesystem
 DISPLAY_BACKEND := fbdev  # or drm, sdl
 ```
 
+### GCC 7.5 Compatibility (K1 Dynamic Target)
+
+The K1 dynamic build uses a custom GCC 7.5 toolchain targeting the K1's native glibc 2.29. GCC 7.5 only supports C++17 partially, so code must avoid certain features. This applies to **all code in the codebase** — even native builds should stay compatible.
+
+**What works:**
+- Most of C++17 (`std::optional`, `std::string_view`, structured bindings, `if constexpr`, etc.)
+- `<filesystem>` via the compat shim at `include/compat/filesystem` (aliases `std::experimental::filesystem` → `std::filesystem`)
+
+**Gotchas to avoid:**
+
+| Feature | GCC 7 Status | Workaround | Example |
+|---------|-------------|------------|---------|
+| **`std::from_chars` (integers)** | Not available | Use `std::strtol` / `std::strtod` | `src/util/version.cpp` |
+| **`std::atomic<time_point>`** | Doesn't compile | Store as `std::atomic<int64_t>` (nanoseconds) | `include/gcode_streaming_controller.h` |
+| **C++20 designated initializers** | Not supported (`{.foo = 1}`) | Initialize struct explicitly, then assign fields | `src/ui/ui_fan_control_overlay.cpp` |
+| **`directory_entry` member functions** | `.is_regular_file()`, `.file_size()`, `.last_write_time()` missing | Use free functions: `std::filesystem::is_regular_file(entry.path())` | `src/print/thumbnail_cache.cpp`, `src/plugin/plugin_manager.cpp` |
+| **`-lstdc++fs`** | Required for `<experimental/filesystem>` | Added automatically for `k1-dynamic` in `mk/cross.mk` and `mk/watchdog.mk` | — |
+| **LTO (`-flto`)** | GCC 7.5 static toolchain lacks `liblto_plugin.so` | Disabled for `k1-dynamic`; uses plain `ar`/`ranlib` instead of `gcc-ar`/`gcc-ranlib` | `mk/cross.mk` |
+
+**Filesystem compat shim** (`include/compat/filesystem`):
+- For GCC < 8: includes `<experimental/filesystem>` and aliases it into `std::filesystem`
+- For GCC 8+/Clang/MSVC: passes through to the real `<filesystem>` via `#include_next`
+- Activated by `-isystem include/compat` in the K1 dynamic target flags
+
+**When adding new code:** Always use `std::filesystem::is_regular_file(path)` (free function) rather than `entry.is_regular_file()` (member function). The free-function forms work on both GCC 7 and modern compilers.
+
 ### Troubleshooting
 
 **Docker not installed:**
