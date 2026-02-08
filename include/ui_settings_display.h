@@ -140,6 +140,12 @@ class DisplaySettingsOverlay : public OverlayBase {
     //
 
     /**
+     * @brief Handle sleep while printing toggle
+     * @param enabled Whether sleep during prints is allowed
+     */
+    void handle_sleep_while_printing_changed(bool enabled);
+
+    /**
      * @brief Handle brightness slider change
      * @param value New brightness value (10-100)
      */
@@ -215,6 +221,11 @@ class DisplaySettingsOverlay : public OverlayBase {
     void init_sleep_dropdown();
 
     /**
+     * @brief Initialize sleep while printing toggle
+     */
+    void init_sleep_while_printing_toggle();
+
+    /**
      * @brief Initialize bed mesh mode dropdown
      */
     void init_bed_mesh_dropdown();
@@ -266,6 +277,7 @@ class DisplaySettingsOverlay : public OverlayBase {
     //
 
     static void on_brightness_changed(lv_event_t* e);
+    static void on_sleep_while_printing_changed(lv_event_t* e);
     static void on_theme_preset_changed(lv_event_t* e);
     static void on_theme_settings_clicked(lv_event_t* e);
     static void on_apply_theme_clicked(lv_event_t* e);

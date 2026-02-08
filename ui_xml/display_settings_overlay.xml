@@ -96,6 +96,14 @@
                             options="Never&#10;1 minute&#10;5 minutes&#10;10 minutes&#10;30 minutes"
                             callback="on_display_sleep_changed"/>
       <!-- ================================================================== -->
+      <!-- SLEEP WHILE PRINTING -->
+      <!-- ================================================================== -->
+      <setting_toggle_row name="row_sleep_while_printing"
+                          label="Sleep While Printing" label_tag="Sleep While Printing" icon="sleep"
+                          description="Allow display to sleep during active prints"
+                          description_tag="Allow display to sleep during active prints"
+                          callback="on_sleep_while_printing_changed"/>
+      <!-- ================================================================== -->
       <!-- TIME FORMAT -->
       <!-- ================================================================== -->
       <setting_dropdown_row name="row_time_format"

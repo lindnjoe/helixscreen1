@@ -96,8 +96,6 @@ class SettingsPanel : public PanelBase {
     lv_obj_t* led_light_switch_ = nullptr;
     lv_obj_t* sounds_switch_ = nullptr;
     lv_obj_t* estop_confirm_switch_ = nullptr;
-    lv_obj_t* sleep_while_printing_switch_ = nullptr;
-
     // Dropdowns
     lv_obj_t* completion_alert_dropdown_ = nullptr;
     lv_obj_t* display_sleep_dropdown_ = nullptr;
@@ -224,8 +222,6 @@ class SettingsPanel : public PanelBase {
     void handle_led_light_changed(bool enabled);
     void handle_sounds_changed(bool enabled);
     void handle_estop_confirm_changed(bool enabled);
-    void handle_sleep_while_printing_changed(bool enabled);
-
     void handle_led_select_changed(int index);
     void handle_display_settings_clicked();
     void handle_filament_sensors_clicked();
@@ -273,7 +269,6 @@ class SettingsPanel : public PanelBase {
     static void on_led_light_changed(lv_event_t* e);
     static void on_sounds_changed(lv_event_t* e);
     static void on_estop_confirm_changed(lv_event_t* e);
-    static void on_sleep_while_printing_changed(lv_event_t* e);
     static void on_display_settings_clicked(lv_event_t* e);
     static void on_filament_sensors_clicked(lv_event_t* e);
     static void on_ams_settings_clicked(lv_event_t* e);

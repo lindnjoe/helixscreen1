@@ -26,12 +26,6 @@
                         label="3D Preview" label_tag="3D Preview" icon="rotate_3d"
                         description="Interactive 3D G-code during prints"
                         description_tag="Interactive 3D G-code during prints" callback="on_gcode_3d_changed"/>
-    <!-- Sleep While Printing Toggle -->
-    <setting_toggle_row name="row_sleep_while_printing"
-                        label="Sleep While Printing" label_tag="Sleep While Printing" icon="sleep"
-                        description="Allow display to sleep during active prints"
-                        description_tag="Allow display to sleep during active prints"
-                        callback="on_sleep_while_printing_changed"/>
     <!-- Display Settings (opens overlay for brightness + sleep timeout) -->
     <setting_action_row name="row_display_settings"
                         label="Display Settings" label_tag="Display Settings" icon="light"
@@ -130,11 +124,18 @@
     <!-- SYSTEM SECTION -->
     <!-- ================================================================== -->
     <setting_section_header title="SYSTEM" title_tag="SYSTEM" icon="sysinfo"/>
+    <!-- Printer Name -->
+    <setting_info_row name="row_printer" label="Printer Name" label_tag="Printer Name" icon="printer_3d">
+      <text_muted name="value" bind_text="printer_value"/>
+    </setting_info_row>
     <!-- Network Settings -->
     <setting_action_row name="row_network"
                         label="Network Settings" label_tag="Network Settings" icon="wifi"
                         description="WiFi and Ethernet configuration" description_tag="WiFi and Ethernet configuration"
                         callback="on_network_clicked"/>
+    <!-- Printer Host (clickable - opens change host modal) -->
+    <setting_action_row name="row_printer_host"
+                        label="Host" label_tag="Host" icon="lan" callback="on_change_host_clicked"/>
     <!-- Touch Calibration (hidden on non-touch displays unless test mode) -->
     <!-- Description is bound to touch_cal_status subject in C++ setup() -->
     <lv_obj name="container_touch_calibration" width="100%" style_pad_all="0" scrollable="false">
@@ -197,9 +198,17 @@
               style_pad_bottom="#space_md" style_pad_gap="#space_sm" scrollable="false" clickable="false"
               event_bubble="true">
         <icon name="row_icon" src="info" size="sm" variant="secondary" clickable="false" event_bubble="true"/>
-        <text_body name="label"
-                   text="Current Version" translation_tag="Current Version" style_text_color="#text" flex_grow="1"
-                   clickable="false" event_bubble="true"/>
+        <lv_obj height="content"
+                style_pad_all="0" flex_flow="column" style_pad_gap="#space_xs" flex_grow="1" scrollable="false"
+                clickable="false" event_bubble="true">
+          <text_body name="label"
+                     text="Current Version" translation_tag="Current Version" style_text_color="#text"
+                     clickable="false" event_bubble="true"/>
+          <text_small name="beta_description" text="Beta features are enabled"
+                      translation_tag="Beta features are enabled" clickable="false" event_bubble="true">
+            <bind_flag_if_eq subject="show_beta_features" flag="hidden" ref_value="0"/>
+          </text_small>
+        </lv_obj>
         <text_muted name="value" bind_text="version_value" clickable="false" event_bubble="true"/>
       </lv_obj>
       <event_cb trigger="clicked" callback="on_version_clicked"/>
@@ -208,13 +217,6 @@
     <setting_action_row name="row_check_updates"
                         label="Check for Updates" label_tag="Check for Updates" icon="refresh"
                         bind_description="update_version_text" callback="on_check_updates_clicked"/>
-    <!-- Printer Name -->
-    <setting_info_row name="row_printer" label="Printer" label_tag="Printer" icon="printer_3d">
-      <text_muted name="value" bind_text="printer_value"/>
-    </setting_info_row>
-    <!-- Printer Host (clickable - opens change host modal) -->
-    <setting_action_row name="row_printer_host"
-                        label="Host" label_tag="Host" icon="lan" callback="on_change_host_clicked"/>
     <!-- Klipper Version -->
     <setting_info_row name="row_klipper" label="Klipper" label_tag="Klipper" icon="toy_brick_outline">
       <text_muted name="value" text="—"/>

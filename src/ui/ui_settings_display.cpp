@@ -86,6 +86,10 @@ void DisplaySettingsOverlay::register_callbacks() {
     // Brightness slider callback
     lv_xml_register_event_cb(nullptr, "on_brightness_changed", on_brightness_changed);
 
+    // Sleep while printing toggle
+    lv_xml_register_event_cb(nullptr, "on_sleep_while_printing_changed",
+                             on_sleep_while_printing_changed);
+
     // Theme explorer callbacks (primary panel)
     lv_xml_register_event_cb(nullptr, "on_theme_preset_changed", on_theme_preset_changed);
     lv_xml_register_event_cb(nullptr, "on_theme_settings_clicked", on_theme_settings_clicked);
@@ -166,6 +170,7 @@ void DisplaySettingsOverlay::on_activate() {
     init_brightness_controls();
     init_dim_dropdown();
     init_sleep_dropdown();
+    init_sleep_while_printing_toggle();
     init_bed_mesh_dropdown();
     init_gcode_dropdown();
     init_time_format_dropdown();
@@ -229,6 +234,25 @@ void DisplaySettingsOverlay::init_sleep_dropdown() {
 
         spdlog::debug("[{}] Sleep dropdown initialized to index {} ({}s)", get_name(), index,
                       current_sec);
+    }
+}
+
+void DisplaySettingsOverlay::init_sleep_while_printing_toggle() {
+    if (!overlay_root_)
+        return;
+
+    lv_obj_t* row = lv_obj_find_by_name(overlay_root_, "row_sleep_while_printing");
+    if (!row)
+        return;
+
+    lv_obj_t* toggle = lv_obj_find_by_name(row, "toggle");
+    if (toggle) {
+        if (SettingsManager::instance().get_sleep_while_printing()) {
+            lv_obj_add_state(toggle, LV_STATE_CHECKED);
+        } else {
+            lv_obj_remove_state(toggle, LV_STATE_CHECKED);
+        }
+        spdlog::trace("[{}]   ✓ Sleep while printing toggle", get_name());
     }
 }
 
@@ -306,6 +330,11 @@ void DisplaySettingsOverlay::init_time_format_dropdown() {
 // ============================================================================
 // EVENT HANDLERS
 // ============================================================================
+
+void DisplaySettingsOverlay::handle_sleep_while_printing_changed(bool enabled) {
+    spdlog::info("[{}] Sleep while printing toggled: {}", get_name(), enabled ? "ON" : "OFF");
+    SettingsManager::instance().set_sleep_while_printing(enabled);
+}
 
 void DisplaySettingsOverlay::handle_brightness_changed(int value) {
     SettingsManager::instance().set_brightness(value);
@@ -560,6 +589,14 @@ void DisplaySettingsOverlay::on_brightness_changed(lv_event_t* e) {
     auto* slider = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
     int value = lv_slider_get_value(slider);
     get_display_settings_overlay().handle_brightness_changed(value);
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+void DisplaySettingsOverlay::on_sleep_while_printing_changed(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[DisplaySettingsOverlay] on_sleep_while_printing_changed");
+    auto* toggle = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
+    bool enabled = lv_obj_has_state(toggle, LV_STATE_CHECKED);
+    get_display_settings_overlay().handle_sleep_while_printing_changed(enabled);
     LVGL_SAFE_EVENT_CB_END();
 }
 
