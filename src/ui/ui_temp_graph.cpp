@@ -1130,8 +1130,11 @@ void ui_temp_graph_set_axis_size(ui_temp_graph_t* graph, const char* size) {
     int32_t label_height = theme_manager_get_font_height(graph->axis_font);
 
     // Update padding (tighter for smaller sizes)
+    // Top padding must accommodate the full top Y-axis label above the top grid line
     bool is_xs = size && strcmp(size, "xs") == 0;
-    int32_t top_pad = is_xs ? space_xs : space_md;
+    int32_t min_top_for_label = label_height;
+    int32_t top_pad =
+        is_xs ? LV_MAX(space_sm, min_top_for_label) : LV_MAX(space_md, min_top_for_label);
     int32_t left_pad = y_axis_width + space_sm; // Add gap between labels and chart
     int32_t bottom_pad =
         is_xs ? (space_xs + label_height + space_xs) : (space_sm + label_height + space_md);
