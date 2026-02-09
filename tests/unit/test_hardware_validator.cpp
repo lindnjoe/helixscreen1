@@ -854,3 +854,105 @@ TEST_CASE_METHOD(
         REQUIRE(is_missing_in_result(result, "toolchanger"));
     }
 }
+
+// ============================================================================
+// "None" Sentinel Value Tests
+//
+// The wizard dropdown saves "None" as empty string to config. The hardware
+// validator should NOT report missing hardware for empty config values.
+// ============================================================================
+
+TEST_CASE_METHOD(HardwareValidatorConfigFixture,
+                 "HardwareValidator - empty LED config does not trigger missing warning",
+                 "[hardware][validator][config][none]") {
+    MoonrakerClientMock client;
+    client.set_heaters({"extruder", "heater_bed"});
+    client.set_leds({}); // No LEDs on printer
+
+    // Config with empty LED strip (user selected "None" in wizard)
+    config.data = {{"printer",
+                    {{"moonraker_host", "127.0.0.1"},
+                     {"moonraker_port", 7125},
+                     {"leds", {{"strip", ""}}},
+                     {"hardware",
+                      {{"optional", json::array()},
+                       {"expected", json::array()},
+                       {"last_snapshot", json::object()}}}}}};
+
+    HardwareValidator validator;
+    auto result = validator.validate(&config, client.hardware());
+
+    // Empty string = no LED configured, should NOT warn about missing LED
+    bool found_led_missing = false;
+    for (const auto& issue : result.expected_missing) {
+        if (issue.hardware_type == HardwareType::LED) {
+            found_led_missing = true;
+        }
+    }
+    REQUIRE_FALSE(found_led_missing);
+}
+
+TEST_CASE_METHOD(HardwareValidatorConfigFixture,
+                 "HardwareValidator - 'None' string in LED config triggers false positive",
+                 "[hardware][validator][config][none]") {
+    MoonrakerClientMock client;
+    client.set_heaters({"extruder", "heater_bed"});
+    client.set_leds({}); // No LEDs on printer
+
+    // Config with literal "None" (the old bug — wizard saved "None" as a string)
+    config.data = {{"printer",
+                    {{"moonraker_host", "127.0.0.1"},
+                     {"moonraker_port", 7125},
+                     {"leds", {{"strip", "None"}}},
+                     {"hardware",
+                      {{"optional", json::array()},
+                       {"expected", json::array()},
+                       {"last_snapshot", json::object()}}}}}};
+
+    HardwareValidator validator;
+    auto result = validator.validate(&config, client.hardware());
+
+    // "None" is a non-empty string, so validator WILL report it as missing
+    // This test documents the old bug behavior
+    bool found_led_missing = false;
+    for (const auto& issue : result.expected_missing) {
+        if (issue.hardware_type == HardwareType::LED) {
+            found_led_missing = true;
+        }
+    }
+    REQUIRE(found_led_missing);
+}
+
+TEST_CASE_METHOD(HardwareValidatorConfigFixture,
+                 "HardwareValidator - empty fan config does not trigger missing warning",
+                 "[hardware][validator][config][none]") {
+    MoonrakerClientMock client;
+    client.set_heaters({"extruder", "heater_bed"});
+    client.set_fans({"fan", "heater_fan hotend_fan"});
+
+    // Config with empty chamber and exhaust fans (user selected "None")
+    config.data = {{"printer",
+                    {{"moonraker_host", "127.0.0.1"},
+                     {"moonraker_port", 7125},
+                     {"fans",
+                      {{"part", "fan"},
+                       {"hotend", "heater_fan hotend_fan"},
+                       {"chamber", ""},
+                       {"exhaust", ""}}},
+                     {"hardware",
+                      {{"optional", json::array()},
+                       {"expected", json::array()},
+                       {"last_snapshot", json::object()}}}}}};
+
+    HardwareValidator validator;
+    auto result = validator.validate(&config, client.hardware());
+
+    // Empty strings for chamber/exhaust = not configured, no warnings
+    bool found_fan_missing = false;
+    for (const auto& issue : result.expected_missing) {
+        if (issue.hardware_type == HardwareType::FAN && issue.hardware_name.empty()) {
+            found_fan_missing = true;
+        }
+    }
+    REQUIRE_FALSE(found_fan_missing);
+}

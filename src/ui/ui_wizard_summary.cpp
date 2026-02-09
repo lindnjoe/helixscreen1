@@ -157,11 +157,11 @@ std::string WizardSummaryStep::format_bed_summary() {
     Config* config = Config::get_instance();
     std::stringstream ss;
 
-    std::string heater = config->get<std::string>(helix::wizard::BED_HEATER, "None");
-    std::string sensor = config->get<std::string>(helix::wizard::BED_SENSOR, "None");
+    std::string heater = config->get<std::string>(helix::wizard::BED_HEATER, "");
+    std::string sensor = config->get<std::string>(helix::wizard::BED_SENSOR, "");
 
-    ss << "Heater: " << (heater == "None" ? "None" : heater);
-    ss << ", Sensor: " << (sensor == "None" ? "None" : sensor);
+    ss << "Heater: " << (heater.empty() ? "None" : heater);
+    ss << ", Sensor: " << (sensor.empty() ? "None" : sensor);
 
     return ss.str();
 }
@@ -170,11 +170,11 @@ std::string WizardSummaryStep::format_hotend_summary() {
     Config* config = Config::get_instance();
     std::stringstream ss;
 
-    std::string heater = config->get<std::string>(helix::wizard::HOTEND_HEATER, "None");
-    std::string sensor = config->get<std::string>(helix::wizard::HOTEND_SENSOR, "None");
+    std::string heater = config->get<std::string>(helix::wizard::HOTEND_HEATER, "");
+    std::string sensor = config->get<std::string>(helix::wizard::HOTEND_SENSOR, "");
 
-    ss << "Heater: " << (heater == "None" ? "None" : heater);
-    ss << ", Sensor: " << (sensor == "None" ? "None" : sensor);
+    ss << "Heater: " << (heater.empty() ? "None" : heater);
+    ss << ", Sensor: " << (sensor.empty() ? "None" : sensor);
 
     return ss.str();
 }
@@ -228,19 +228,16 @@ void WizardSummaryStep::init_subjects() {
     std::string hotend_summary = config ? format_hotend_summary() : "Not configured";
 
     // Part cooling fan
-    std::string part_fan =
-        config ? config->get<std::string>(helix::wizard::PART_FAN, "None") : "None";
-    int part_fan_visible = (part_fan != "None") ? 1 : 0;
+    std::string part_fan = config ? config->get<std::string>(helix::wizard::PART_FAN, "") : "";
+    int part_fan_visible = !part_fan.empty() ? 1 : 0;
 
     // Hotend cooling fan
-    std::string hotend_fan =
-        config ? config->get<std::string>(helix::wizard::HOTEND_FAN, "None") : "None";
-    int hotend_fan_visible = (hotend_fan != "None") ? 1 : 0;
+    std::string hotend_fan = config ? config->get<std::string>(helix::wizard::HOTEND_FAN, "") : "";
+    int hotend_fan_visible = !hotend_fan.empty() ? 1 : 0;
 
     // LED strip
-    std::string led_strip =
-        config ? config->get<std::string>(helix::wizard::LED_STRIP, "None") : "None";
-    int led_strip_visible = (led_strip != "None") ? 1 : 0;
+    std::string led_strip = config ? config->get<std::string>(helix::wizard::LED_STRIP, "") : "";
+    int led_strip_visible = !led_strip.empty() ? 1 : 0;
 
     // Filament sensor - get from FilamentSensorManager
     std::string filament_sensor = "None";

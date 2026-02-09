@@ -154,9 +154,11 @@ bool save_dropdown_selection(lv_subject_t* subject, const std::vector<std::strin
     }
 
     // Save item name (not index) to config
+    // "None" is a UI placeholder meaning "no selection" — save as empty string
     const std::string& item_name = items[static_cast<size_t>(index)];
-    config->set(config_path, item_name);
-    spdlog::debug("{} Saved selection: {}", log_prefix, item_name);
+    const std::string save_value = (item_name == "None") ? "" : item_name;
+    config->set(config_path, save_value);
+    spdlog::debug("{} Saved selection: '{}'", log_prefix, save_value);
 
     return true;
 }
