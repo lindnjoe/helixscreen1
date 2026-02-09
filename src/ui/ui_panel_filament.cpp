@@ -590,6 +590,11 @@ void FilamentPanel::handle_purge_amount_select(int amount) {
 }
 
 void FilamentPanel::handle_load_button() {
+    if (operation_in_progress_) {
+        NOTIFY_WARNING("Operation already in progress");
+        return;
+    }
+
     if (!is_extrusion_allowed()) {
         NOTIFY_WARNING("Nozzle too cold for filament load ({}°C, min: {}°C)", nozzle_current_,
                        min_extrude_temp_);
@@ -613,6 +618,11 @@ void FilamentPanel::handle_load_button() {
 }
 
 void FilamentPanel::handle_unload_button() {
+    if (operation_in_progress_) {
+        NOTIFY_WARNING("Operation already in progress");
+        return;
+    }
+
     if (!is_extrusion_allowed()) {
         NOTIFY_WARNING("Nozzle too cold for filament unload ({}°C, min: {}°C)", nozzle_current_,
                        min_extrude_temp_);
@@ -954,10 +964,22 @@ void FilamentPanel::execute_load() {
         return;
     }
 
+    set_operation_in_progress(true);
     spdlog::info("[{}] Loading filament via StandardMacros: {}", get_name(), info.get_macro());
+    NOTIFY_INFO("Loading filament...");
+    // FilamentPanel is a global singleton, so `this` capture is safe [L012]
     StandardMacros::instance().execute(
-        StandardMacroSlot::LoadFilament, api_, []() { NOTIFY_SUCCESS("Loading filament..."); },
-        [](const MoonrakerError& error) {
+        StandardMacroSlot::LoadFilament, api_,
+        [this]() {
+            ui_async_call(
+                [](void* ud) { static_cast<FilamentPanel*>(ud)->set_operation_in_progress(false); },
+                this);
+            NOTIFY_SUCCESS("Filament loaded");
+        },
+        [this](const MoonrakerError& error) {
+            ui_async_call(
+                [](void* ud) { static_cast<FilamentPanel*>(ud)->set_operation_in_progress(false); },
+                this);
             NOTIFY_ERROR("Filament load failed: {}", error.user_message());
         });
 }
@@ -970,10 +992,22 @@ void FilamentPanel::execute_unload() {
         return;
     }
 
+    set_operation_in_progress(true);
     spdlog::info("[{}] Unloading filament via StandardMacros: {}", get_name(), info.get_macro());
+    NOTIFY_INFO("Unloading filament...");
+    // FilamentPanel is a global singleton, so `this` capture is safe [L012]
     StandardMacros::instance().execute(
-        StandardMacroSlot::UnloadFilament, api_, []() { NOTIFY_SUCCESS("Unloading filament..."); },
-        [](const MoonrakerError& error) {
+        StandardMacroSlot::UnloadFilament, api_,
+        [this]() {
+            ui_async_call(
+                [](void* ud) { static_cast<FilamentPanel*>(ud)->set_operation_in_progress(false); },
+                this);
+            NOTIFY_SUCCESS("Filament unloaded");
+        },
+        [this](const MoonrakerError& error) {
+            ui_async_call(
+                [](void* ud) { static_cast<FilamentPanel*>(ud)->set_operation_in_progress(false); },
+                this);
             NOTIFY_ERROR("Filament unload failed: {}", error.user_message());
         });
 }

@@ -464,8 +464,9 @@ int MoonrakerClient::connect(const char* url, std::function<void()> on_connected
                         LOG_ERROR_INTERNAL(
                             "[Moonraker Client] Success callback for '{}' threw exception: {}",
                             method_name, e.what());
-                        // Re-throw to be caught by outer handler for consistency
-                        throw;
+                        // Do NOT re-throw: stack unwinding between here and the outer
+                        // handler can leave libhv's event loop in a corrupt state,
+                        // leading to SIGSEGV on the next message cycle.
                     }
                 }
             }

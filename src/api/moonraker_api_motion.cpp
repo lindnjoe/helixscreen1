@@ -471,8 +471,14 @@ void MoonrakerAPI::execute_gcode(const std::string& gcode, SuccessCallback on_su
 
     spdlog::trace("[Moonraker API] Executing G-code: {}", annotated);
 
-    client_.send_jsonrpc(
-        "printer.gcode.script", params, [on_success](json) { on_success(); }, on_error);
+    // Guard: only wrap on_success in lambda if non-null, otherwise pass nullptr.
+    // A lambda wrapping a null std::function would bypass send_jsonrpc's null check
+    // and throw bad_function_call when invoked.
+    std::function<void(json)> success_wrapper;
+    if (on_success) {
+        success_wrapper = [on_success](json) { on_success(); };
+    }
+    client_.send_jsonrpc("printer.gcode.script", params, std::move(success_wrapper), on_error);
 }
 
 bool MoonrakerAPI::is_safe_gcode_param(const std::string& str) {
