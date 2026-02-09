@@ -5,6 +5,39 @@ All notable changes to HelixScreen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.8] - 2026-02-09
+
+### Added
+- G-code toolpath render uses AMS/Spoolman filament colors for accurate color previews
+- Reprint button shown for all terminal print states (error, cancelled, complete)
+- Config symlinked into printer_data for editing via Mainsail/Fluidd file manager
+- Async button timeout guard to prevent stuck UI on failed operations
+- 35 new translation strings synced across all languages
+
+### Fixed
+- Slicer time estimate preserved across reprints instead of resetting to zero
+- Install directory ownership for Moonraker update manager (fixes #29)
+- Python 3.9 compatibility for Sonic Pad KIAUH integration (fixes #28)
+- Display sleep using software overlay for unrecognized display hardware (#23)
+- Z-offset controls compacted for small displays (#27)
+- Print error state handled with badge, reprint button, and automatic heater shutoff
+- WebSocket callbacks deferred to main thread preventing UI race conditions
+- Responsive breakpoints based on screen height instead of max dimension
+- Cooldown button uses TURN_OFF_HEATERS for reliable heater shutoff
+- Splash screen support for ultra-wide displays
+- 32-bit userspace detection on 64-bit Pi kernels
+- Graph Y-axis label no longer clips top padding
+- Print card info column taps now navigate to status screen
+- Watchdog double-instance prevented on supervised restart
+- Internal splash skipped when external splash process is running
+- Resolution auto-detection enabled at startup
+
+### Changed
+- Z-offset scale layout dynamically adapts to measured label widths
+- Filament panel temperature updates are targeted instead of full-refresh
+- Machine limits G-code debounced to reduce unnecessary sends
+- Delete button on print detail uses danger styling
+
 ## [0.9.7] - 2026-02-08
 
 Z-offset calibration redesigned from scratch with a Prusa-style visual meter,
@@ -224,6 +257,7 @@ Initial tagged release. Foundation for all subsequent development.
 - Automated GitHub Actions release pipeline
 - One-liner installation script with platform auto-detection
 
+[0.9.8]: https://github.com/prestonbrown/helixscreen/compare/v0.9.7...v0.9.8
 [0.9.7]: https://github.com/prestonbrown/helixscreen/compare/v0.9.6...v0.9.7
 [0.9.6]: https://github.com/prestonbrown/helixscreen/compare/v0.9.5...v0.9.6
 [0.9.5]: https://github.com/prestonbrown/helixscreen/compare/v0.9.4...v0.9.5
