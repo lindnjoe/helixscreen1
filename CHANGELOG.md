@@ -5,6 +5,43 @@ All notable changes to HelixScreen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.7] - 2026-02-08
+
+Z-offset calibration redesigned from scratch with a Prusa-style visual meter,
+plus display reliability fixes and hardware detection improvements.
+
+### Added
+- Z-offset calibration overhaul: Prusa-style vertical meter with draw-in arrow animation, horizontal step buttons, auto-ranging scale, saved offset display, and auto-navigation when calibration is in progress
+- Z-offset calibration strategy system for printer-specific save commands
+- Automatic update notifications with dismiss support
+- Sleep While Printing toggle to keep display on during prints
+- Hardware detection: mainboard identification heuristic, non-printer addon exclusion, and kinematics filtering
+- Calibration features gated behind beta feature flag
+
+### Fixed
+- Crash from rapid filament load/unload button presses
+- Crash dialog not initializing touch calibration config
+- Keyboard shortcuts firing when typing in text inputs
+- Parent directory (..) not always sorted first in file browser
+- Splash screen crash when prerendered assets missing
+- Console bleed-through on fbdev displays
+- Display not repainting fully after wake from sleep
+- Moonraker updates switched from git_repo to zip type for reliability
+- Thumbnail format forced to ARGB8888 for correct rendering
+- Print outcome badges misaligned above thumbnail
+- Scroll-on-focus causing unwanted panel jumps
+- Install service filtering to only existing system groups
+- Screws tilt adjust detection from configfile fallback
+- Wizard saving literal 'None' instead of empty string for unselected hardware
+- Mock printer kinematics matching actual printer type
+- Touch calibration detection unified with headless pointer support
+
+### Changed
+- Dark mode applies live without restart
+- Calibration button layout redesigned Mainsail-style
+- Textarea widgets migrated to text_input component
+- Redundant kinematics polling eliminated
+
 ## [0.9.6] - 2026-02-08
 
 ### Added
@@ -187,6 +224,7 @@ Initial tagged release. Foundation for all subsequent development.
 - Automated GitHub Actions release pipeline
 - One-liner installation script with platform auto-detection
 
+[0.9.7]: https://github.com/prestonbrown/helixscreen/compare/v0.9.6...v0.9.7
 [0.9.6]: https://github.com/prestonbrown/helixscreen/compare/v0.9.5...v0.9.6
 [0.9.5]: https://github.com/prestonbrown/helixscreen/compare/v0.9.4...v0.9.5
 [0.9.4]: https://github.com/prestonbrown/helixscreen/compare/v0.9.3...v0.9.4
