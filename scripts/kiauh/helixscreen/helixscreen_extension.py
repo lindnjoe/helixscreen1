@@ -10,9 +10,9 @@ import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict
 
-from kiauh.extensions.base_extension import BaseExtension
-from kiauh.core.logger import Logger
-from kiauh.utils.input_utils import get_confirm
+from extensions.base_extension import BaseExtension
+from core.logger import Logger
+from utils.input_utils import get_confirm
 
 if TYPE_CHECKING:
     pass

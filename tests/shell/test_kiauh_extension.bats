@@ -116,3 +116,18 @@ assert isinstance(data['updates'], bool), f'updates should be bool, got {type(da
 @test "__init__.py exports HELIXSCREEN_REPO" {
     grep -q 'HELIXSCREEN_REPO' "$KIAUH_DIR/__init__.py"
 }
+
+# --- Import path tests (issue #30: dual-import identity mismatch) ---
+
+@test "helixscreen_extension.py imports BaseExtension without kiauh. prefix" {
+    # KIAUH uses 'from extensions.base_extension import BaseExtension'
+    # Using 'from kiauh.extensions...' creates a dual-import identity mismatch
+    # where issubclass() fails because Python sees two different classes
+    ! grep -q 'from kiauh\.' "$KIAUH_DIR/helixscreen_extension.py"
+}
+
+@test "helixscreen_extension.py uses KIAUH-style imports" {
+    # All KIAUH extensions use 'from extensions.*' and 'from core.*' paths
+    grep -q 'from extensions.base_extension import BaseExtension' "$KIAUH_DIR/helixscreen_extension.py"
+    grep -q 'from core.logger import Logger' "$KIAUH_DIR/helixscreen_extension.py"
+}
