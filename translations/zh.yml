@@ -328,6 +328,7 @@ translations:
   "Humidity Sensors": "湿度传感器"
   'IP:': 'IP：'
   Idle: 空闲
+  "If Moonraker is local or your screen is attached to the printer directly, we'll connect automatically": "如果 Moonraker 在本地运行或屏幕直接连接到打印机，将自动连接"
   "Ignore": "忽略"
   In Progress: 进行中
   Indexing G-code...: 正在索引 G-code...

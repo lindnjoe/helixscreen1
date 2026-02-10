@@ -328,6 +328,7 @@ translations:
   "Humidity Sensors": "Датчики влажности"
   'IP:': 'IP:'
   Idle: Ожидание
+  "If Moonraker is local or your screen is attached to the printer directly, we'll connect automatically": "Если Moonraker локальный или экран подключён напрямую к принтеру, подключение произойдёт автоматически"
   "Ignore": "Игнорировать"
   In Progress: В процессе
   Indexing G-code...: Индексация G-code...

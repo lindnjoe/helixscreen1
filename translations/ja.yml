@@ -328,6 +328,7 @@ translations:
   "Humidity Sensors": "湿度センサー"
   'IP:': 'IP:'
   Idle: "アイドル"
+  "If Moonraker is local or your screen is attached to the printer directly, we'll connect automatically": "Moonrakerがローカルの場合、またはスクリーンがプリンターに直接接続されている場合、自動的に接続します"
   "Ignore": "無視"
   In Progress: "進行中"
   Indexing G-code...: "G-codeをインデックス中..."
