@@ -508,9 +508,10 @@ void DisplayManager::check_display_sleep() {
     bool activity_detected = (inactive_ms < 500);
 
     if (m_display_sleeping) {
-        // Currently sleeping - wake only when input wrapper requests it
-        // (touch is absorbed by sleep_aware_read_cb which sets m_wake_requested)
-        if (m_wake_requested) {
+        // Wake via sleep_aware_read_cb (embedded) or LVGL activity detection (SDL).
+        // On SDL, the sleep-aware wrapper isn't installed because it breaks SDL's
+        // mouse device identification, so we fall back to LVGL activity tracking.
+        if (m_wake_requested || activity_detected) {
             m_wake_requested = false;
             wake_display();
         }
