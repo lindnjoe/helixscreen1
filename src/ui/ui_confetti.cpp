@@ -8,7 +8,6 @@
 #include "lvgl/src/xml/lv_xml_parser.h"
 #include "lvgl/src/xml/lv_xml_widget.h"
 #include "lvgl/src/xml/parsers/lv_xml_obj_parser.h"
-#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -22,15 +21,12 @@ namespace {
 // Physics constants
 constexpr float GRAVITY = 400.0f;         // Pixels per second squared
 constexpr float AIR_RESISTANCE = 0.98f;   // Velocity multiplier per frame
-constexpr float ROTATION_SPEED = 8.0f;    // Radians per second
 constexpr float FADE_START = 0.7f;        // Start fading at 70% lifetime
 constexpr float PARTICLE_LIFETIME = 3.0f; // Seconds
-
-// Particle shapes
-enum class Shape { RECT, SQUARE, CIRCLE };
+constexpr int MAX_PARTICLES = 60;         // Keep particle count reasonable
 
 // Celebration colors (vibrant rainbow)
-const std::vector<lv_color_t> CONFETTI_COLORS = {
+const lv_color_t CONFETTI_COLORS[] = {
     lv_color_hex(0xFF6B6B), // Red
     lv_color_hex(0xFFE66D), // Yellow
     lv_color_hex(0x4ECDC4), // Teal
@@ -40,21 +36,20 @@ const std::vector<lv_color_t> CONFETTI_COLORS = {
     lv_color_hex(0xF7DC6F), // Gold
     lv_color_hex(0xAED6F1), // Light blue
 };
+constexpr int NUM_COLORS = sizeof(CONFETTI_COLORS) / sizeof(CONFETTI_COLORS[0]);
 
 struct Particle {
+    lv_obj_t* obj = nullptr;
     float x, y;           // Position
     float vx, vy;         // Velocity
     float rotation;       // Current rotation angle
     float rotation_speed; // Rotation velocity
     float life;           // Remaining lifetime (0-1)
-    float size;           // Base size
-    lv_color_t color;
-    Shape shape;
+    float base_w, base_h; // Base dimensions
 };
 
 struct ConfettiData {
-    lv_obj_t* canvas = nullptr;
-    lv_draw_buf_t* draw_buf = nullptr;
+    lv_obj_t* container = nullptr;
     lv_timer_t* timer = nullptr;
     std::vector<Particle> particles;
     int32_t width = 0;
@@ -80,76 +75,21 @@ int random_int(std::mt19937& rng, int min, int max) {
     return dist(rng);
 }
 
-void draw_particle(lv_layer_t* layer, const Particle& p) {
-    if (p.life <= 0)
+void update_particles(ConfettiData* data) {
+    if (!data || !data->container)
         return;
 
-    // Calculate opacity based on lifetime
-    lv_opa_t opa = LV_OPA_COVER;
-    if (p.life < FADE_START) {
-        opa = (lv_opa_t)(255 * (p.life / FADE_START));
-    }
-
-    lv_draw_fill_dsc_t fill_dsc;
-    lv_draw_fill_dsc_init(&fill_dsc);
-    fill_dsc.color = p.color;
-    fill_dsc.opa = opa;
-
-    // Size varies slightly with rotation for visual interest
-    float size = p.size * (0.8f + 0.2f * fabsf(cosf(p.rotation)));
-    int32_t half = (int32_t)(size / 2);
-
-    // Draw based on shape
-    switch (p.shape) {
-    case Shape::RECT: {
-        // Elongated rectangle
-        int32_t w = (int32_t)(size * 1.5f);
-        int32_t h = (int32_t)(size * 0.6f);
-        // Simple rotation approximation via width/height swap
-        if (fabsf(sinf(p.rotation)) > 0.7f)
-            std::swap(w, h);
-        lv_area_t area = {(int32_t)p.x - w / 2, (int32_t)p.y - h / 2, (int32_t)p.x + w / 2,
-                          (int32_t)p.y + h / 2};
-        fill_dsc.radius = 2;
-        lv_draw_fill(layer, &fill_dsc, &area);
-        break;
-    }
-    case Shape::SQUARE: {
-        lv_area_t area = {(int32_t)p.x - half, (int32_t)p.y - half, (int32_t)p.x + half,
-                          (int32_t)p.y + half};
-        fill_dsc.radius = 1;
-        lv_draw_fill(layer, &fill_dsc, &area);
-        break;
-    }
-    case Shape::CIRCLE: {
-        lv_area_t area = {(int32_t)p.x - half, (int32_t)p.y - half, (int32_t)p.x + half,
-                          (int32_t)p.y + half};
-        fill_dsc.radius = LV_RADIUS_CIRCLE;
-        lv_draw_fill(layer, &fill_dsc, &area);
-        break;
-    }
-    }
-}
-
-void update_and_render(ConfettiData* data) {
-    if (!data || !data->canvas || !data->draw_buf)
-        return;
-
-    // Calculate delta time
     uint32_t now = lv_tick_get();
     float dt = (now - data->last_tick) / 1000.0f;
     data->last_tick = now;
-
-    // Clamp dt to avoid physics explosions on lag
     dt = std::min(dt, 0.1f);
 
-    // Update particles
     bool any_alive = false;
     for (auto& p : data->particles) {
         if (p.life <= 0)
             continue;
 
-        // Physics update
+        // Physics
         p.vy += GRAVITY * dt;
         p.vx *= AIR_RESISTANCE;
         p.vy *= AIR_RESISTANCE;
@@ -158,37 +98,48 @@ void update_and_render(ConfettiData* data) {
         p.rotation += p.rotation_speed * dt;
         p.life -= dt / PARTICLE_LIFETIME;
 
-        // Bounce off bottom with energy loss
-        if (p.y > data->height - p.size) {
-            p.y = data->height - p.size;
+        // Bounce off bottom
+        if (p.y > data->height - p.base_h) {
+            p.y = data->height - p.base_h;
             p.vy = -p.vy * 0.3f;
             p.vx *= 0.8f;
         }
 
-        if (p.life > 0)
-            any_alive = true;
+        if (p.life <= 0) {
+            // Hide dead particles
+            lv_obj_add_flag(p.obj, LV_OBJ_FLAG_HIDDEN);
+            continue;
+        }
+
+        any_alive = true;
+
+        // Update position
+        lv_obj_set_pos(p.obj, (int32_t)p.x, (int32_t)p.y);
+
+        // Simulate rotation by varying width/height
+        float rot_factor = fabsf(cosf(p.rotation));
+        int32_t w = std::max((int32_t)(p.base_w * (0.4f + 0.6f * rot_factor)), (int32_t)2);
+        int32_t h = std::max((int32_t)(p.base_h * (0.4f + 0.6f * (1.0f - rot_factor))), (int32_t)2);
+        lv_obj_set_size(p.obj, w, h);
+
+        // Fade out near end of life
+        if (p.life < FADE_START) {
+            lv_opa_t opa = (lv_opa_t)(255 * (p.life / FADE_START));
+            lv_obj_set_style_opa(p.obj, opa, LV_PART_MAIN);
+        }
     }
 
-    // Clear canvas
-    lv_canvas_fill_bg(data->canvas, lv_color_black(), LV_OPA_TRANSP);
-
-    // Render particles
-    lv_layer_t layer;
-    lv_canvas_init_layer(data->canvas, &layer);
-
-    for (const auto& p : data->particles) {
-        draw_particle(&layer, p);
-    }
-
-    lv_canvas_finish_layer(data->canvas, &layer);
-    lv_obj_invalidate(data->canvas);
-
-    // Stop timer if all particles dead
+    // All particles dead — clean up
     if (!any_alive && data->timer) {
         lv_timer_delete(data->timer);
         data->timer = nullptr;
-        data->particles.clear();
-        spdlog::debug("[Confetti] Animation complete");
+
+        // Delete the whole container (takes all particle objects with it)
+        lv_obj_t* container = data->container;
+        s_registry.erase(container);
+        delete data;
+        lv_obj_delete(container);
+        spdlog::debug("[Confetti] Animation complete, cleaned up");
     }
 }
 
@@ -196,7 +147,7 @@ void timer_cb(lv_timer_t* timer) {
     lv_obj_t* obj = static_cast<lv_obj_t*>(lv_timer_get_user_data(timer));
     ConfettiData* data = get_data(obj);
     if (data) {
-        update_and_render(data);
+        update_particles(data);
     }
 }
 
@@ -206,57 +157,42 @@ void delete_cb(lv_event_t* e) {
     if (data) {
         if (data->timer) {
             lv_timer_delete(data->timer);
-        }
-        if (data->draw_buf) {
-            lv_draw_buf_destroy(data->draw_buf);
+            data->timer = nullptr;
         }
         s_registry.erase(obj);
         delete data;
-        spdlog::trace("[Confetti] Destroyed");
+        spdlog::trace("[Confetti] Destroyed via delete event");
     }
 }
 
 lv_obj_t* confetti_create_internal(lv_obj_t* parent) {
-    // Get parent dimensions
-    int32_t width = lv_obj_get_width(parent);
-    int32_t height = lv_obj_get_height(parent);
+    // Use display resolution for sizing
+    lv_display_t* disp = lv_display_get_default();
+    int32_t width = lv_display_get_horizontal_resolution(disp);
+    int32_t height = lv_display_get_vertical_resolution(disp);
 
-    // Create canvas
-    lv_draw_buf_t* draw_buf =
-        lv_draw_buf_create(width, height, LV_COLOR_FORMAT_ARGB8888, LV_STRIDE_AUTO);
-    if (!draw_buf) {
-        spdlog::error("[Confetti] Failed to create draw buffer");
-        return nullptr;
-    }
+    // Create transparent click-through container
+    lv_obj_t* container = lv_obj_create(parent);
+    lv_obj_remove_style_all(container);
+    lv_obj_set_size(container, width, height);
+    lv_obj_set_pos(container, 0, 0);
+    lv_obj_remove_flag(container, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_remove_flag(container, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(container, LV_OBJ_FLAG_IGNORE_LAYOUT);
+    lv_obj_add_flag(container, LV_OBJ_FLAG_FLOATING);
 
-    lv_obj_t* canvas = lv_canvas_create(parent);
-    lv_canvas_set_draw_buf(canvas, draw_buf);
-    lv_obj_set_size(canvas, width, height);
-    lv_obj_align(canvas, LV_ALIGN_TOP_LEFT, 0, 0);
-
-    // Make click-through
-    lv_obj_remove_flag(canvas, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_flag(canvas, LV_OBJ_FLAG_IGNORE_LAYOUT);
-
-    // Clear to transparent
-    lv_canvas_fill_bg(canvas, lv_color_black(), LV_OPA_TRANSP);
-
-    // Create data
     ConfettiData* data = new ConfettiData();
-    data->canvas = canvas;
-    data->draw_buf = draw_buf;
+    data->container = container;
     data->width = width;
     data->height = height;
     data->rng = std::mt19937(std::random_device{}());
     data->last_tick = lv_tick_get();
 
-    s_registry[canvas] = data;
+    s_registry[container] = data;
+    lv_obj_add_event_cb(container, delete_cb, LV_EVENT_DELETE, nullptr);
 
-    // Register cleanup
-    lv_obj_add_event_cb(canvas, delete_cb, LV_EVENT_DELETE, nullptr);
-
-    spdlog::debug("[Confetti] Created {}x{} canvas", width, height);
-    return canvas;
+    spdlog::debug("[Confetti] Created {}x{} container on parent", width, height);
+    return container;
 }
 
 void* confetti_xml_create(lv_xml_parser_state_t* state, const char** /*attrs*/) {
@@ -281,31 +217,58 @@ void ui_confetti_burst(lv_obj_t* confetti, int count) {
         return;
     }
 
+    // Cap particle count for performance
+    count = std::min(count, MAX_PARTICLES);
+
     // Spawn point (top center)
     float spawn_x = data->width / 2.0f;
-    float spawn_y = data->height * 0.2f;
+    float spawn_y = data->height * 0.15f;
 
-    // Reserve space
     data->particles.reserve(data->particles.size() + count);
 
-    // Spawn particles
     for (int i = 0; i < count; i++) {
         Particle p;
-        p.x = spawn_x + random_float(data->rng, -50, 50);
-        p.y = spawn_y + random_float(data->rng, -30, 30);
 
-        // Burst velocity - fan out and up
-        float angle = random_float(data->rng, -2.5f, -0.6f); // Mostly upward
-        float speed = random_float(data->rng, 200, 500);
+        // Create the visual object
+        p.obj = lv_obj_create(data->container);
+        lv_obj_remove_style_all(p.obj);
+        lv_obj_remove_flag(p.obj, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_remove_flag(p.obj, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_add_flag(p.obj, LV_OBJ_FLAG_IGNORE_LAYOUT);
+        lv_obj_add_flag(p.obj, LV_OBJ_FLAG_FLOATING);
+
+        // Random color
+        lv_color_t color = CONFETTI_COLORS[random_int(data->rng, 0, NUM_COLORS - 1)];
+        lv_obj_set_style_bg_color(p.obj, color, LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(p.obj, LV_OPA_COVER, LV_PART_MAIN);
+
+        // Random shape via border radius
+        int shape = random_int(data->rng, 0, 2);
+        if (shape == 2) {
+            lv_obj_set_style_radius(p.obj, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+        } else {
+            lv_obj_set_style_radius(p.obj, 2, LV_PART_MAIN);
+        }
+
+        // Size
+        p.base_w = random_float(data->rng, 8, 16);
+        p.base_h = (shape == 0) ? p.base_w * 0.5f : p.base_w; // Rectangles are wider
+        lv_obj_set_size(p.obj, (int32_t)p.base_w, (int32_t)p.base_h);
+
+        // Position
+        p.x = spawn_x + random_float(data->rng, -60, 60);
+        p.y = spawn_y + random_float(data->rng, -30, 30);
+        lv_obj_set_pos(p.obj, (int32_t)p.x, (int32_t)p.y);
+
+        // Velocity — fan out in all upward directions
+        float angle = random_float(data->rng, -2.8f, -0.3f);
+        float speed = random_float(data->rng, 250, 550);
         p.vx = cosf(angle) * speed * random_float(data->rng, 0.5f, 1.5f);
         p.vy = sinf(angle) * speed;
 
         p.rotation = random_float(data->rng, 0, 6.28f);
-        p.rotation_speed = random_float(data->rng, -ROTATION_SPEED, ROTATION_SPEED);
+        p.rotation_speed = random_float(data->rng, -8.0f, 8.0f);
         p.life = 1.0f;
-        p.size = random_float(data->rng, 6, 14);
-        p.color = CONFETTI_COLORS[random_int(data->rng, 0, CONFETTI_COLORS.size() - 1)];
-        p.shape = static_cast<Shape>(random_int(data->rng, 0, 2));
 
         data->particles.push_back(p);
     }
@@ -327,9 +290,14 @@ void ui_confetti_clear(lv_obj_t* confetti) {
         lv_timer_delete(data->timer);
         data->timer = nullptr;
     }
+
+    // Hide all particles
+    for (auto& p : data->particles) {
+        if (p.obj) {
+            lv_obj_add_flag(p.obj, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
     data->particles.clear();
-    lv_canvas_fill_bg(data->canvas, lv_color_black(), LV_OPA_TRANSP);
-    lv_obj_invalidate(data->canvas);
 }
 
 void ui_confetti_init() {

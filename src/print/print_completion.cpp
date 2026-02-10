@@ -151,12 +151,13 @@ static void show_rich_completion_modal(PrintJobState state, const char* filename
     // Note: OK button dismissal is wired via XML event_cb="on_print_complete_ok"
     // Backdrop click-to-close and ESC handling are automatic via Modal system
 
-    // Celebrate successful prints with confetti!
-    if (state == PrintJobState::COMPLETE) {
-        lv_obj_t* confetti = ui_confetti_create(lv_screen_active());
+    // Celebrate successful prints with confetti (respects animations setting)
+    // Create on lv_layer_top() so it renders above everything including modals
+    if (state == PrintJobState::COMPLETE && SettingsManager::instance().get_animations_enabled()) {
+        lv_obj_t* confetti = ui_confetti_create(lv_layer_top());
         if (confetti) {
             ui_confetti_burst(confetti, 100);
-            spdlog::debug("[PrintComplete] 🎉 Confetti burst for successful print!");
+            spdlog::debug("[PrintComplete] Confetti burst for successful print");
         }
     }
 
