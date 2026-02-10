@@ -1,0 +1,379 @@
+#!/usr/bin/env bats
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Tests for service management (service.sh)
+# Covers install/stop/hooks/ownership for services.
+
+WORKTREE_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
+
+setup() {
+    load helpers
+
+    # Source modules (reset source guards so each test gets a fresh load)
+    unset _HELIX_COMMON_SOURCED _HELIX_SERVICE_SOURCED
+    . "$WORKTREE_ROOT/scripts/lib/installer/common.sh" 2>/dev/null || true
+    . "$WORKTREE_ROOT/scripts/lib/installer/service.sh"
+
+    # Set required globals
+    export INIT_SYSTEM="systemd"
+    export INSTALL_DIR="$BATS_TEST_TMPDIR/opt/helixscreen"
+    export INIT_SCRIPT_DEST="$BATS_TEST_TMPDIR/etc/init.d/S99helixscreen"
+    export SERVICE_NAME="helixscreen"
+    export SUDO=""
+    export KLIPPER_USER=""
+    export KLIPPER_HOME=""
+    export HELIX_INIT_SCRIPTS=""
+    export HELIX_PROCESSES="helix-screen helix-splash helix-watchdog"
+    export PLATFORM=""
+
+    # Create fake /etc/systemd/system in tmpdir for systemd tests
+    export FAKE_SYSTEMD_DIR="$BATS_TEST_TMPDIR/etc/systemd/system"
+    mkdir -p "$FAKE_SYSTEMD_DIR"
+
+    mkdir -p "$INSTALL_DIR/config" "$INSTALL_DIR/bin"
+    mkdir -p "$(dirname "$INIT_SCRIPT_DEST")"
+}
+
+# Helper: create a SUDO wrapper that rewrites /etc/systemd/system/ paths to tmpdir
+# This avoids mocking cp/sed (which causes infinite recursion)
+setup_sudo_redirect() {
+    local wrapper="$BATS_TEST_TMPDIR/bin/sudo_redirect"
+    mkdir -p "$(dirname "$wrapper")"
+    cat > "$wrapper" << 'SUDOEOF'
+#!/bin/sh
+# Rewrite /etc/systemd/system/ paths to test tmpdir
+new_args=""
+for arg in "$@"; do
+    case "$arg" in
+        /etc/systemd/system/*)
+            basename="${arg##*/}"
+            arg="${FAKE_SYSTEMD_DIR}/${basename}"
+            ;;
+    esac
+    new_args="$new_args \"$arg\""
+done
+eval $new_args
+SUDOEOF
+    chmod +x "$wrapper"
+    SUDO="$wrapper"
+}
+
+# Helper: create a systemd service template in the install config dir
+create_service_template() {
+    cat > "$INSTALL_DIR/config/helixscreen.service" << 'EOF'
+[Unit]
+Description=HelixScreen UI
+After=network.target
+
+[Service]
+User=@@HELIX_USER@@
+Group=@@HELIX_GROUP@@
+WorkingDirectory=@@INSTALL_DIR@@
+ExecStart=@@INSTALL_DIR@@/bin/helix-screen
+
+[Install]
+WantedBy=multi-user.target
+EOF
+}
+
+# Helper: create a SysV init template in the install config dir
+create_init_template() {
+    cat > "$INSTALL_DIR/config/helixscreen.init" << 'INITEOF'
+#!/bin/sh
+DAEMON_DIR="/opt/helixscreen"
+case "$1" in
+    start) "$DAEMON_DIR/bin/helix-screen" & ;;
+    stop)  killall helix-screen 2>/dev/null ;;
+    status) pidof helix-screen >/dev/null ;;
+    *) echo "Usage: $0 {start|stop|status}" ;;
+esac
+INITEOF
+    chmod +x "$INSTALL_DIR/config/helixscreen.init"
+}
+
+# =============================================================================
+# install_service_systemd
+# =============================================================================
+
+@test "install_service_systemd: copies and templates service file" {
+    create_service_template
+    mock_command_script "systemctl" 'exit 0'
+    setup_sudo_redirect
+    KLIPPER_USER="biqu"
+
+    install_service_systemd
+
+    [ -f "$FAKE_SYSTEMD_DIR/helixscreen.service" ]
+}
+
+@test "install_service_systemd: missing template exits with error" {
+    rm -f "$INSTALL_DIR/config/helixscreen.service"
+
+    run install_service_systemd
+    [ "$status" -ne 0 ]
+}
+
+@test "install_service_systemd: daemon-reload failure exits with error" {
+    create_service_template
+    setup_sudo_redirect
+    mock_command_fail "systemctl"
+
+    run install_service_systemd
+    [ "$status" -ne 0 ]
+}
+
+@test "install_service_systemd: replaces @@HELIX_USER@@ and @@INSTALL_DIR@@" {
+    create_service_template
+    mock_command_script "systemctl" 'exit 0'
+    setup_sudo_redirect
+    KLIPPER_USER="biqu"
+
+    install_service_systemd
+
+    local dest="$FAKE_SYSTEMD_DIR/helixscreen.service"
+    [ -f "$dest" ]
+    grep -q "User=biqu" "$dest"
+    grep -q "Group=biqu" "$dest"
+    grep -q "ExecStart=$INSTALL_DIR/bin/helix-screen" "$dest"
+}
+
+@test "install_service_systemd: KLIPPER_USER sets the service user" {
+    create_service_template
+    mock_command_script "systemctl" 'exit 0'
+    setup_sudo_redirect
+    KLIPPER_USER="mks"
+
+    install_service_systemd
+
+    local dest="$FAKE_SYSTEMD_DIR/helixscreen.service"
+    grep -q "User=mks" "$dest"
+    grep -q "Group=mks" "$dest"
+}
+
+# =============================================================================
+# install_service_sysv
+# =============================================================================
+
+@test "install_service_sysv: copies init script and sets executable" {
+    create_init_template
+
+    install_service_sysv
+
+    [ -f "$INIT_SCRIPT_DEST" ]
+    [ -x "$INIT_SCRIPT_DEST" ]
+}
+
+@test "install_service_sysv: missing init template exits with error" {
+    rm -f "$INSTALL_DIR/config/helixscreen.init"
+
+    run install_service_sysv
+    [ "$status" -ne 0 ]
+}
+
+@test "install_service_sysv: DAEMON_DIR is updated to INSTALL_DIR" {
+    create_init_template
+
+    install_service_sysv
+
+    grep -q "DAEMON_DIR=\"$INSTALL_DIR\"" "$INIT_SCRIPT_DEST"
+}
+
+@test "install_service_sysv: uses correct INIT_SCRIPT_DEST" {
+    create_init_template
+    INIT_SCRIPT_DEST="$BATS_TEST_TMPDIR/etc/init.d/S80helixscreen"
+    mkdir -p "$(dirname "$INIT_SCRIPT_DEST")"
+
+    install_service_sysv
+
+    [ -f "$BATS_TEST_TMPDIR/etc/init.d/S80helixscreen" ]
+}
+
+# =============================================================================
+# install_service (dispatcher)
+# =============================================================================
+
+@test "install_service: INIT_SYSTEM=systemd calls systemd path" {
+    INIT_SYSTEM="systemd"
+    create_service_template
+    mock_command_script "systemctl" 'exit 0'
+    setup_sudo_redirect
+
+    install_service "pi"
+
+    [ -f "$FAKE_SYSTEMD_DIR/helixscreen.service" ]
+}
+
+@test "install_service: INIT_SYSTEM=sysv calls sysv path" {
+    INIT_SYSTEM="sysv"
+    create_init_template
+
+    install_service "ad5m"
+
+    [ -f "$INIT_SCRIPT_DEST" ]
+    [ -x "$INIT_SCRIPT_DEST" ]
+}
+
+# =============================================================================
+# stop_service
+# =============================================================================
+
+@test "stop_service: systemd calls systemctl stop" {
+    INIT_SYSTEM="systemd"
+    local stop_called="$BATS_TEST_TMPDIR/stop_called"
+    mock_command_script "systemctl" '
+        case "$*" in
+            *is-active*) exit 0 ;;
+            *stop*) touch "'"$stop_called"'"; exit 0 ;;
+            *) exit 0 ;;
+        esac
+    '
+
+    stop_service
+
+    [ -f "$stop_called" ]
+}
+
+@test "stop_service: sysv calls init script stop" {
+    INIT_SYSTEM="sysv"
+    INIT_SCRIPT_DEST="$BATS_TEST_TMPDIR/etc/init.d/S99helixscreen"
+    # Create executable init script that records stop call
+    local stop_called="$BATS_TEST_TMPDIR/sysv_stop_called"
+    cat > "$INIT_SCRIPT_DEST" << STOPEOF
+#!/bin/sh
+case "\$1" in
+    stop) touch "$stop_called" ;;
+esac
+STOPEOF
+    chmod +x "$INIT_SCRIPT_DEST"
+
+    # Mock killall/kill to prevent actual process kills
+    mock_command "killall" ""
+    mock_command_script "pidof" 'exit 1'
+
+    stop_service
+
+    [ -f "$stop_called" ]
+}
+
+@test "stop_service: sysv checks all HELIX_INIT_SCRIPTS" {
+    INIT_SYSTEM="sysv"
+    INIT_SCRIPT_DEST="$BATS_TEST_TMPDIR/nonexistent"
+    local alt_script="$BATS_TEST_TMPDIR/etc/init.d/S80helixscreen"
+    local alt_called="$BATS_TEST_TMPDIR/alt_stop_called"
+    mkdir -p "$(dirname "$alt_script")"
+    cat > "$alt_script" << ALTEOF
+#!/bin/sh
+case "\$1" in
+    stop) touch "$alt_called" ;;
+esac
+ALTEOF
+    chmod +x "$alt_script"
+    HELIX_INIT_SCRIPTS="$alt_script"
+
+    # Mock killall/kill
+    mock_command "killall" ""
+    mock_command_script "pidof" 'exit 1'
+
+    stop_service
+
+    [ -f "$alt_called" ]
+}
+
+@test "stop_service: failures are suppressed (|| true pattern)" {
+    INIT_SYSTEM="systemd"
+    # systemctl is-active says running, but stop fails
+    mock_command_script "systemctl" '
+        case "$*" in
+            *is-active*) exit 0 ;;
+            *stop*) exit 1 ;;
+            *) exit 0 ;;
+        esac
+    '
+
+    # Should not exit with error despite stop failure
+    run stop_service
+    [ "$status" -eq 0 ]
+}
+
+# =============================================================================
+# deploy_platform_hooks
+# =============================================================================
+
+@test "deploy_platform_hooks: copies hooks file for known platform" {
+    local hooks_src="$INSTALL_DIR/config/platform/hooks-pi.sh"
+    mkdir -p "$(dirname "$hooks_src")"
+    echo '#!/bin/sh' > "$hooks_src"
+    echo 'platform_pre_start() { :; }' >> "$hooks_src"
+
+    deploy_platform_hooks "$INSTALL_DIR" "pi"
+
+    [ -f "$INSTALL_DIR/platform/hooks.sh" ]
+    [ -x "$INSTALL_DIR/platform/hooks.sh" ]
+}
+
+@test "deploy_platform_hooks: no hooks file returns 0" {
+    # No hooks file created for this platform
+    run deploy_platform_hooks "$INSTALL_DIR" "unknown-platform"
+    [ "$status" -eq 0 ]
+}
+
+@test "deploy_platform_hooks: creates platform directory if needed" {
+    local hooks_src="$INSTALL_DIR/config/platform/hooks-k1.sh"
+    mkdir -p "$(dirname "$hooks_src")"
+    echo '#!/bin/sh' > "$hooks_src"
+
+    # Ensure platform dir does not exist
+    rm -rf "$INSTALL_DIR/platform"
+
+    deploy_platform_hooks "$INSTALL_DIR" "k1"
+
+    [ -d "$INSTALL_DIR/platform" ]
+    [ -f "$INSTALL_DIR/platform/hooks.sh" ]
+}
+
+# =============================================================================
+# fix_install_ownership
+# =============================================================================
+
+@test "fix_install_ownership: non-root user chowns config directory" {
+    KLIPPER_USER="biqu"
+    mkdir -p "$INSTALL_DIR/config"
+    local chown_log="$BATS_TEST_TMPDIR/chown_log"
+    mock_command_script "chown" 'echo "$@" >> "'"$chown_log"'"'
+
+    fix_install_ownership
+
+    [ -f "$chown_log" ]
+    grep -q "biqu:biqu" "$chown_log"
+    grep -q "$INSTALL_DIR/config" "$chown_log"
+}
+
+@test "fix_install_ownership: root user is a no-op" {
+    KLIPPER_USER="root"
+    local chown_log="$BATS_TEST_TMPDIR/chown_log"
+    mock_command_script "chown" 'echo "$@" >> "'"$chown_log"'"'
+
+    fix_install_ownership
+
+    # chown should NOT have been called
+    [ ! -f "$chown_log" ]
+}
+
+@test "fix_install_ownership: empty KLIPPER_USER is a no-op" {
+    KLIPPER_USER=""
+    local chown_log="$BATS_TEST_TMPDIR/chown_log"
+    mock_command_script "chown" 'echo "$@" >> "'"$chown_log"'"'
+
+    fix_install_ownership
+
+    [ ! -f "$chown_log" ]
+}
+
+@test "fix_install_ownership: missing config dir does not crash" {
+    KLIPPER_USER="biqu"
+    rm -rf "$INSTALL_DIR/config"
+    mock_command "chown" ""
+
+    run fix_install_ownership
+    [ "$status" -eq 0 ]
+}
