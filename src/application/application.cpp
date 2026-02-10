@@ -287,9 +287,9 @@ int Application::run(int argc, char** argv) {
     }
 
     // Sync telemetry enabled state from SettingsManager (now that its subjects are initialized)
-    // and record the session event if telemetry is enabled
+    // Note: record_session() is deferred to on_discovery_complete callback so hardware data is
+    // available
     TelemetryManager::instance().set_enabled(SettingsManager::instance().get_telemetry_enabled());
-    TelemetryManager::instance().record_session();
 
     // Update SettingsManager with theme mode support (must be after both theme and settings init)
     SettingsManager::instance().on_theme_changed();
@@ -1414,6 +1414,9 @@ void Application::setup_discovery_callbacks() {
 
             // Auto-detect printer type if not already set (e.g., fresh install with preset)
             PrinterDetector::auto_detect_and_save(c->hardware, Config::get_instance());
+
+            // Record telemetry session event now that hardware data is available
+            TelemetryManager::instance().record_session();
 
             // Fetch safety limits and build volume from Klipper config (stepper ranges,
             // min_extrude_temp, max_temp, etc.) — runs for ALL discovery completions

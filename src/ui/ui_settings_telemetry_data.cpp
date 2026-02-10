@@ -222,63 +222,195 @@ void TelemetryDataOverlay::populate_events() {
         lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
         lv_obj_remove_flag(card, LV_OBJ_FLAG_SCROLLABLE);
 
-        // Event type (heading)
+        // Helper: create a label that wraps within the card
+        auto make_label = [&](lv_obj_t* parent, const std::string& text,
+                              const char* color_token) -> lv_obj_t* {
+            lv_obj_t* label = lv_label_create(parent);
+            lv_label_set_text(label, text.c_str());
+            lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
+            lv_obj_set_width(label, lv_pct(100));
+            lv_obj_set_style_text_color(label, theme_manager_get_color(color_token), 0);
+            lv_obj_set_style_text_font(label, lv_font_get_default(), 0);
+            return label;
+        };
+
+        // Event type (heading) — JSON key is "event", not "type"
         std::string event_type = "Unknown Event";
-        if (event.contains("type") && event["type"].is_string()) {
-            event_type = event["type"].get<std::string>();
-            // Capitalize and format type
+        if (event.contains("event") && event["event"].is_string()) {
+            event_type = event["event"].get<std::string>();
             if (event_type == "session") {
                 event_type = "Session Start";
             } else if (event_type == "print_outcome") {
                 event_type = "Print Outcome";
+            } else if (event_type == "crash") {
+                event_type = "Crash Report";
             }
         }
 
-        lv_obj_t* type_label = lv_label_create(card);
-        lv_label_set_text(type_label, event_type.c_str());
-        lv_obj_set_style_text_color(type_label, theme_manager_get_color("text"), 0);
-        lv_obj_set_style_text_font(type_label, lv_font_get_default(), 0);
+        make_label(card, event_type, "text");
 
         // Timestamp
         if (event.contains("timestamp") && event["timestamp"].is_string()) {
-            std::string ts = event["timestamp"].get<std::string>();
-            lv_obj_t* ts_label = lv_label_create(card);
-            lv_label_set_text(ts_label, ts.c_str());
-            lv_obj_set_style_text_color(ts_label, theme_manager_get_color("text_muted"), 0);
-            lv_obj_set_style_text_font(ts_label, lv_font_get_default(), 0);
+            make_label(card, event["timestamp"].get<std::string>(), "text_muted");
         }
 
         // Key fields based on event type
         std::string type_str;
-        if (event.contains("type") && event["type"].is_string()) {
-            type_str = event["type"].get<std::string>();
+        if (event.contains("event") && event["event"].is_string()) {
+            type_str = event["event"].get<std::string>();
         }
 
         if (type_str == "session") {
-            // Show version and platform
-            auto add_field = [&](const char* key, const char* display_name) {
-                if (event.contains(key) && event[key].is_string()) {
+            // Session fields are nested under "app"
+            auto add_app_field = [&](const char* key, const char* display_name) {
+                if (event.contains("app") && event["app"].contains(key) &&
+                    event["app"][key].is_string()) {
                     std::string text =
-                        std::string(display_name) + ": " + event[key].get<std::string>();
-                    lv_obj_t* label = lv_label_create(card);
-                    lv_label_set_text(label, text.c_str());
-                    lv_obj_set_style_text_color(label, theme_manager_get_color("text_subtle"), 0);
-                    lv_obj_set_style_text_font(label, lv_font_get_default(), 0);
+                        std::string(display_name) + ": " + event["app"][key].get<std::string>();
+                    make_label(card, text, "text_subtle");
                 }
             };
-            add_field("version", "Version");
-            add_field("platform", "Platform");
-            add_field("display", "Display");
+
+            // App info - combine platform and display on one line
+            add_app_field("version", "Version");
+            if (event.contains("app")) {
+                const auto& app = event["app"];
+                std::string platform_display;
+                if (app.contains("platform") && app["platform"].is_string()) {
+                    platform_display = "Platform: " + app["platform"].get<std::string>();
+                }
+                if (app.contains("display") && app["display"].is_string()) {
+                    if (!platform_display.empty())
+                        platform_display += " | ";
+                    platform_display += "Display: " + app["display"].get<std::string>();
+                    if (app.contains("display_backend") && app["display_backend"].is_string()) {
+                        platform_display += " (" + app["display_backend"].get<std::string>() + ")";
+                    }
+                }
+                if (!platform_display.empty()) {
+                    make_label(card, platform_display, "text_subtle");
+                }
+
+                // Theme, locale, and input type
+                std::string settings_line;
+                if (app.contains("theme") && app["theme"].is_string()) {
+                    settings_line = "Theme: " + app["theme"].get<std::string>();
+                }
+                if (app.contains("locale") && app["locale"].is_string()) {
+                    if (!settings_line.empty())
+                        settings_line += " | ";
+                    settings_line += "Locale: " + app["locale"].get<std::string>();
+                }
+                if (app.contains("input_type") && app["input_type"].is_string()) {
+                    if (!settings_line.empty())
+                        settings_line += " | ";
+                    settings_line += "Input: " + app["input_type"].get<std::string>();
+                }
+                if (!settings_line.empty()) {
+                    make_label(card, settings_line, "text_subtle");
+                }
+            }
+
+            // Printer section
+            if (event.contains("printer") && event["printer"].is_object()) {
+                const auto& p = event["printer"];
+
+                // "Printer: corexy, 350x350x300"
+                std::string printer_line = "Printer:";
+                if (p.contains("kinematics") && p["kinematics"].is_string()) {
+                    printer_line += " " + p["kinematics"].get<std::string>();
+                }
+                if (p.contains("build_volume") && p["build_volume"].is_string()) {
+                    printer_line += ", " + p["build_volume"].get<std::string>();
+                }
+                if (printer_line != "Printer:") {
+                    make_label(card, printer_line, "text_subtle");
+                }
+
+                // "MCU: stm32f446 (x2) | 1 extruder"
+                std::string mcu_line;
+                if (p.contains("mcu") && p["mcu"].is_string()) {
+                    mcu_line = "MCU: " + p["mcu"].get<std::string>();
+                    if (p.contains("mcu_count") && p["mcu_count"].is_number_integer() &&
+                        p["mcu_count"].get<int>() > 1) {
+                        mcu_line += " (x" + std::to_string(p["mcu_count"].get<int>()) + ")";
+                    }
+                }
+                if (p.contains("extruder_count") && p["extruder_count"].is_number_integer()) {
+                    int ext = p["extruder_count"].get<int>();
+                    if (!mcu_line.empty())
+                        mcu_line += " | ";
+                    mcu_line += std::to_string(ext) + " extruder" + (ext != 1 ? "s" : "");
+                }
+                if (!mcu_line.empty()) {
+                    make_label(card, mcu_line, "text_subtle");
+                }
+
+                // Klipper and Moonraker versions
+                if (p.contains("klipper_version") && p["klipper_version"].is_string()) {
+                    make_label(card, "Klipper: " + p["klipper_version"].get<std::string>(),
+                               "text_subtle");
+                }
+                if (p.contains("moonraker_version") && p["moonraker_version"].is_string()) {
+                    make_label(card, "Moonraker: " + p["moonraker_version"].get<std::string>(),
+                               "text_subtle");
+                }
+            }
+
+            // Features array
+            if (event.contains("features") && event["features"].is_array() &&
+                !event["features"].empty()) {
+                std::string features_str = "Features: ";
+                bool first = true;
+                for (const auto& f : event["features"]) {
+                    if (f.is_string()) {
+                        if (!first)
+                            features_str += ", ";
+                        features_str += f.get<std::string>();
+                        first = false;
+                    }
+                }
+                make_label(card, features_str, "text_subtle");
+            }
+
+            // Host info
+            if (event.contains("host") && event["host"].is_object()) {
+                const auto& h = event["host"];
+
+                // "Host: aarch64, 4 cores, 1024 MB RAM"
+                std::string host_line;
+                if (h.contains("arch") && h["arch"].is_string()) {
+                    host_line = h["arch"].get<std::string>();
+                }
+                if (h.contains("cpu_cores") && h["cpu_cores"].is_number_integer()) {
+                    if (!host_line.empty())
+                        host_line += ", ";
+                    host_line += std::to_string(h["cpu_cores"].get<int>()) + " cores";
+                }
+                if (h.contains("ram_total_mb") && h["ram_total_mb"].is_number_integer()) {
+                    if (!host_line.empty())
+                        host_line += ", ";
+                    host_line += std::to_string(h["ram_total_mb"].get<int>()) + " MB RAM";
+                }
+                if (!host_line.empty()) {
+                    make_label(card, "Host: " + host_line, "text_subtle");
+                }
+
+                if (h.contains("cpu_model") && h["cpu_model"].is_string()) {
+                    make_label(card, "CPU: " + h["cpu_model"].get<std::string>(), "text_subtle");
+                }
+
+                if (h.contains("os") && h["os"].is_string()) {
+                    make_label(card, "OS: " + h["os"].get<std::string>(), "text_subtle");
+                }
+            }
         } else if (type_str == "print_outcome") {
-            // Show outcome and key print details
+            // Print outcome fields are at top level
             auto add_field_str = [&](const char* key, const char* display_name) {
                 if (event.contains(key) && event[key].is_string()) {
-                    std::string text =
-                        std::string(display_name) + ": " + event[key].get<std::string>();
-                    lv_obj_t* label = lv_label_create(card);
-                    lv_label_set_text(label, text.c_str());
-                    lv_obj_set_style_text_color(label, theme_manager_get_color("text_subtle"), 0);
-                    lv_obj_set_style_text_font(label, lv_font_get_default(), 0);
+                    make_label(card,
+                               std::string(display_name) + ": " + event[key].get<std::string>(),
+                               "text_subtle");
                 }
             };
             auto add_field_num = [&](const char* key, const char* display_name,
@@ -292,10 +424,7 @@ void TelemetryDataOverlay::populate_events() {
                         snprintf(buf, sizeof(buf), "%s: %.1f%s", display_name,
                                  event[key].get<double>(), suffix);
                     }
-                    lv_obj_t* label = lv_label_create(card);
-                    lv_label_set_text(label, buf);
-                    lv_obj_set_style_text_color(label, theme_manager_get_color("text_subtle"), 0);
-                    lv_obj_set_style_text_font(label, lv_font_get_default(), 0);
+                    make_label(card, buf, "text_subtle");
                 }
             };
             add_field_str("outcome", "Outcome");
@@ -309,17 +438,10 @@ void TelemetryDataOverlay::populate_events() {
                           "C");
         }
 
-        // Show the hashed device ID (truncated for readability)
+        // Show the full hashed device ID (no truncation)
         if (event.contains("device_id") && event["device_id"].is_string()) {
-            std::string device_id = event["device_id"].get<std::string>();
-            if (device_id.length() > 16) {
-                device_id = device_id.substr(0, 16) + "...";
-            }
-            std::string text = "Device: " + device_id;
-            lv_obj_t* label = lv_label_create(card);
-            lv_label_set_text(label, text.c_str());
-            lv_obj_set_style_text_color(label, theme_manager_get_color("text_subtle"), 0);
-            lv_obj_set_style_text_font(label, lv_font_get_default(), 0);
+            std::string text = "Device: " + event["device_id"].get<std::string>();
+            make_label(card, text, "text_subtle");
         }
     }
 

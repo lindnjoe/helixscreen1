@@ -3,10 +3,13 @@
 
 #include "system/telemetry_manager.h"
 
+#include "ams_types.h"
 #include "app_globals.h"
 #include "config.h"
+#include "display_backend.h"
 #include "display_manager.h"
 #include "hv/requests.h"
+#include "moonraker_client.h"
 #include "platform_capabilities.h"
 #include "printer_state.h"
 #include "settings_manager.h"
@@ -24,6 +27,7 @@
 #include <iomanip>
 #include <random>
 #include <sstream>
+#include <sys/utsname.h>
 
 #ifdef __APPLE__
 #include <CommonCrypto/CommonDigest.h>
@@ -787,20 +791,213 @@ nlohmann::json TelemetryManager::build_session_event() const {
     event["device_id"] = get_hashed_device_id();
     event["timestamp"] = get_timestamp();
 
+    // ---- app section ----
     json app;
     app["version"] = HELIX_VERSION;
     app["platform"] = UpdateChecker::get_platform_key();
 
-    // Include display resolution if available
     if (auto* dm = DisplayManager::instance()) {
         int w = dm->width();
         int h = dm->height();
         if (w > 0 && h > 0) {
             app["display"] = std::to_string(w) + "x" + std::to_string(h);
         }
+        if (auto* backend = dm->backend()) {
+            app["display_backend"] = display_backend_type_to_string(backend->type());
+
+            // Input type: SDL=mouse, FBDEV/DRM=touch
+            if (backend->type() == DisplayBackendType::SDL) {
+                app["input_type"] = "mouse";
+            } else {
+                app["input_type"] = "touch";
+            }
+        }
+        app["has_backlight"] = dm->has_backlight_control();
+        app["has_hw_blank"] = dm->uses_hardware_blank();
     }
 
+    // Theme and language (always available, don't depend on DisplayManager)
+    app["theme"] = SettingsManager::instance().get_dark_mode() ? "dark" : "light";
+    app["locale"] = SettingsManager::instance().get_language();
+
     event["app"] = app;
+
+    // ---- host section (always available, doesn't require printer connection) ----
+    json host;
+
+    // Architecture from uname
+    {
+        struct utsname uts;
+        if (uname(&uts) == 0) {
+            host["arch"] = std::string(uts.machine);
+        }
+    }
+
+    // CPU model from /proc/cpuinfo (first "model name" or "Hardware" line)
+    {
+        std::ifstream cpuinfo("/proc/cpuinfo");
+        if (cpuinfo.good()) {
+            std::string line;
+            while (std::getline(cpuinfo, line)) {
+                // x86: "model name	: Intel(R) Core..."
+                // ARM: "Hardware	: BCM2711"
+                if (line.rfind("model name", 0) == 0 || line.rfind("Hardware", 0) == 0) {
+                    auto pos = line.find(':');
+                    if (pos != std::string::npos && pos + 2 < line.size()) {
+                        host["cpu_model"] = line.substr(pos + 2);
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    // RAM and CPU cores from PlatformCapabilities
+    {
+        auto caps = helix::PlatformCapabilities::detect();
+        if (caps.total_ram_mb > 0) {
+            host["ram_total_mb"] = static_cast<int>(caps.total_ram_mb);
+        }
+        if (caps.cpu_cores > 0) {
+            host["cpu_cores"] = caps.cpu_cores;
+        }
+    }
+
+    // ---- printer & features sections (require discovery data) ----
+    auto* client = get_moonraker_client();
+    if (client) {
+        const auto& hw = client->hardware();
+
+        // printer section
+        json printer;
+        if (!hw.kinematics().empty()) {
+            printer["kinematics"] = hw.kinematics();
+        }
+
+        const auto& bv = hw.build_volume();
+        if (bv.x_max > 0 && bv.y_max > 0) {
+            // Format as "XxYxZ" using integer dimensions
+            std::string vol = std::to_string(static_cast<int>(bv.x_max - bv.x_min)) + "x" +
+                              std::to_string(static_cast<int>(bv.y_max - bv.y_min));
+            if (bv.z_max > 0) {
+                vol += "x" + std::to_string(static_cast<int>(bv.z_max));
+            }
+            printer["build_volume"] = vol;
+        }
+
+        if (!hw.mcu().empty()) {
+            printer["mcu"] = hw.mcu();
+        }
+        printer["mcu_count"] = static_cast<int>(hw.mcu_list().empty() ? (hw.mcu().empty() ? 0 : 1)
+                                                                      : hw.mcu_list().size());
+
+        // Count extruders from heaters list (names starting with "extruder")
+        int extruder_count = 0;
+        for (const auto& heater : hw.heaters()) {
+            if (heater.rfind("extruder", 0) == 0 && heater.rfind("extruder_stepper", 0) != 0) {
+                extruder_count++;
+            }
+        }
+        printer["extruder_count"] = extruder_count;
+
+        printer["has_heated_bed"] = hw.has_heater_bed();
+        printer["has_chamber"] = hw.supports_chamber();
+
+        if (!hw.software_version().empty()) {
+            printer["klipper_version"] = hw.software_version();
+        }
+        if (!hw.moonraker_version().empty()) {
+            printer["moonraker_version"] = hw.moonraker_version();
+        }
+
+        // Detected printer type (generic model name, not PII)
+        {
+            const auto& ptype = get_printer_state().get_printer_type();
+            if (!ptype.empty()) {
+                printer["detected_model"] = ptype;
+            }
+        }
+
+        event["printer"] = printer;
+
+        // features array
+        json features = json::array();
+
+        // Leveling
+        if (hw.has_bed_mesh())
+            features.push_back("bed_mesh");
+        if (hw.has_qgl())
+            features.push_back("qgl");
+        if (hw.has_z_tilt())
+            features.push_back("z_tilt");
+        if (hw.has_screws_tilt())
+            features.push_back("screws_tilt");
+
+        // Hardware
+        if (hw.has_probe())
+            features.push_back("probe");
+        if (hw.has_heater_bed())
+            features.push_back("heated_bed");
+        if (hw.supports_chamber())
+            features.push_back("chamber");
+        if (hw.has_accelerometer())
+            features.push_back("accelerometer");
+        if (hw.has_filament_sensors())
+            features.push_back("filament_sensor");
+        if (hw.has_led())
+            features.push_back("led");
+        if (hw.has_speaker())
+            features.push_back("speaker");
+
+        // Software
+        if (hw.has_firmware_retraction())
+            features.push_back("firmware_retraction");
+        if (hw.has_exclude_object())
+            features.push_back("exclude_object");
+        if (hw.has_timelapse())
+            features.push_back("timelapse");
+
+        // Spoolman and HelixPlugin from PrinterState
+        auto& ps = get_printer_state();
+        auto* spoolman_subj = lv_xml_get_subject(nullptr, "printer_has_spoolman");
+        if (spoolman_subj && lv_subject_get_int(spoolman_subj) > 0) {
+            features.push_back("spoolman");
+        }
+        if (ps.is_phase_tracking_enabled()) {
+            features.push_back("phase_tracking");
+        }
+        if (ps.service_has_helix_plugin()) {
+            features.push_back("helix_plugin");
+        }
+
+        // MMU
+        switch (hw.mmu_type()) {
+        case AmsType::HAPPY_HARE:
+            features.push_back("mmu_happy_hare");
+            break;
+        case AmsType::AFC:
+            features.push_back("mmu_afc");
+            break;
+        case AmsType::TOOL_CHANGER:
+            features.push_back("tool_changer");
+            break;
+        default:
+            break;
+        }
+
+        event["features"] = features;
+
+        // Add OS from discovery to host section
+        if (!hw.os_version().empty()) {
+            host["os"] = hw.os_version();
+        }
+    }
+
+    // Emit host section (always, even without printer connection)
+    if (!host.empty()) {
+        event["host"] = host;
+    }
+
     return event;
 }
 

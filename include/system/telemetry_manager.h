@@ -369,7 +369,7 @@ class TelemetryManager {
     static constexpr uint32_t AUTO_SEND_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 
     /** @brief Schema version for event JSON structure */
-    static constexpr int SCHEMA_VERSION = 1;
+    static constexpr int SCHEMA_VERSION = 2;
 
     /** @brief HTTPS endpoint for telemetry submission */
     static constexpr const char* ENDPOINT_URL = "https://telemetry.helixscreen.org/v1/events";

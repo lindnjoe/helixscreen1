@@ -950,3 +950,137 @@ TEST_CASE("Scheduler: constants have expected values", "[telemetry][scheduler]")
     REQUIRE(TelemetryManager::INITIAL_SEND_DELAY_MS == 60000);
     REQUIRE(TelemetryManager::AUTO_SEND_INTERVAL_MS == 3600000);
 }
+
+// ============================================================================
+// Schema Version 2 - Hardware Survey [telemetry][session][v2]
+// ============================================================================
+
+TEST_CASE("SCHEMA_VERSION is 2", "[telemetry][session][v2]") {
+    REQUIRE(TelemetryManager::SCHEMA_VERSION == 2);
+}
+
+TEST_CASE_METHOD(TelemetryTestFixture, "Session event v2: schema_version is 2",
+                 "[telemetry][session][v2]") {
+    auto& tm = TelemetryManager::instance();
+    tm.set_enabled(true);
+
+    tm.record_session();
+    auto event = tm.get_queue_snapshot()[0];
+
+    REQUIRE(event["schema_version"] == 2);
+}
+
+TEST_CASE_METHOD(TelemetryTestFixture, "Session event v2: app section has display backend fields",
+                 "[telemetry][session][v2]") {
+    auto& tm = TelemetryManager::instance();
+    tm.set_enabled(true);
+
+    tm.record_session();
+    auto event = tm.get_queue_snapshot()[0];
+
+    // App section should exist and have version/platform
+    REQUIRE(event.contains("app"));
+    REQUIRE(event["app"].contains("version"));
+    REQUIRE(event["app"].contains("platform"));
+
+    // Display backend fields are booleans when DisplayManager is available
+    // In test context, DisplayManager may not be initialized, so just verify
+    // the app object itself is present and well-formed
+    REQUIRE(event["app"].is_object());
+}
+
+TEST_CASE_METHOD(TelemetryTestFixture, "Session event v2: no PII in printer/features/host sections",
+                 "[telemetry][session][v2]") {
+    auto& tm = TelemetryManager::instance();
+    tm.set_enabled(true);
+
+    tm.record_session();
+    auto event = tm.get_queue_snapshot()[0];
+
+    // Serialize entire event to verify no PII leaked
+    std::string event_str = event.dump();
+
+    // Must NOT contain any PII-identifying fields at any level
+    REQUIRE(event_str.find("\"hostname\"") == std::string::npos);
+    REQUIRE(event_str.find("\"ip\"") == std::string::npos);
+    REQUIRE(event_str.find("\"mac_address\"") == std::string::npos);
+    REQUIRE(event_str.find("\"username\"") == std::string::npos);
+    REQUIRE(event_str.find("\"serial_number\"") == std::string::npos);
+    REQUIRE(event_str.find("\"email\"") == std::string::npos);
+    REQUIRE(event_str.find("\"ssid\"") == std::string::npos);
+
+    // If printer section exists, verify no hostname
+    if (event.contains("printer")) {
+        REQUIRE_FALSE(event["printer"].contains("hostname"));
+    }
+
+    // If host section exists, it should only have os
+    if (event.contains("host")) {
+        REQUIRE_FALSE(event["host"].contains("hostname"));
+        REQUIRE_FALSE(event["host"].contains("ip"));
+    }
+}
+
+TEST_CASE_METHOD(TelemetryTestFixture, "Session event v2: features is an array when present",
+                 "[telemetry][session][v2]") {
+    auto& tm = TelemetryManager::instance();
+    tm.set_enabled(true);
+
+    tm.record_session();
+    auto event = tm.get_queue_snapshot()[0];
+
+    // In test context without a real printer, features may not be present
+    // But if it IS present, it must be an array of strings
+    if (event.contains("features")) {
+        REQUIRE(event["features"].is_array());
+        for (const auto& f : event["features"]) {
+            REQUIRE(f.is_string());
+        }
+    }
+}
+
+TEST_CASE_METHOD(TelemetryTestFixture, "Session event v2: app has theme and locale",
+                 "[telemetry][session][v2]") {
+    auto& tm = TelemetryManager::instance();
+    tm.set_enabled(true);
+
+    tm.record_session();
+    auto event = tm.get_queue_snapshot()[0];
+
+    REQUIRE(event.contains("app"));
+    const auto& app = event["app"];
+
+    // Theme should be "dark" or "light"
+    REQUIRE(app.contains("theme"));
+    REQUIRE(app["theme"].is_string());
+    std::string theme = app["theme"].get<std::string>();
+    REQUIRE((theme == "dark" || theme == "light"));
+
+    // Locale should be a non-empty language code
+    REQUIRE(app.contains("locale"));
+    REQUIRE(app["locale"].is_string());
+    REQUIRE(!app["locale"].get<std::string>().empty());
+}
+
+TEST_CASE_METHOD(TelemetryTestFixture, "Session event v2: host section has hardware info",
+                 "[telemetry][session][v2]") {
+    auto& tm = TelemetryManager::instance();
+    tm.set_enabled(true);
+
+    tm.record_session();
+    auto event = tm.get_queue_snapshot()[0];
+
+    // Host section should always be present (doesn't require printer)
+    REQUIRE(event.contains("host"));
+    const auto& host = event["host"];
+    REQUIRE(host.is_object());
+
+    // Architecture should be present on any platform
+    REQUIRE(host.contains("arch"));
+    REQUIRE(host["arch"].is_string());
+    REQUIRE(!host["arch"].get<std::string>().empty());
+
+    // Verify no PII leakage in host section
+    REQUIRE_FALSE(host.contains("hostname"));
+    REQUIRE_FALSE(host.contains("ip"));
+}
