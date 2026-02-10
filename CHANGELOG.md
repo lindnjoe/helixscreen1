@@ -5,6 +5,40 @@ All notable changes to HelixScreen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.9] - 2026-02-09
+
+Telemetry, security hardening, and a bundled uninstaller — plus deploy packages are now ~60% smaller.
+
+### Added
+- Anonymous opt-in telemetry with crash reporting, session recording, and auto-send scheduler
+- Hardware survey enrichment for telemetry sessions (schema v2)
+- Telemetry opt-in step in setup wizard with info modal
+- Cloudflare Worker telemetry backend
+- Bundled uninstaller with 151 shell tests
+- Creality K2 added to GitHub release workflow
+
+### Fixed
+- Framebuffer garbage on home panel from missing container background
+- Observer crash on quit from subject/display deinit ordering
+- Stale subject pointers in ToastManager and WizardTouchCalibration on shutdown
+- Print thumbnail offset and outcome overlay centering
+- Confetti particle system rewritten to use native LVGL objects
+- Print card thumbnail overlap — e-stop relocated to print card
+- Auto-navigation to print status suppressed during setup wizard
+- KIAUH extension discovery uses native import paths (fixes #30)
+- Data root auto-detected from binary path with missing globals.xml abort
+- NaN/Inf guards on all G-code generation paths
+- Safe restart via absolute argv[0] path resolution
+- Replaced system() with fork/execvp in ping_host()
+- Tightened directory permissions, replaced strcpy with memcpy
+- K2 musl cross-compilation LDFLAGS
+- Telemetry opt-in enforced for crash events
+- Telemetry enabled state synced at startup with API key auth
+
+### Changed
+- Deploy footprint reduced ~60% with asset excludes and LZ4 image compression
+- Shell test gate added to release workflow
+
 ## [0.9.8] - 2026-02-09
 
 ### Added
@@ -257,6 +291,7 @@ Initial tagged release. Foundation for all subsequent development.
 - Automated GitHub Actions release pipeline
 - One-liner installation script with platform auto-detection
 
+[0.9.9]: https://github.com/prestonbrown/helixscreen/compare/v0.9.8...v0.9.9
 [0.9.8]: https://github.com/prestonbrown/helixscreen/compare/v0.9.7...v0.9.8
 [0.9.7]: https://github.com/prestonbrown/helixscreen/compare/v0.9.6...v0.9.7
 [0.9.6]: https://github.com/prestonbrown/helixscreen/compare/v0.9.5...v0.9.6
