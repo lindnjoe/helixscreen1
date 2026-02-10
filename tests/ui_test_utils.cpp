@@ -581,8 +581,19 @@ void app_request_restart_service() {
 }
 
 // Stub for get_helix_cache_dir (tests use temp directory)
+// Respects HELIX_CACHE_DIR env var for testing the override, falls back to /tmp
 #include "app_globals.h"
 std::string get_helix_cache_dir(const std::string& subdir) {
+    const char* helix_cache = std::getenv("HELIX_CACHE_DIR");
+    if (helix_cache && helix_cache[0] != '\0') {
+        std::string path = std::string(helix_cache) + "/" + subdir;
+        std::error_code ec;
+        std::filesystem::create_directories(path, ec);
+        if (!ec && std::filesystem::exists(path)) {
+            return path;
+        }
+        // Fall through if HELIX_CACHE_DIR path is invalid
+    }
     std::string path = "/tmp/helix_test_" + subdir;
     std::filesystem::create_directories(path);
     return path;

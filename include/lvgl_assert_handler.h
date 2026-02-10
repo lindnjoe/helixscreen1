@@ -101,7 +101,8 @@ static inline void helix_lvgl_assert_handler(const char* file, int line, const c
     // Print stack trace to stderr
     helix_print_backtrace(STDERR_FILENO);
 
-    // Also write to log file for embedded systems
+    // /tmp/helix_assert.log intentionally stays in /tmp - signal handler context
+    // requires async-signal-safe functions only; can't use get_helix_cache_dir()
     FILE* log = fopen("/tmp/helix_assert.log", "a");
     if (log) {
         fprintf(log, "[%s] LVGL ASSERT at %s:%d in %s()\n", time_buf, file, line, func);

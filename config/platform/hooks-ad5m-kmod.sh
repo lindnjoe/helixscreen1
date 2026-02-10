@@ -70,6 +70,7 @@ platform_wait_for_services() {
 # No flag file coordination needed on Klipper Mod -- there is no S99root
 # or screen.sh equivalent that checks for a third-party UI.
 platform_pre_start() {
+    export HELIX_CACHE_DIR="/data/helixscreen/cache"
     return 0
 }
 

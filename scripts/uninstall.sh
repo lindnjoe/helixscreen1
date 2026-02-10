@@ -1319,6 +1319,31 @@ EOF
     $SUDO mv "${release_info}.tmp" "$release_info"
 }
 
+# Ensure helixscreen is in moonraker.asvc (service allowlist)
+# Moonraker requires services to be listed here before it can manage them.
+# The asvc file lives in printer_data/, one level up from config/moonraker.conf.
+# Args: $1 = moonraker.conf path (used to derive printer_data path)
+ensure_moonraker_asvc() {
+    local conf="$1"
+    # printer_data is two levels up from config/moonraker.conf
+    local printer_data
+    printer_data="$(dirname "$(dirname "$conf")")"
+    local asvc="${printer_data}/moonraker.asvc"
+
+    if [ ! -f "$asvc" ]; then
+        log_info "No moonraker.asvc found at $asvc, skipping"
+        return 0
+    fi
+
+    if grep -q '^helixscreen$' "$asvc" 2>/dev/null; then
+        return 0
+    fi
+
+    log_info "Adding helixscreen to $asvc..."
+    echo "helixscreen" | $SUDO tee -a "$asvc" >/dev/null
+    log_success "Added helixscreen to Moonraker service allowlist"
+}
+
 # Restart Moonraker to pick up configuration changes
 restart_moonraker() {
     if command -v systemctl >/dev/null 2>&1 && $SUDO systemctl is-active --quiet moonraker 2>/dev/null; then
@@ -1364,16 +1389,20 @@ configure_moonraker_updates() {
     # Migrate old git_repo config to zip
     if has_old_git_repo_section "$conf"; then
         migrate_git_repo_to_zip "$conf"
+        ensure_moonraker_asvc "$conf"
         restart_moonraker
         return 0
     fi
 
     if has_update_manager_section "$conf"; then
         log_info "update_manager section already exists in $conf"
+        # Still ensure asvc is correct even if section already exists
+        ensure_moonraker_asvc "$conf"
         return 0
     fi
 
     add_update_manager_section "$conf"
+    ensure_moonraker_asvc "$conf"
     restart_moonraker
 }
 
@@ -1536,10 +1565,17 @@ uninstall() {
     fi
 
     # Clean up helixscreen cache directories
-    for cache_dir in /root/.cache/helix /tmp/helix_thumbs /.cache/helix; do
+    for cache_dir in /root/.cache/helix /tmp/helix_thumbs /.cache/helix /data/helixscreen/cache /usr/data/helixscreen/cache; do
         if [ -d "$cache_dir" ] 2>/dev/null; then
             log_info "Removing cache: $cache_dir"
             $SUDO rm -rf "$cache_dir"
+        fi
+    done
+    # Clean up /var/tmp helix files
+    for tmp_pattern in /var/tmp/helix_*; do
+        if [ -e "$tmp_pattern" ] 2>/dev/null; then
+            log_info "Removing cache: $tmp_pattern"
+            $SUDO rm -rf "$tmp_pattern"
         fi
     done
 
@@ -1616,7 +1652,10 @@ clean_old_installation() {
         "/root/.cache/helix/helix_thumbs" \
         "/home/*/.cache/helix/helix_thumbs" \
         "/tmp/helix_thumbs" \
-        "/var/tmp/helix_thumbs"
+        "/var/tmp/helix_thumbs" \
+        "/var/tmp/helix_*" \
+        "/data/helixscreen/cache" \
+        "/usr/data/helixscreen/cache"
     do
         for cache_dir in $cache_pattern; do
             if [ -d "$cache_dir" ] 2>/dev/null; then

@@ -9,6 +9,7 @@
  */
 
 #include "../../include/thumbnail_cache.h"
+#include "app_globals.h"
 
 #include <cstdlib>
 #include <filesystem>
@@ -463,4 +464,36 @@ TEST_CASE("ThumbnailCache invalidation removes all variants", "[assets][cache][i
             std::filesystem::remove(file);
         }
     }
+}
+
+// ============================================================================
+// ThumbnailCache + HELIX_CACHE_DIR Integration
+// ============================================================================
+
+TEST_CASE("ThumbnailCache respects HELIX_CACHE_DIR via get_helix_cache_dir", "[assets][cache]") {
+    // Save and restore env var
+    const char* orig = std::getenv("HELIX_CACHE_DIR");
+    std::string orig_val = orig ? orig : "";
+    bool had_orig = (orig != nullptr);
+
+    std::string tmpdir = std::string("/tmp/helix_test_thumb_env_") +
+                         std::to_string(static_cast<unsigned long>(time(nullptr)));
+    std::filesystem::create_directories(tmpdir);
+
+    setenv("HELIX_CACHE_DIR", tmpdir.c_str(), 1);
+
+    // get_helix_cache_dir should resolve under our tmpdir
+    std::string result = get_helix_cache_dir("helix_thumbs");
+    REQUIRE(result.find(tmpdir) == 0);
+    REQUIRE(result.find("helix_thumbs") != std::string::npos);
+
+    // Restore env
+    if (had_orig) {
+        setenv("HELIX_CACHE_DIR", orig_val.c_str(), 1);
+    } else {
+        unsetenv("HELIX_CACHE_DIR");
+    }
+
+    std::error_code ec;
+    std::filesystem::remove_all(tmpdir, ec);
 }

@@ -586,3 +586,12 @@ CONF
     grep -q "/opt/helixscreen" "$WORKTREE_ROOT/scripts/uninstall.sh"
     grep -q "/usr/data/helixscreen" "$WORKTREE_ROOT/scripts/uninstall.sh"
 }
+
+@test "regression: uninstall.sh cleans platform cache directories" {
+    grep -q "/data/helixscreen/cache" "$WORKTREE_ROOT/scripts/uninstall.sh"
+    grep -q "/usr/data/helixscreen/cache" "$WORKTREE_ROOT/scripts/uninstall.sh"
+}
+
+@test "regression: uninstall.sh cleans /var/tmp helix directories" {
+    grep -q "/var/tmp/helix_" "$WORKTREE_ROOT/scripts/uninstall.sh"
+}

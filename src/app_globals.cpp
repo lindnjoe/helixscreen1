@@ -273,7 +273,49 @@ static bool try_create_dir(const std::string& path) {
 }
 
 std::string get_helix_cache_dir(const std::string& subdir) {
-    // 1. Check XDG_CACHE_HOME (XDG Base Directory Specification)
+    // 1. Check HELIX_CACHE_DIR env var (explicit override)
+    const char* helix_cache = std::getenv("HELIX_CACHE_DIR");
+    if (helix_cache && helix_cache[0] != '\0') {
+        std::string path = std::string(helix_cache) + "/" + subdir;
+        if (try_create_dir(path)) {
+            spdlog::info("[App Globals] Cache dir (HELIX_CACHE_DIR): {}", path);
+            return path;
+        }
+    }
+
+    // 2. Check config /cache/base_directory
+    Config* config = Config::get_instance();
+    if (config) {
+        std::string base = config->get<std::string>("/cache/base_directory", "");
+        if (!base.empty()) {
+            std::string path = base + "/" + subdir;
+            if (try_create_dir(path)) {
+                spdlog::info("[App Globals] Cache dir (config): {}", path);
+                return path;
+            }
+        }
+    }
+
+    // 3. Platform-specific compile-time paths
+#if defined(HELIX_PLATFORM_AD5M)
+    {
+        std::string path = "/data/helixscreen/cache/" + subdir;
+        if (try_create_dir(path)) {
+            spdlog::info("[App Globals] Cache dir (AD5M): {}", path);
+            return path;
+        }
+    }
+#elif defined(HELIX_PLATFORM_K1) || defined(HELIX_PLATFORM_K2)
+    {
+        std::string path = "/usr/data/helixscreen/cache/" + subdir;
+        if (try_create_dir(path)) {
+            spdlog::info("[App Globals] Cache dir (K1/K2): {}", path);
+            return path;
+        }
+    }
+#endif
+
+    // 4. Check XDG_CACHE_HOME (XDG Base Directory Specification)
     const char* xdg_cache = std::getenv("XDG_CACHE_HOME");
     if (xdg_cache && xdg_cache[0] != '\0') {
         std::string path = std::string(xdg_cache) + "/helix/" + subdir;
@@ -282,7 +324,7 @@ std::string get_helix_cache_dir(const std::string& subdir) {
         }
     }
 
-    // 2. Try $HOME/.cache/helix (standard Linux location)
+    // 5. Try $HOME/.cache/helix (standard Linux location)
     const char* home = std::getenv("HOME");
     if (home && home[0] != '\0') {
         std::string path = std::string(home) + "/.cache/helix/" + subdir;
@@ -291,7 +333,7 @@ std::string get_helix_cache_dir(const std::string& subdir) {
         }
     }
 
-    // 3. Try /var/tmp (persistent, often larger than /tmp on embedded)
+    // 6. Try /var/tmp (persistent, often larger than /tmp on embedded)
     {
         std::string path = "/var/tmp/helix_" + subdir;
         if (try_create_dir(path)) {
@@ -299,7 +341,7 @@ std::string get_helix_cache_dir(const std::string& subdir) {
         }
     }
 
-    // 4. Last resort: /tmp (may be RAM-backed tmpfs)
+    // 7. Last resort: /tmp (may be RAM-backed tmpfs)
     {
         std::string path = "/tmp/helix_" + subdir;
         if (try_create_dir(path)) {

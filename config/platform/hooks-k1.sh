@@ -19,7 +19,7 @@ platform_wait_for_services() {
 }
 
 platform_pre_start() {
-    :
+    export HELIX_CACHE_DIR="/usr/data/helixscreen/cache"
 }
 
 platform_post_stop() {

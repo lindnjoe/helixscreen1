@@ -127,6 +127,7 @@ platform_wait_for_services() {
 # This must happen BEFORE stopping competing UIs or enabling backlight, because
 # ForgeX's screen.sh could run at any time via Klipper's delayed_gcode.
 platform_pre_start() {
+    export HELIX_CACHE_DIR="/data/helixscreen/cache"
     touch /tmp/helixscreen_active
 }
 

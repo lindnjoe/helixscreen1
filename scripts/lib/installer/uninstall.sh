@@ -126,10 +126,17 @@ uninstall() {
     fi
 
     # Clean up helixscreen cache directories
-    for cache_dir in /root/.cache/helix /tmp/helix_thumbs /.cache/helix; do
+    for cache_dir in /root/.cache/helix /tmp/helix_thumbs /.cache/helix /data/helixscreen/cache /usr/data/helixscreen/cache; do
         if [ -d "$cache_dir" ] 2>/dev/null; then
             log_info "Removing cache: $cache_dir"
             $SUDO rm -rf "$cache_dir"
+        fi
+    done
+    # Clean up /var/tmp helix files
+    for tmp_pattern in /var/tmp/helix_*; do
+        if [ -e "$tmp_pattern" ] 2>/dev/null; then
+            log_info "Removing cache: $tmp_pattern"
+            $SUDO rm -rf "$tmp_pattern"
         fi
     done
 
@@ -206,7 +213,10 @@ clean_old_installation() {
         "/root/.cache/helix/helix_thumbs" \
         "/home/*/.cache/helix/helix_thumbs" \
         "/tmp/helix_thumbs" \
-        "/var/tmp/helix_thumbs"
+        "/var/tmp/helix_thumbs" \
+        "/var/tmp/helix_*" \
+        "/data/helixscreen/cache" \
+        "/usr/data/helixscreen/cache"
     do
         for cache_dir in $cache_pattern; do
             if [ -d "$cache_dir" ] 2>/dev/null; then

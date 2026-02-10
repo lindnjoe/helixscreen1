@@ -3,6 +3,7 @@
 
 #include "thumbnail_cache.h"
 
+#include "app_globals.h"
 #include "config.h"
 
 #include <spdlog/spdlog.h>
@@ -40,35 +41,6 @@ static size_t calculate_dynamic_max_size(const std::string& cache_dir, size_t co
     } catch (const std::filesystem::filesystem_error& e) {
         spdlog::warn("[ThumbnailCache] Failed to query disk space: {}, using minimum", e.what());
         return ThumbnailCache::MIN_CACHE_SIZE;
-    }
-}
-
-// Helper to check if a directory is writable and has reasonable space
-static bool is_usable_temp_dir(const std::string& path, size_t min_space_mb = 10) {
-    try {
-        if (!std::filesystem::exists(path)) {
-            return false;
-        }
-
-        // Check available space
-        std::filesystem::space_info space = std::filesystem::space(path);
-        size_t available_mb = space.available / (1024 * 1024);
-        if (available_mb < min_space_mb) {
-            return false;
-        }
-
-        // Verify write permission by creating a test file
-        std::string test_file = path + "/.helix_write_test";
-        std::ofstream ofs(test_file);
-        if (!ofs.good()) {
-            return false;
-        }
-        ofs.close();
-        std::filesystem::remove(test_file);
-
-        return true;
-    } catch (...) {
-        return false;
     }
 }
 
@@ -110,69 +82,8 @@ std::string ThumbnailCache::determine_cache_dir() {
         }
     }
 
-    // 2. Check XDG_CACHE_HOME (respects XDG Base Directory Specification)
-    const char* xdg_cache = std::getenv("XDG_CACHE_HOME");
-    if (xdg_cache && xdg_cache[0] != '\0') {
-        std::string full_path = std::string(xdg_cache) + "/helix/" + CACHE_SUBDIR;
-        if (try_create_cache_dir(full_path)) {
-            spdlog::info("[ThumbnailCache] Using XDG_CACHE_HOME: {}", full_path);
-            return full_path;
-        }
-    }
-
-    // 3. Try $HOME/.cache/helix (standard location on Linux)
-    const char* home = std::getenv("HOME");
-    if (home && home[0] != '\0') {
-        std::string cache_base = std::string(home) + "/.cache/helix/" + CACHE_SUBDIR;
-        if (try_create_cache_dir(cache_base)) {
-            spdlog::debug("[ThumbnailCache] Using HOME/.cache: {}", cache_base);
-            return cache_base;
-        }
-        spdlog::warn("[ThumbnailCache] Cannot use ~/.cache");
-    }
-
-    // 4. Check standard temp directory environment variables
-    // These are checked in order of preference
-    const char* temp_env_vars[] = {"TMPDIR", "TMP", "TEMP", nullptr};
-    for (const char** var = temp_env_vars; *var != nullptr; ++var) {
-        const char* dir = std::getenv(*var);
-        if (dir && dir[0] != '\0') {
-            std::string full_path = std::string(dir) + "/helix/" + CACHE_SUBDIR;
-            if (is_usable_temp_dir(dir) && try_create_cache_dir(full_path)) {
-                spdlog::info("[ThumbnailCache] Using {}: {}", *var, full_path);
-                return full_path;
-            }
-        }
-    }
-
-    // 5. Try /var/tmp (persistent across reboots, often larger than /tmp on embedded)
-    if (is_usable_temp_dir("/var/tmp", 20)) {
-        std::string var_tmp_path = std::string("/var/tmp/helix/") + CACHE_SUBDIR;
-        if (try_create_cache_dir(var_tmp_path)) {
-            spdlog::info("[ThumbnailCache] Using /var/tmp: {}", var_tmp_path);
-            return var_tmp_path;
-        }
-    }
-
-    // 6. Last resort: /tmp (works everywhere, but may be small tmpfs)
-    std::string fallback = std::string("/tmp/helix/") + CACHE_SUBDIR;
-    if (try_create_cache_dir(fallback)) {
-        spdlog::warn("[ThumbnailCache] Falling back to /tmp: {}", fallback);
-        return fallback;
-    }
-
-    // 7. Absolute last resort - current directory (shouldn't happen)
-    try {
-        std::string cwd_fallback =
-            (std::filesystem::current_path() / "helix" / CACHE_SUBDIR).string();
-        spdlog::error("[ThumbnailCache] No writable cache directory found, using {}", cwd_fallback);
-        return cwd_fallback;
-    } catch (...) {
-        // If even current_path() fails, use relative as absolute last resort
-        std::string fallback = "./helix/" + std::string(CACHE_SUBDIR);
-        spdlog::error("[ThumbnailCache] No writable cache directory found, using {}", fallback);
-        return fallback;
-    }
+    // 2. Fall through to centralized cache resolution chain
+    return get_helix_cache_dir(CACHE_SUBDIR);
 }
 
 ThumbnailCache::ThumbnailCache()

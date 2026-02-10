@@ -189,10 +189,15 @@ void set_wizard_active(bool active);
  * @brief Get appropriate cache directory for temp files
  *
  * Determines best location for cache/temp files with priority:
- * 1. XDG_CACHE_HOME/helix/<subdir>
- * 2. $HOME/.cache/helix/<subdir>
- * 3. /var/tmp/helix_<subdir>
- * 4. /tmp/helix_<subdir> (last resort)
+ * 1. HELIX_CACHE_DIR env var + /<subdir>
+ * 2. Config /cache/base_directory + /<subdir>
+ * 3. Platform-specific (compile-time):
+ *    - AD5M:  /data/helixscreen/cache/<subdir>
+ *    - K1/K2: /usr/data/helixscreen/cache/<subdir>
+ * 4. XDG_CACHE_HOME/helix/<subdir>
+ * 5. $HOME/.cache/helix/<subdir>
+ * 6. /var/tmp/helix_<subdir>
+ * 7. /tmp/helix_<subdir> (last resort, with warning)
  *
  * Creates directory if needed. On embedded systems, prefers persistent
  * storage over RAM-backed tmpfs.

@@ -15,7 +15,7 @@ This document provides a comprehensive reference for all environment variables u
 | [Calibration](#calibration-auto-start) | 2 | `*_AUTO_START` |
 | [Debugging](#debugging) | 1 | `HELIX_DEBUG_*` |
 | [Deployment](#deployment) | 1 | `HELIX_` |
-| [Logging & Paths](#logging--data-paths) | 2 | Standard Unix |
+| [Logging & Paths](#logging--data-paths) | 3 | `HELIX_` / Standard Unix |
 
 ---
 
@@ -646,6 +646,37 @@ $HELIX_DATA_DIR/
 ---
 
 ## Logging & Data Paths
+
+### `HELIX_CACHE_DIR`
+
+Override the base directory for all HelixScreen cache/temp files (thumbnails, screenshots, gcode temp files).
+
+| Property | Value |
+|----------|-------|
+| **Values** | Absolute directory path |
+| **Default** | Auto-detected per platform |
+| **File** | `src/app_globals.cpp` |
+
+When set, all cache subdirectories are created under `$HELIX_CACHE_DIR/<subdir>`. Platform hooks set this automatically:
+- **AD5M**: `/data/helixscreen/cache` (5.8GB ext4 partition)
+- **K1/K2**: `/usr/data/helixscreen/cache`
+
+```bash
+# Custom cache location
+HELIX_CACHE_DIR=/mnt/storage/helix-cache ./build/bin/helix-screen
+
+# AD5M (set automatically by platform hooks)
+export HELIX_CACHE_DIR="/data/helixscreen/cache"
+```
+
+**Resolution chain** (first match wins):
+1. `HELIX_CACHE_DIR` env var
+2. Config `/cache/base_directory`
+3. Platform-specific compile-time default
+4. `XDG_CACHE_HOME/helix/`
+5. `$HOME/.cache/helix/`
+6. `/var/tmp/helix_`
+7. `/tmp/helix_` (last resort)
 
 ### `XDG_DATA_HOME`
 

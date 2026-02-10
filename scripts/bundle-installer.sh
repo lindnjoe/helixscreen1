@@ -325,6 +325,16 @@ main() {
     install_service "$platform"
     install_platform_hooks
 
+    # Create platform cache directory
+    case "$platform" in
+        ad5m)
+            $SUDO mkdir -p /data/helixscreen/cache
+            ;;
+        k1)
+            $SUDO mkdir -p /usr/data/helixscreen/cache
+            ;;
+    esac
+
     # Symlink config into printer_data (Pi/Klipper only - enables web UI editing)
     setup_config_symlink
 

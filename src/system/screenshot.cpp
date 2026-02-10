@@ -5,12 +5,15 @@
 
 #include "ui_error_reporting.h"
 
+#include "app_globals.h"
+
 #include <spdlog/spdlog.h>
 
 #include <cstdio>
 #include <ctime>
 #include <lvgl.h>
 #include <memory>
+#include <string>
 
 namespace helix {
 
@@ -63,10 +66,14 @@ bool write_bmp(const char* filename, const uint8_t* data, int width, int height)
 }
 
 void save_screenshot() {
-    // Generate unique filename with timestamp
-    char filename[256];
-    snprintf(filename, sizeof(filename), "/tmp/ui-screenshot-%lu.bmp",
-             (unsigned long)time(nullptr));
+    // Generate unique filename with timestamp in cache directory
+    std::string cache_dir = get_helix_cache_dir("screenshots");
+    if (cache_dir.empty()) {
+        spdlog::error("[Screenshot] Failed to resolve cache directory");
+        return;
+    }
+    std::string filename = cache_dir + "/ui-screenshot-" +
+                           std::to_string(static_cast<unsigned long>(time(nullptr))) + ".bmp";
 
     // Take snapshot using LVGL's native API (platform-independent)
     lv_obj_t* screen = lv_screen_active();
@@ -78,7 +85,7 @@ void save_screenshot() {
     }
 
     // Write BMP file
-    if (write_bmp(filename, snapshot->data, snapshot->header.w, snapshot->header.h)) {
+    if (write_bmp(filename.c_str(), snapshot->data, snapshot->header.w, snapshot->header.h)) {
         spdlog::info("[Screenshot] saved: {}", filename);
     } else {
         NOTIFY_ERROR("Failed to save screenshot");
