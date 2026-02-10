@@ -4,6 +4,7 @@
 interface Env {
   TELEMETRY_BUCKET: R2Bucket;
   INGEST_API_KEY: string; // Cloudflare secret: wrangler secret put INGEST_API_KEY
+  ADMIN_API_KEY: string; // Cloudflare secret: wrangler secret put ADMIN_API_KEY (for analytics)
 }
 
 const CORS_HEADERS: Record<string, string> = {
@@ -111,6 +112,64 @@ export default {
       }
 
       return json({ status: "ok", stored: body.length });
+    }
+
+    // Event listing — returns keys for a given date prefix (for analytics pull)
+    // GET /v1/events/list?prefix=events/2026/01/15/&cursor=...
+    // Requires ADMIN_API_KEY (NOT the ingest key baked into client binaries)
+    if (url.pathname === "/v1/events/list" && request.method === "GET") {
+      const apiKey = request.headers.get("x-api-key") ?? "";
+      if (!env.ADMIN_API_KEY || apiKey !== env.ADMIN_API_KEY) {
+        return json({ error: "Unauthorized" }, 401);
+      }
+
+      const prefix = url.searchParams.get("prefix") ?? "events/";
+      if (!prefix.startsWith("events/")) {
+        return json({ error: "Prefix must start with events/" }, 400);
+      }
+      const cursor = url.searchParams.get("cursor") ?? undefined;
+      const limit = Math.max(1, Math.min(
+        parseInt(url.searchParams.get("limit") ?? "1000", 10) || 1000,
+        1000,
+      ));
+
+      const listed = await env.TELEMETRY_BUCKET.list({ prefix, cursor, limit });
+      return json({
+        keys: listed.objects.map((obj) => ({
+          key: obj.key,
+          size: obj.size,
+          uploaded: obj.uploaded.toISOString(),
+        })),
+        truncated: listed.truncated,
+        cursor: listed.truncated ? listed.cursor : undefined,
+      });
+    }
+
+    // Event download — stream a specific event file
+    // GET /v1/events/get?key=events/2026/01/15/1234567890-abc123.json
+    // Requires ADMIN_API_KEY (NOT the ingest key baked into client binaries)
+    if (url.pathname === "/v1/events/get" && request.method === "GET") {
+      const apiKey = request.headers.get("x-api-key") ?? "";
+      if (!env.ADMIN_API_KEY || apiKey !== env.ADMIN_API_KEY) {
+        return json({ error: "Unauthorized" }, 401);
+      }
+
+      const key = url.searchParams.get("key");
+      if (!key || !key.startsWith("events/") || !key.endsWith(".json")) {
+        return json({ error: "Invalid key" }, 400);
+      }
+
+      const obj = await env.TELEMETRY_BUCKET.get(key);
+      if (!obj) {
+        return json({ error: "Not found" }, 404);
+      }
+
+      return new Response(obj.body, {
+        headers: {
+          "Content-Type": "application/json",
+          ...CORS_HEADERS,
+        },
+      });
     }
 
     // Symbol map listing — returns available platforms for a version

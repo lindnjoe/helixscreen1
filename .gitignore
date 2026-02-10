@@ -118,3 +118,9 @@ dist/
 assets/fonts/NotoSansCJK*.otf
 .bash-git-rc
 config/helixconfig.json.voronv2
+
+# ============================================================================
+# Telemetry Analytics (local data pulled from R2)
+# ============================================================================
+.telemetry-data/
+.env.telemetry
