@@ -41,24 +41,11 @@ std::unique_ptr<WifiBackend> WifiBackend::create(bool silent) {
                  start_result.technical_msg);
     return nullptr;
 #else
-    // Linux: Try wpa_supplicant backend first (primary)
-    spdlog::debug("[WifiBackend] Attempting wpa_supplicant backend for Linux{}",
+    // Linux: Try NetworkManager first (fast probe, most distros use it)
+    spdlog::debug("[WifiBackend] Attempting NetworkManager backend for Linux{}",
                   silent ? " (silent mode)" : "");
-    auto wpa_backend = std::make_unique<WifiBackendWpaSupplicant>();
-    wpa_backend->set_silent(true); // Silent during probe - we may fallback to NM
-    WiFiError wpa_result = wpa_backend->start();
-
-    if (wpa_result.success()) {
-        spdlog::info("[WifiBackend] wpa_supplicant backend started successfully");
-        return wpa_backend;
-    }
-
-    spdlog::debug("[WifiBackend] wpa_supplicant failed: {} - trying NetworkManager",
-                  wpa_result.technical_msg);
-
-    // Fallback: Try NetworkManager backend (for systems like MainsailOS)
     auto nm_backend = std::make_unique<WifiBackendNetworkManager>();
-    nm_backend->set_silent(silent);
+    nm_backend->set_silent(true); // Silent during probe - we may fallback to wpa
     WiFiError nm_result = nm_backend->start();
 
     if (nm_result.success()) {
@@ -66,10 +53,23 @@ std::unique_ptr<WifiBackend> WifiBackend::create(bool silent) {
         return nm_backend;
     }
 
+    spdlog::debug("[WifiBackend] NetworkManager failed: {} - trying wpa_supplicant",
+                  nm_result.technical_msg);
+
+    // Fallback: Try wpa_supplicant backend
+    auto wpa_backend = std::make_unique<WifiBackendWpaSupplicant>();
+    wpa_backend->set_silent(silent);
+    WiFiError wpa_result = wpa_backend->start();
+
+    if (wpa_result.success()) {
+        spdlog::info("[WifiBackend] wpa_supplicant backend started successfully");
+        return wpa_backend;
+    }
+
     // Both backends failed
     spdlog::warn("[WifiBackend] All backends failed - WiFi unavailable");
-    spdlog::warn("[WifiBackend]   wpa_supplicant: {}", wpa_result.technical_msg);
     spdlog::warn("[WifiBackend]   NetworkManager: {}", nm_result.technical_msg);
+    spdlog::warn("[WifiBackend]   wpa_supplicant: {}", wpa_result.technical_msg);
     return nullptr;
 #endif
 }
