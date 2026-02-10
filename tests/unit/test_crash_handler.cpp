@@ -294,6 +294,12 @@ TEST_CASE_METHOD(CrashTestFixture, "Crash: TelemetryManager enqueues crash event
             << "bt:0x0040abcd\nbt:0x0040ef01\n";
     }
 
+    // Enable telemetry via config file (crash events respect opt-in)
+    {
+        std::ofstream ofs((temp_dir() / "telemetry_config.json").string());
+        ofs << R"({"enabled": true})";
+    }
+
     // Initialize TelemetryManager with the temp dir (init calls check_previous_crash)
     auto& tm = TelemetryManager::instance();
     tm.shutdown();
@@ -352,12 +358,43 @@ TEST_CASE_METHOD(CrashTestFixture, "Crash: TelemetryManager ignores absent crash
     tm.shutdown();
 }
 
+TEST_CASE_METHOD(CrashTestFixture, "Crash: when disabled, crash event is not enqueued",
+                 "[telemetry][crash]") {
+    // Write a crash file
+    {
+        std::ofstream ofs((temp_dir() / "crash.txt").string());
+        ofs << "signal:11\nname:SIGSEGV\nversion:0.9.6\ntimestamp:1707350400\nuptime:3600\n";
+    }
+
+    // No telemetry config = disabled by default
+    auto& tm = TelemetryManager::instance();
+    tm.shutdown();
+    tm.init(temp_dir().string());
+
+    // No crash events should be enqueued
+    auto snapshot = tm.get_queue_snapshot();
+    for (const auto& event : snapshot) {
+        REQUIRE_FALSE(event["event"] == "crash");
+    }
+
+    // Crash file should still be cleaned up
+    REQUIRE_FALSE(crash_handler::has_crash_file((temp_dir() / "crash.txt").string()));
+
+    tm.shutdown();
+}
+
 TEST_CASE_METHOD(CrashTestFixture, "Crash: crash event has correct device_id format",
                  "[telemetry][crash]") {
     // Write crash file
     {
         std::ofstream ofs((temp_dir() / "crash.txt").string());
         ofs << "signal:6\nname:SIGABRT\nversion:1.0.0\ntimestamp:1707350400\nuptime:0\n";
+    }
+
+    // Enable telemetry so crash event is enqueued
+    {
+        std::ofstream ofs((temp_dir() / "telemetry_config.json").string());
+        ofs << R"({"enabled": true})";
     }
 
     auto& tm = TelemetryManager::instance();

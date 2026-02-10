@@ -282,10 +282,7 @@ void TelemetryManager::init(const std::string& config_dir) {
     // Restore persisted event queue
     load_queue();
 
-    // Check for crash file from a previous session
-    check_previous_crash();
-
-    // Load enabled state from config
+    // Load enabled state from config (before crash check so opt-in is respected)
     try {
         std::string config_path = config_dir_ + "/telemetry_config.json";
         std::ifstream config_file(config_path);
@@ -302,6 +299,9 @@ void TelemetryManager::init(const std::string& config_dir) {
                      e.what());
         enabled_.store(false);
     }
+
+    // Check for crash file from a previous session (respects opt-in)
+    check_previous_crash();
 
     // Initialize LVGL subject for settings UI binding
     if (!subjects_initialized_) {
@@ -746,13 +746,15 @@ void TelemetryManager::check_previous_crash() {
         event["backtrace"] = crash_data["backtrace"];
     }
 
-    // Enqueue the crash event (bypasses enabled check -- crash data is
-    // always recorded for next-session pickup, regardless of opt-in state)
-    enqueue_event(std::move(event));
-    save_queue();
-
-    spdlog::info("[TelemetryManager] Enqueued crash event (signal={}, name={})",
-                 crash_data.value("signal", 0), crash_data.value("signal_name", "unknown"));
+    // Only enqueue if telemetry is enabled (respect user opt-in)
+    if (enabled_.load()) {
+        enqueue_event(std::move(event));
+        save_queue();
+        spdlog::info("[TelemetryManager] Enqueued crash event (signal={}, name={})",
+                     crash_data.value("signal", 0), crash_data.value("signal_name", "unknown"));
+    } else {
+        spdlog::debug("[TelemetryManager] Crash event discarded (telemetry disabled)");
+    }
 
     // Remove the crash file so we don't re-process it
     crash_handler::remove_crash_file(crash_path);
