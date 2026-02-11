@@ -535,8 +535,8 @@ void ui_frequency_response_chart_configure_for_platform(ui_frequency_response_ch
         break;
     case helix::PlatformTier::EMBEDDED:
     default:
-        chart->max_points = 0;
-        chart->chart_mode = false;
+        chart->max_points = helix::PlatformCapabilities::BASIC_CHART_POINTS;
+        chart->chart_mode = true;
         break;
     }
 
