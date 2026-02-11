@@ -10,11 +10,13 @@
 #   make PLATFORM_TARGET=ad5m  # Cross-compile for Adventurer 5M (armv7-a)
 #   make PLATFORM_TARGET=k1    # Cross-compile for Creality K1 series (MIPS32)
 #   make PLATFORM_TARGET=k2    # Cross-compile for Creality K2 series (ARM)
+#   make PLATFORM_TARGET=snapmaker-u1 # Cross-compile for Snapmaker U1 (aarch64)
 #   make pi-docker             # Docker-based Pi build (64-bit)
 #   make pi32-docker           # Docker-based Pi build (32-bit)
 #   make ad5m-docker           # Docker-based AD5M build
 #   make k1-docker             # Docker-based K1 build
 #   make k2-docker             # Docker-based K2 build
+#   make snapmaker-u1-docker   # Docker-based Snapmaker U1 build
 
 # =============================================================================
 # Target Platform Definitions
@@ -229,6 +231,27 @@ else ifeq ($(PLATFORM_TARGET),k2)
     BUILD_SUBDIR := k2
     STRIP_BINARY := yes
 
+else ifeq ($(PLATFORM_TARGET),snapmaker-u1)
+    # -------------------------------------------------------------------------
+    # Snapmaker U1 - Rockchip ARM64 (aarch64)
+    # Specs: 480x320 display, Debian Trixie, glibc
+    # -------------------------------------------------------------------------
+    # FULLY STATIC BUILD: Avoids glibc version mismatches across Debian versions.
+    # Uses same aarch64-linux-gnu toolchain as Pi but with static linking.
+    CROSS_COMPILE ?= aarch64-linux-gnu-
+    TARGET_ARCH := aarch64
+    TARGET_TRIPLE := aarch64-linux-gnu
+    TARGET_CFLAGS := -march=armv8-a -Os -flto -ffunction-sections -fdata-sections \
+        -Wno-error=conversion -Wno-error=sign-conversion -DHELIX_RELEASE_BUILD -DHELIX_PLATFORM_SNAPMAKER_U1
+    TARGET_LDFLAGS := -Wl,--gc-sections -flto -static
+    ENABLE_SSL := yes
+    DISPLAY_BACKEND := fbdev
+    ENABLE_SDL := no
+    ENABLE_TINYGL_3D := no
+    ENABLE_EVDEV := yes
+    BUILD_SUBDIR := snapmaker-u1
+    STRIP_BINARY := yes
+
 else ifeq ($(PLATFORM_TARGET),native)
     # -------------------------------------------------------------------------
     # Native desktop build (macOS / Linux)
@@ -244,7 +267,7 @@ else ifeq ($(PLATFORM_TARGET),native)
     BUILD_SUBDIR :=
 
 else
-    $(error Unknown PLATFORM_TARGET: $(PLATFORM_TARGET). Valid options: native, pi, pi32, ad5m, k1, k1-dynamic, k2)
+    $(error Unknown PLATFORM_TARGET: $(PLATFORM_TARGET). Valid options: native, pi, pi32, ad5m, k1, k1-dynamic, k2, snapmaker-u1)
 endif
 
 # =============================================================================
@@ -320,6 +343,13 @@ ifeq ($(PLATFORM_TARGET),k1-dynamic)
     SUBMODULE_CXXFLAGS := $(subst -O2,-Os,$(SUBMODULE_CXXFLAGS))
 endif
 
+ifeq ($(PLATFORM_TARGET),snapmaker-u1)
+    CFLAGS := $(subst -O2,-Os,$(CFLAGS))
+    CXXFLAGS := $(subst -O2,-Os,$(CXXFLAGS))
+    SUBMODULE_CFLAGS := $(subst -O2,-Os,$(SUBMODULE_CFLAGS))
+    SUBMODULE_CXXFLAGS := $(subst -O2,-Os,$(SUBMODULE_CXXFLAGS))
+endif
+
 ifdef TARGET_LDFLAGS
     LDFLAGS += $(TARGET_LDFLAGS)
 endif
@@ -359,7 +389,7 @@ endif
 # Cross-Compilation Build Targets
 # =============================================================================
 
-.PHONY: pi pi32 ad5m k1 k1-dynamic k2 pi-docker pi32-docker ad5m-docker k1-docker k1-dynamic-docker k2-docker docker-toolchains cross-info ensure-docker ensure-buildx maybe-stop-colima
+.PHONY: pi pi32 ad5m k1 k1-dynamic k2 snapmaker-u1 pi-docker pi32-docker ad5m-docker k1-docker k1-dynamic-docker k2-docker snapmaker-u1-docker docker-toolchains docker-toolchain-snapmaker-u1 cross-info ensure-docker ensure-buildx maybe-stop-colima
 
 # Direct cross-compilation (requires toolchain installed)
 pi:
@@ -385,6 +415,10 @@ k1-dynamic:
 k2:
 	@echo "$(CYAN)$(BOLD)Cross-compiling for Creality K2 series (ARM Cortex-A53)...$(RESET)"
 	$(Q)$(MAKE) PLATFORM_TARGET=k2 -j$(NPROC) all
+
+snapmaker-u1:
+	@echo "$(CYAN)$(BOLD)Cross-compiling for Snapmaker U1 (aarch64)...$(RESET)"
+	$(Q)$(MAKE) PLATFORM_TARGET=snapmaker-u1 -j$(NPROC) all
 
 # Docker-based cross-compilation (recommended)
 # SKIP_OPTIONAL_DEPS=1 skips npm, clang-format, python venv, and other development tools
@@ -529,6 +563,21 @@ k2-docker: ensure-docker
 		make PLATFORM_TARGET=k2 SKIP_OPTIONAL_DEPS=1 -j$$(nproc)
 	@$(MAKE) --no-print-directory maybe-stop-colima
 
+snapmaker-u1-docker: ensure-docker
+	@echo "$(CYAN)$(BOLD)Cross-compiling for Snapmaker U1 via Docker...$(RESET)"
+	@if ! docker image inspect helixscreen/toolchain-snapmaker-u1 >/dev/null 2>&1; then \
+		echo "$(YELLOW)Docker image not found. Building toolchain first...$(RESET)"; \
+		$(MAKE) docker-toolchain-snapmaker-u1; \
+	fi
+	$(Q)docker run --platform linux/amd64 --rm --user $$(id -u):$$(id -g) -v "$(PWD)":/src -w /src helixscreen/toolchain-snapmaker-u1 \
+		make PLATFORM_TARGET=snapmaker-u1 SKIP_OPTIONAL_DEPS=1 -j$$(nproc)
+	@# Extract CA certificates from Docker image for HTTPS verification on device
+	@mkdir -p build/snapmaker-u1/certs
+	@docker run --rm helixscreen/toolchain-snapmaker-u1 cat /etc/ssl/certs/ca-certificates.crt > build/snapmaker-u1/certs/ca-certificates.crt 2>/dev/null \
+		&& echo "$(GREEN)✓ CA certificates extracted$(RESET)" \
+		|| echo "$(YELLOW)⚠ Could not extract CA certificates (HTTPS may rely on device certs)$(RESET)"
+	@$(MAKE) --no-print-directory maybe-stop-colima
+
 # Stop Colima after build to free up RAM (macOS only)
 # Only stops if Colima is running and we're on macOS
 .PHONY: maybe-stop-colima
@@ -541,7 +590,7 @@ maybe-stop-colima:
 	fi
 
 # Build Docker toolchain images
-docker-toolchains: docker-toolchain-pi docker-toolchain-pi32 docker-toolchain-ad5m docker-toolchain-k1 docker-toolchain-k1-dynamic docker-toolchain-k2
+docker-toolchains: docker-toolchain-pi docker-toolchain-pi32 docker-toolchain-ad5m docker-toolchain-k1 docker-toolchain-k1-dynamic docker-toolchain-k2 docker-toolchain-snapmaker-u1
 	@echo "$(GREEN)$(BOLD)All Docker toolchains built successfully$(RESET)"
 
 docker-toolchain-pi: ensure-buildx
@@ -568,6 +617,10 @@ docker-toolchain-k2: ensure-buildx
 	@echo "$(CYAN)Building Creality K2 series toolchain Docker image...$(RESET)"
 	$(Q)docker buildx build -t helixscreen/toolchain-k2 -f docker/Dockerfile.k2 docker/
 
+docker-toolchain-snapmaker-u1: ensure-buildx
+	@echo "$(CYAN)Building Snapmaker U1 toolchain Docker image...$(RESET)"
+	$(Q)docker buildx build --platform linux/amd64 -t helixscreen/toolchain-snapmaker-u1 -f docker/Dockerfile.snapmaker-u1 docker/
+
 # Display cross-compilation info (alias for help-cross)
 cross-info: help-cross
 
@@ -588,6 +641,7 @@ help-cross:
 	echo "  $${G}k1-docker$${X}            - Build for Creality K1 series (MIPS32, static) via Docker"; \
 	echo "  $${G}k1-dynamic-docker$${X}    - Build for Creality K1 series (MIPS32, dynamic) via Docker"; \
 	echo "  $${G}k2-docker$${X}            - Build for Creality K2 series (ARM, static) via Docker"; \
+	echo "  $${G}snapmaker-u1-docker$${X}  - Build for Snapmaker U1 (aarch64, static) via Docker"; \
 	echo "  $${G}docker-toolchains$${X}    - Build all Docker toolchain images"; \
 	echo "  $${G}docker-toolchain-pi$${X}  - Build Pi toolchain image only"; \
 	echo "  $${G}docker-toolchain-pi32$${X} - Build Pi 32-bit toolchain image only"; \
@@ -595,6 +649,7 @@ help-cross:
 	echo "  $${G}docker-toolchain-k1$${X}  - Build K1 static toolchain image only"; \
 	echo "  $${G}docker-toolchain-k1-dynamic$${X} - Build K1 dynamic toolchain image only"; \
 	echo "  $${G}docker-toolchain-k2$${X}  - Build K2 toolchain image only"; \
+	echo "  $${G}docker-toolchain-snapmaker-u1$${X} - Build Snapmaker U1 toolchain image only"; \
 	echo ""; \
 	echo "$${C}Direct Cross-Compilation (requires local toolchain):$${X}"; \
 	echo "  $${G}pi$${X}                   - Cross-compile for Raspberry Pi (64-bit)"; \
@@ -603,6 +658,7 @@ help-cross:
 	echo "  $${G}k1$${X}                   - Cross-compile for Creality K1 series (static)"; \
 	echo "  $${G}k1-dynamic$${X}           - Cross-compile for Creality K1 series (dynamic)"; \
 	echo "  $${G}k2$${X}                   - Cross-compile for Creality K2 series"; \
+	echo "  $${G}snapmaker-u1$${X}         - Cross-compile for Snapmaker U1 (aarch64)"; \
 	echo ""; \
 	echo "$${C}Pi Deployment (64-bit):$${X}"; \
 	echo "  $${G}deploy-pi$${X}            - Deploy and restart in background (default)"; \
@@ -643,6 +699,12 @@ help-cross:
 	echo "  $${G}k2-test$${X}              - Full cycle: docker build + deploy + run (fg)"; \
 	echo "  $${G}k2-ssh$${X}               - SSH into the K2"; \
 	echo ""; \
+	echo "$${C}Snapmaker U1 Deployment:$${X}"; \
+	echo "  $${G}deploy-snapmaker-u1$${X}  - Deploy and restart in background"; \
+	echo "  $${G}deploy-snapmaker-u1-fg$${X} - Deploy and run in foreground (debug)"; \
+	echo "  $${G}deploy-snapmaker-u1-bin$${X} - Deploy binaries only (fast iteration)"; \
+	echo "  $${G}snapmaker-u1-ssh$${X}     - SSH into the Snapmaker U1"; \
+	echo ""; \
 	echo "$${C}Deployment Options:$${X}"; \
 	echo "  $${Y}PI_HOST$${X}=hostname     - Pi hostname (default: helixpi.local)"; \
 	echo "  $${Y}PI_USER$${X}=user         - Pi username (default: from SSH config)"; \
@@ -656,6 +718,9 @@ help-cross:
 	echo "  $${Y}K2_HOST$${X}=hostname     - K2 hostname/IP (default: k2.local)"; \
 	echo "  $${Y}K2_USER$${X}=user         - K2 username (default: root)"; \
 	echo "  $${Y}K2_DEPLOY_DIR$${X}=path   - K2 deploy directory (default: /opt/helixscreen)"; \
+	echo "  $${Y}SNAPMAKER_U1_HOST$${X}=hostname - Snapmaker U1 hostname/IP (default: snapmaker-u1.local)"; \
+	echo "  $${Y}SNAPMAKER_U1_USER$${X}=user     - Snapmaker U1 username (default: lava)"; \
+	echo "  $${Y}SNAPMAKER_U1_DEPLOY_DIR$${X}=path - Snapmaker U1 deploy directory (default: /opt/helixscreen)"; \
 	echo ""; \
 	echo "$${C}Current Configuration:$${X}"; \
 	echo "  Platform target: $(PLATFORM_TARGET)"; \
@@ -1010,6 +1075,67 @@ ad5m-ssh:
 ad5m-test: remote-ad5m deploy-ad5m-fg
 
 # =============================================================================
+# Snapmaker U1 Deployment Configuration
+# =============================================================================
+# Snapmaker U1 deployment settings
+# Specs: Rockchip ARM64, 480x320 display, Debian Trixie
+#
+# Example: make deploy-snapmaker-u1 SNAPMAKER_U1_HOST=192.168.1.100
+# Note: U1 runs Debian with standard tools (scp, ssh, tar)
+SNAPMAKER_U1_HOST ?= snapmaker-u1.local
+SNAPMAKER_U1_USER ?= lava
+SNAPMAKER_U1_SSH_TARGET := $(SNAPMAKER_U1_USER)@$(SNAPMAKER_U1_HOST)
+SNAPMAKER_U1_DEPLOY_DIR ?= /opt/helixscreen
+
+# =============================================================================
+# Snapmaker U1 Deployment Targets
+# =============================================================================
+
+.PHONY: deploy-snapmaker-u1 deploy-snapmaker-u1-fg deploy-snapmaker-u1-bin snapmaker-u1-ssh
+
+deploy-snapmaker-u1:
+	@test -f build/snapmaker-u1/bin/helix-screen || { echo "$(RED)Error: build/snapmaker-u1/bin/helix-screen not found. Run 'make snapmaker-u1-docker' first.$(RESET)"; exit 1; }
+	@echo "$(CYAN)Deploying HelixScreen to $(SNAPMAKER_U1_SSH_TARGET):$(SNAPMAKER_U1_DEPLOY_DIR)...$(RESET)"
+	ssh $(SNAPMAKER_U1_SSH_TARGET) "sudo killall helix-screen helix-splash 2>/dev/null || true; sudo mkdir -p $(SNAPMAKER_U1_DEPLOY_DIR)/bin"
+	scp build/snapmaker-u1/bin/helix-screen $(SNAPMAKER_U1_SSH_TARGET):$(SNAPMAKER_U1_DEPLOY_DIR)/bin/
+	@if [ -f build/snapmaker-u1/bin/helix-splash ]; then scp build/snapmaker-u1/bin/helix-splash $(SNAPMAKER_U1_SSH_TARGET):$(SNAPMAKER_U1_DEPLOY_DIR)/bin/; fi
+	ssh $(SNAPMAKER_U1_SSH_TARGET) "chmod +x $(SNAPMAKER_U1_DEPLOY_DIR)/bin/helix-*"
+	@# Transfer assets
+	COPYFILE_DISABLE=1 tar -cf - $(DEPLOY_TAR_EXCLUDES) $(DEPLOY_ASSET_DIRS) | ssh $(SNAPMAKER_U1_SSH_TARGET) "cd $(SNAPMAKER_U1_DEPLOY_DIR) && tar -xf -"
+	@if [ -f "build/snapmaker-u1/certs/ca-certificates.crt" ]; then \
+		echo "  $(DIM)Deploying CA certificates...$(RESET)"; \
+		ssh $(SNAPMAKER_U1_SSH_TARGET) "mkdir -p $(SNAPMAKER_U1_DEPLOY_DIR)/certs"; \
+		scp build/snapmaker-u1/certs/ca-certificates.crt $(SNAPMAKER_U1_SSH_TARGET):$(SNAPMAKER_U1_DEPLOY_DIR)/certs/; \
+	fi
+	@echo "$(GREEN)✓ Deployed to $(SNAPMAKER_U1_HOST):$(SNAPMAKER_U1_DEPLOY_DIR)$(RESET)"
+	@echo "$(CYAN)Starting helix-screen on $(SNAPMAKER_U1_HOST)...$(RESET)"
+	ssh $(SNAPMAKER_U1_SSH_TARGET) "cd $(SNAPMAKER_U1_DEPLOY_DIR) && sudo ./bin/helix-screen &"
+
+deploy-snapmaker-u1-fg:
+	@test -f build/snapmaker-u1/bin/helix-screen || { echo "$(RED)Error: build/snapmaker-u1/bin/helix-screen not found. Run 'make snapmaker-u1-docker' first.$(RESET)"; exit 1; }
+	@echo "$(CYAN)Deploying HelixScreen to $(SNAPMAKER_U1_SSH_TARGET):$(SNAPMAKER_U1_DEPLOY_DIR)...$(RESET)"
+	ssh $(SNAPMAKER_U1_SSH_TARGET) "sudo killall helix-screen helix-splash 2>/dev/null || true; sudo mkdir -p $(SNAPMAKER_U1_DEPLOY_DIR)/bin"
+	scp build/snapmaker-u1/bin/helix-screen $(SNAPMAKER_U1_SSH_TARGET):$(SNAPMAKER_U1_DEPLOY_DIR)/bin/
+	ssh $(SNAPMAKER_U1_SSH_TARGET) "chmod +x $(SNAPMAKER_U1_DEPLOY_DIR)/bin/helix-*"
+	COPYFILE_DISABLE=1 tar -cf - $(DEPLOY_TAR_EXCLUDES) $(DEPLOY_ASSET_DIRS) | ssh $(SNAPMAKER_U1_SSH_TARGET) "cd $(SNAPMAKER_U1_DEPLOY_DIR) && tar -xf -"
+	@echo "$(GREEN)✓ Deployed to $(SNAPMAKER_U1_HOST):$(SNAPMAKER_U1_DEPLOY_DIR)$(RESET)"
+	@echo "$(CYAN)Starting helix-screen on $(SNAPMAKER_U1_HOST) (foreground, verbose)...$(RESET)"
+	ssh -t $(SNAPMAKER_U1_SSH_TARGET) "cd $(SNAPMAKER_U1_DEPLOY_DIR) && sudo ./bin/helix-screen -vv"
+
+deploy-snapmaker-u1-bin:
+	@test -f build/snapmaker-u1/bin/helix-screen || { echo "$(RED)Error: build/snapmaker-u1/bin/helix-screen not found. Run 'make snapmaker-u1-docker' first.$(RESET)"; exit 1; }
+	@echo "$(CYAN)Deploying binary only to $(SNAPMAKER_U1_SSH_TARGET):$(SNAPMAKER_U1_DEPLOY_DIR)/bin...$(RESET)"
+	ssh $(SNAPMAKER_U1_SSH_TARGET) "sudo killall helix-screen 2>/dev/null || true"
+	scp build/snapmaker-u1/bin/helix-screen $(SNAPMAKER_U1_SSH_TARGET):$(SNAPMAKER_U1_DEPLOY_DIR)/bin/
+	ssh $(SNAPMAKER_U1_SSH_TARGET) "chmod +x $(SNAPMAKER_U1_DEPLOY_DIR)/bin/helix-screen"
+	@echo "$(GREEN)✓ Binary deployed$(RESET)"
+	@echo "$(CYAN)Restarting helix-screen on $(SNAPMAKER_U1_HOST)...$(RESET)"
+	ssh $(SNAPMAKER_U1_SSH_TARGET) "cd $(SNAPMAKER_U1_DEPLOY_DIR) && sudo ./bin/helix-screen &"
+
+snapmaker-u1-ssh:
+	ssh $(SNAPMAKER_U1_SSH_TARGET)
+
+# =============================================================================
 # K1 Deployment Configuration (UNTESTED)
 # =============================================================================
 # Creality K1 series deployment settings
@@ -1317,7 +1443,7 @@ define release-clean-assets
 	@find $(1)/assets -name 'mdi-icon-metadata.json.gz' -delete 2>/dev/null || true
 endef
 
-.PHONY: release-pi release-pi32 release-ad5m release-k1 release-k1-dynamic release-k2 release-all release-clean
+.PHONY: release-pi release-pi32 release-ad5m release-k1 release-k1-dynamic release-k2 release-snapmaker-u1 release-all release-clean
 
 # Package Pi release
 release-pi: | build/pi/bin/helix-screen build/pi/bin/helix-splash
@@ -1535,6 +1661,36 @@ release-k2: | build/k2/bin/helix-screen build/k2/bin/helix-splash
 	@echo "$(GREEN)✓ Created $(RELEASE_DIR)/helixscreen-k2-$(RELEASE_VERSION).tar.gz + helixscreen-k2.zip$(RESET)"
 	@ls -lh $(RELEASE_DIR)/helixscreen-k2-$(RELEASE_VERSION).tar.gz $(RELEASE_DIR)/helixscreen-k2.zip
 
+# Package Snapmaker U1 release
+release-snapmaker-u1: | build/snapmaker-u1/bin/helix-screen
+	@echo "$(CYAN)$(BOLD)Packaging Snapmaker U1 release v$(VERSION)...$(RESET)"
+	@mkdir -p $(RELEASE_DIR)/helixscreen/bin
+	@cp build/snapmaker-u1/bin/helix-screen $(RELEASE_DIR)/helixscreen/bin/
+	@if [ -f build/snapmaker-u1/bin/helix-splash ]; then cp build/snapmaker-u1/bin/helix-splash $(RELEASE_DIR)/helixscreen/bin/; fi
+	@cp scripts/helix-launcher.sh $(RELEASE_DIR)/helixscreen/bin/ 2>/dev/null || true
+	@cp -r ui_xml config $(RELEASE_DIR)/helixscreen/
+	@rm -f $(RELEASE_DIR)/helixscreen/config/helixconfig.json $(RELEASE_DIR)/helixscreen/config/helixconfig-test.json
+	@mkdir -p $(RELEASE_DIR)/helixscreen/scripts
+	@cp scripts/uninstall.sh $(RELEASE_DIR)/helixscreen/scripts/ 2>/dev/null || true
+	@mkdir -p $(RELEASE_DIR)/helixscreen/assets
+	@for asset in $(RELEASE_ASSETS); do \
+		if [ -d "$$asset" ]; then cp -r "$$asset" $(RELEASE_DIR)/helixscreen/assets/; fi; \
+	done
+	@if [ -f "build/snapmaker-u1/certs/ca-certificates.crt" ]; then \
+		mkdir -p $(RELEASE_DIR)/helixscreen/certs; \
+		cp build/snapmaker-u1/certs/ca-certificates.crt $(RELEASE_DIR)/helixscreen/certs/; \
+		echo "  $(DIM)Included CA certificates for HTTPS$(RESET)"; \
+	fi
+	@find $(RELEASE_DIR)/helixscreen -name '.DS_Store' -delete 2>/dev/null || true
+	$(call release-clean-assets,$(RELEASE_DIR)/helixscreen)
+	@xattr -cr $(RELEASE_DIR)/helixscreen 2>/dev/null || true
+	@echo '{"project_name":"helixscreen","project_owner":"prestonbrown","version":"$(RELEASE_VERSION)","asset_name":"helixscreen-snapmaker-u1.zip"}' > $(RELEASE_DIR)/helixscreen/release_info.json
+	@cd $(RELEASE_DIR)/helixscreen && zip -qr ../helixscreen-snapmaker-u1.zip .
+	@cd $(RELEASE_DIR) && COPYFILE_DISABLE=1 tar -czvf helixscreen-snapmaker-u1-$(RELEASE_VERSION).tar.gz helixscreen
+	@rm -rf $(RELEASE_DIR)/helixscreen
+	@echo "$(GREEN)✓ Created $(RELEASE_DIR)/helixscreen-snapmaker-u1-$(RELEASE_VERSION).tar.gz + helixscreen-snapmaker-u1.zip$(RESET)"
+	@ls -lh $(RELEASE_DIR)/helixscreen-snapmaker-u1-$(RELEASE_VERSION).tar.gz $(RELEASE_DIR)/helixscreen-snapmaker-u1.zip
+
 # Package all releases
 release-all: release-pi release-pi32 release-ad5m release-k1 release-k1-dynamic release-k2
 	@echo "$(GREEN)$(BOLD)✓ All releases packaged in $(RELEASE_DIR)/$(RESET)"
@@ -1547,12 +1703,13 @@ release-clean:
 
 # Aliases for package-* (matches scripts/package.sh naming)
 # These trigger the full build + package workflow
-.PHONY: package-ad5m package-pi package-pi32 package-k1-dynamic package-k2 package-all package-clean
+.PHONY: package-ad5m package-pi package-pi32 package-k1-dynamic package-k2 package-snapmaker-u1 package-all package-clean
 package-ad5m: ad5m-docker gen-images-ad5m gen-splash-3d-ad5m gen-printer-images release-ad5m
 package-pi: pi-docker gen-images gen-splash-3d gen-printer-images release-pi
 package-pi32: pi32-docker gen-images gen-splash-3d gen-printer-images release-pi32
 package-k1-dynamic: k1-dynamic-docker gen-images gen-splash-3d-k1 gen-printer-images release-k1-dynamic
 package-k2: k2-docker gen-images gen-printer-images release-k2
+package-snapmaker-u1: snapmaker-u1-docker gen-images gen-printer-images release-snapmaker-u1
 package-all: package-ad5m package-pi package-pi32 package-k1-dynamic package-k2
 package-clean: release-clean
 
