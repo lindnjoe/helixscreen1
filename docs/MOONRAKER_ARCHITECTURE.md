@@ -2,7 +2,7 @@
 
 This document describes the architecture of the Moonraker integration layer.
 
-> **Last Updated:** 2026-02-06
+> **Last Updated:** 2026-02-10
 
 ## Overview
 
@@ -41,6 +41,8 @@ The Moonraker integration is split into three distinct layers with clean separat
 ```
 
 **Key Architectural Principle:** MoonrakerClient is pure transport. It does NOT store hardware data. All discovered hardware information flows via callbacks to MoonrakerAPI, which owns the `PrinterDiscovery` instance as the single source of truth.
+
+**Abstraction Boundary (enforced Feb 2026):** UI code should ONLY talk to `MoonrakerAPI`, never `MoonrakerClient` directly. The API provides proxy methods for connection state, subscriptions, database operations, and plugin RPCs. The dead `IMoonrakerDomainService` interface has been deleted; shared data types live in `moonraker_types.h`.
 
 ## Layer Responsibilities
 
@@ -214,6 +216,10 @@ The following methods have been removed from `MoonrakerClient` and are now in `M
 | **Bed mesh** | Owns `active_bed_mesh_`, `bed_mesh_profiles_` | Dispatches via callbacks |
 | Return types | Pointers (nullable) | N/A for hardware data |
 | G-code | `execute_gcode()` (async) | `gcode_script()` (sync-ish) |
+| Connection state | `is_connected()`, `get_connection_state()` | Internal state |
+| Subscriptions | `subscribe_notifications()`, `register_method_callback()` | Direct registration |
+| Database | `database_get_item()`, `database_post_item()` | Raw `send_jsonrpc()` |
+| Plugin RPCs | `get_phase_tracking_status()`, `set_phase_tracking_enabled()` | Raw `send_jsonrpc()` |
 | Thread safety | Delegates to client | Internal mutexes |
 | UI coupling | None | None (events only) |
 
@@ -257,7 +263,7 @@ The following methods have been removed from `MoonrakerClient` and are now in `M
 | `include/moonraker_client.h` | Transport layer (WebSocket, JSON-RPC) |
 | `include/moonraker_api.h` | Domain logic layer |
 | `include/moonraker_events.h` | Event types and callbacks |
-| `include/moonraker_domain_service.h` | Domain interface + BedMeshProfile struct |
+| `include/moonraker_types.h` | Shared data types (BedMeshProfile, GcodeStoreEntry, etc.) |
 | `include/moonraker_client_mock.h` | Transport layer mock |
 | `include/moonraker_api_mock.h` | Domain layer mock |
 
@@ -320,6 +326,48 @@ bool has_qgl = api->hardware_discovery().has_qgl();
 const auto& macros = api->hardware_discovery().macros();
 ```
 
+### Migrating from get_client() / get_moonraker_client()
+
+**Before (OLD - violates abstraction boundary):**
+```cpp
+// Connection state
+api->get_client().get_connection_state();
+api->get_client().get_last_url();
+
+// Subscriptions
+api->get_client().register_method_callback("notify_gcode_response", "panel", cb);
+api->get_client().register_notify_update(cb);
+
+// Database
+client->send_jsonrpc("server.database.get_item", params, on_result, on_error);
+
+// G-code
+client->gcode_script("TURN_OFF_HEATERS");
+
+// Disconnect modal
+client->suppress_disconnect_modal(15000);
+```
+
+**After (CURRENT):**
+```cpp
+// Connection state — use API proxies
+api->get_connection_state();
+api->get_websocket_url();
+
+// Subscriptions — use API proxies
+api->register_method_callback("notify_gcode_response", "panel", cb);
+api->subscribe_notifications(cb);
+
+// Database — use typed wrappers
+api->database_get_item("helix", "spoolman_enabled", on_success, on_error);
+
+// G-code — use validated path
+api->execute_gcode("TURN_OFF_HEATERS", nullptr, nullptr);
+
+// Disconnect modal — use API proxy
+api->suppress_disconnect_modal(15000);
+```
+
 ### Key Changes
 
 1. **Hardware data:** All hardware queries go through `api->hardware_discovery()`
@@ -327,6 +375,8 @@ const auto& macros = api->hardware_discovery().macros();
 3. **Null checks:** `MoonrakerAPI` returns pointers for bed mesh, not references
 4. **PrinterCapabilities deleted:** Use `PrinterDiscovery` via `api->hardware_discovery()`
 5. **Global accessor:** Use `get_moonraker_api()` for domain operations
+6. **IMoonrakerDomainService deleted:** `BedMeshProfile` and `GcodeStoreEntry` now in `moonraker_types.h`
+7. **UI abstraction boundary:** UI code uses API proxy methods, never `get_client()` or `get_moonraker_client()`
 
 ## See Also
 

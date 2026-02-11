@@ -1,7 +1,7 @@
 # HelixScreen Technical Debt Tracker
 
 **Created:** 2024-12-16
-**Last Updated:** 2026-02-06
+**Last Updated:** 2026-02-10
 **Status:** IN PROGRESS
 **Overall Progress:** ~50%
 
@@ -2004,7 +2004,7 @@ Update this table as work progresses:
 | P7: Tooling | [ ] | 0% | | Pre-commit hooks, CI, make lint |
 | P8: Code Duplication | [ ] | 0% | | Sensor managers (800 LOC), AMS backends (600 LOC), wizard steps (400 LOC) |
 | P9: Threading/Async | [ ] | 0% | | Document patterns, fix callback bypass, remove redundant sync |
-| P10: API Surface | [ ] | 0% | | Subject bundles, MoonrakerAPI split, deprecated API migration |
+| P10: API Surface | [~] | 25% | | Abstraction boundary enforced (Feb 2026). Subject bundles, domain split, deprecated API migration remain. |
 
 ---
 

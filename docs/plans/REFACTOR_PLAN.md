@@ -1182,7 +1182,17 @@ private:
 
 ### 1.5 MoonrakerAPI Domain Split
 
-**Status**: [ ] Not Started  [ ] In Progress  [ ] Complete
+**Status**: [ ] Not Started  [x] In Progress  [ ] Complete
+
+> **2026-02-10 Partial Progress:** Abstraction boundary enforcement complete. UI code no longer
+> accesses `MoonrakerClient` directly. Added proxy methods to MoonrakerAPI for connection state,
+> subscriptions, database ops, plugin RPCs, and G-code store. Deleted dead `IMoonrakerDomainService`
+> interface. Moved shared types to `moonraker_types.h`. Remaining work: full domain sub-API split.
+>
+> **Commits:** `a5650da0` (main refactor), `ec140f65` (review fixes), `4cabd79a` (gcode_store proxy)
+>
+> **Remaining `get_moonraker_client()` in UI:** ~17 calls, mostly in `ui_wizard_connection.cpp` (10 calls,
+> legitimate transport-level connection management), plus screws_tilt, input_shaper, settings, change_host.
 
 #### Problem Statement
 `MoonrakerAPI` is a 1190-line facade containing **70+ public methods** across 5+ unrelated domains. Finding the right method requires scrolling through a massive interface.
@@ -1640,7 +1650,7 @@ MoonrakerClient (orchestrator, ~300 lines)
 | PrinterState domain split - design | 1d | | [x] Complete |
 | PrinterState domain split - implementation | 3d | | [x] Complete |
 | PrinterState migration | 2d | | [x] Complete |
-| MoonrakerAPI domain split | 2d | | [ ] Not started |
+| MoonrakerAPI domain split | 2d | | [~] Abstraction boundary done, domain split pending |
 | PrintStatusPanel decomposition | 3d | | [x] Complete (see notes) |
 
 ### Phase 4: Polish (ongoing)
@@ -1664,8 +1674,9 @@ MoonrakerClient (orchestrator, ~300 lines)
 | Phase 4: Polish | 4 | 0 | 0% |
 | **Total** | **18** | **13** | **72%** |
 
-> **Note (2026-01-25)**: Phase 3 at 80% - PrinterState and PrintStatusPanel decomposition both COMPLETE.
-> Only MoonrakerAPI domain split remains not started.
+> **Note (2026-02-10)**: Phase 3 at 90% - PrinterState and PrintStatusPanel decomposition both COMPLETE.
+> MoonrakerAPI abstraction boundary enforced (UI no longer accesses Client directly). Full domain sub-API
+> split remains.
 
 ### Metrics Dashboard
 | Metric | Current | Target | Progress |
@@ -1879,4 +1890,5 @@ private:
 | 2026-01-09 | Claude | Observer factory: Phase 1-3 complete. Factory implemented (466 lines, 12 tests), 3 pilot panels migrated (FilamentPanel, ControlsPanel, ExtrusionPanel). Net -146 lines. 6 files/13 observers remaining. |
 | 2026-01-10 | Claude | SubjectManagedPanel universal adoption complete. 83 files migrated, ~340+ subjects using RAII. Added UI_MANAGED_SUBJECT_* macros (INT, STRING, STRING_N, POINTER, COLOR). Phase 2: Foundation now 100% complete. |
 | 2026-01-11 | Claude | **Hardware Discovery Refactor complete** (separate effort from this plan). Created `PrinterDiscovery` as single source of truth. Deleted `PrinterCapabilities`. Moved bed mesh to MoonrakerAPI. Clean architecture: MoonrakerClient (transport) -> callbacks -> MoonrakerAPI (domain). See `docs/HARDWARE_DISCOVERY_REFACTOR.md`. |
+| 2026-02-10 | Claude | **MoonrakerAPI abstraction boundary enforced.** Deleted dead `IMoonrakerDomainService` interface. Added proxy methods to MoonrakerAPI (connection state, subscriptions, database, plugin RPCs, gcode store). Migrated all UI code from `get_client()`/`get_moonraker_client()` to API proxies. Moved `BedMeshProfile` and `GcodeStoreEntry` to `moonraker_types.h`. Removed `client_` members from PID panel, retraction settings, spoolman overlay, console panel. ~17 legitimate `get_moonraker_client()` calls remain (mostly connection wizard). Commits: a5650da0, ec140f65, 4cabd79a. |
 | 2026-01-17 | Claude | **Major status update**: PrinterState decomposition COMPLETE (11+ domain classes extracted, facade now 2,002 lines). Quick Wins 100% complete (PrintStatusPanel modals extracted to 4 dedicated files). PrintStatusPanel now IN PROGRESS. Updated all progress tracking tables. Added Recommended Next Priorities section. Overall progress: 61% (was 28%). |
