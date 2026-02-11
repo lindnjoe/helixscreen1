@@ -267,6 +267,10 @@ TEST_CASE("CliArgs: default values", "[cli_args]") {
     SECTION("moonraker URL default empty") {
         REQUIRE(args.moonraker_url.empty());
     }
+
+    SECTION("layout default empty") {
+        REQUIRE(args.layout.empty());
+    }
 }
 
 TEST_CASE("CliArgs: needs_moonraker_data", "[cli_args]") {

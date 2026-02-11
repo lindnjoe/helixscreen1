@@ -115,6 +115,10 @@ struct CliArgs {
     // Display rotation (passed by watchdog, or CLI override)
     int rotation = 0; // 0, 90, 180, 270 degrees
 
+    // Layout override
+    std::string layout; // --layout: override auto-detected layout ("auto", "standard", "ultrawide",
+                        // etc.)
+
     // Moonraker override (for testing/development)
     std::string moonraker_url; // --moonraker: override config URL (e.g., ws://192.168.1.112:7125)
 

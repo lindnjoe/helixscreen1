@@ -131,6 +131,8 @@ static void print_help(const char* program_name) {
     printf("  --debug-subjects     Enable verbose subject debugging with stack traces\n");
     printf("  --moonraker <url>    Override Moonraker URL (e.g., ws://192.168.1.112:7125)\n");
     printf("  --rotate <degrees>   Display rotation: 0, 90, 180, 270\n");
+    printf("  --layout <type>      Override auto-detected layout (auto, standard, ultrawide, "
+           "portrait, tiny, tiny-portrait)\n");
     printf("  -h, --help           Show this help message\n");
     printf("  -V, --version        Show version information\n");
     printf("\nTest Mode Options:\n");
@@ -510,6 +512,27 @@ bool parse_cli_args(int argc, char** argv, CliArgs& args, int& screen_width, int
         } else if (strcmp(argv[i], "--rotate") == 0 && i + 1 < argc) {
             args.rotation = atoi(argv[++i]);
             spdlog::info("[CLI] Display rotation: {}°", args.rotation);
+        } else if (strcmp(argv[i], "--layout") == 0 || strncmp(argv[i], "--layout=", 9) == 0) {
+            const char* value = nullptr;
+            if (strncmp(argv[i], "--layout=", 9) == 0) {
+                value = argv[i] + 9;
+            } else if (i + 1 < argc) {
+                value = argv[++i];
+            } else {
+                printf("Error: --layout requires an argument\n");
+                return false;
+            }
+            // Validate layout value
+            if (strcmp(value, "auto") == 0 || strcmp(value, "standard") == 0 ||
+                strcmp(value, "ultrawide") == 0 || strcmp(value, "portrait") == 0 ||
+                strcmp(value, "tiny") == 0 || strcmp(value, "tiny-portrait") == 0) {
+                args.layout = value;
+                spdlog::info("[CLI] Layout override: {}", args.layout);
+            } else {
+                printf("Error: invalid --layout value: %s\n", value);
+                printf("Valid values: auto, standard, ultrawide, portrait, tiny, tiny-portrait\n");
+                return false;
+            }
         } else if (strcmp(argv[i], "--real-wifi") == 0) {
             config.use_real_wifi = true;
         } else if (strcmp(argv[i], "--real-ethernet") == 0) {
