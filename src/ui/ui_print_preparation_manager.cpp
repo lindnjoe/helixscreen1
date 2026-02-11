@@ -149,7 +149,7 @@ void PrintPreparationManager::analyze_print_start_macro_internal() {
     }
 
     // Check if WebSocket connection is actually established
-    if (api_->get_client().get_connection_state() != ConnectionState::CONNECTED) {
+    if (api_->get_connection_state() != ConnectionState::CONNECTED) {
         spdlog::debug("[PrintPreparationManager] Deferring PRINT_START analysis - not connected");
         return;
     }

@@ -14,6 +14,7 @@
 #include "ui_utils.h"
 
 #include "app_globals.h"
+#include "moonraker_api.h"
 #include "moonraker_client.h"
 #include "theme_manager.h"
 
@@ -619,21 +620,12 @@ void ConsolePanel::send_gcode_command() {
     cmd_entry.is_error = false;
     add_entry(cmd_entry);
 
-    // Send via MoonrakerClient
-    MoonrakerClient* client = get_moonraker_client();
-    if (client) {
-        int result = client->gcode_script(command);
-        if (result < 0) {
-            spdlog::error("[{}] Failed to send G-code command", get_name());
-            // Add error response to console
-            GcodeEntry err_entry;
-            err_entry.message = "!! Failed to send command";
-            err_entry.type = GcodeEntry::Type::RESPONSE;
-            err_entry.is_error = true;
-            add_entry(err_entry);
-        }
+    // Send via MoonrakerAPI (fire-and-forget for console commands)
+    MoonrakerAPI* api = get_moonraker_api();
+    if (api) {
+        api->execute_gcode(command, nullptr, nullptr);
     } else {
-        spdlog::warn("[{}] No MoonrakerClient available", get_name());
+        spdlog::warn("[{}] No MoonrakerAPI available", get_name());
     }
 }
 

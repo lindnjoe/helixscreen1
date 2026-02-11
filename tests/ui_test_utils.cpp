@@ -5,6 +5,7 @@
 
 #include "ui_update_queue.h"
 
+#include "lib/lvgl/src/misc/lv_timer_private.h"
 #include "spdlog/spdlog.h"
 
 #include <chrono>
@@ -19,10 +20,44 @@ void lv_init_safe() {
     if (!lv_is_initialized()) {
         lv_init();
     }
-    // Initialize UI update queue for async operations in tests
-    // This must be called inside lv_init_safe() because drain_queue_for_testing()
-    // depends on the queue being initialized
-    ui_update_queue_init();
+    // UpdateQueue init is handled by LVGLTestFixture constructor per-test,
+    // NOT here. Having it here (called once via call_once) conflicts with
+    // the per-test shutdown/reinit lifecycle in the fixture destructor.
+}
+
+// Track whether timer last_run values have been normalized
+static bool s_timers_normalized = false;
+
+uint32_t lv_timer_handler_safe() {
+    // Drain the UpdateQueue before calling lv_timer_handler() to prevent
+    // the queue's 1ms timer from setting subjects during the handler,
+    // which triggers observers that may create/delete timers and restart
+    // LVGL's internal do-while loop.
+    auto& queue = helix::ui::UpdateQueue::instance();
+    queue.drain_queue_for_testing();
+
+    // On first call, normalize all timer last_run timestamps to the current
+    // tick. Without this, timers created during fixture initialization may
+    // have stale last_run values (e.g., from a previous tick epoch), making
+    // them all simultaneously "ready". When they all fire at once, each one
+    // that creates/deletes a timer causes LVGL's do-while to restart from
+    // the head, creating an infinite loop.
+    if (!s_timers_normalized) {
+        uint32_t now = lv_tick_get();
+        lv_timer_t* t = lv_timer_get_next(nullptr);
+        while (t) {
+            t->last_run = now;
+            t = lv_timer_get_next(t);
+        }
+        s_timers_normalized = true;
+    }
+
+    // Pause the UpdateQueue timer during the handler call to prevent it
+    // from firing and re-triggering the subject→observer→async chain
+    queue.pause_timer();
+    uint32_t result = lv_timer_handler();
+    queue.resume_timer();
+    return result;
 }
 
 namespace UITest {
@@ -103,13 +138,13 @@ bool click_at(int32_t x, int32_t y) {
     last_data.point.x = x;
     last_data.point.y = y;
     last_data.state = LV_INDEV_STATE_PRESSED;
-    lv_timer_handler(); // Process press event
-    wait_ms(50);        // Minimum press duration
+    lv_timer_handler_safe(); // Process press event
+    wait_ms(50);             // Minimum press duration
 
     // Simulate release
     last_data.state = LV_INDEV_STATE_RELEASED;
-    lv_timer_handler(); // Process release event
-    wait_ms(50);        // Allow click handlers to execute
+    lv_timer_handler_safe(); // Process release event
+    wait_ms(50);             // Allow click handlers to execute
 
     spdlog::debug("[UITest] Click simulation complete");
     return true;
@@ -133,7 +168,7 @@ bool type_text(const std::string& text) {
 
     // Add text directly to textarea
     lv_textarea_add_text(focused, text.c_str());
-    lv_timer_handler();
+    lv_timer_handler_safe();
     wait_ms(50); // Allow text processing
 
     return true;
@@ -155,7 +190,7 @@ bool type_text(lv_obj_t* textarea, const std::string& text) {
 
     // Add text directly to textarea
     lv_textarea_add_text(textarea, text.c_str());
-    lv_timer_handler();
+    lv_timer_handler_safe();
     wait_ms(50); // Allow text processing
 
     return true;
@@ -179,7 +214,7 @@ bool send_key(uint32_t key) {
             // Trigger READY event on textarea
             lv_obj_send_event(focused, LV_EVENT_READY, nullptr);
         }
-        lv_timer_handler();
+        lv_timer_handler_safe();
         wait_ms(50);
         return true;
     }
@@ -193,7 +228,7 @@ void wait_ms(uint32_t ms) {
     auto end = start + std::chrono::milliseconds(ms);
 
     while (std::chrono::steady_clock::now() < end) {
-        lv_timer_handler(); // Process LVGL tasks
+        lv_timer_handler_safe(); // Process LVGL tasks
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 }
@@ -203,7 +238,7 @@ bool wait_until(std::function<bool()> condition, uint32_t timeout_ms) {
     auto end = start + std::chrono::milliseconds(timeout_ms);
 
     while (std::chrono::steady_clock::now() < end) {
-        lv_timer_handler(); // Process LVGL tasks
+        lv_timer_handler_safe(); // Process LVGL tasks
 
         if (condition()) {
             return true; // Condition met
@@ -241,7 +276,7 @@ bool wait_for_timers(uint32_t timeout_ms) {
     auto end = start + std::chrono::milliseconds(timeout_ms);
 
     while (std::chrono::steady_clock::now() < end) {
-        uint32_t next_timer = lv_timer_handler();
+        uint32_t next_timer = lv_timer_handler_safe();
 
         // If next timer is in the far future (> 1 second), no active timers
         if (next_timer > 1000) {
@@ -478,6 +513,10 @@ EmergencyStopOverlay& EmergencyStopOverlay::instance() {
 }
 
 void EmergencyStopOverlay::set_require_confirmation(bool /* require */) {
+    // No-op in tests
+}
+
+void EmergencyStopOverlay::suppress_recovery_dialog(uint32_t /* duration_ms */) {
     // No-op in tests
 }
 

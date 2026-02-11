@@ -12,7 +12,7 @@
 #include "ui_nav_manager.h"
 
 #include "ams_state.h"
-#include "moonraker_client.h"
+#include "moonraker_api.h"
 #include "static_panel_registry.h"
 
 #include <spdlog/spdlog.h>
@@ -166,24 +166,20 @@ void AmsSpoolmanOverlay::refresh() {
 // ============================================================================
 
 void AmsSpoolmanOverlay::load_from_database() {
-    if (!client_) {
-        spdlog::warn("[{}] No client available, using default values", get_name());
+    if (!api_) {
+        spdlog::warn("[{}] No API available, using default values", get_name());
         return;
     }
 
     // Load sync enabled setting
-    nlohmann::json params_sync = {{"namespace", DB_NAMESPACE}, {"key", DB_KEY_SYNC_ENABLED}};
-
-    client_->send_jsonrpc(
-        "server.database.get_item", params_sync,
-        [this](const nlohmann::json& response) {
+    api_->database_get_item(
+        DB_NAMESPACE, DB_KEY_SYNC_ENABLED,
+        [this](const nlohmann::json& value) {
             bool enabled = DEFAULT_SYNC_ENABLED;
-            if (response.contains("value")) {
-                if (response["value"].is_boolean()) {
-                    enabled = response["value"].get<bool>();
-                } else if (response["value"].is_number()) {
-                    enabled = response["value"].get<int>() != 0;
-                }
+            if (value.is_boolean()) {
+                enabled = value.get<bool>();
+            } else if (value.is_number()) {
+                enabled = value.get<int>() != 0;
             }
             lv_subject_set_int(&sync_enabled_subject_, enabled ? 1 : 0);
             spdlog::debug("[{}] Loaded sync_enabled={} from database", get_name(), enabled);
@@ -200,20 +196,15 @@ void AmsSpoolmanOverlay::load_from_database() {
                           err.message);
             // Use default value
             lv_subject_set_int(&sync_enabled_subject_, DEFAULT_SYNC_ENABLED ? 1 : 0);
-        },
-        0,     // timeout_ms = default
-        true); // silent = true (key may not exist on first run)
+        });
 
     // Load refresh interval setting
-    nlohmann::json params_interval = {{"namespace", DB_NAMESPACE},
-                                      {"key", DB_KEY_REFRESH_INTERVAL}};
-
-    client_->send_jsonrpc(
-        "server.database.get_item", params_interval,
-        [this](const nlohmann::json& response) {
+    api_->database_get_item(
+        DB_NAMESPACE, DB_KEY_REFRESH_INTERVAL,
+        [this](const nlohmann::json& value) {
             int interval = DEFAULT_REFRESH_INTERVAL_SECONDS;
-            if (response.contains("value") && response["value"].is_number()) {
-                interval = response["value"].get<int>();
+            if (value.is_number()) {
+                interval = value.get<int>();
             }
             lv_subject_set_int(&refresh_interval_subject_, interval);
             spdlog::debug("[{}] Loaded refresh_interval={} from database", get_name(), interval);
@@ -223,23 +214,18 @@ void AmsSpoolmanOverlay::load_from_database() {
                           err.message);
             // Use default value
             lv_subject_set_int(&refresh_interval_subject_, DEFAULT_REFRESH_INTERVAL_SECONDS);
-        },
-        0,     // timeout_ms = default
-        true); // silent = true (key may not exist on first run)
+        });
 }
 
 void AmsSpoolmanOverlay::save_sync_enabled(bool enabled) {
-    if (!client_) {
-        spdlog::warn("[{}] No client available, cannot save setting", get_name());
+    if (!api_) {
+        spdlog::warn("[{}] No API available, cannot save setting", get_name());
         return;
     }
 
-    nlohmann::json params = {
-        {"namespace", DB_NAMESPACE}, {"key", DB_KEY_SYNC_ENABLED}, {"value", enabled}};
-
-    client_->send_jsonrpc(
-        "server.database.post_item", params,
-        [this, enabled](const nlohmann::json&) {
+    api_->database_post_item(
+        DB_NAMESPACE, DB_KEY_SYNC_ENABLED, enabled,
+        [this, enabled]() {
             spdlog::info("[{}] Saved sync_enabled={} to database", get_name(), enabled);
         },
         [this](const MoonrakerError& err) {
@@ -248,17 +234,14 @@ void AmsSpoolmanOverlay::save_sync_enabled(bool enabled) {
 }
 
 void AmsSpoolmanOverlay::save_refresh_interval(int interval_seconds) {
-    if (!client_) {
-        spdlog::warn("[{}] No client available, cannot save setting", get_name());
+    if (!api_) {
+        spdlog::warn("[{}] No API available, cannot save setting", get_name());
         return;
     }
 
-    nlohmann::json params = {
-        {"namespace", DB_NAMESPACE}, {"key", DB_KEY_REFRESH_INTERVAL}, {"value", interval_seconds}};
-
-    client_->send_jsonrpc(
-        "server.database.post_item", params,
-        [this, interval_seconds](const nlohmann::json&) {
+    api_->database_post_item(
+        DB_NAMESPACE, DB_KEY_REFRESH_INTERVAL, interval_seconds,
+        [this, interval_seconds]() {
             spdlog::info("[{}] Saved refresh_interval={} to database", get_name(),
                          interval_seconds);
         },

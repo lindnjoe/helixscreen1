@@ -270,8 +270,8 @@ void PIDCalibrationPanel::on_deactivate() {
     // If calibration is in progress, abort it
     if (state_ == State::CALIBRATING) {
         spdlog::info("[PIDCal] Aborting calibration on deactivate");
-        if (client_) {
-            client_->gcode_script("TURN_OFF_HEATERS");
+        if (api_) {
+            api_->execute_gcode("TURN_OFF_HEATERS", nullptr, nullptr);
         }
     }
 
@@ -309,8 +309,8 @@ void PIDCalibrationPanel::cleanup() {
 // ============================================================================
 
 void PIDCalibrationPanel::turn_off_fan() {
-    if (fan_speed_ > 0 && client_) {
-        client_->gcode_script("M107");
+    if (fan_speed_ > 0 && api_) {
+        api_->execute_gcode("M107", nullptr, nullptr);
         spdlog::debug("[PIDCal] Fan turned off after calibration");
     }
 }
@@ -482,11 +482,11 @@ void PIDCalibrationPanel::send_pid_calibrate() {
     const char* heater_name = (selected_heater_ == Heater::EXTRUDER) ? "extruder" : "heater_bed";
 
     // Set fan speed before calibration (extruder only)
-    if (selected_heater_ == Heater::EXTRUDER && fan_speed_ > 0 && client_) {
+    if (selected_heater_ == Heater::EXTRUDER && fan_speed_ > 0 && api_) {
         char fan_cmd[32];
         snprintf(fan_cmd, sizeof(fan_cmd), "M106 S%d", fan_speed_ * 255 / 100);
         spdlog::info("[PIDCal] Setting fan: {}", fan_cmd);
-        client_->gcode_script(fan_cmd);
+        api_->execute_gcode(fan_cmd, nullptr, nullptr);
     }
 
     // Update calibrating state label

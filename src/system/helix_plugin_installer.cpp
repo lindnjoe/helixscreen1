@@ -170,8 +170,8 @@ void HelixPluginInstaller::set_api(MoonrakerAPI* api) {
     api_ = api;
 
     // Try to get WebSocket URL from API's client
-    if (api_ && api_->get_client().get_connection_state() == ConnectionState::CONNECTED) {
-        websocket_url_ = api_->get_client().get_last_url();
+    if (api_ && api_->get_connection_state() == ConnectionState::CONNECTED) {
+        websocket_url_ = api_->get_websocket_url();
     }
 }
 

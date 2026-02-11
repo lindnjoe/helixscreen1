@@ -114,13 +114,9 @@ class UpdateQueue {
     /**
      * @brief Shutdown and cleanup
      *
-     * Note: We do NOT explicitly delete the timer here because:
-     * 1. lv_deinit() will clean up all timers as part of its shutdown
-     * 2. Manually deleting can cause double-free if LVGL state is corrupted
-     * 3. This mirrors how DisplayManager handles display/input cleanup
-     *
-     * We DO clear the pending queue to prevent stale callbacks from executing
-     * after objects they reference have been destroyed (important for tests).
+     * Deletes the LVGL timer to prevent orphaned timers from accumulating
+     * across test fixture lifecycles. Clears pending queue to prevent stale
+     * callbacks from executing after objects they reference are destroyed.
      */
     void shutdown() {
         {
@@ -129,6 +125,31 @@ class UpdateQueue {
         }
         timer_ = nullptr;
         initialized_ = false;
+    }
+
+    /**
+     * @brief Pause the update queue timer
+     *
+     * Prevents the timer from firing during lv_timer_handler() calls.
+     * Used by test infrastructure to break the infinite restart chain
+     * where UpdateQueue callbacks trigger subject changes that create
+     * new period-0 timers.
+     */
+    void pause_timer() {
+        if (timer_) {
+            lv_timer_pause(timer_);
+        }
+    }
+
+    /**
+     * @brief Resume the update queue timer
+     *
+     * Re-enables the timer after it was paused.
+     */
+    void resume_timer() {
+        if (timer_) {
+            lv_timer_resume(timer_);
+        }
     }
 
     /**

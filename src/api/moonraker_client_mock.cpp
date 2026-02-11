@@ -1391,11 +1391,21 @@ int MoonrakerClientMock::gcode_script(const std::string& gcode) {
                 s->cycle++;
 
                 if (s->cycle <= 5) {
-                    // Simulate temperature cycling progress
+                    // Simulate Kalico PID sample output (matches pid_calibrate.py format)
                     char buf[128];
-                    float temp = static_cast<float>(s->target) + (s->cycle % 2 == 0 ? 2.5f : -2.5f);
-                    snprintf(buf, sizeof(buf), "// Heating cycle %d of 5, temp: %.1f", s->cycle,
-                             temp);
+                    float pwm = 0.5f - (s->cycle * 0.02f);
+                    float asymmetry = 0.3f - (s->cycle * 0.05f);
+                    // First two samples have n/a tolerance, then converging values
+                    if (s->cycle <= 2) {
+                        snprintf(buf, sizeof(buf),
+                                 "sample:%d pwm:%.3f asymmetry:%.3f tolerance:n/a", s->cycle, pwm,
+                                 asymmetry);
+                    } else {
+                        float tolerance = 0.1f / s->cycle;
+                        snprintf(buf, sizeof(buf),
+                                 "sample:%d pwm:%.3f asymmetry:%.3f tolerance:%.4f", s->cycle, pwm,
+                                 asymmetry, tolerance);
+                    }
                     s->mock->dispatch_gcode_response(buf);
                 } else {
                     // Emit final PID result matching real Klipper format

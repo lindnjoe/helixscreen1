@@ -991,9 +991,9 @@ void SettingsPanel::handle_spoolman_settings_clicked() {
         overlay.init_subjects();
         overlay.register_callbacks();
     }
-    MoonrakerClient* client = get_moonraker_client();
-    if (client) {
-        overlay.set_client(client);
+    MoonrakerAPI* api = get_moonraker_api();
+    if (api) {
+        overlay.set_api(api);
     }
     overlay.show(parent_screen_);
 }

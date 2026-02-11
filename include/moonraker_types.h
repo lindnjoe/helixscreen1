@@ -257,3 +257,25 @@ struct RestResponse {
     json data; ///< Parsed JSON response. If response isn't JSON, contains {"_raw_body": "..."}
     std::string error; ///< Error message (empty on success)
 };
+
+// ============================================================================
+// Bed Mesh Types
+// ============================================================================
+
+/**
+ * @brief Bed mesh profile data from Klipper
+ *
+ * Contains the probed Z-height matrix and associated metadata for bed mesh
+ * visualization and compensation.
+ */
+struct BedMeshProfile {
+    std::string name;                              ///< Profile name (e.g., "default", "adaptive")
+    std::vector<std::vector<float>> probed_matrix; ///< Z height grid (row-major order)
+    float mesh_min[2];                             ///< Min X,Y coordinates
+    float mesh_max[2];                             ///< Max X,Y coordinates
+    int x_count;                                   ///< Probes per row
+    int y_count;                                   ///< Number of rows
+    std::string algo;                              ///< Interpolation algorithm
+
+    BedMeshProfile() : mesh_min{0, 0}, mesh_max{0, 0}, x_count(0), y_count(0) {}
+};

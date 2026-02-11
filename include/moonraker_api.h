@@ -47,7 +47,6 @@
 #include "advanced_panel_types.h"
 #include "calibration_types.h"
 #include "moonraker_client.h"
-#include "moonraker_domain_service.h"
 #include "moonraker_error.h"
 #include "moonraker_types.h"
 #include "print_history_data.h"
@@ -982,6 +981,62 @@ class MoonrakerAPI {
      */
     void get_available_objects(std::function<void(const std::vector<std::string>&)> on_success,
                                ErrorCallback on_error);
+
+    // ========================================================================
+    // Connection and Subscription Proxies
+    // ========================================================================
+
+    /// Check if the client is currently connected to Moonraker
+    virtual bool is_connected() const;
+
+    /// Get current connection state
+    virtual ConnectionState get_connection_state() const;
+
+    /// Get the WebSocket URL used for the current connection
+    virtual std::string get_websocket_url() const;
+
+    /// Subscribe to status update notifications (mirrors MoonrakerClient::register_notify_update)
+    virtual SubscriptionId subscribe_notifications(std::function<void(json)> callback);
+
+    /// Unsubscribe from status update notifications
+    virtual bool unsubscribe_notifications(SubscriptionId id);
+
+    /// Register a persistent callback for a specific notification method
+    virtual void register_method_callback(const std::string& method, const std::string& name,
+                                          std::function<void(json)> callback);
+
+    /// Unregister a method-specific callback
+    virtual bool unregister_method_callback(const std::string& method, const std::string& name);
+
+    /// Temporarily suppress disconnect modal notifications
+    virtual void suppress_disconnect_modal(int duration_ms);
+
+    // ========================================================================
+    // Helix Plugin Operations
+    // ========================================================================
+
+    /// Get phase tracking plugin status
+    virtual void get_phase_tracking_status(std::function<void(bool enabled)> on_success,
+                                           ErrorCallback on_error = nullptr);
+
+    /// Enable or disable phase tracking plugin
+    virtual void set_phase_tracking_enabled(bool enabled,
+                                            std::function<void(bool success)> on_success,
+                                            ErrorCallback on_error = nullptr);
+
+    // ========================================================================
+    // Database Operations
+    // ========================================================================
+
+    /// Get a value from Moonraker's database
+    virtual void database_get_item(const std::string& namespace_name, const std::string& key,
+                                   std::function<void(const json&)> on_success,
+                                   ErrorCallback on_error = nullptr);
+
+    /// Store a value in Moonraker's database
+    virtual void database_post_item(const std::string& namespace_name, const std::string& key,
+                                    const json& value, std::function<void()> on_success = nullptr,
+                                    ErrorCallback on_error = nullptr);
 
     // ========================================================================
     // Internal Access

@@ -32,6 +32,71 @@ MoonrakerAPIMock::MoonrakerAPIMock(MoonrakerClient& client, PrinterState& state)
     init_mock_spools();
 }
 
+// ============================================================================
+// Connection/Subscription/Database Proxy Overrides (mock no-ops)
+// ============================================================================
+
+SubscriptionId MoonrakerAPIMock::subscribe_notifications(std::function<void(json)> /*callback*/) {
+    return mock_next_subscription_id_++;
+}
+
+bool MoonrakerAPIMock::unsubscribe_notifications(SubscriptionId /*id*/) {
+    return true;
+}
+
+void MoonrakerAPIMock::register_method_callback(const std::string& /*method*/,
+                                                const std::string& /*name*/,
+                                                std::function<void(json)> /*callback*/) {
+    // No-op in mock
+}
+
+bool MoonrakerAPIMock::unregister_method_callback(const std::string& /*method*/,
+                                                  const std::string& /*name*/) {
+    return true;
+}
+
+void MoonrakerAPIMock::suppress_disconnect_modal(int /*duration_ms*/) {
+    // No-op in mock
+}
+
+void MoonrakerAPIMock::database_get_item(const std::string& /*namespace_name*/,
+                                         const std::string& /*key*/,
+                                         std::function<void(const json&)> on_success,
+                                         ErrorCallback /*on_error*/) {
+    if (on_success) {
+        on_success(json{});
+    }
+}
+
+void MoonrakerAPIMock::database_post_item(const std::string& /*namespace_name*/,
+                                          const std::string& /*key*/, const json& /*value*/,
+                                          std::function<void()> on_success,
+                                          ErrorCallback /*on_error*/) {
+    if (on_success) {
+        on_success();
+    }
+}
+
+// ============================================================================
+// Helix Plugin Method Overrides (mock)
+// ============================================================================
+
+void MoonrakerAPIMock::get_phase_tracking_status(std::function<void(bool)> on_success,
+                                                 ErrorCallback /*on_error*/) {
+    if (on_success) {
+        on_success(false);
+    }
+}
+
+void MoonrakerAPIMock::set_phase_tracking_enabled(bool enabled,
+                                                  std::function<void(bool)> on_success,
+                                                  ErrorCallback /*on_error*/) {
+    spdlog::debug("[MoonrakerAPIMock] set_phase_tracking_enabled({})", enabled);
+    if (on_success) {
+        on_success(enabled);
+    }
+}
+
 std::string MoonrakerAPIMock::find_test_file(const std::string& filename) const {
     namespace fs = std::filesystem;
 

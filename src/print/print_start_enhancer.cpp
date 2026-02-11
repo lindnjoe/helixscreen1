@@ -700,7 +700,7 @@ void PrintStartEnhancer::restart_klipper(MoonrakerAPI* api, std::function<void()
     // Suppress the disconnect modal since we're intentionally restarting Klipper.
     // Without this, users see a scary "Printer Firmware Disconnected" error modal
     // even though we just told Klipper to restart.
-    api->get_client().suppress_disconnect_modal(10000); // 10 seconds
+    api->suppress_disconnect_modal(10000); // 10 seconds
 
     api->restart_klipper(on_success, on_error);
 }

@@ -27,7 +27,7 @@ bool PrintSelectFileProvider::is_ready() const {
         return false;
     }
 
-    ConnectionState state = api_->get_client().get_connection_state();
+    ConnectionState state = api_->get_connection_state();
     return state == ConnectionState::CONNECTED;
 }
 

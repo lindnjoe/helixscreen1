@@ -7,6 +7,7 @@
 #include "ui_nav_manager.h"
 
 #include "lvgl/src/xml/lv_xml.h"
+#include "moonraker_api.h"
 #include "runtime_config.h"
 #include "static_panel_registry.h"
 
@@ -28,19 +29,19 @@ RetractionSettingsOverlay& get_global_retraction_settings() {
     return *g_retraction_settings;
 }
 
-void init_global_retraction_settings(MoonrakerClient* client) {
+void init_global_retraction_settings(MoonrakerAPI* api) {
     if (g_retraction_settings) {
         spdlog::warn(
             "[Retraction Settings] RetractionSettingsOverlay already initialized, skipping");
         return;
     }
-    g_retraction_settings = std::make_unique<RetractionSettingsOverlay>(client);
+    g_retraction_settings = std::make_unique<RetractionSettingsOverlay>(api);
     StaticPanelRegistry::instance().register_destroy("RetractionSettingsOverlay",
                                                      []() { g_retraction_settings.reset(); });
     spdlog::trace("[Retraction Settings] RetractionSettingsOverlay initialized");
 }
 
-RetractionSettingsOverlay::RetractionSettingsOverlay(MoonrakerClient* client) : client_(client) {
+RetractionSettingsOverlay::RetractionSettingsOverlay(MoonrakerAPI* api) : api_(api) {
     spdlog::debug("[{}] Constructor", get_name());
 }
 
@@ -192,8 +193,8 @@ void RetractionSettingsOverlay::update_display_labels() {
 }
 
 void RetractionSettingsOverlay::send_retraction_settings() {
-    if (!client_) {
-        spdlog::debug("[{}] No client, skipping G-code send", get_name());
+    if (!api_) {
+        spdlog::debug("[{}] No API, skipping G-code send", get_name());
         return;
     }
 
@@ -215,7 +216,7 @@ void RetractionSettingsOverlay::send_retraction_settings() {
              length_mm, retract_speed, extra_mm, unretract_spd);
 
     spdlog::debug("[{}] Sending: {}", get_name(), gcode);
-    client_->gcode_script(gcode);
+    api_->execute_gcode(gcode, nullptr, nullptr);
 }
 
 // =============================================================================
@@ -238,8 +239,8 @@ void RetractionSettingsOverlay::on_enabled_changed(lv_event_t* e) {
         overlay.send_retraction_settings();
     } else {
         // Disable by setting retract length to 0
-        if (overlay.client_) {
-            overlay.client_->gcode_script("SET_RETRACTION RETRACT_LENGTH=0");
+        if (overlay.api_) {
+            overlay.api_->execute_gcode("SET_RETRACTION RETRACT_LENGTH=0", nullptr, nullptr);
         }
     }
 }

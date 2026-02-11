@@ -217,7 +217,7 @@ void SubjectInitializer::init_panel_subjects(MoonrakerAPI* api) {
     init_global_timelapse_install(api);
     get_global_timelapse_install().init_subjects();
 
-    init_global_retraction_settings(api ? get_moonraker_client() : nullptr);
+    init_global_retraction_settings(api);
     get_global_retraction_settings().init_subjects();
 
     // Fan control overlay (opened from Controls panel secondary fans list)

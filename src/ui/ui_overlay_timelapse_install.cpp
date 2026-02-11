@@ -483,7 +483,7 @@ void TimelapseInstallOverlay::step_restart_moonraker() {
     auto alive = alive_guard_;
 
     // Suppress disconnect modal during intentional restart
-    api_->get_client().suppress_disconnect_modal(15000);
+    api_->suppress_disconnect_modal(15000);
 
     api_->restart_moonraker(
         [this, alive]() {

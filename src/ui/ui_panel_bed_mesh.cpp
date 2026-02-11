@@ -499,7 +499,7 @@ void BedMeshPanel::setup_moonraker_subscription() {
     auto alive = alive_; // Capture shared_ptr by value for destruction detection [L012]
 
     SubscriptionId id =
-        api->get_client().register_notify_update([this, api, alive](nlohmann::json notification) {
+        api->subscribe_notifications([this, api, alive](nlohmann::json notification) {
             // Check destruction flag FIRST - panel may have been deleted
             if (!alive->load()) {
                 return;
@@ -538,7 +538,7 @@ void BedMeshPanel::setup_moonraker_subscription() {
         });
 
     // Store in RAII guard for automatic cleanup on destruction
-    subscription_ = SubscriptionGuard(&api->get_client(), id);
+    subscription_ = SubscriptionGuard(api, id);
     spdlog::debug("[{}] Registered Moonraker callback for mesh updates", get_name());
 }
 

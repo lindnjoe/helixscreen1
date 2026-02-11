@@ -209,3 +209,116 @@ std::string MoonrakerAPI::generate_absolute_move_gcode(char axis, double positio
     }
     return gcode.str();
 }
+
+// ============================================================================
+// Connection and Subscription Proxies
+// ============================================================================
+
+bool MoonrakerAPI::is_connected() const {
+    return client_.get_connection_state() == ConnectionState::CONNECTED;
+}
+
+ConnectionState MoonrakerAPI::get_connection_state() const {
+    return client_.get_connection_state();
+}
+
+std::string MoonrakerAPI::get_websocket_url() const {
+    return client_.get_last_url();
+}
+
+SubscriptionId MoonrakerAPI::subscribe_notifications(std::function<void(json)> callback) {
+    return client_.register_notify_update(std::move(callback));
+}
+
+bool MoonrakerAPI::unsubscribe_notifications(SubscriptionId id) {
+    return client_.unsubscribe_notify_update(id);
+}
+
+void MoonrakerAPI::register_method_callback(const std::string& method, const std::string& name,
+                                            std::function<void(json)> callback) {
+    client_.register_method_callback(method, name, std::move(callback));
+}
+
+bool MoonrakerAPI::unregister_method_callback(const std::string& method, const std::string& name) {
+    return client_.unregister_method_callback(method, name);
+}
+
+void MoonrakerAPI::suppress_disconnect_modal(int duration_ms) {
+    client_.suppress_disconnect_modal(static_cast<uint32_t>(duration_ms));
+}
+
+// ============================================================================
+// Helix Plugin Operations
+// ============================================================================
+
+void MoonrakerAPI::get_phase_tracking_status(std::function<void(bool enabled)> on_success,
+                                             ErrorCallback on_error) {
+    client_.send_jsonrpc(
+        "server.helix.phase_tracking.status", json::object(),
+        [on_success](const json& result) {
+            bool enabled = result.value("enabled", false);
+            if (on_success)
+                on_success(enabled);
+        },
+        [on_error](const MoonrakerError& err) {
+            if (on_error)
+                on_error(err);
+        },
+        0,     // timeout_ms: use default
+        true); // silent: suppress RPC_ERROR events/toasts
+}
+
+void MoonrakerAPI::set_phase_tracking_enabled(bool enabled,
+                                              std::function<void(bool success)> on_success,
+                                              ErrorCallback on_error) {
+    std::string method =
+        enabled ? "server.helix.phase_tracking.enable" : "server.helix.phase_tracking.disable";
+    client_.send_jsonrpc(
+        method, json::object(),
+        [on_success](const json& result) {
+            bool ok = result.value("success", false);
+            if (on_success)
+                on_success(ok);
+        },
+        [on_error](const MoonrakerError& err) {
+            if (on_error)
+                on_error(err);
+        });
+}
+
+// ============================================================================
+// Database Operations
+// ============================================================================
+
+void MoonrakerAPI::database_get_item(const std::string& namespace_name, const std::string& key,
+                                     std::function<void(const json&)> on_success,
+                                     ErrorCallback on_error) {
+    json params = {{"namespace", namespace_name}, {"key", key}};
+    client_.send_jsonrpc(
+        "server.database.get_item", params,
+        [on_success](const json& result) {
+            if (on_success) {
+                on_success(result.value("value", json{}));
+            }
+        },
+        [on_error](const MoonrakerError& err) {
+            if (on_error)
+                on_error(err);
+        });
+}
+
+void MoonrakerAPI::database_post_item(const std::string& namespace_name, const std::string& key,
+                                      const json& value, std::function<void()> on_success,
+                                      ErrorCallback on_error) {
+    json params = {{"namespace", namespace_name}, {"key", key}, {"value", value}};
+    client_.send_jsonrpc(
+        "server.database.post_item", params,
+        [on_success](const json&) {
+            if (on_success)
+                on_success();
+        },
+        [on_error](const MoonrakerError& err) {
+            if (on_error)
+                on_error(err);
+        });
+}

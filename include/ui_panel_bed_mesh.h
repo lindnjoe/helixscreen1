@@ -6,7 +6,7 @@
 #include "ui_observer_guard.h"
 #include "ui_subscription_guard.h"
 
-#include "moonraker_domain_service.h" // For BedMeshProfile
+#include "moonraker_types.h" // For BedMeshProfile
 #include "operation_timeout_guard.h"
 #include "overlay_base.h"
 #include "subject_managed_panel.h"

@@ -1207,7 +1207,7 @@ class MacroAnalysisRetryFixture {
      */
     void drain_queue() {
         helix::ui::UpdateQueue::instance().drain_queue_for_testing();
-        lv_timer_handler(); // Process LVGL timers for retry scheduling
+        lv_timer_handler_safe(); // Process LVGL timers for retry scheduling
     }
 
     /**

@@ -184,8 +184,7 @@ PrintSelectPanel::~PrintSelectPanel() {
     // if the global manager is still valid (it returns nullptr after destruction).
     auto* mgr = get_moonraker_manager();
     if (mgr && api_ && !filelist_handler_name_.empty()) {
-        api_->get_client().unregister_method_callback("notify_filelist_changed",
-                                                      filelist_handler_name_);
+        api_->unregister_method_callback("notify_filelist_changed", filelist_handler_name_);
     }
 
     // CRITICAL: During static destruction (app exit), LVGL may already be gone.
@@ -611,8 +610,7 @@ void PrintSelectPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
 
                     // Update installer's websocket URL for local/remote detection
                     if (self->api_) {
-                        self->plugin_installer_.set_websocket_url(
-                            self->api_->get_client().get_last_url());
+                        self->plugin_installer_.set_websocket_url(self->api_->get_websocket_url());
                     }
                     // Note: Plugin detection now happens automatically in discovery flow
                     // (application.cpp). Install prompt is triggered by helix_plugin_observer_.
@@ -1228,7 +1226,7 @@ void PrintSelectPanel::set_api(MoonrakerAPI* api) {
         filelist_handler_name_ =
             "print_select_filelist_" + std::to_string(reinterpret_cast<uintptr_t>(this));
         auto* self = this;
-        api_->get_client().register_method_callback(
+        api_->register_method_callback(
             "notify_filelist_changed", filelist_handler_name_, [self](const json& /*msg*/) {
                 spdlog::info("[{}] File list changed notification received", self->get_name());
 

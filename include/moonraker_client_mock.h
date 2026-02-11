@@ -4,6 +4,7 @@
 #pragma once
 
 #include "moonraker_client.h"
+#include "moonraker_types.h"
 
 #include <atomic>
 #include <chrono>

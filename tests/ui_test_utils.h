@@ -168,3 +168,20 @@ lv_obj_t* find_by_name(lv_obj_t* parent, const std::string& name);
 int count_children_with_marker(lv_obj_t* parent, const char* marker);
 
 } // namespace UITest
+
+/**
+ * @brief Safe wrapper around lv_timer_handler() for tests
+ *
+ * Drains the UpdateQueue manually, then calls lv_timer_handler() with
+ * stale timers reset to prevent the infinite loop in LVGL's internal
+ * do-while that restarts when timers are created/deleted.
+ *
+ * The root cause: LVGL timers created during initialization may have
+ * stale last_run timestamps, making them all "ready" simultaneously.
+ * Each timer that fires can trigger timer creation/deletion, causing
+ * the do-while loop to restart from the head indefinitely.
+ *
+ * This function resets all timer last_run values to the current tick
+ * on first call, ensuring timers fire at their normal pace.
+ */
+uint32_t lv_timer_handler_safe();

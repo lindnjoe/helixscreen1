@@ -5,24 +5,23 @@
 
 #include "moonraker_client.h"
 
+#include <functional>
 #include <utility>
+
+class MoonrakerAPI;
 
 /**
  * @brief RAII wrapper for Moonraker subscriptions - auto-unsubscribes on destruction
  *
- * Similar to ObserverGuard but for MoonrakerClient::register_notify_update() subscriptions.
+ * Similar to ObserverGuard but for notification subscriptions.
  * Ensures subscriptions are properly cleaned up when the owning object is destroyed.
  *
- * Usage:
+ * Supports construction from either MoonrakerClient or MoonrakerAPI:
  * @code
- *   class MyBackend {
- *       SubscriptionGuard subscription_;
- *
- *       void start(MoonrakerClient* client) {
- *           subscription_ = SubscriptionGuard(client, client->register_notify_update(...));
- *       }
- *       // Automatically unsubscribes when MyBackend is destroyed
- *   };
+ *   // Via MoonrakerClient (legacy)
+ *   subscription_ = SubscriptionGuard(client, client->register_notify_update(...));
+ *   // Via MoonrakerAPI (preferred)
+ *   subscription_ = SubscriptionGuard(api, api->subscribe_notifications(...));
  * @endcode
  */
 class SubscriptionGuard {
@@ -36,21 +35,32 @@ class SubscriptionGuard {
      * @param id Subscription ID from register_notify_update()
      */
     SubscriptionGuard(MoonrakerClient* client, SubscriptionId id)
-        : client_(client), subscription_id_(id) {}
+        : subscription_id_(id),
+          unsubscribe_fn_(
+              client ? [client](SubscriptionId sid) { client->unsubscribe_notify_update(sid); }
+                     : std::function<void(SubscriptionId)>{}) {}
+
+    /**
+     * @brief Construct guard from MoonrakerAPI and subscription ID
+     *
+     * @param api MoonrakerAPI that owns the subscription
+     * @param id Subscription ID from subscribe_notifications()
+     */
+    SubscriptionGuard(MoonrakerAPI* api, SubscriptionId id);
 
     ~SubscriptionGuard() {
         reset();
     }
 
     SubscriptionGuard(SubscriptionGuard&& other) noexcept
-        : client_(std::exchange(other.client_, nullptr)),
-          subscription_id_(std::exchange(other.subscription_id_, INVALID_SUBSCRIPTION_ID)) {}
+        : subscription_id_(std::exchange(other.subscription_id_, INVALID_SUBSCRIPTION_ID)),
+          unsubscribe_fn_(std::exchange(other.unsubscribe_fn_, {})) {}
 
     SubscriptionGuard& operator=(SubscriptionGuard&& other) noexcept {
         if (this != &other) {
             reset();
-            client_ = std::exchange(other.client_, nullptr);
             subscription_id_ = std::exchange(other.subscription_id_, INVALID_SUBSCRIPTION_ID);
+            unsubscribe_fn_ = std::exchange(other.unsubscribe_fn_, {});
         }
         return *this;
     }
@@ -62,11 +72,11 @@ class SubscriptionGuard {
      * @brief Unsubscribe and release the subscription
      */
     void reset() {
-        if (client_ && subscription_id_ != INVALID_SUBSCRIPTION_ID) {
-            client_->unsubscribe_notify_update(subscription_id_);
+        if (unsubscribe_fn_ && subscription_id_ != INVALID_SUBSCRIPTION_ID) {
+            unsubscribe_fn_(subscription_id_);
             subscription_id_ = INVALID_SUBSCRIPTION_ID;
         }
-        client_ = nullptr;
+        unsubscribe_fn_ = {};
     }
 
     /**
@@ -76,7 +86,7 @@ class SubscriptionGuard {
      * The subscription will not be removed (it may already be gone).
      */
     void release() {
-        client_ = nullptr;
+        unsubscribe_fn_ = {};
         subscription_id_ = INVALID_SUBSCRIPTION_ID;
     }
 
@@ -84,7 +94,7 @@ class SubscriptionGuard {
      * @brief Check if guard holds a valid subscription
      */
     explicit operator bool() const {
-        return client_ != nullptr && subscription_id_ != INVALID_SUBSCRIPTION_ID;
+        return unsubscribe_fn_ && subscription_id_ != INVALID_SUBSCRIPTION_ID;
     }
 
     /**
@@ -95,6 +105,6 @@ class SubscriptionGuard {
     }
 
   private:
-    MoonrakerClient* client_ = nullptr;
     SubscriptionId subscription_id_ = INVALID_SUBSCRIPTION_ID;
+    std::function<void(SubscriptionId)> unsubscribe_fn_;
 };

@@ -377,7 +377,7 @@ void HistoryListPanel::refresh_from_api() {
 
     // Check if WebSocket is actually connected before attempting to send requests
     // This prevents the race condition where the panel is opened before connection is established
-    ConnectionState state = api->get_client().get_connection_state();
+    ConnectionState state = api->get_connection_state();
     if (state != ConnectionState::CONNECTED) {
         spdlog::debug("[{}] Cannot fetch history: not connected (state={})", get_name(),
                       static_cast<int>(state));
@@ -422,7 +422,7 @@ void HistoryListPanel::load_more() {
     }
 
     // Check if WebSocket is connected
-    ConnectionState state = api->get_client().get_connection_state();
+    ConnectionState state = api->get_connection_state();
     if (state != ConnectionState::CONNECTED) {
         spdlog::debug("[{}] Cannot load more: not connected", get_name());
         return;

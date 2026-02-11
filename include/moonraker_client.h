@@ -37,7 +37,6 @@
 #pragma once
 
 #include "hv/WebSocketClient.h"
-#include "moonraker_domain_service.h"
 #include "moonraker_error.h"
 #include "moonraker_events.h"
 #include "moonraker_request.h"
