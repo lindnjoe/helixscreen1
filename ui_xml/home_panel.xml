@@ -176,7 +176,7 @@
           <!-- Printer Status -->
           <ui_button name="status_btn_printer"
                      height="100%" variant="ghost" flex_grow="1" flex_flow="column" style_flex_main_place="center"
-                     style_flex_cross_place="center" style_flex_track_place="center" focusable="false">
+                     style_flex_cross_place="center" style_flex_track_place="center" style_border_width="0" focusable="false">
             <event_cb trigger="clicked" callback="printer_status_clicked_cb"/>
             <!-- Ready (green) - state 0 -->
             <icon name="printer_icon_ready" src="printer_3d" size="#icon_size_card" variant="success" hidden="true">
@@ -204,7 +204,7 @@
           <!-- Note: Uses different subject than navigation_bar's network_icon_state (simpler 3-state) -->
           <ui_button name="network_btn"
                      height="100%" variant="ghost" flex_grow="1" flex_flow="column" style_flex_main_place="center"
-                     style_flex_cross_place="center" style_flex_track_place="center" focusable="false">
+                     style_flex_cross_place="center" style_flex_track_place="center" style_border_width="0" focusable="false">
             <event_cb trigger="clicked" callback="network_clicked_cb"/>
             <!-- Disconnected (state 0) -->
             <icon name="net_disconnected" src="wifi_off" size="#icon_size_card" variant="disabled">
@@ -272,7 +272,7 @@
             <bind_flag_if_not_eq subject="klippy_state" flag="hidden" ref_value="2"/>
             <!-- Circular button: uses primary to indicate "safe" recovery action -->
             <ui_button name="firmware_restart_button_home"
-                       width="#button_height_sm" height="#button_height_sm" style_radius="24" align="center"
+                       width="#button_height_sm" height="#button_height_sm" style_radius="24" style_border_width="0" align="center"
                        focusable="false">
               <icon src="refresh" size="sm" variant="text" align="center"/>
               <event_cb trigger="clicked" callback="firmware_restart_clicked"/>
@@ -288,7 +288,7 @@
           <!-- Disabled when not connected (state != 2) using LVGL's native disabled state -->
           <ui_button name="temp_btn"
                      height="100%" variant="ghost" flex_grow="1" flex_flow="column" style_flex_main_place="center"
-                     style_flex_cross_place="center" style_flex_track_place="center" focusable="false">
+                     style_flex_cross_place="center" style_flex_track_place="center" style_border_width="0" focusable="false">
             <bind_state_if_not_eq subject="printer_connection_state" state="disabled" ref_value="2"/>
             <event_cb trigger="clicked" callback="temp_clicked_cb"/>
             <icon name="temp_icon" src="heater" size="#icon_size_card" variant="secondary"/>
@@ -303,7 +303,7 @@
           </divider_vertical>
 
           <!-- Light control button - single icon with dynamic brightness/color -->
-          <ui_button name="light_button" height="100%" variant="ghost" flex_grow="1" focusable="false">
+          <ui_button name="light_button" height="100%" variant="ghost" flex_grow="1" style_border_width="0" focusable="false">
             <bind_flag_if_eq subject="printer_has_led" flag="hidden" ref_value="0"/>
             <bind_state_if_not_eq subject="printer_connection_state" state="disabled" ref_value="2"/>
             <!-- Dynamic icon - source and color set by C++ based on LED brightness/color -->
