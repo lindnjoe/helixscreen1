@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <optional>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -204,6 +205,8 @@ class PrinterDiscovery {
             }
             // AFC lane discovery
             else if (name.rfind("AFC_stepper ", 0) == 0) {
+                has_mmu_ = true;
+                mmu_type_ = AmsType::AFC;
                 std::string lane_name = name.substr(12); // Remove "AFC_stepper " prefix
                 if (!lane_name.empty()) {
                     afc_lane_names_.push_back(lane_name);
@@ -211,9 +214,34 @@ class PrinterDiscovery {
             }
             // AFC hub discovery
             else if (name.rfind("AFC_hub ", 0) == 0) {
+                has_mmu_ = true;
+                mmu_type_ = AmsType::AFC;
                 std::string hub_name = name.substr(8); // Remove "AFC_hub " prefix
                 if (!hub_name.empty()) {
                     afc_hub_names_.push_back(hub_name);
+                }
+            }
+            // AFC extruder discovery (signals AFC installed even if main object is missing)
+            else if (name.rfind("AFC_extruder ", 0) == 0) {
+                has_mmu_ = true;
+                mmu_type_ = AmsType::AFC;
+            }
+            // OpenAMS units indicate AFC is installed
+            else if (name.rfind("AFC_OpenAMS ", 0) == 0) {
+                has_mmu_ = true;
+                mmu_type_ = AmsType::AFC;
+                std::string unit_name = name.substr(12); // Remove "AFC_OpenAMS " prefix
+                if (!unit_name.empty()) {
+                    openams_unit_names_.insert(unit_name);
+                }
+            }
+            // BoxTurtle units indicate AFC is installed
+            else if (name.rfind("AFC_BoxTurtle ", 0) == 0) {
+                has_mmu_ = true;
+                mmu_type_ = AmsType::AFC;
+                std::string unit_name = name.substr(14); // Remove "AFC_BoxTurtle " prefix
+                if (!unit_name.empty()) {
+                    boxturtle_unit_names_.insert(unit_name);
                 }
             }
             // Tool changer detection
@@ -281,9 +309,64 @@ class PrinterDiscovery {
             }
         }
 
+        int expected_units =
+            static_cast<int>(openams_unit_names_.size() + boxturtle_unit_names_.size());
+        if (expected_units == 0) {
+            expected_units = static_cast<int>(afc_hub_names_.size());
+        }
+        if (expected_units > 0) {
+            int expected_lanes = expected_units * 4;
+            if (static_cast<int>(afc_lane_names_.size()) < expected_lanes) {
+                std::unordered_set<std::string> existing_lanes(afc_lane_names_.begin(),
+                                                               afc_lane_names_.end());
+                afc_lane_names_.reserve(expected_lanes);
+                for (int i = 0; i < expected_lanes; ++i) {
+                    std::string lane_name = "lane" + std::to_string(i);
+                    if (existing_lanes.insert(lane_name).second) {
+                        afc_lane_names_.push_back(std::move(lane_name));
+                    }
+                }
+            }
+        }
+
         // Sort AFC lane names for consistent ordering
         if (!afc_lane_names_.empty()) {
-            std::sort(afc_lane_names_.begin(), afc_lane_names_.end());
+            auto lane_index = [](const std::string& name) -> std::optional<int> {
+                static const std::string kPrefix = "lane";
+                if (name.rfind(kPrefix, 0) != 0) {
+                    return std::nullopt;
+                }
+                std::string suffix = name.substr(kPrefix.size());
+                if (suffix.empty()) {
+                    return std::nullopt;
+                }
+                for (char c : suffix) {
+                    if (!std::isdigit(static_cast<unsigned char>(c))) {
+                        return std::nullopt;
+                    }
+                }
+                try {
+                    return std::stoi(suffix);
+                } catch (...) {
+                    return std::nullopt;
+                }
+            };
+
+            std::sort(afc_lane_names_.begin(), afc_lane_names_.end(),
+                      [&](const std::string& left, const std::string& right) {
+                          auto left_index = lane_index(left);
+                          auto right_index = lane_index(right);
+                          if (left_index && right_index) {
+                              return *left_index < *right_index;
+                          }
+                          if (left_index) {
+                              return true;
+                          }
+                          if (right_index) {
+                              return false;
+                          }
+                          return left < right;
+                      });
         }
 
         // Sort tool names for consistent ordering
@@ -292,7 +375,7 @@ class PrinterDiscovery {
         }
 
         // Set mmu_type_ for tool changers (after all objects processed)
-        if (has_tool_changer_ && !tool_names_.empty()) {
+        if (has_tool_changer_ && !tool_names_.empty() && mmu_type_ == AmsType::NONE) {
             mmu_type_ = AmsType::TOOL_CHANGER;
         }
     }
@@ -362,6 +445,8 @@ class PrinterDiscovery {
         filament_sensor_names_.clear();
         mmu_encoder_names_.clear();
         mmu_servo_names_.clear();
+        openams_unit_names_.clear();
+        boxturtle_unit_names_.clear();
 
         // Macros
         macros_.clear();
@@ -819,6 +904,8 @@ class PrinterDiscovery {
     std::vector<std::string> filament_sensor_names_;
     std::vector<std::string> mmu_encoder_names_;
     std::vector<std::string> mmu_servo_names_;
+    std::unordered_set<std::string> openams_unit_names_;
+    std::unordered_set<std::string> boxturtle_unit_names_;
 
     // Macros
     std::unordered_set<std::string> macros_;

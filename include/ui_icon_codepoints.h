@@ -341,7 +341,7 @@ inline const char* strip_legacy_prefix(const char* legacy_name) {
         size_t copy_len = len - 4;
         if (copy_len >= sizeof(buffer))
             copy_len = sizeof(buffer) - 1;
-        strncpy(buffer, stripped, copy_len);
+        memcpy(buffer, stripped, copy_len);
         buffer[copy_len] = '\0';
         return buffer;
     }

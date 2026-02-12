@@ -10,6 +10,7 @@
 #include "ui_panel_temp_control.h"
 #include "ui_update_queue.h"
 
+#include "ams_state.h"
 #include "filament_database.h"
 #include "moonraker_api.h"
 #include "static_panel_registry.h"
@@ -28,6 +29,8 @@
 // State subject (0=IDLE, 1=CALIBRATING, 2=SAVING, 3=COMPLETE, 4=ERROR)
 static lv_subject_t s_pid_cal_state;
 static bool s_callbacks_registered = false;
+
+static std::string get_pid_heater_name(PIDCalibrationPanel::Heater heater);
 
 // ============================================================================
 // CONSTRUCTOR / DESTRUCTOR
@@ -448,7 +451,7 @@ void PIDCalibrationPanel::setup_pid_graph() {
 
         // Register with TempControlPanel for live updates
         if (temp_control_panel_) {
-            std::string klipper_heater = is_extruder ? "extruder" : "heater_bed";
+            std::string klipper_heater = get_pid_heater_name(selected_heater_);
             temp_control_panel_->register_heater_graph(pid_graph_, pid_graph_series_id_,
                                                        klipper_heater);
         }
@@ -484,7 +487,7 @@ void PIDCalibrationPanel::send_pid_calibrate() {
         return;
     }
 
-    const char* heater_name = (selected_heater_ == Heater::EXTRUDER) ? "extruder" : "heater_bed";
+    const std::string heater_name = get_pid_heater_name(selected_heater_);
 
     // Set fan speed before calibration (extruder only)
     if (selected_heater_ == Heater::EXTRUDER && fan_speed_ > 0 && api_) {
@@ -584,7 +587,7 @@ void PIDCalibrationPanel::fetch_old_pid_values() {
         return;
     }
 
-    const char* heater_name = (selected_heater_ == Heater::EXTRUDER) ? "extruder" : "heater_bed";
+    const std::string heater_name = get_pid_heater_name(selected_heater_);
     spdlog::debug("[PIDCal] Fetching old PID values for '{}'", heater_name);
 
     api_->get_heater_pid_values(
@@ -1005,6 +1008,18 @@ static int get_material_nozzle_temp(const char* name) {
 static int get_material_bed_temp(const char* name) {
     auto mat = filament::find_material(name);
     return mat ? mat->bed_temp : 60;
+}
+
+static std::string get_pid_heater_name(PIDCalibrationPanel::Heater heater) {
+    if (heater == PIDCalibrationPanel::Heater::BED) {
+        return "heater_bed";
+    }
+
+    int current_tool = lv_subject_get_int(AmsState::instance().get_current_tool_subject());
+    if (current_tool <= 0) {
+        return "extruder";
+    }
+    return "extruder" + std::to_string(current_tool);
 }
 
 // Material preset trampolines (extruder) — temps from filament database
