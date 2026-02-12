@@ -12,6 +12,7 @@
 #include "ui_temperature_utils.h"
 #include "ui_utils.h"
 
+#include "ams_state.h"
 #include "app_constants.h"
 #include "app_globals.h"
 #include "filament_database.h"
@@ -352,16 +353,25 @@ void TempControlPanel::update_bed_display() {
     lv_subject_copy_string(&bed_display_subject_, bed_display_buf_.data());
 }
 
-void TempControlPanel::send_nozzle_temperature(int target) {
-    spdlog::debug("[TempPanel] Sending nozzle temperature: {}°C", target);
+std::string TempControlPanel::get_active_nozzle_heater() const {
+    int current_tool = lv_subject_get_int(AmsState::instance().get_current_tool_subject());
+    if (current_tool <= 0) {
+        return "extruder";
+    }
+    return "extruder" + std::to_string(current_tool);
+}
 
+void TempControlPanel::send_nozzle_temperature(int target) {
     if (!api_) {
         spdlog::warn("[TempPanel] Cannot set nozzle temp: no API connection");
         return;
     }
 
+    const std::string heater = get_active_nozzle_heater();
+    spdlog::debug("[TempPanel] Sending nozzle temperature: {}°C for {}", target, heater);
+
     api_->set_temperature(
-        "extruder", static_cast<double>(target),
+        heater, static_cast<double>(target),
         []() {
             // No toast on success - immediate visual feedback is sufficient
         },
@@ -578,18 +588,12 @@ void TempControlPanel::on_nozzle_confirm_clicked(lv_event_t* e) {
     self->nozzle_pending_ = -1;
 
     if (self->api_) {
-        self->api_->set_temperature(
-            "extruder", static_cast<double>(target),
-            [target]() {
-                if (target == 0) {
-                    NOTIFY_SUCCESS("Nozzle heater turned off");
-                } else {
-                    NOTIFY_SUCCESS("Nozzle target set to {}°C", target);
-                }
-            },
-            [](const MoonrakerError& error) {
-                NOTIFY_ERROR("Failed to set nozzle temp: {}", error.user_message());
-            });
+        self->send_nozzle_temperature(target);
+        if (target == 0) {
+            NOTIFY_SUCCESS("Nozzle heater turned off");
+        } else {
+            NOTIFY_SUCCESS("Nozzle target set to {}°C", target);
+        }
     }
 
     ui_nav_go_back();
