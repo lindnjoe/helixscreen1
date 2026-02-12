@@ -235,6 +235,15 @@ class PrinterDiscovery {
                     openams_unit_names_.insert(unit_name);
                 }
             }
+            // BoxTurtle units indicate AFC is installed
+            else if (name.rfind("AFC_BoxTurtle ", 0) == 0) {
+                has_mmu_ = true;
+                mmu_type_ = AmsType::AFC;
+                std::string unit_name = name.substr(14); // Remove "AFC_BoxTurtle " prefix
+                if (!unit_name.empty()) {
+                    boxturtle_unit_names_.insert(unit_name);
+                }
+            }
             // Tool changer detection
             else if (name == "toolchanger") {
                 has_tool_changer_ = true;
@@ -300,13 +309,23 @@ class PrinterDiscovery {
             }
         }
 
-        int expected_units = std::max(static_cast<int>(openams_unit_names_.size()),
-                                      static_cast<int>(afc_hub_names_.size()));
-        if (expected_units > 0 && afc_lane_names_.empty()) {
+        int expected_units =
+            static_cast<int>(openams_unit_names_.size() + boxturtle_unit_names_.size());
+        if (expected_units == 0) {
+            expected_units = static_cast<int>(afc_hub_names_.size());
+        }
+        if (expected_units > 0) {
             int expected_lanes = expected_units * 4;
-            afc_lane_names_.reserve(expected_lanes);
-            for (int i = 0; i < expected_lanes; ++i) {
-                afc_lane_names_.push_back("lane" + std::to_string(i));
+            if (static_cast<int>(afc_lane_names_.size()) < expected_lanes) {
+                std::unordered_set<std::string> existing_lanes(afc_lane_names_.begin(),
+                                                               afc_lane_names_.end());
+                afc_lane_names_.reserve(expected_lanes);
+                for (int i = 0; i < expected_lanes; ++i) {
+                    std::string lane_name = "lane" + std::to_string(i);
+                    if (existing_lanes.insert(lane_name).second) {
+                        afc_lane_names_.push_back(std::move(lane_name));
+                    }
+                }
             }
         }
 
@@ -427,6 +446,7 @@ class PrinterDiscovery {
         mmu_encoder_names_.clear();
         mmu_servo_names_.clear();
         openams_unit_names_.clear();
+        boxturtle_unit_names_.clear();
 
         // Macros
         macros_.clear();
@@ -885,6 +905,7 @@ class PrinterDiscovery {
     std::vector<std::string> mmu_encoder_names_;
     std::vector<std::string> mmu_servo_names_;
     std::unordered_set<std::string> openams_unit_names_;
+    std::unordered_set<std::string> boxturtle_unit_names_;
 
     // Macros
     std::unordered_set<std::string> macros_;
