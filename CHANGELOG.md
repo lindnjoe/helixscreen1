@@ -5,6 +5,30 @@ All notable changes to HelixScreen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.13] - 2026-02-11
+
+### Added
+- Frequency response charts for input shaper calibration with shaper overlay toggles
+- CSV parser for Klipper calibration frequency response data
+- Filament usage tracking with live consumption during printing and slicer estimates on completion modal
+- Unified error modal with declarative subjects and single suppression
+- Ultrawide home panel layout for 1920x480 displays
+- Internationalization support for header bar and overlay panel titles
+- Demo mode for PID and input shaper calibration screenshots
+- Klipper/Moonraker pre-flight check in AD5M and K1 installers
+
+### Fixed
+- getcwd errors during AD5M startup (#36)
+- Installer permission denied on tar extraction cleanup (#34)
+- Print tune panel layout adjusted to fit 800x480 screens
+- CLI hyphen normalization for layout names
+
+### Changed
+- Input shaper graduated from beta to stable
+- Width-aware Bresenham line drawing for G-code layer renderer
+- Overlay content padding standardized across panels
+- Action button widths use percentages instead of hardcoded pixels
+
 ## [0.9.12] - 2026-02-11
 
 ### Added
@@ -364,6 +388,7 @@ Initial tagged release. Foundation for all subsequent development.
 - Automated GitHub Actions release pipeline
 - One-liner installation script with platform auto-detection
 
+[0.9.13]: https://github.com/prestonbrown/helixscreen/compare/v0.9.12...v0.9.13
 [0.9.12]: https://github.com/prestonbrown/helixscreen/compare/v0.9.11...v0.9.12
 [0.9.11]: https://github.com/prestonbrown/helixscreen/compare/v0.9.10...v0.9.11
 [0.9.10]: https://github.com/prestonbrown/helixscreen/compare/v0.9.9...v0.9.10
