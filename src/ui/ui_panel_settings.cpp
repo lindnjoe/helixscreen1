@@ -13,7 +13,6 @@
 #include "ui_nav.h"
 #include "ui_nav_manager.h"
 #include "ui_overlay_network_settings.h"
-#include "ui_overlay_printer_image.h"
 #include "ui_panel_memory_stats.h"
 #include "ui_settings_about.h"
 #include "ui_settings_display.h"
@@ -403,6 +402,7 @@ void SettingsPanel::init_subjects() {
 
     // Register XML event callbacks for action rows
     lv_xml_register_event_cb(nullptr, "on_display_settings_clicked", on_display_settings_clicked);
+    // Note: on_printer_image_clicked moved to PrinterManagerOverlay
     lv_xml_register_event_cb(nullptr, "on_filament_sensors_clicked", on_filament_sensors_clicked);
 
     // Note: Sensors overlay callbacks are now handled by SensorSettingsOverlay
@@ -966,13 +966,6 @@ void SettingsPanel::handle_display_settings_clicked() {
     overlay.show(parent_screen_);
 }
 
-void SettingsPanel::handle_printer_image_clicked() {
-    spdlog::debug("[{}] Printer Image clicked - delegating to PrinterImageOverlay", get_name());
-
-    auto& overlay = helix::settings::get_printer_image_overlay();
-    overlay.show(parent_screen_);
-}
-
 void SettingsPanel::handle_filament_sensors_clicked() {
     spdlog::debug("[{}] Sensors clicked - delegating to SensorSettingsOverlay", get_name());
 
@@ -1318,12 +1311,6 @@ void SettingsPanel::on_display_settings_clicked(lv_event_t* /*e*/) {
     LVGL_SAFE_EVENT_CB_END();
 }
 
-void SettingsPanel::on_printer_image_clicked(lv_event_t* /*e*/) {
-    LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_printer_image_clicked");
-    get_global_settings_panel().handle_printer_image_clicked();
-    LVGL_SAFE_EVENT_CB_END();
-}
-
 void SettingsPanel::on_filament_sensors_clicked(lv_event_t* /*e*/) {
     LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_filament_sensors_clicked");
     get_global_settings_panel().handle_filament_sensors_clicked();
@@ -1463,8 +1450,6 @@ void register_settings_panel_callbacks() {
     // Action row callbacks used in settings_panel.xml
     lv_xml_register_event_cb(nullptr, "on_display_settings_clicked",
                              SettingsPanel::on_display_settings_clicked);
-    lv_xml_register_event_cb(nullptr, "on_printer_image_clicked",
-                             SettingsPanel::on_printer_image_clicked);
     lv_xml_register_event_cb(nullptr, "on_filament_sensors_clicked",
                              SettingsPanel::on_filament_sensors_clicked);
     lv_xml_register_event_cb(nullptr, "on_macro_buttons_clicked",
