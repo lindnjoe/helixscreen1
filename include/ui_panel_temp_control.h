@@ -203,6 +203,7 @@ class TempControlPanel {
     // Send temperature command to printer (immediate action)
     void send_nozzle_temperature(int target);
     void send_bed_temperature(int target);
+    std::string get_active_nozzle_heater() const;
 
     // Status text and icon color update helpers
     void update_nozzle_status();
