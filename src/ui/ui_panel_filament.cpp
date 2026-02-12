@@ -412,6 +412,14 @@ void FilamentPanel::update_all_temps() {
 // INSTANCE HANDLERS
 // ============================================================================
 
+std::string FilamentPanel::get_active_extruder_heater() const {
+    int current_tool = lv_subject_get_int(AmsState::instance().get_current_tool_subject());
+    if (current_tool <= 0) {
+        return "extruder";
+    }
+    return "extruder" + std::to_string(current_tool);
+}
+
 void FilamentPanel::handle_preset_button(int material_id) {
     if (material_id < 0 || material_id >= PRESET_COUNT) {
         spdlog::error("[{}] Invalid preset ID {} (valid: 0-{})", get_name(), material_id,
@@ -441,8 +449,10 @@ void FilamentPanel::handle_preset_button(int material_id) {
 
     // Send temperature commands to printer (both nozzle and bed)
     if (api_) {
+        const std::string extruder_heater = get_active_extruder_heater();
+
         api_->set_temperature(
-            "extruder", static_cast<double>(nozzle_target_),
+            extruder_heater, static_cast<double>(nozzle_target_),
             [target = nozzle_target_]() { NOTIFY_SUCCESS("Nozzle target set to {}°C", target); },
             [](const MoonrakerError& error) {
                 NOTIFY_ERROR("Failed to set nozzle temp: {}", error.user_message());
@@ -505,8 +515,10 @@ void FilamentPanel::handle_custom_nozzle_confirmed(float value) {
 
     // Send temperature command to printer
     if (api_) {
+        const std::string extruder_heater = get_active_extruder_heater();
+
         api_->set_temperature(
-            "extruder", static_cast<double>(nozzle_target_),
+            extruder_heater, static_cast<double>(nozzle_target_),
             [target = nozzle_target_]() { NOTIFY_SUCCESS("Nozzle target set to {}°C", target); },
             [](const MoonrakerError& error) {
                 NOTIFY_ERROR("Failed to set nozzle temp: {}", error.user_message());
