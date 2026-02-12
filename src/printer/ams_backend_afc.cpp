@@ -1018,8 +1018,10 @@ void AmsBackendAfc::parse_lane_data(const nlohmann::json& lane_data) {
                   return left < right;
               });
 
-    // Initialize lanes if this is the first time or count changed
-    if (!lanes_initialized_ || new_lane_names.size() != lane_names_.size()) {
+    // Initialize (or reinitialize) lanes when names differ from current mapping.
+    // Name mismatches can happen when discovery synthesizes placeholder names
+    // but AFC lane_data reports the authoritative lane keys.
+    if (!lanes_initialized_ || new_lane_names != lane_names_) {
         initialize_lanes(new_lane_names);
     }
 

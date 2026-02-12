@@ -655,6 +655,36 @@ TEST_CASE("AFC set_discovered_lanes: empty lanes doesn't overwrite existing",
     REQUIRE(helper.get_hub_names()[0] == "NewHub");
 }
 
+TEST_CASE("AFC lane_data reinitializes when lane names differ",
+          "[ams][afc][discovery][lane_data]") {
+    AmsBackendAfcTestHelper helper;
+
+    // Simulate synthesized discovery lanes that don't match authoritative AFC lane_data keys.
+    std::vector<std::string> lanes = {"lane1", "lane2", "lane3", "lane4",
+                                      "lane5", "lane6", "lane7", "lane8"};
+    helper.set_discovered_lanes(lanes, {"Turtle_1", "Turtle_2"});
+    helper.initialize_lanes_from_discovery();
+
+    nlohmann::json afc_data;
+    nlohmann::json lane_map;
+    for (int i = 0; i < 8; ++i) {
+        lane_map["lane" + std::to_string(i)] = {
+            {"material", "PLA"}, {"spool_id", 100 + i}, {"remaining_weight", 500.0f + i}};
+    }
+    afc_data["lanes"] = lane_map;
+
+    helper.feed_afc_state(afc_data);
+
+    REQUIRE(helper.get_lane_names().size() == 8);
+    REQUIRE(helper.get_lane_names().front() == "lane0");
+    REQUIRE(helper.get_lane_names().back() == "lane7");
+
+    SlotInfo slot0 = helper.get_slot_info(0);
+    SlotInfo slot7 = helper.get_slot_info(7);
+    REQUIRE(slot0.spoolman_id == 100);
+    REQUIRE(slot7.spoolman_id == 107);
+}
+
 TEST_CASE("AFC segment: works with discovered lanes", "[ams][afc][discovery][segment]") {
     AmsBackendAfcTestHelper helper;
 
