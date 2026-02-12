@@ -26,6 +26,19 @@ jobs:
     - name: Install bats
       run: sudo apt-get update -qq && sudo apt-get install -y bats
 
+    - name: Verify bundled installers are up-to-date
+      run: |
+        bash scripts/bundle-installer.sh -o /tmp/install-regen.sh
+        bash scripts/bundle-uninstaller.sh -o /tmp/uninstall-regen.sh
+        diff scripts/install.sh /tmp/install-regen.sh || {
+          echo "::error::scripts/install.sh is stale — run: bash scripts/bundle-installer.sh -o scripts/install.sh"
+          exit 1
+        }
+        diff scripts/uninstall.sh /tmp/uninstall-regen.sh || {
+          echo "::error::scripts/uninstall.sh is stale — run: bash scripts/bundle-uninstaller.sh -o scripts/uninstall.sh"
+          exit 1
+        }
+
     - name: Run shell tests
       run: make test-shell
 
