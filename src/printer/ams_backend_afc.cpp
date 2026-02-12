@@ -494,6 +494,7 @@ void AmsBackendAfc::parse_afc_state(const nlohmann::json& afc_data) {
         auto it = lane_name_to_index_.find(load_lane);
         if (it != lane_name_to_index_.end()) {
             system_info_.current_slot = it->second;
+            system_info_.filament_loaded = true;
             spdlog::trace("[AMS AFC] Current load: {} (slot {})", load_lane, it->second);
         }
     }
@@ -656,6 +657,15 @@ void AmsBackendAfc::parse_afc_stepper(const std::string& lane_name, const nlohma
         slot->remaining_weight_g = data["weight"].get<float>();
     }
 
+    // Parse nozzle temperature recommendation from Spoolman (via AFC)
+    if (data.contains("extruder_temp") && data["extruder_temp"].is_number_integer()) {
+        int temp = data["extruder_temp"].get<int>();
+        if (temp > 0) {
+            slot->nozzle_temp_min = temp;
+            slot->nozzle_temp_max = temp;
+        }
+    }
+
     // Derive slot status from sensors and status string
     bool tool_loaded = false;
     if (data.contains("tool_loaded") && data["tool_loaded"].is_boolean()) {
@@ -667,7 +677,12 @@ void AmsBackendAfc::parse_afc_stepper(const std::string& lane_name, const nlohma
         status_str = data["status"].get<std::string>();
     }
 
-    if (status_str == "Loaded" || tool_loaded) {
+    if (tool_loaded || status_str == "Tool Loaded" || status_str == "Tooled") {
+        slot->status = SlotStatus::LOADED;
+        // This lane's filament is in the toolhead — update global state
+        system_info_.current_slot = slot_index;
+        system_info_.filament_loaded = true;
+    } else if (status_str == "Loaded") {
         slot->status = SlotStatus::LOADED;
     } else if (sensors.prep || sensors.load) {
         slot->status = SlotStatus::AVAILABLE;
@@ -677,9 +692,9 @@ void AmsBackendAfc::parse_afc_stepper(const std::string& lane_name, const nlohma
         slot->status = SlotStatus::AVAILABLE; // Default for other states like "Ready"
     }
 
-    spdlog::trace("[AMS AFC] Lane {} (slot {}): prep={} load={} hub={} status={}", lane_name,
-                  slot_index, sensors.prep, sensors.load, sensors.loaded_to_hub,
-                  slot_status_to_string(slot->status));
+    spdlog::trace("[AMS AFC] Lane {} (slot {}): prep={} load={} hub={} tool_loaded={} status={}",
+                  lane_name, slot_index, sensors.prep, sensors.load, sensors.loaded_to_hub,
+                  tool_loaded, slot_status_to_string(slot->status));
 
     // Parse tool mapping from "map" field (e.g., "T0", "T1")
     if (data.contains("map") && data["map"].is_string()) {
@@ -767,12 +782,17 @@ void AmsBackendAfc::parse_afc_extruder(const nlohmann::json& data) {
     if (data.contains("lane_loaded") && !data["lane_loaded"].is_null()) {
         if (data["lane_loaded"].is_string()) {
             current_lane_name_ = data["lane_loaded"].get<std::string>();
-            // Update current_gate from lane name
+            // Update current_slot from lane name
             auto it = lane_name_to_index_.find(current_lane_name_);
             if (it != lane_name_to_index_.end()) {
                 system_info_.current_slot = it->second;
+                system_info_.filament_loaded = true;
             }
         }
+    } else if (data.contains("lane_loaded") && data["lane_loaded"].is_null()) {
+        current_lane_name_.clear();
+        system_info_.current_slot = -1;
+        system_info_.filament_loaded = false;
     }
 
     spdlog::trace("[AMS AFC] Extruder: tool_start={} tool_end={} lane={}", tool_start_sensor_,
