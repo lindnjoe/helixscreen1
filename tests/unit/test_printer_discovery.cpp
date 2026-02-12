@@ -513,6 +513,35 @@ TEST_CASE("PrinterDiscovery detects tool changer", "[printer_discovery]") {
     REQUIRE(tools.size() == 3);
 }
 
+TEST_CASE("PrinterDiscovery prefers AFC over tool changer when both are present",
+          "[printer_discovery]") {
+    PrinterDiscovery hw;
+
+    json objects = {"toolchanger", "tool T0", "tool T1", "AFC_stepper lane0", "AFC_hub Turtle_1"};
+    hw.parse_objects(objects);
+
+    REQUIRE(hw.has_tool_changer());
+    REQUIRE(hw.has_mmu());
+    REQUIRE(hw.mmu_type() == AmsType::AFC);
+}
+
+TEST_CASE("PrinterDiscovery detects AFC from OpenAMS objects", "[printer_discovery]") {
+    PrinterDiscovery hw;
+
+    json objects = {"toolchanger", "tool T0", "AFC_OpenAMS AMS_1", "AFC_hub Turtle_1"};
+    hw.parse_objects(objects);
+
+    REQUIRE(hw.has_mmu());
+    REQUIRE(hw.mmu_type() == AmsType::AFC);
+
+    auto lanes = hw.afc_lane_names();
+    REQUIRE(lanes.size() == 4);
+    REQUIRE(lanes[0] == "lane0");
+    REQUIRE(lanes[1] == "lane1");
+    REQUIRE(lanes[2] == "lane2");
+    REQUIRE(lanes[3] == "lane3");
+}
+
 // ============================================================================
 // Filament Sensor Detection Tests
 // ============================================================================
