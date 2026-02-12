@@ -513,6 +513,53 @@ TEST_CASE("PrinterDiscovery detects tool changer", "[printer_discovery]") {
     REQUIRE(tools.size() == 3);
 }
 
+TEST_CASE("PrinterDiscovery prefers AFC over tool changer when both are present",
+          "[printer_discovery]") {
+    PrinterDiscovery hw;
+
+    json objects = {"toolchanger", "tool T0", "tool T1", "AFC_stepper lane0", "AFC_hub Turtle_1"};
+    hw.parse_objects(objects);
+
+    REQUIRE(hw.has_tool_changer());
+    REQUIRE(hw.has_mmu());
+    REQUIRE(hw.mmu_type() == AmsType::AFC);
+}
+
+TEST_CASE("PrinterDiscovery detects AFC from OpenAMS objects", "[printer_discovery]") {
+    PrinterDiscovery hw;
+
+    json objects = {"toolchanger", "tool T0", "AFC_OpenAMS AMS_1", "AFC_hub Turtle_1"};
+    hw.parse_objects(objects);
+
+    REQUIRE(hw.has_mmu());
+    REQUIRE(hw.mmu_type() == AmsType::AFC);
+
+    auto lanes = hw.afc_lane_names();
+    REQUIRE(lanes.size() == 4);
+    REQUIRE(lanes[0] == "lane0");
+    REQUIRE(lanes[1] == "lane1");
+    REQUIRE(lanes[2] == "lane2");
+    REQUIRE(lanes[3] == "lane3");
+}
+
+TEST_CASE("PrinterDiscovery does not synthesize extra AFC lanes when lanes already exist",
+          "[printer_discovery]") {
+    PrinterDiscovery hw;
+
+    json objects = {
+        "AFC_OpenAMS AMS_1", "AFC_OpenAMS AMS_2",  "AFC_OpenAMS AMS_3", "AFC_hub Turtle_1",
+        "AFC_hub Turtle_2",  "AFC_hub Turtle_3",   "AFC_hub Turtle_4",  "AFC_stepper lane0",
+        "AFC_stepper lane1", "AFC_stepper lane2",  "AFC_stepper lane3", "AFC_stepper lane4",
+        "AFC_stepper lane5", "AFC_stepper lane6",  "AFC_stepper lane7", "AFC_stepper lane8",
+        "AFC_stepper lane9", "AFC_stepper lane10", "AFC_stepper lane11"};
+    hw.parse_objects(objects);
+
+    auto lanes = hw.afc_lane_names();
+    REQUIRE(lanes.size() == 12);
+    REQUIRE(lanes.front() == "lane0");
+    REQUIRE(lanes.back() == "lane11");
+}
+
 // ============================================================================
 // Filament Sensor Detection Tests
 // ============================================================================

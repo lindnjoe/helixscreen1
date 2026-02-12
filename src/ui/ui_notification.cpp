@@ -24,7 +24,9 @@
 
 #include <spdlog/spdlog.h>
 
+#include <algorithm>
 #include <atomic>
+#include <cstdio>
 #include <cstring>
 #include <string>
 #include <thread>
@@ -76,7 +78,15 @@ static void async_message_callback(void* user_data) {
         // Format display message with title if present
         char display_buf[320]; // title + ": " + message
         if (data->has_title) {
-            snprintf(display_buf, sizeof(display_buf), "%s: %s", data->title, data->message);
+            // Reserve one byte for NUL and avoid -Wformat-truncation warning
+            constexpr int kAvail = static_cast<int>(sizeof(display_buf)) - 1;
+            constexpr int kSepLen = 2; // ": "
+            int title_len = static_cast<int>(strnlen(data->title, sizeof(data->title)));
+            int msg_len = static_cast<int>(strnlen(data->message, sizeof(data->message)));
+            int max_title = std::min(title_len, std::max(0, kAvail - kSepLen));
+            int max_msg = std::min(msg_len, std::max(0, kAvail - kSepLen - max_title));
+            snprintf(display_buf, sizeof(display_buf), "%.*s: %.*s", max_title, data->title,
+                     max_msg, data->message);
         } else {
             strncpy(display_buf, data->message, sizeof(display_buf) - 1);
             display_buf[sizeof(display_buf) - 1] = '\0';
