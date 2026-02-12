@@ -999,6 +999,8 @@ void PIDCalibrationPanel::on_fan_slider_changed(lv_event_t* e) {
     spdlog::debug("[PIDCal] Fan speed set to {}%", speed);
 }
 
+static std::string get_pid_heater_name(PIDCalibrationPanel::Heater heater);
+
 // Helper: look up recommended temp from filament database
 static int get_material_nozzle_temp(const char* name) {
     auto mat = filament::find_material(name);
