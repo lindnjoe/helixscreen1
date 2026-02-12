@@ -57,7 +57,7 @@ TEST_CASE("LedController discover_from_hardware populates native backend", "[led
     REQUIRE(strips[0].supports_white == true);
 
     REQUIRE(strips[1].id == "dotstar status_led");
-    REQUIRE(strips[1].name == "Status Led");
+    REQUIRE(strips[1].name == "Status LED");
     REQUIRE(strips[1].supports_white == true);
 
     REQUIRE(strips[2].id == "led case_light");
@@ -151,13 +151,13 @@ TEST_CASE("MacroBackend macro management", "[led]") {
     macro.display_name = "Cabinet Light";
     macro.on_macro = "LIGHTS_ON";
     macro.off_macro = "LIGHTS_OFF";
-    macro.custom_actions = {{"Party Mode", "LED_PARTY"}};
+    macro.presets = {{"Party Mode", "LED_PARTY"}};
 
     backend.add_macro(macro);
     REQUIRE(backend.is_available());
     REQUIRE(backend.macros().size() == 1);
     REQUIRE(backend.macros()[0].display_name == "Cabinet Light");
-    REQUIRE(backend.macros()[0].custom_actions.size() == 1);
+    REQUIRE(backend.macros()[0].presets.size() == 1);
 
     backend.clear();
     REQUIRE(!backend.is_available());
@@ -204,4 +204,176 @@ TEST_CASE("LedController: selected_strips can hold WLED strip IDs", "[led][contr
     // Can switch back to native
     controller.set_selected_strips({"neopixel chamber_light"});
     REQUIRE(controller.selected_strips()[0] == "neopixel chamber_light");
+}
+
+TEST_CASE("LedController: toggle_all turns on all selected native strips", "[led][controller]") {
+    auto& ctrl = helix::led::LedController::instance();
+    ctrl.deinit();
+    ctrl.init(nullptr, nullptr);
+
+    // Add native strips
+    helix::led::LedStripInfo strip1;
+    strip1.name = "Chamber Light";
+    strip1.id = "neopixel chamber_light";
+    strip1.backend = helix::led::LedBackendType::NATIVE;
+    strip1.supports_color = true;
+    strip1.supports_white = true;
+    ctrl.native().add_strip(strip1);
+
+    // Select the strip
+    ctrl.set_selected_strips({"neopixel chamber_light"});
+
+    // toggle_all should exist and not crash with nullptr api
+    // (actual gcode won't be sent without real api, but the method should work)
+    ctrl.toggle_all(true);
+    ctrl.toggle_all(false);
+
+    ctrl.deinit();
+}
+
+TEST_CASE("LedController: toggle_all with empty selected_strips is a no-op", "[led][controller]") {
+    auto& ctrl = helix::led::LedController::instance();
+    ctrl.deinit();
+    ctrl.init(nullptr, nullptr);
+
+    // No strips selected
+    REQUIRE(ctrl.selected_strips().empty());
+
+    // Should not crash
+    ctrl.toggle_all(true);
+    ctrl.toggle_all(false);
+
+    ctrl.deinit();
+}
+
+TEST_CASE("LedController: toggle_all with mixed backend types", "[led][controller]") {
+    auto& ctrl = helix::led::LedController::instance();
+    ctrl.deinit();
+    ctrl.init(nullptr, nullptr);
+
+    // Add native strip
+    helix::led::LedStripInfo native_strip;
+    native_strip.name = "Chamber Light";
+    native_strip.id = "neopixel chamber_light";
+    native_strip.backend = helix::led::LedBackendType::NATIVE;
+    native_strip.supports_color = true;
+    native_strip.supports_white = true;
+    ctrl.native().add_strip(native_strip);
+
+    // Add WLED strip
+    helix::led::LedStripInfo wled_strip;
+    wled_strip.name = "Printer LED";
+    wled_strip.id = "wled_printer_led";
+    wled_strip.backend = helix::led::LedBackendType::WLED;
+    wled_strip.supports_color = true;
+    wled_strip.supports_white = false;
+    ctrl.wled().add_strip(wled_strip);
+
+    // Select both
+    ctrl.set_selected_strips({"neopixel chamber_light", "wled_printer_led"});
+
+    // Should dispatch to correct backends without crash
+    ctrl.toggle_all(true);
+    ctrl.toggle_all(false);
+
+    ctrl.deinit();
+}
+
+TEST_CASE("LedController: backend_for_strip returns correct type", "[led][controller]") {
+    auto& ctrl = helix::led::LedController::instance();
+    ctrl.deinit();
+    ctrl.init(nullptr, nullptr);
+
+    // Add native strip
+    helix::led::LedStripInfo native_strip;
+    native_strip.name = "Chamber Light";
+    native_strip.id = "neopixel chamber_light";
+    native_strip.backend = helix::led::LedBackendType::NATIVE;
+    native_strip.supports_color = true;
+    native_strip.supports_white = true;
+    ctrl.native().add_strip(native_strip);
+
+    // Add WLED strip
+    helix::led::LedStripInfo wled_strip;
+    wled_strip.name = "Printer LED";
+    wled_strip.id = "wled_printer_led";
+    wled_strip.backend = helix::led::LedBackendType::WLED;
+    wled_strip.supports_color = true;
+    wled_strip.supports_white = false;
+    ctrl.wled().add_strip(wled_strip);
+
+    // Check backend_for_strip
+    REQUIRE(ctrl.backend_for_strip("neopixel chamber_light") == helix::led::LedBackendType::NATIVE);
+    REQUIRE(ctrl.backend_for_strip("wled_printer_led") == helix::led::LedBackendType::WLED);
+
+    // Unknown strip should return NATIVE as default
+    REQUIRE(ctrl.backend_for_strip("unknown_strip") == helix::led::LedBackendType::NATIVE);
+
+    ctrl.deinit();
+}
+
+TEST_CASE("LedController: backend_for_strip identifies macro backend", "[led][controller]") {
+    auto& ctrl = helix::led::LedController::instance();
+    ctrl.deinit();
+    ctrl.init(nullptr, nullptr);
+
+    // Add a macro device
+    helix::led::LedMacroInfo macro;
+    macro.display_name = "Cabinet Light";
+    macro.type = helix::led::MacroLedType::ON_OFF;
+    macro.on_macro = "LIGHTS_ON";
+    macro.off_macro = "LIGHTS_OFF";
+    ctrl.macro().add_macro(macro);
+    ctrl.set_configured_macros({macro});
+
+    // Macro devices are identified by display name
+    REQUIRE(ctrl.backend_for_strip("Cabinet Light") == helix::led::LedBackendType::MACRO);
+
+    ctrl.deinit();
+}
+
+TEST_CASE("LedController: get/set_led_on_at_start", "[led][controller]") {
+    auto& ctrl = helix::led::LedController::instance();
+    ctrl.deinit();
+    ctrl.init(nullptr, nullptr);
+
+    // Default should be false
+    REQUIRE(ctrl.get_led_on_at_start() == false);
+
+    ctrl.set_led_on_at_start(true);
+    REQUIRE(ctrl.get_led_on_at_start() == true);
+
+    ctrl.set_led_on_at_start(false);
+    REQUIRE(ctrl.get_led_on_at_start() == false);
+
+    ctrl.deinit();
+}
+
+TEST_CASE("LedController: apply_startup_preference does nothing when disabled",
+          "[led][controller]") {
+    auto& ctrl = helix::led::LedController::instance();
+    ctrl.deinit();
+    ctrl.init(nullptr, nullptr);
+
+    ctrl.set_led_on_at_start(false);
+
+    // Should not crash - just a no-op
+    ctrl.apply_startup_preference();
+
+    ctrl.deinit();
+}
+
+TEST_CASE("LedController: apply_startup_preference with no strips is a no-op",
+          "[led][controller]") {
+    auto& ctrl = helix::led::LedController::instance();
+    ctrl.deinit();
+    ctrl.init(nullptr, nullptr);
+
+    ctrl.set_led_on_at_start(true);
+    REQUIRE(ctrl.selected_strips().empty());
+
+    // Should not crash even though enabled
+    ctrl.apply_startup_preference();
+
+    ctrl.deinit();
 }

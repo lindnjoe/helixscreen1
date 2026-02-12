@@ -61,6 +61,8 @@ void LedController::deinit() {
     last_brightness_ = 100;
     color_presets_.clear();
     configured_macros_.clear();
+    discovered_led_macros_.clear();
+    led_on_at_start_ = false;
 
     spdlog::info("[LedController] Deinitialized");
 }
@@ -172,26 +174,85 @@ void LedController::discover_from_hardware(const helix::PrinterDiscovery& hardwa
         spdlog::info("[LedController] Discovered {} LED effect(s)", effects_.effects().size());
     }
 
-    // LED macros (store as candidates - user configures in settings)
+    // LED macros — store as candidates for settings UI, don't create devices
+    discovered_led_macros_.clear();
     for (const auto& macro_name : hardware.led_macros()) {
-        LedMacroInfo info;
-        info.display_name = macro_name;
-        // Heuristic: if name contains ON, treat as on_macro; OFF as off_macro; else toggle
-        if (macro_name.find("_ON") != std::string::npos ||
-            macro_name.find("LIGHTS_ON") != std::string::npos) {
-            info.on_macro = macro_name;
-        } else if (macro_name.find("_OFF") != std::string::npos ||
-                   macro_name.find("LIGHTS_OFF") != std::string::npos) {
-            info.off_macro = macro_name;
-        } else {
-            info.toggle_macro = macro_name;
-        }
-        macro_.add_macro(info);
+        discovered_led_macros_.push_back(macro_name);
+    }
+
+    if (!discovered_led_macros_.empty()) {
+        spdlog::info("[LedController] Discovered {} LED macro candidate(s)",
+                     discovered_led_macros_.size());
+    }
+
+    // Populate macro backend from configured macro devices (loaded from config)
+    for (const auto& macro_cfg : configured_macros_) {
+        macro_.add_macro(macro_cfg);
     }
 
     if (macro_.is_available()) {
-        spdlog::info("[LedController] Discovered {} LED macro candidate(s)",
+        spdlog::info("[LedController] Loaded {} configured macro device(s)",
                      macro_.macros().size());
+    }
+
+    // If no configured macros exist but we discovered candidates, create defaults
+    if (configured_macros_.empty() && !discovered_led_macros_.empty()) {
+        std::string on_macro, off_macro;
+        std::vector<std::pair<std::string, std::string>> remaining_presets;
+
+        for (const auto& name : discovered_led_macros_) {
+            if (on_macro.empty() && (name.find("_ON") != std::string::npos ||
+                                     name.find("LIGHTS_ON") != std::string::npos)) {
+                on_macro = name;
+            } else if (off_macro.empty() && (name.find("_OFF") != std::string::npos ||
+                                             name.find("LIGHTS_OFF") != std::string::npos)) {
+                off_macro = name;
+            } else if (name.find("TOGGLE") != std::string::npos) {
+                // Skip toggles that pair with ON/OFF
+            } else {
+                // Title-case the display name
+                std::string display = name;
+                std::replace(display.begin(), display.end(), '_', ' ');
+                bool cap = true;
+                for (auto& c : display) {
+                    if (c == ' ') {
+                        cap = true;
+                    } else if (cap) {
+                        c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+                        cap = false;
+                    } else {
+                        c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+                    }
+                }
+                remaining_presets.emplace_back(display, name);
+            }
+        }
+
+        // Create ON/OFF device if pair found
+        if (!on_macro.empty() && !off_macro.empty()) {
+            LedMacroInfo lights;
+            lights.display_name = "Lights";
+            lights.type = MacroLedType::ON_OFF;
+            lights.on_macro = on_macro;
+            lights.off_macro = off_macro;
+            configured_macros_.push_back(lights);
+            macro_.add_macro(lights);
+        }
+
+        // Create preset device if remaining macros exist
+        if (!remaining_presets.empty()) {
+            LedMacroInfo preset_device;
+            preset_device.display_name = "LED Modes";
+            preset_device.type = MacroLedType::PRESET;
+            preset_device.presets = remaining_presets;
+            configured_macros_.push_back(preset_device);
+            macro_.add_macro(preset_device);
+        }
+
+        if (!configured_macros_.empty()) {
+            spdlog::info("[LedController] Auto-created {} macro device(s) from discovered macros",
+                         configured_macros_.size());
+        }
     }
 }
 
@@ -1155,9 +1216,37 @@ void LedController::load_config() {
         return;
     }
 
+    // === One-time migration from old /led/ paths ===
+    auto& old_strips = cfg->get_json("/led/selected_strips");
+    if (old_strips.is_array() && !old_strips.empty()) {
+        auto& new_strips = cfg->get_json("/printer/leds/selected_strips");
+        if (!new_strips.is_array() || new_strips.empty()) {
+            spdlog::info("[LedController] Migrating config from /led/ to /printer/leds/");
+            cfg->set("/printer/leds/selected_strips", old_strips);
+
+            auto& old_color_json = cfg->get_json("/led/last_color");
+            if (old_color_json.is_number()) {
+                cfg->set("/printer/leds/last_color", old_color_json.get<int>());
+            }
+            auto& old_brightness_json = cfg->get_json("/led/last_brightness");
+            if (old_brightness_json.is_number()) {
+                cfg->set("/printer/leds/last_brightness", old_brightness_json.get<int>());
+            }
+            auto& old_presets = cfg->get_json("/led/color_presets");
+            if (old_presets.is_array() && !old_presets.empty()) {
+                cfg->set("/printer/leds/color_presets", old_presets);
+            }
+            auto& old_macros = cfg->get_json("/led/macro_devices");
+            if (old_macros.is_array() && !old_macros.empty()) {
+                cfg->set("/printer/leds/macro_devices", old_macros);
+            }
+            cfg->save();
+        }
+    }
+
     // Selected strips
     selected_strips_.clear();
-    auto& strips_json = cfg->get_json("/led/selected_strips");
+    auto& strips_json = cfg->get_json("/printer/leds/selected_strips");
     if (strips_json.is_array()) {
         for (const auto& s : strips_json) {
             if (s.is_string()) {
@@ -1166,13 +1255,42 @@ void LedController::load_config() {
         }
     }
 
+    // Legacy migration: /printer/leds/selected (JSON array from old SettingsManager)
+    if (selected_strips_.empty()) {
+        auto& legacy_selected = cfg->get_json("/printer/leds/selected");
+        if (legacy_selected.is_array()) {
+            for (const auto& s : legacy_selected) {
+                if (s.is_string() && !s.get<std::string>().empty()) {
+                    selected_strips_.push_back(s.get<std::string>());
+                }
+            }
+            if (!selected_strips_.empty()) {
+                spdlog::info("[LedController] Migrated {} strip(s) from /printer/leds/selected",
+                             selected_strips_.size());
+            }
+        }
+    }
+
+    // Legacy migration: /printer/leds/strip (single string, oldest format)
+    if (selected_strips_.empty()) {
+        auto& legacy_strip_json = cfg->get_json("/printer/leds/strip");
+        std::string legacy_strip =
+            legacy_strip_json.is_string() ? legacy_strip_json.get<std::string>() : "";
+        if (!legacy_strip.empty()) {
+            selected_strips_.push_back(legacy_strip);
+            spdlog::info("[LedController] Migrated legacy single strip: {}", legacy_strip);
+        }
+    }
+
     // Last color & brightness
-    last_color_ = static_cast<uint32_t>(cfg->get<int>("/led/last_color", 0xFFFFFF));
-    last_brightness_ = cfg->get<int>("/led/last_brightness", 100);
+    auto& color_json = cfg->get_json("/printer/leds/last_color");
+    last_color_ = color_json.is_number() ? static_cast<uint32_t>(color_json.get<int>()) : 0xFFFFFF;
+    auto& brightness_json = cfg->get_json("/printer/leds/last_brightness");
+    last_brightness_ = brightness_json.is_number() ? brightness_json.get<int>() : 100;
 
     // Color presets
     color_presets_.clear();
-    auto& presets_json = cfg->get_json("/led/color_presets");
+    auto& presets_json = cfg->get_json("/printer/leds/color_presets");
     if (presets_json.is_array()) {
         for (const auto& p : presets_json) {
             if (p.is_number()) {
@@ -1187,7 +1305,7 @@ void LedController::load_config() {
 
     // Configured macros
     configured_macros_.clear();
-    auto& macros_json = cfg->get_json("/led/macro_devices");
+    auto& macros_json = cfg->get_json("/printer/leds/macro_devices");
     if (macros_json.is_array()) {
         for (const auto& m : macros_json) {
             if (!m.is_object()) {
@@ -1198,19 +1316,57 @@ void LedController::load_config() {
             info.on_macro = m.value("on_macro", "");
             info.off_macro = m.value("off_macro", "");
             info.toggle_macro = m.value("toggle_macro", "");
-            if (m.contains("custom_actions") && m["custom_actions"].is_array()) {
-                for (const auto& a : m["custom_actions"]) {
-                    if (a.is_object()) {
-                        info.custom_actions.emplace_back(a.value("label", ""),
-                                                         a.value("macro", ""));
-                    }
+
+            // Parse type field (with backward compat inference)
+            std::string type_str = m.value("type", "");
+            if (type_str == "on_off") {
+                info.type = MacroLedType::ON_OFF;
+            } else if (type_str == "toggle") {
+                info.type = MacroLedType::TOGGLE;
+            } else if (type_str == "preset") {
+                info.type = MacroLedType::PRESET;
+            } else {
+                // Infer from populated fields
+                if (!info.on_macro.empty() && !info.off_macro.empty()) {
+                    info.type = MacroLedType::ON_OFF;
+                } else if (!info.toggle_macro.empty()) {
+                    info.type = MacroLedType::TOGGLE;
+                } else {
+                    info.type = MacroLedType::TOGGLE; // default
                 }
             }
+
+            // Parse presets (new format) or custom_actions (legacy)
+            if (m.contains("presets") && m["presets"].is_array()) {
+                for (const auto& p : m["presets"]) {
+                    if (p.is_object()) {
+                        info.presets.emplace_back(p.value("name", ""), p.value("macro", ""));
+                    }
+                }
+                if (!info.presets.empty() && type_str.empty()) {
+                    info.type = MacroLedType::PRESET;
+                }
+            } else if (m.contains("custom_actions") && m["custom_actions"].is_array()) {
+                // Legacy format: custom_actions -> presets
+                for (const auto& a : m["custom_actions"]) {
+                    if (a.is_object()) {
+                        info.presets.emplace_back(a.value("label", ""), a.value("macro", ""));
+                    }
+                }
+                if (!info.presets.empty() && type_str.empty()) {
+                    info.type = MacroLedType::PRESET;
+                }
+            }
+
             if (!info.display_name.empty()) {
                 configured_macros_.push_back(info);
             }
         }
     }
+
+    // LED on at start preference
+    auto& on_at_start_json = cfg->get_json("/printer/leds/led_on_at_start");
+    led_on_at_start_ = on_at_start_json.is_boolean() ? on_at_start_json.get<bool>() : false;
 
     spdlog::debug("[LedController] Loaded config: {} strips, {} presets, {} macros",
                   selected_strips_.size(), color_presets_.size(), configured_macros_.size());
@@ -1227,38 +1383,170 @@ void LedController::save_config() {
     for (const auto& s : selected_strips_) {
         strips_arr.push_back(s);
     }
-    cfg->set("/led/selected_strips", strips_arr);
+    cfg->set("/printer/leds/selected_strips", strips_arr);
 
     // Last color & brightness
-    cfg->set("/led/last_color", static_cast<int>(last_color_));
-    cfg->set("/led/last_brightness", last_brightness_);
+    cfg->set("/printer/leds/last_color", static_cast<int>(last_color_));
+    cfg->set("/printer/leds/last_brightness", last_brightness_);
 
     // Color presets
     nlohmann::json presets_arr = nlohmann::json::array();
     for (const auto& p : color_presets_) {
         presets_arr.push_back(static_cast<int>(p));
     }
-    cfg->set("/led/color_presets", presets_arr);
+    cfg->set("/printer/leds/color_presets", presets_arr);
 
     // Configured macros
     nlohmann::json macros_arr = nlohmann::json::array();
     for (const auto& m : configured_macros_) {
         nlohmann::json obj;
         obj["name"] = m.display_name;
+
+        // Write type field
+        switch (m.type) {
+        case MacroLedType::ON_OFF:
+            obj["type"] = "on_off";
+            break;
+        case MacroLedType::TOGGLE:
+            obj["type"] = "toggle";
+            break;
+        case MacroLedType::PRESET:
+            obj["type"] = "preset";
+            break;
+        }
+
         obj["on_macro"] = m.on_macro;
         obj["off_macro"] = m.off_macro;
         obj["toggle_macro"] = m.toggle_macro;
-        nlohmann::json actions = nlohmann::json::array();
-        for (const auto& [label, macro_gcode] : m.custom_actions) {
-            actions.push_back({{"label", label}, {"macro", macro_gcode}});
+
+        nlohmann::json presets_arr_macro = nlohmann::json::array();
+        for (const auto& [name, macro_gcode] : m.presets) {
+            presets_arr_macro.push_back({{"name", name}, {"macro", macro_gcode}});
         }
-        obj["custom_actions"] = actions;
+        obj["presets"] = presets_arr_macro;
         macros_arr.push_back(obj);
     }
-    cfg->set("/led/macro_devices", macros_arr);
+    cfg->set("/printer/leds/macro_devices", macros_arr);
+
+    // LED on at start preference
+    cfg->set("/printer/leds/led_on_at_start", led_on_at_start_);
 
     cfg->save();
     spdlog::debug("[LedController] Saved config");
+}
+
+void LedController::toggle_all(bool on) {
+    if (selected_strips_.empty()) {
+        spdlog::debug("[LedController] toggle_all({}) - no strips selected", on);
+        return;
+    }
+
+    spdlog::info("[LedController] toggle_all({}) for {} strip(s)", on, selected_strips_.size());
+
+    for (const auto& strip_id : selected_strips_) {
+        auto backend_type = backend_for_strip(strip_id);
+
+        switch (backend_type) {
+        case LedBackendType::NATIVE:
+            if (on) {
+                native_.turn_on(strip_id);
+            } else {
+                native_.turn_off(strip_id);
+            }
+            break;
+
+        case LedBackendType::WLED:
+            if (on) {
+                wled_.set_on(strip_id);
+            } else {
+                wled_.set_off(strip_id);
+            }
+            break;
+
+        case LedBackendType::MACRO: {
+            // Find the macro device matching this strip_id (by display name)
+            for (const auto& macro : configured_macros_) {
+                if (macro.display_name == strip_id) {
+                    switch (macro.type) {
+                    case MacroLedType::ON_OFF:
+                        if (on) {
+                            macro_.execute_on(macro.display_name);
+                        } else {
+                            macro_.execute_off(macro.display_name);
+                        }
+                        break;
+                    case MacroLedType::TOGGLE:
+                        macro_.execute_toggle(macro.display_name);
+                        break;
+                    case MacroLedType::PRESET:
+                        // For preset type, use on/off macros if available
+                        if (on && !macro.on_macro.empty()) {
+                            macro_.execute_on(macro.display_name);
+                        } else if (!on && !macro.off_macro.empty()) {
+                            macro_.execute_off(macro.display_name);
+                        }
+                        break;
+                    }
+                    break;
+                }
+            }
+            break;
+        }
+
+        case LedBackendType::LED_EFFECT:
+            // Effects are controlled separately via activate/stop
+            break;
+        }
+    }
+}
+
+LedBackendType LedController::backend_for_strip(const std::string& strip_id) const {
+    // Check native strips
+    for (const auto& strip : native_.strips()) {
+        if (strip.id == strip_id) {
+            return LedBackendType::NATIVE;
+        }
+    }
+
+    // Check WLED strips
+    for (const auto& strip : wled_.strips()) {
+        if (strip.id == strip_id) {
+            return LedBackendType::WLED;
+        }
+    }
+
+    // Check macro devices (matched by display name)
+    for (const auto& macro : configured_macros_) {
+        if (macro.display_name == strip_id) {
+            return LedBackendType::MACRO;
+        }
+    }
+
+    // Default to native (for backward compat with old configs)
+    return LedBackendType::NATIVE;
+}
+
+bool LedController::get_led_on_at_start() const {
+    return led_on_at_start_;
+}
+
+void LedController::set_led_on_at_start(bool enabled) {
+    led_on_at_start_ = enabled;
+}
+
+void LedController::apply_startup_preference() {
+    if (!led_on_at_start_) {
+        spdlog::debug("[LedController] LED on at start disabled - skipping");
+        return;
+    }
+
+    if (selected_strips_.empty()) {
+        spdlog::debug("[LedController] LED on at start enabled but no strips selected");
+        return;
+    }
+
+    spdlog::info("[LedController] Applying startup preference: turning LEDs on");
+    toggle_all(true);
 }
 
 void LedController::set_selected_strips(const std::vector<std::string>& strips) {

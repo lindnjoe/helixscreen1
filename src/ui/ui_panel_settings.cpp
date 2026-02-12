@@ -17,6 +17,7 @@
 #include "ui_settings_about.h"
 #include "ui_settings_display.h"
 #include "ui_settings_hardware_health.h"
+#include "ui_settings_led.h"
 #include "ui_settings_machine_limits.h"
 #include "ui_settings_macro_buttons.h"
 #include "ui_settings_plugins.h"
@@ -37,6 +38,7 @@
 #include "format_utils.h"
 #include "hardware_validator.h"
 #include "helix_version.h"
+#include "led/led_controller.h"
 #include "lvgl/src/others/translation/lv_translation.h"
 #include "moonraker_api.h"
 #include "moonraker_client.h"
@@ -393,6 +395,7 @@ void SettingsPanel::init_subjects() {
     lv_xml_register_event_cb(nullptr, "on_animations_changed", on_animations_changed);
     lv_xml_register_event_cb(nullptr, "on_gcode_3d_changed", on_gcode_3d_changed);
     lv_xml_register_event_cb(nullptr, "on_led_light_changed", on_led_light_changed);
+    lv_xml_register_event_cb(nullptr, "on_led_settings_clicked", on_led_settings_clicked);
     // Note: on_retraction_row_clicked is registered by RetractionSettingsOverlay
     lv_xml_register_event_cb(nullptr, "on_sound_settings_clicked", on_sound_settings_clicked);
     lv_xml_register_event_cb(nullptr, "on_estop_confirm_changed", on_estop_confirm_changed);
@@ -777,34 +780,20 @@ void SettingsPanel::populate_led_chips() {
     // Clear existing chips
     lv_obj_clean(chip_container);
 
-    // Get discovered LEDs from Moonraker
-    MoonrakerAPI* api = get_moonraker_api();
-    if (!api) {
-        spdlog::debug("[{}] No API for LED chip population", get_name());
-        return;
+    // Source LED list from LedController backends (native + WLED)
+    auto& led_ctrl = helix::led::LedController::instance();
+    discovered_leds_.clear();
+    for (const auto& strip : led_ctrl.native().strips()) {
+        discovered_leds_.push_back(strip.id);
+    }
+    for (const auto& strip : led_ctrl.wled().strips()) {
+        discovered_leds_.push_back(strip.id);
     }
 
-    discovered_leds_ = api->hardware().leds();
-
-    // Load selected LEDs from config
+    // Load selected LEDs from LedController
     selected_leds_.clear();
-    Config* config = Config::get_instance();
-    if (config) {
-        auto& leds_json = config->get_json(helix::wizard::LED_SELECTED);
-        if (leds_json.is_array()) {
-            for (const auto& led : leds_json) {
-                if (led.is_string() && !led.get<std::string>().empty()) {
-                    selected_leds_.insert(led.get<std::string>());
-                }
-            }
-        }
-        // Fallback: legacy single LED
-        if (selected_leds_.empty()) {
-            std::string legacy = config->get<std::string>(helix::wizard::LED_STRIP, "");
-            if (!legacy.empty()) {
-                selected_leds_.insert(legacy);
-            }
-        }
+    for (const auto& strip_id : led_ctrl.selected_strips()) {
+        selected_leds_.insert(strip_id);
     }
 
     // Create chips for each discovered LED
@@ -864,27 +853,10 @@ void SettingsPanel::handle_led_chip_clicked(const std::string& led_name) {
         spdlog::info("[{}] LED selected: {}", get_name(), led_name);
     }
 
-    // Save to config as array
-    Config* config = Config::get_instance();
-    if (config) {
-        json selected_array = json::array();
-        for (const auto& led : selected_leds_) {
-            selected_array.push_back(led);
-        }
-        config->set<json>(helix::wizard::LED_SELECTED, selected_array);
-
-        // Also update legacy single LED path for backward compat
-        if (!selected_leds_.empty()) {
-            config->set<std::string>(helix::wizard::LED_STRIP, *selected_leds_.begin());
-        } else {
-            config->set<std::string>(helix::wizard::LED_STRIP, std::string(""));
-        }
-        config->save();
-    }
-
-    // Update SettingsManager with the new selection
-    std::vector<std::string> leds_vec(selected_leds_.begin(), selected_leds_.end());
-    SettingsManager::instance().set_configured_leds(leds_vec);
+    // Save via LedController
+    std::vector<std::string> strips_vec(selected_leds_.begin(), selected_leds_.end());
+    helix::led::LedController::instance().set_selected_strips(strips_vec);
+    helix::led::LedController::instance().save_config();
 
     // Rebuild chips to update visual state
     populate_led_chips();
@@ -954,6 +926,13 @@ void SettingsPanel::handle_sound_settings_clicked() {
     spdlog::debug("[{}] Sound Settings clicked - delegating to SoundSettingsOverlay", get_name());
 
     auto& overlay = helix::settings::get_sound_settings_overlay();
+    overlay.show(parent_screen_);
+}
+
+void SettingsPanel::handle_led_settings_clicked() {
+    spdlog::debug("[{}] LED Settings clicked - delegating to LedSettingsOverlay", get_name());
+
+    auto& overlay = helix::settings::get_led_settings_overlay();
     overlay.show(parent_screen_);
 }
 
@@ -1304,6 +1283,12 @@ void SettingsPanel::on_sound_settings_clicked(lv_event_t* /*e*/) {
     LVGL_SAFE_EVENT_CB_END();
 }
 
+void SettingsPanel::on_led_settings_clicked(lv_event_t* /*e*/) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_led_settings_clicked");
+    get_global_settings_panel().handle_led_settings_clicked();
+    LVGL_SAFE_EVENT_CB_END();
+}
+
 void SettingsPanel::on_display_settings_clicked(lv_event_t* /*e*/) {
     LVGL_SAFE_EVENT_CB_BEGIN("[SettingsPanel] on_display_settings_clicked");
     get_global_settings_panel().handle_display_settings_clicked();
@@ -1438,6 +1423,8 @@ void register_settings_panel_callbacks() {
                              SettingsPanel::on_animations_changed);
     lv_xml_register_event_cb(nullptr, "on_gcode_3d_changed", SettingsPanel::on_gcode_3d_changed);
     lv_xml_register_event_cb(nullptr, "on_led_light_changed", SettingsPanel::on_led_light_changed);
+    lv_xml_register_event_cb(nullptr, "on_led_settings_clicked",
+                             SettingsPanel::on_led_settings_clicked);
     lv_xml_register_event_cb(nullptr, "on_sound_settings_clicked",
                              SettingsPanel::on_sound_settings_clicked);
     lv_xml_register_event_cb(nullptr, "on_estop_confirm_changed",

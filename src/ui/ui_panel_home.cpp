@@ -25,6 +25,7 @@
 #include "filament_sensor_manager.h"
 #include "format_utils.h"
 #include "injection_point_manager.h"
+#include "led/led_controller.h"
 #include "led/ui_led_control_overlay.h"
 #include "moonraker_api.h"
 #include "observer_factory.h"
@@ -101,24 +102,13 @@ HomePanel::HomePanel(PrinterState& printer_state, MoonrakerAPI* api)
         });
     spdlog::debug("[{}] Subscribed to filament_any_runout subject", get_name());
 
-    // Load configured LEDs from wizard settings and tell PrinterState to track them
-    Config* config = Config::get_instance();
-    if (config) {
-        // Load configured LEDs (multi-LED support)
-        auto& leds_json = config->get_json(helix::wizard::LED_SELECTED);
-        if (leds_json.is_array()) {
-            for (const auto& led : leds_json) {
-                if (led.is_string() && !led.get<std::string>().empty()) {
-                    configured_leds_.push_back(led.get<std::string>());
-                }
-            }
-        }
-        // Fallback: check legacy single LED path
-        if (configured_leds_.empty()) {
-            std::string single_led = config->get<std::string>(helix::wizard::LED_STRIP, "");
-            if (!single_led.empty()) {
-                configured_leds_.push_back(single_led);
-            }
+    // Source LED list from LedController (single source of truth for selected strips)
+    {
+        auto& led_ctrl = helix::led::LedController::instance();
+        const auto& strips = led_ctrl.selected_strips();
+        configured_leds_.clear();
+        for (const auto& strip_id : strips) {
+            configured_leds_.push_back(strip_id);
         }
         if (!configured_leds_.empty()) {
             // Tell PrinterState to track the first LED for state updates
@@ -544,39 +534,9 @@ void HomePanel::handle_light_toggle() {
         return;
     }
 
-    // Toggle to opposite of current state
-    // Note: UI will update when Moonraker notification arrives (via PrinterState observer)
-    bool new_state = !light_on_;
-
-    // Send command to Moonraker for all configured LEDs
-    if (api_) {
-        for (const auto& led : configured_leds_) {
-            if (new_state) {
-                api_->set_led_on(
-                    led,
-                    [this]() {
-                        spdlog::info("[{}] LED turned ON - waiting for state update", get_name());
-                    },
-                    [](const MoonrakerError& err) {
-                        spdlog::error("[Home Panel] Failed to turn LED on: {}", err.message);
-                        NOTIFY_ERROR("Failed to turn light on: {}", err.user_message());
-                    });
-            } else {
-                api_->set_led_off(
-                    led,
-                    [this]() {
-                        spdlog::info("[{}] LED turned OFF - waiting for state update", get_name());
-                    },
-                    [](const MoonrakerError& err) {
-                        spdlog::error("[Home Panel] Failed to turn LED off: {}", err.message);
-                        NOTIFY_ERROR("Failed to turn light off: {}", err.user_message());
-                    });
-            }
-        }
-    } else {
-        spdlog::warn("[{}] API not available - cannot control LED", get_name());
-        NOTIFY_ERROR("Cannot control light: printer not connected");
-    }
+    // Toggle all LEDs via LedController (handles API calls and error reporting)
+    // UI will update when Moonraker notification arrives (via PrinterState observer)
+    helix::led::LedController::instance().toggle_all(!light_on_);
 }
 
 void HomePanel::handle_light_long_press() {
@@ -822,23 +782,15 @@ void HomePanel::reload_from_config() {
         return;
     }
 
-    // Reload LED configuration from wizard settings
+    // Reload LED configuration from LedController (single source of truth)
     // LED visibility is controlled by printer_has_led subject set via set_printer_capabilities()
     // which is called by the on_discovery_complete_ callback after hardware discovery
     std::vector<std::string> new_leds;
-    auto& leds_json = config->get_json(helix::wizard::LED_SELECTED);
-    if (leds_json.is_array()) {
-        for (const auto& led : leds_json) {
-            if (led.is_string() && !led.get<std::string>().empty()) {
-                new_leds.push_back(led.get<std::string>());
-            }
-        }
-    }
-    // Fallback: check legacy single LED path
-    if (new_leds.empty()) {
-        std::string single_led = config->get<std::string>(helix::wizard::LED_STRIP, "");
-        if (!single_led.empty()) {
-            new_leds.push_back(single_led);
+    {
+        auto& led_ctrl = helix::led::LedController::instance();
+        const auto& strips = led_ctrl.selected_strips();
+        for (const auto& strip_id : strips) {
+            new_leds.push_back(strip_id);
         }
     }
     if (new_leds != configured_leds_) {

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+#include "config.h"
 #include "led/led_controller.h"
 #include "printer_discovery.h"
 
@@ -87,6 +88,14 @@ TEST_CASE("LedController discover_from_hardware with effects and macros", "[led]
 
     auto& ctrl = helix::led::LedController::instance();
     ctrl.deinit();
+
+    // Clear any macro_devices from previous tests so auto-creation kicks in
+    auto* cfg = Config::get_instance();
+    if (cfg) {
+        cfg->set("/printer/leds/macro_devices", nlohmann::json::array());
+        cfg->save();
+    }
+
     ctrl.init(nullptr, nullptr);
     ctrl.discover_from_hardware(discovery);
 
@@ -101,9 +110,35 @@ TEST_CASE("LedController discover_from_hardware with effects and macros", "[led]
     REQUIRE(ctrl.effects().effects()[0].icon_hint == "air");
     REQUIRE(ctrl.effects().effects()[1].display_name == "Fire Comet");
 
-    // Macro backend
+    // Discovered macros stored as candidates
+    REQUIRE(ctrl.discovered_macros().size() == 3);
+    REQUIRE(std::find(ctrl.discovered_macros().begin(), ctrl.discovered_macros().end(),
+                      "LIGHTS_ON") != ctrl.discovered_macros().end());
+
+    // Auto-created macro devices from candidates (no config loaded)
     REQUIRE(ctrl.macro().is_available());
-    REQUIRE(ctrl.macro().macros().size() == 3);
+    // Should have auto-created "Lights" (ON_OFF) and "LED Modes" (PRESET: LED_PARTY)
+    REQUIRE(ctrl.macro().macros().size() == 2);
+
+    // Verify auto-created devices
+    const auto& macros = ctrl.macro().macros();
+    bool found_lights = false, found_modes = false;
+    for (const auto& m : macros) {
+        if (m.display_name == "Lights") {
+            found_lights = true;
+            REQUIRE(m.type == helix::led::MacroLedType::ON_OFF);
+            REQUIRE(m.on_macro == "LIGHTS_ON");
+            REQUIRE(m.off_macro == "LIGHTS_OFF");
+        }
+        if (m.display_name == "LED Modes") {
+            found_modes = true;
+            REQUIRE(m.type == helix::led::MacroLedType::PRESET);
+            REQUIRE(m.presets.size() == 1);
+            REQUIRE(m.presets[0].second == "LED_PARTY");
+        }
+    }
+    REQUIRE(found_lights);
+    REQUIRE(found_modes);
 
     // All three backends available
     auto backends = ctrl.available_backends();

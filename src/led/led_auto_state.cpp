@@ -231,12 +231,28 @@ void LedAutoState::load_config() {
         return;
     }
 
+    // === One-time migration from old /led/auto_state/ paths ===
+    auto& old_enabled_json = cfg->get_json("/led/auto_state/enabled");
+    if (old_enabled_json.is_boolean()) {
+        auto& new_enabled_json = cfg->get_json("/printer/leds/auto_state/enabled");
+        if (!new_enabled_json.is_boolean()) {
+            spdlog::info("[LedAutoState] Migrating config from /led/auto_state/ to "
+                         "/printer/leds/auto_state/");
+            cfg->set("/printer/leds/auto_state/enabled", old_enabled_json.get<bool>());
+            auto& old_mappings = cfg->get_json("/led/auto_state/mappings");
+            if (old_mappings.is_object()) {
+                cfg->set("/printer/leds/auto_state/mappings", old_mappings);
+            }
+            cfg->save();
+        }
+    }
+
     // Enabled flag
-    enabled_ = cfg->get<bool>("/led/auto_state/enabled", false);
+    enabled_ = cfg->get<bool>("/printer/leds/auto_state/enabled", false);
 
     // Mappings
     mappings_.clear();
-    auto& mappings_json = cfg->get_json("/led/auto_state/mappings");
+    auto& mappings_json = cfg->get_json("/printer/leds/auto_state/mappings");
     if (mappings_json.is_object()) {
         for (auto it = mappings_json.begin(); it != mappings_json.end(); ++it) {
             if (!it.value().is_object()) {
@@ -268,7 +284,7 @@ void LedAutoState::save_config() {
         return;
     }
 
-    cfg->set("/led/auto_state/enabled", enabled_);
+    cfg->set("/printer/leds/auto_state/enabled", enabled_);
 
     nlohmann::json mappings_json = nlohmann::json::object();
     for (const auto& [key, action] : mappings_) {
@@ -287,7 +303,7 @@ void LedAutoState::save_config() {
         }
         mappings_json[key] = obj;
     }
-    cfg->set("/led/auto_state/mappings", mappings_json);
+    cfg->set("/printer/leds/auto_state/mappings", mappings_json);
 
     cfg->save();
     spdlog::debug("[LedAutoState] Saved config");

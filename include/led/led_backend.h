@@ -27,12 +27,15 @@ struct LedEffectInfo {
         false; // Whether this effect is currently active (tracked via Moonraker subscription)
 };
 
+enum class MacroLedType { ON_OFF, TOGGLE, PRESET };
+
 struct LedMacroInfo {
-    std::string display_name; // User-friendly label
-    std::string on_macro;     // Gcode to turn on (empty if toggle-only)
-    std::string off_macro;    // Gcode to turn off (empty if toggle-only)
-    std::string toggle_macro; // Single toggle macro (empty if separate on/off)
-    std::vector<std::pair<std::string, std::string>> custom_actions; // {label, macro}
+    std::string display_name;                                 // User-friendly label
+    MacroLedType type = MacroLedType::TOGGLE;                 // Control style
+    std::string on_macro;                                     // ON_OFF type: gcode to turn on
+    std::string off_macro;                                    // ON_OFF type: gcode to turn off
+    std::string toggle_macro;                                 // TOGGLE type: single toggle macro
+    std::vector<std::pair<std::string, std::string>> presets; // PRESET type: {name, macro}
 };
 
 /// WLED preset info fetched from device

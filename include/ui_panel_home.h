@@ -8,6 +8,7 @@
 #include "ui_panel_base.h"
 #include "ui_panel_print_status.h" // For RunoutGuidanceModal
 
+#include "led/led_controller.h"
 #include "subject_managed_panel.h"
 #include "tips_manager.h"
 

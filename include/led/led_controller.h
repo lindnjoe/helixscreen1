@@ -305,6 +305,19 @@ class LedController {
     void load_config();
     void save_config();
 
+    // Toggle all selected strips on/off
+    void toggle_all(bool on);
+
+    // Determine which backend a given strip belongs to
+    [[nodiscard]] LedBackendType backend_for_strip(const std::string& strip_id) const;
+
+    // LED on at start preference
+    [[nodiscard]] bool get_led_on_at_start() const;
+    void set_led_on_at_start(bool enabled);
+
+    // Apply startup preference (call at boot after printer is ready)
+    void apply_startup_preference();
+
     // Config accessors
     [[nodiscard]] const std::vector<std::string>& selected_strips() const {
         return selected_strips_;
@@ -331,6 +344,10 @@ class LedController {
     }
     void set_configured_macros(const std::vector<LedMacroInfo>& macros);
 
+    [[nodiscard]] const std::vector<std::string>& discovered_macros() const {
+        return discovered_led_macros_;
+    }
+
   private:
     LedController() = default;
     ~LedController() = default;
@@ -352,6 +369,8 @@ class LedController {
     int last_brightness_ = 100;
     std::vector<uint32_t> color_presets_;
     std::vector<LedMacroInfo> configured_macros_;
+    std::vector<std::string> discovered_led_macros_; // Raw macro names from hardware
+    bool led_on_at_start_ = false;
 
     // Default color presets
     static constexpr uint32_t DEFAULT_COLOR_PRESETS[] = {0xFFFFFF, 0xFFD700, 0xFF6B35, 0x4FC3F7,

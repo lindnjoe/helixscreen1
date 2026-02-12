@@ -295,6 +295,7 @@ void register_xml_components() {
     register_xml("about_overlay.xml");
     register_xml("display_settings_overlay.xml");
     register_xml("sound_settings_overlay.xml");
+    register_xml("led_settings_overlay.xml");
     register_xml("theme_editor_overlay.xml");
     register_xml("theme_preview_overlay.xml");
     register_xml("theme_save_as_modal.xml");

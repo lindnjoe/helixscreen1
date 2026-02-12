@@ -23,6 +23,7 @@
 #include "helix_version.h"
 #include "keyboard_shortcuts.h"
 #include "layout_manager.h"
+#include "led/led_controller.h"
 #include "moonraker_manager.h"
 #include "panel_factory.h"
 #include "print_history_manager.h"
@@ -1524,7 +1525,7 @@ void Application::setup_discovery_callbacks() {
             }
 
             // Apply LED startup preference (turn on LED if user preference is enabled)
-            SettingsManager::instance().apply_led_startup_preference();
+            helix::led::LedController::instance().apply_startup_preference();
 
             // Start automatic update checks (15s initial delay, then every 24h)
             UpdateChecker::instance().start_auto_check();
