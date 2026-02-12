@@ -413,6 +413,14 @@ void FilamentPanel::update_all_temps() {
 // ============================================================================
 
 std::string FilamentPanel::get_active_extruder_heater() const {
+    // Prefer toolhead-reported active extruder (works for multi-extruder setups
+    // even when AMS current_tool is unavailable/stale).
+    std::string active_heater = printer_state_.get_active_extruder_name();
+    if (!active_heater.empty()) {
+        return active_heater;
+    }
+
+    // Fallback to AMS tool index mapping.
     int current_tool = lv_subject_get_int(AmsState::instance().get_current_tool_subject());
     if (current_tool <= 0) {
         return "extruder";

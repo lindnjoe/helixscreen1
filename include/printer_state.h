@@ -250,6 +250,14 @@ class PrinterState {
      */
     json& get_json_state();
 
+    /**
+     * @brief Get the active extruder heater name from toolhead status
+     *
+     * Reads `toolhead.extruder` from cached status (e.g., "extruder", "extruder1").
+     * Falls back to "extruder" if unavailable.
+     */
+    [[nodiscard]] std::string get_active_extruder_name() const;
+
     //
     // Subject accessors for XML binding
     //
