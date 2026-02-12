@@ -30,6 +30,8 @@
 static lv_subject_t s_pid_cal_state;
 static bool s_callbacks_registered = false;
 
+static std::string get_pid_heater_name(PIDCalibrationPanel::Heater heater);
+
 // ============================================================================
 // CONSTRUCTOR / DESTRUCTOR
 // ============================================================================
