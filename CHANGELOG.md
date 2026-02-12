@@ -5,6 +5,16 @@ All notable changes to HelixScreen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.15] - 2026-02-12
+
+### Fixed
+- Touchscreen calibration wizard no longer appears on capacitive displays (#40)
+- Calibration verify step now applies new calibration so accept/retry buttons are tappable
+- Debug logging via HELIX_DEBUG=1 in env file now works correctly after sourcing order fix
+- Release pipeline R2 upload failing when changelog contains special characters
+- Symbol resolution script using wrong domain (releases.helixscreen.com → .org)
+- User docs referencing `--help | head -1` instead of `--version` for version checks
+
 ## [0.9.14] - 2026-02-12
 
 ### Fixed
@@ -393,6 +403,7 @@ Initial tagged release. Foundation for all subsequent development.
 - Automated GitHub Actions release pipeline
 - One-liner installation script with platform auto-detection
 
+[0.9.15]: https://github.com/prestonbrown/helixscreen/compare/v0.9.14...v0.9.15
 [0.9.14]: https://github.com/prestonbrown/helixscreen/compare/v0.9.13...v0.9.14
 [0.9.13]: https://github.com/prestonbrown/helixscreen/compare/v0.9.12...v0.9.13
 [0.9.12]: https://github.com/prestonbrown/helixscreen/compare/v0.9.11...v0.9.12
