@@ -1427,6 +1427,8 @@ void MoonrakerAPI::start_resonance_test(char axis, AdvancedProgressCallback on_p
     collector->start();
 
     // Send the G-code command
+    // SHAPER_CALIBRATE sweeps 5-100 Hz (~95s) then calculates best shapers (~30-60s)
+    static constexpr uint32_t SHAPER_CALIBRATE_TIMEOUT_MS = 5 * 60 * 1000;
     std::string cmd = "SHAPER_CALIBRATE AXIS=";
     cmd += axis;
 
@@ -1439,7 +1441,8 @@ void MoonrakerAPI::start_resonance_test(char axis, AdvancedProgressCallback on_p
             if (on_error) {
                 on_error(err);
             }
-        });
+        },
+        SHAPER_CALIBRATE_TIMEOUT_MS);
 }
 
 void MoonrakerAPI::start_klippain_shaper_calibration(const std::string& /*axis*/,
