@@ -1585,7 +1585,7 @@ class PrinterState {
 
     // JSON cache for complex data
     json json_state_;
-    std::mutex state_mutex_;
+    mutable std::mutex state_mutex_;
 
     // Initialization guard to prevent multiple subject initializations
     bool subjects_initialized_ = false;
