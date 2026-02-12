@@ -15,8 +15,9 @@ namespace helix::settings {
  * @class PrinterImageOverlay
  * @brief Overlay for browsing and selecting printer images
  *
- * Displays shipped and custom printer images in a grid layout.
- * Users can select an image or choose auto-detect mode.
+ * Displays shipped and custom printer images in a left-list + right-preview layout.
+ * Users can select an image or choose auto-detect mode. Only one image preview
+ * is loaded at a time, keeping RAM usage minimal.
  *
  * ## Usage:
  *
@@ -61,7 +62,7 @@ class PrinterImageOverlay : public OverlayBase {
     /// Provide USB manager for USB image import
     void set_usb_manager(UsbManager* manager);
 
-    /// Re-populate custom images grid (public for async callback)
+    /// Re-populate custom images list (public for async callback)
     void refresh_custom_images();
 
   private:
@@ -82,10 +83,12 @@ class PrinterImageOverlay : public OverlayBase {
     void scan_usb_drives();
     void populate_usb_images(const std::string& mount_path);
     void handle_usb_import(const std::string& source_path);
-    lv_obj_t* create_card_from_xml(lv_obj_t* parent, const std::string& image_id,
-                                   const std::string& display_name, const std::string& preview_path,
-                                   const char* callback_name);
+    lv_obj_t* create_list_row(lv_obj_t* parent, const std::string& image_id,
+                              const std::string& display_name, const char* callback_name);
     void update_selection_indicator(const std::string& active_id);
+    void update_preview(const std::string& image_id, const std::string& display_name,
+                        const std::string& preview_path);
+    std::string get_preview_path_for_id(const std::string& image_id);
 
     //
     // === Members ===
@@ -100,6 +103,13 @@ class PrinterImageOverlay : public OverlayBase {
     lv_subject_t usb_visible_subject_{}; // int: 0=hidden, 1=visible
     lv_subject_t usb_status_subject_{};  // string: status text
     char usb_status_buf_[256] = {};
+
+    // Preview subjects for right-side panel
+    lv_subject_t preview_src_subject_{};  // pointer: image path for bind_src
+    char preview_src_buf_[512] = {};      // buffer for preview path string
+    lv_subject_t preview_name_subject_{}; // string: display name
+    char preview_name_buf_[128] = {};
+    lv_subject_t has_preview_subject_{}; // int: 0=no preview, 1=has preview
 };
 
 /**

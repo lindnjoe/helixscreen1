@@ -115,6 +115,7 @@ std::vector<PrinterImageManager::ImageInfo> PrinterImageManager::get_shipped_ima
         info.id = "shipped:" + stem;
         info.display_name = stem;
         std::replace(info.display_name.begin(), info.display_name.end(), '-', ' ');
+        std::replace(info.display_name.begin(), info.display_name.end(), '_', ' ');
         // Preview uses 150px prerendered variant
         info.preview_path = get_prerendered_printer_path(stem, 480); // 480 -> 150px
         results.push_back(std::move(info));

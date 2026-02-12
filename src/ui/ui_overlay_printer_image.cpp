@@ -5,9 +5,10 @@
  * @file ui_overlay_printer_image.cpp
  * @brief Implementation of PrinterImageOverlay
  *
- * Displays shipped and custom printer images in a grid layout for selection.
- * Cards are created from the printer_image_card XML component. USB section
- * visibility and status text are driven by subjects for declarative binding.
+ * Displays shipped and custom printer images in a left-list + right-preview layout.
+ * List rows are created from the setting_action_row XML component. The preview panel
+ * on the right is driven by subjects for declarative binding (bind_src, bind_text,
+ * bind_flag_if_eq).
  */
 
 #include "ui_overlay_printer_image.h"
@@ -18,9 +19,9 @@
 #include "ui_nav_manager.h"
 #include "ui_update_queue.h"
 
+#include "prerendered_images.h"
 #include "printer_image_manager.h"
 #include "static_panel_registry.h"
-#include "theme_manager.h"
 #include "usb_manager.h"
 
 #include <spdlog/spdlog.h>
@@ -77,6 +78,13 @@ void PrinterImageOverlay::init_subjects() {
     // USB status text subject
     UI_MANAGED_SUBJECT_STRING(usb_status_subject_, usb_status_buf_, "", "printer_image_usb_status",
                               subjects_);
+
+    // Preview panel subjects
+    UI_MANAGED_SUBJECT_POINTER(preview_src_subject_, preview_src_buf_, "printer_image_preview_src",
+                               subjects_);
+    UI_MANAGED_SUBJECT_STRING(preview_name_subject_, preview_name_buf_, "",
+                              "printer_image_preview_name", subjects_);
+    UI_MANAGED_SUBJECT_INT(has_preview_subject_, 0, "printer_image_has_preview", subjects_);
 
     subjects_initialized_ = true;
     spdlog::debug("[{}] Subjects initialized", get_name());
@@ -138,7 +146,7 @@ void PrinterImageOverlay::show(lv_obj_t* parent_screen) {
     // Register for lifecycle callbacks
     NavigationManager::instance().register_overlay_instance(overlay_root_, this);
 
-    // Push onto navigation stack (on_activate will populate grids)
+    // Push onto navigation stack (on_activate will populate lists)
     ui_nav_push_overlay(overlay_root_);
 }
 
@@ -167,6 +175,19 @@ void PrinterImageOverlay::on_activate() {
     // Highlight the currently active image
     std::string active_id = helix::PrinterImageManager::instance().get_active_image_id();
     update_selection_indicator(active_id);
+
+    // Show preview for current selection
+    if (!active_id.empty()) {
+        std::string display_name = active_id;
+        auto colon_pos = active_id.find(':');
+        if (colon_pos != std::string::npos) {
+            display_name = active_id.substr(colon_pos + 1);
+        }
+        std::string preview_path = get_preview_path_for_id(active_id);
+        update_preview(active_id, display_name, preview_path);
+    } else {
+        update_preview("", "Auto-Detect", "");
+    }
 }
 
 void PrinterImageOverlay::on_deactivate() {
@@ -174,52 +195,31 @@ void PrinterImageOverlay::on_deactivate() {
 }
 
 // ============================================================================
-// CARD CREATION (XML-based)
+// LIST ROW CREATION
 // ============================================================================
 
-lv_obj_t* PrinterImageOverlay::create_card_from_xml(lv_obj_t* parent, const std::string& image_id,
-                                                    const std::string& display_name,
-                                                    const std::string& preview_path,
-                                                    const char* callback_name) {
-    // Only show .bin previews (PNGs are too slow to decode during scroll)
-    bool is_bin = preview_path.size() > 4 && preview_path.substr(preview_path.size() - 4) == ".bin";
-    const char* show_img = (is_bin && !preview_path.empty()) ? "1" : "0";
-
-    const char* attrs[] = {"image_src",          preview_path.c_str(), "label_text",
-                           display_name.c_str(), "show_image",         show_img,
-                           "callback",           callback_name,        nullptr};
-    lv_obj_t* card = static_cast<lv_obj_t*>(lv_xml_create(parent, "printer_image_card", attrs));
-    if (!card) {
-        spdlog::warn("[{}] Failed to create card for {}", get_name(), image_id);
+lv_obj_t* PrinterImageOverlay::create_list_row(lv_obj_t* parent, const std::string& image_id,
+                                               const std::string& display_name,
+                                               const char* callback_name) {
+    const char* attrs[] = {"label_text", display_name.c_str(), "callback", callback_name, nullptr};
+    lv_obj_t* row = static_cast<lv_obj_t*>(lv_xml_create(parent, "printer_image_list_item", attrs));
+    if (!row) {
+        spdlog::warn("[{}] Failed to create list row for {}", get_name(), image_id);
         return nullptr;
     }
 
-    // Toggle image/placeholder visibility based on show_image
-    // (one-time setup since bind_flag_if_eq cannot use prop values as subjects)
-    lv_obj_t* card_image = lv_obj_find_by_name(card, "card_image");
-    lv_obj_t* card_placeholder = lv_obj_find_by_name(card, "card_placeholder_icon");
-    if (is_bin && !preview_path.empty()) {
-        // Show image, hide placeholder
-        if (card_placeholder)
-            lv_obj_add_flag(card_placeholder, LV_OBJ_FLAG_HIDDEN);
-    } else {
-        // Show placeholder, hide image
-        if (card_image)
-            lv_obj_add_flag(card_image, LV_OBJ_FLAG_HIDDEN);
-    }
-
-    // Store image_id in user_data (freed on card delete)
+    // Store image_id in user_data (freed on row delete)
     char* id_copy = strdup(image_id.c_str());
     if (!id_copy) {
         spdlog::error("[{}] Failed to allocate memory for image id", get_name());
-        return card;
+        return row;
     }
-    lv_obj_set_user_data(card, id_copy);
+    lv_obj_set_user_data(row, id_copy);
 
-    // Free strdup'd user_data when LVGL destroys the card
+    // Free strdup'd user_data when LVGL destroys the row
     // (acceptable exception to declarative UI rule for cleanup)
     lv_obj_add_event_cb(
-        card,
+        row,
         [](lv_event_t* e) {
             auto* obj = lv_event_get_current_target_obj(e);
             void* data = lv_obj_get_user_data(obj);
@@ -229,11 +229,47 @@ lv_obj_t* PrinterImageOverlay::create_card_from_xml(lv_obj_t* parent, const std:
         },
         LV_EVENT_DELETE, nullptr);
 
-    return card;
+    return row;
 }
 
 // ============================================================================
-// GRID POPULATION
+// PREVIEW
+// ============================================================================
+
+void PrinterImageOverlay::update_preview(const std::string& /*image_id*/,
+                                         const std::string& display_name,
+                                         const std::string& preview_path) {
+    // Update preview name via subject binding
+    lv_subject_copy_string(&preview_name_subject_, display_name.c_str());
+
+    if (!preview_path.empty()) {
+        // Copy path to buffer and update pointer subject
+        strncpy(preview_src_buf_, preview_path.c_str(), sizeof(preview_src_buf_) - 1);
+        preview_src_buf_[sizeof(preview_src_buf_) - 1] = '\0';
+        lv_subject_set_pointer(&preview_src_subject_, preview_src_buf_);
+        lv_subject_set_int(&has_preview_subject_, 1);
+    } else {
+        lv_subject_set_int(&has_preview_subject_, 0);
+    }
+}
+
+std::string PrinterImageOverlay::get_preview_path_for_id(const std::string& image_id) {
+    if (image_id.rfind("shipped:", 0) == 0) {
+        std::string name = image_id.substr(8);
+        return get_prerendered_printer_path(name, 480);
+    }
+    if (image_id.rfind("custom:", 0) == 0) {
+        auto custom_images = helix::PrinterImageManager::instance().get_custom_images();
+        for (const auto& img : custom_images) {
+            if (img.id == image_id)
+                return img.preview_path;
+        }
+    }
+    return "";
+}
+
+// ============================================================================
+// LIST POPULATION
 // ============================================================================
 
 void PrinterImageOverlay::populate_shipped_images() {
@@ -241,20 +277,19 @@ void PrinterImageOverlay::populate_shipped_images() {
         return;
     }
 
-    lv_obj_t* grid = lv_obj_find_by_name(overlay_root_, "shipped_images_grid");
-    if (!grid) {
-        spdlog::warn("[{}] shipped_images_grid not found", get_name());
+    lv_obj_t* list = lv_obj_find_by_name(overlay_root_, "shipped_images_list");
+    if (!list) {
+        spdlog::warn("[{}] shipped_images_list not found", get_name());
         return;
     }
 
-    lv_obj_clean(grid);
+    lv_obj_clean(list);
 
     auto images = helix::PrinterImageManager::instance().get_shipped_images();
     spdlog::debug("[{}] Populating {} shipped images", get_name(), images.size());
 
     for (const auto& img : images) {
-        create_card_from_xml(grid, img.id, img.display_name, img.preview_path,
-                             "on_printer_image_card_clicked");
+        create_list_row(list, img.id, img.display_name, "on_printer_image_card_clicked");
     }
 }
 
@@ -263,20 +298,19 @@ void PrinterImageOverlay::populate_custom_images() {
         return;
     }
 
-    lv_obj_t* grid = lv_obj_find_by_name(overlay_root_, "custom_images_grid");
-    if (!grid) {
-        spdlog::warn("[{}] custom_images_grid not found", get_name());
+    lv_obj_t* list = lv_obj_find_by_name(overlay_root_, "custom_images_list");
+    if (!list) {
+        spdlog::warn("[{}] custom_images_list not found", get_name());
         return;
     }
 
-    lv_obj_clean(grid);
+    lv_obj_clean(list);
 
     auto images = helix::PrinterImageManager::instance().get_custom_images();
     spdlog::debug("[{}] Populating {} custom images", get_name(), images.size());
 
     for (const auto& img : images) {
-        create_card_from_xml(grid, img.id, img.display_name, img.preview_path,
-                             "on_printer_image_card_clicked");
+        create_list_row(list, img.id, img.display_name, "on_printer_image_card_clicked");
     }
 }
 
@@ -285,29 +319,25 @@ void PrinterImageOverlay::update_selection_indicator(const std::string& active_i
         return;
     }
 
-    lv_color_t highlight_color = theme_manager_get_color("primary_color");
-
-    // Helper lambda to update a grid's card selection styles
-    auto update_grid = [&](const char* grid_name) {
-        lv_obj_t* grid = lv_obj_find_by_name(overlay_root_, grid_name);
-        if (!grid)
+    auto update_list = [&](const char* list_name) {
+        lv_obj_t* list = lv_obj_find_by_name(overlay_root_, list_name);
+        if (!list)
             return;
 
-        uint32_t count = lv_obj_get_child_count(grid);
+        uint32_t count = lv_obj_get_child_count(list);
         for (uint32_t i = 0; i < count; i++) {
-            lv_obj_t* child = lv_obj_get_child(grid, static_cast<int32_t>(i));
+            lv_obj_t* child = lv_obj_get_child(list, static_cast<int32_t>(i));
             auto* id = static_cast<const char*>(lv_obj_get_user_data(child));
             if (id && std::string(id) == active_id) {
-                lv_obj_set_style_border_color(child, highlight_color, LV_PART_MAIN);
-                lv_obj_set_style_border_opa(child, LV_OPA_COVER, LV_PART_MAIN);
+                lv_obj_add_state(child, LV_STATE_CHECKED);
             } else {
-                lv_obj_set_style_border_opa(child, LV_OPA_TRANSP, LV_PART_MAIN);
+                lv_obj_remove_state(child, LV_STATE_CHECKED);
             }
         }
     };
 
-    update_grid("shipped_images_grid");
-    update_grid("custom_images_grid");
+    update_list("shipped_images_list");
+    update_list("custom_images_list");
 }
 
 // ============================================================================
@@ -333,13 +363,13 @@ void PrinterImageOverlay::scan_usb_drives() {
 }
 
 void PrinterImageOverlay::populate_usb_images(const std::string& mount_path) {
-    lv_obj_t* grid = lv_obj_find_by_name(overlay_root_, "usb_images_grid");
-    if (!grid) {
-        spdlog::warn("[{}] usb_images_grid not found", get_name());
+    lv_obj_t* list = lv_obj_find_by_name(overlay_root_, "usb_images_list");
+    if (!list) {
+        spdlog::warn("[{}] usb_images_list not found", get_name());
         return;
     }
 
-    lv_obj_clean(grid);
+    lv_obj_clean(list);
 
     auto image_paths = helix::PrinterImageManager::instance().scan_for_images(mount_path);
     spdlog::debug("[{}] Found {} importable images on USB", get_name(), image_paths.size());
@@ -354,9 +384,9 @@ void PrinterImageOverlay::populate_usb_images(const std::string& mount_path) {
     for (const auto& path : image_paths) {
         std::string filename = std::filesystem::path(path).filename().string();
 
-        // USB cards use a different callback (import behavior vs select)
+        // USB rows use a different callback (import behavior vs select)
         // and store the full path as image_id for the import handler
-        create_card_from_xml(grid, path, filename, "", "on_printer_image_usb_clicked");
+        create_list_row(list, path, filename, "on_printer_image_usb_clicked");
     }
 }
 
@@ -398,6 +428,7 @@ void PrinterImageOverlay::handle_auto_detect() {
     spdlog::info("[{}] Auto-detect selected", get_name());
     helix::PrinterImageManager::instance().set_active_image("");
     update_selection_indicator("");
+    update_preview("", "Auto-Detect", "");
     NOTIFY_INFO("Printer image set to auto-detect");
 }
 
@@ -406,13 +437,16 @@ void PrinterImageOverlay::handle_image_selected(const std::string& image_id) {
     helix::PrinterImageManager::instance().set_active_image(image_id);
     update_selection_indicator(image_id);
 
-    // Extract display name from ID for notification
+    // Extract display name from ID for notification and preview
     std::string display_name = image_id;
     auto colon_pos = image_id.find(':');
     if (colon_pos != std::string::npos) {
         display_name = image_id.substr(colon_pos + 1);
     }
-    NOTIFY_INFO("Printer image: {}", display_name);
+
+    // Update preview panel
+    std::string preview_path = get_preview_path_for_id(image_id);
+    update_preview(image_id, display_name, preview_path);
 }
 
 // ============================================================================
@@ -427,9 +461,9 @@ void PrinterImageOverlay::on_auto_detect(lv_event_t* /*e*/) {
 
 void PrinterImageOverlay::on_image_card_clicked(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[PrinterImageOverlay] on_image_card_clicked");
-    // Get the card root (current_target = obj with the handler = card_root view)
-    auto* card = lv_event_get_current_target_obj(e);
-    auto* id = static_cast<const char*>(lv_obj_get_user_data(card));
+    // Get the row root (current_target = obj with the handler = setting_action_row view)
+    auto* row = lv_event_get_current_target_obj(e);
+    auto* id = static_cast<const char*>(lv_obj_get_user_data(row));
     if (id) {
         get_printer_image_overlay().handle_image_selected(std::string(id));
     }
@@ -438,9 +472,9 @@ void PrinterImageOverlay::on_image_card_clicked(lv_event_t* e) {
 
 void PrinterImageOverlay::on_usb_image_clicked(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[PrinterImageOverlay] on_usb_image_clicked");
-    // Get the card root (current_target = obj with the handler = card_root view)
-    auto* card = lv_event_get_current_target_obj(e);
-    auto* path = static_cast<const char*>(lv_obj_get_user_data(card));
+    // Get the row root (current_target = obj with the handler = setting_action_row view)
+    auto* row = lv_event_get_current_target_obj(e);
+    auto* path = static_cast<const char*>(lv_obj_get_user_data(row));
     if (path) {
         get_printer_image_overlay().handle_usb_import(std::string(path));
     }
