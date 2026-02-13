@@ -39,6 +39,7 @@ static std::atomic<bool> s_shutdown_flag{false};
 
 // Polling interval for Spoolman weight updates (30 seconds)
 static constexpr uint32_t SPOOLMAN_POLL_INTERVAL_MS = 30000;
+static constexpr uint32_t SPOOLMAN_SYNC_REFRESH_MIN_INTERVAL_MS = 5000;
 
 struct AsyncSyncData {
     bool full_sync;
@@ -486,9 +487,14 @@ void AmsState::sync_from_backend() {
                   ams_action_to_string(info.action),
                   path_segment_to_string(backend_->get_filament_segment()));
 
-    // Refresh Spoolman weights now that slot data is available
-    // (this catches initial load and any re-syncs)
-    refresh_spoolman_weights();
+    // Refresh Spoolman weights opportunistically, but throttle to avoid request
+    // storms during rapid tool-change event bursts.
+    uint32_t now_ms = lv_tick_get();
+    if (last_sync_spoolman_refresh_ms_ == 0 ||
+        (now_ms - last_sync_spoolman_refresh_ms_) >= SPOOLMAN_SYNC_REFRESH_MIN_INTERVAL_MS) {
+        last_sync_spoolman_refresh_ms_ = now_ms;
+        refresh_spoolman_weights();
+    }
 }
 
 void AmsState::update_slot(int slot_index) {
