@@ -824,6 +824,34 @@ TEST_CASE("AFC handle_status_update discovers lanes directly from AFC_stepper ke
     REQUIRE(slot1.spoolman_id == 202);
 }
 
+TEST_CASE("AFC partial stepper updates do not shrink lane map",
+          "[ams][afc][discovery][stepper_keys][incremental]") {
+    AmsBackendAfcTestHelper helper;
+
+    nlohmann::json initial;
+    initial["AFC_stepper lane0"] = {{"material", "PLA"}, {"spool_id", 201}, {"prep", true}};
+    initial["AFC_stepper lane1"] = {{"material", "PETG"}, {"spool_id", 202}, {"prep", true}};
+    initial["AFC_stepper lane2"] = {{"material", "ABS"}, {"spool_id", 203}, {"prep", true}};
+    helper.feed_status_update(initial);
+
+    REQUIRE(helper.get_lane_names().size() == 3);
+
+    // Simulate runtime incremental notify_status_update payload that only includes
+    // one changed lane key during a tool-change cycle.
+    nlohmann::json partial;
+    partial["AFC_stepper lane1"] = {{"material", "Nylon"}, {"spool_id", 222}, {"prep", true}};
+    helper.feed_status_update(partial);
+
+    REQUIRE(helper.get_lane_names().size() == 3);
+    REQUIRE(helper.get_lane_names()[0] == "lane0");
+    REQUIRE(helper.get_lane_names()[1] == "lane1");
+    REQUIRE(helper.get_lane_names()[2] == "lane2");
+
+    SlotInfo lane1 = helper.get_slot_info(1);
+    REQUIRE(lane1.spoolman_id == 222);
+    REQUIRE(lane1.material == "Nylon");
+}
+
 TEST_CASE("AFC handle_status_update discovers lanes from AFC_lane keys",
           "[ams][afc][discovery][afc_lane_keys]") {
     AmsBackendAfcTestHelper helper;

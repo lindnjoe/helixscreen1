@@ -452,47 +452,20 @@ void AmsBackendAfc::handle_status_update(const nlohmann::json& notification) {
         }
 
         if (!stepper_lane_names.empty()) {
-            auto lane_index = [](const std::string& name) -> std::optional<int> {
-                static const std::string kPrefix = "lane";
-                if (name.rfind(kPrefix, 0) != 0) {
-                    return std::nullopt;
-                }
-                std::string suffix = name.substr(kPrefix.size());
-                if (suffix.empty() || !std::all_of(suffix.begin(), suffix.end(), [](char c) {
-                        return std::isdigit(static_cast<unsigned char>(c));
-                    })) {
-                    return std::nullopt;
-                }
-                try {
-                    return std::stoi(suffix);
-                } catch (...) {
-                    return std::nullopt;
-                }
-            };
+            sort_and_dedupe_lane_names(stepper_lane_names);
 
-            std::sort(stepper_lane_names.begin(), stepper_lane_names.end(),
-                      [&](const std::string& left, const std::string& right) {
-                          auto left_index = lane_index(left);
-                          auto right_index = lane_index(right);
-                          if (left_index && right_index) {
-                              return *left_index < *right_index;
-                          }
-                          if (left_index) {
-                              return true;
-                          }
-                          if (right_index) {
-                              return false;
-                          }
-                          return left < right;
-                      });
-            stepper_lane_names.erase(
-                std::unique(stepper_lane_names.begin(), stepper_lane_names.end()),
-                stepper_lane_names.end());
+            std::vector<std::string> merged_lane_names = stepper_lane_names;
+            if (lanes_initialized_) {
+                merged_lane_names.insert(merged_lane_names.end(), lane_names_.begin(),
+                                         lane_names_.end());
+                sort_and_dedupe_lane_names(merged_lane_names);
+            }
 
-            if (!lanes_initialized_ || stepper_lane_names != lane_names_) {
-                initialize_lanes(stepper_lane_names);
-                spdlog::debug("[AMS AFC] Lane map synchronized from stepper keys ({} lanes)",
-                              lane_names_.size());
+            if (!lanes_initialized_ || merged_lane_names != lane_names_) {
+                initialize_lanes(merged_lane_names);
+                spdlog::debug(
+                    "[AMS AFC] Lane map synchronized from stepper keys ({} lanes, merged)",
+                    lane_names_.size());
             }
 
             for (const auto& lane_name : stepper_lane_names) {
