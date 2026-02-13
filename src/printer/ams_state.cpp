@@ -517,17 +517,34 @@ void AmsState::on_backend_event(const std::string& event, const std::string& dat
     // and LVGL is not thread-safe
 
     // Helper to safely queue async call using RAII pattern
-    auto queue_sync = [](bool full_sync, int slot_index) {
+    auto queue_sync = [this](bool full_sync, int slot_index) {
+        if (full_sync) {
+            bool expected = false;
+            if (!full_sync_queued_.compare_exchange_strong(expected, true,
+                                                           std::memory_order_acq_rel)) {
+                // A full sync is already queued; coalesce bursty backend events.
+                return;
+            }
+        }
+
         auto sync_data = std::make_unique<AsyncSyncData>(AsyncSyncData{full_sync, slot_index});
-        ui_queue_update<AsyncSyncData>(std::move(sync_data), [](AsyncSyncData* d) {
+        ui_queue_update<AsyncSyncData>(std::move(sync_data), [this](AsyncSyncData* d) {
             // Skip if shutdown is in progress - AmsState singleton may be destroyed
             if (s_shutdown_flag.load(std::memory_order_acquire)) {
+                if (d->full_sync) {
+                    full_sync_queued_.store(false, std::memory_order_release);
+                }
                 return;
             }
 
             if (d->full_sync) {
                 AmsState::instance().sync_from_backend();
+                full_sync_queued_.store(false, std::memory_order_release);
             } else {
+                if (full_sync_queued_.load(std::memory_order_acquire)) {
+                    // A full sync is already queued; skip stale per-slot update.
+                    return;
+                }
                 AmsState::instance().update_slot(d->slot_index);
             }
         });
