@@ -1586,15 +1586,16 @@ AmsError AmsBackendAfc::load_filament(int slot_index) {
         }
     }
 
-    // Send AFC_LOAD LANE={name} command
+    // AFC/MMU load command format: CHANGE_TOOL LANE={name}
     std::ostringstream cmd;
-    cmd << "AFC_LOAD LANE=" << lane_name;
+    cmd << "CHANGE_TOOL LANE=" << lane_name;
 
     spdlog::info("[AMS AFC] Loading from lane {} (slot {})", lane_name, slot_index);
     return execute_gcode(cmd.str());
 }
 
 AmsError AmsBackendAfc::unload_filament() {
+    std::string lane_name;
     {
         std::lock_guard<std::recursive_mutex> lock(mutex_);
 
@@ -1607,10 +1608,26 @@ AmsError AmsBackendAfc::unload_filament() {
             return AmsError(AmsResult::WRONG_STATE, "No filament loaded", "No filament to unload",
                             "Load filament first");
         }
+
+        if (system_info_.current_slot >= 0) {
+            lane_name = get_lane_name(system_info_.current_slot);
+        }
+
+        if (lane_name.empty() && !current_lane_name_.empty()) {
+            lane_name = current_lane_name_;
+        }
+
+        if (lane_name.empty()) {
+            return AmsError(AmsResult::WRONG_STATE, "No active lane for unload",
+                            "Cannot determine active lane", "Select/load a lane and try again");
+        }
     }
 
-    spdlog::info("[AMS AFC] Unloading filament");
-    return execute_gcode("AFC_UNLOAD");
+    std::ostringstream cmd;
+    cmd << "TOOL_UNLOAD LANE=" << lane_name;
+
+    spdlog::info("[AMS AFC] Unloading filament from lane {}", lane_name);
+    return execute_gcode(cmd.str());
 }
 
 AmsError AmsBackendAfc::select_slot(int slot_index) {

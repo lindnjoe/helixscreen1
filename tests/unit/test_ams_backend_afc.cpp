@@ -1501,6 +1501,44 @@ TEST_CASE("AFC bowden slider max accommodates real bowden length",
     }
 }
 
+TEST_CASE("AFC load_filament uses CHANGE_TOOL lane command", "[ams][afc][commands][load]") {
+    AmsBackendAfcTestHelper helper;
+    helper.initialize_test_lanes_with_slots(4);
+    helper.set_running(true);
+
+    auto result = helper.load_filament(1);
+
+    REQUIRE(result.success());
+    REQUIRE(helper.has_gcode("CHANGE_TOOL LANE=lane2"));
+}
+
+TEST_CASE("AFC unload_filament uses TOOL_UNLOAD lane command", "[ams][afc][commands][unload]") {
+    AmsBackendAfcTestHelper helper;
+    helper.initialize_test_lanes_with_slots(4);
+    helper.set_running(true);
+    helper.set_filament_loaded(true);
+    helper.set_current_slot(2);
+
+    auto result = helper.unload_filament();
+
+    REQUIRE(result.success());
+    REQUIRE(helper.has_gcode("TOOL_UNLOAD LANE=lane3"));
+}
+
+TEST_CASE("AFC unload_filament falls back to current lane name", "[ams][afc][commands][unload]") {
+    AmsBackendAfcTestHelper helper;
+    helper.initialize_test_lanes_with_slots(4);
+    helper.set_running(true);
+    helper.set_filament_loaded(true);
+    helper.set_current_slot(-1);
+    helper.set_current_lane("lane4");
+
+    auto result = helper.unload_filament();
+
+    REQUIRE(result.success());
+    REQUIRE(helper.has_gcode("TOOL_UNLOAD LANE=lane4"));
+}
+
 // ============================================================================
 // Phase 3: New Device Actions & Commands Tests
 // ============================================================================
