@@ -39,6 +39,7 @@ static std::atomic<bool> s_shutdown_flag{false};
 
 // Polling interval for Spoolman weight updates (30 seconds)
 static constexpr uint32_t SPOOLMAN_POLL_INTERVAL_MS = 30000;
+static constexpr uint32_t SPOOLMAN_SYNC_REFRESH_MIN_INTERVAL_MS = 5000;
 
 struct AsyncSyncData {
     bool full_sync;
@@ -486,9 +487,14 @@ void AmsState::sync_from_backend() {
                   ams_action_to_string(info.action),
                   path_segment_to_string(backend_->get_filament_segment()));
 
-    // Refresh Spoolman weights now that slot data is available
-    // (this catches initial load and any re-syncs)
-    refresh_spoolman_weights();
+    // Refresh Spoolman weights opportunistically, but throttle to avoid request
+    // storms during rapid tool-change event bursts.
+    uint32_t now_ms = lv_tick_get();
+    if (last_sync_spoolman_refresh_ms_ == 0 ||
+        (now_ms - last_sync_spoolman_refresh_ms_) >= SPOOLMAN_SYNC_REFRESH_MIN_INTERVAL_MS) {
+        last_sync_spoolman_refresh_ms_ = now_ms;
+        refresh_spoolman_weights();
+    }
 }
 
 void AmsState::update_slot(int slot_index) {
@@ -517,17 +523,34 @@ void AmsState::on_backend_event(const std::string& event, const std::string& dat
     // and LVGL is not thread-safe
 
     // Helper to safely queue async call using RAII pattern
-    auto queue_sync = [](bool full_sync, int slot_index) {
+    auto queue_sync = [this](bool full_sync, int slot_index) {
+        if (full_sync) {
+            bool expected = false;
+            if (!full_sync_queued_.compare_exchange_strong(expected, true,
+                                                           std::memory_order_acq_rel)) {
+                // A full sync is already queued; coalesce bursty backend events.
+                return;
+            }
+        }
+
         auto sync_data = std::make_unique<AsyncSyncData>(AsyncSyncData{full_sync, slot_index});
-        ui_queue_update<AsyncSyncData>(std::move(sync_data), [](AsyncSyncData* d) {
+        ui_queue_update<AsyncSyncData>(std::move(sync_data), [this](AsyncSyncData* d) {
             // Skip if shutdown is in progress - AmsState singleton may be destroyed
             if (s_shutdown_flag.load(std::memory_order_acquire)) {
+                if (d->full_sync) {
+                    full_sync_queued_.store(false, std::memory_order_release);
+                }
                 return;
             }
 
             if (d->full_sync) {
                 AmsState::instance().sync_from_backend();
+                full_sync_queued_.store(false, std::memory_order_release);
             } else {
+                if (full_sync_queued_.load(std::memory_order_acquire)) {
+                    // A full sync is already queued; skip stale per-slot update.
+                    return;
+                }
                 AmsState::instance().update_slot(d->slot_index);
             }
         });

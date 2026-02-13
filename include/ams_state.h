@@ -10,6 +10,7 @@
 #include "lvgl/lvgl.h"
 #include "subject_managed_panel.h"
 
+#include <atomic>
 #include <memory>
 #include <mutex>
 
@@ -645,6 +646,11 @@ class AmsState {
     // Spoolman weight polling
     lv_timer_t* spoolman_poll_timer_ = nullptr;
     int spoolman_poll_refcount_ = 0;
+    uint32_t last_sync_spoolman_refresh_ms_ = 0;
+
+    // Event coalescing: avoid queuing unbounded full-sync jobs when AFC/OpenAMS
+    // emits rapid incremental updates during tool-change sequences.
+    std::atomic<bool> full_sync_queued_{false};
 
     // Subject manager for automatic cleanup
     SubjectManager subjects_;
