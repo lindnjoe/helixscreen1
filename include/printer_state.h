@@ -1618,6 +1618,7 @@ class PrinterState {
     // lv_async_call to defer to these internal methods, ensuring thread safety.
 
     friend class PrinterStateTestAccess;
+    friend class PrinterTemperatureStateTestAccess;
     friend void async_klipper_version_callback(void* user_data);
     friend void async_moonraker_version_callback(void* user_data);
     friend void async_klippy_state_callback(void* user_data);
