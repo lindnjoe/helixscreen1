@@ -930,3 +930,21 @@ TEST_CASE("PrinterDiscovery detects screws_tilt_adjust from config when missing 
     hw.parse_config_keys(config);
     REQUIRE(hw.has_screws_tilt());
 }
+TEST_CASE("PrinterDiscovery AFC: discovers lanes from AFC_lane objects",
+          "[discovery][afc][openams]") {
+    using nlohmann::json;
+    PrinterDiscovery discovery;
+
+    json objects = {
+        "AFC",           "AFC_OpenAMS AMS_1", "AFC_lane lane4", "AFC_lane lane5", "AFC_lane lane6",
+        "AFC_lane lane7"};
+
+    discovery.parse_objects(objects);
+
+    REQUIRE(discovery.has_mmu());
+    REQUIRE(discovery.get_mmu_type() == AmsType::AFC);
+    const auto& lanes = discovery.get_afc_lane_names();
+    REQUIRE(lanes.size() == 4);
+    REQUIRE(lanes[0] == "lane4");
+    REQUIRE(lanes[3] == "lane7");
+}

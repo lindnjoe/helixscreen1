@@ -205,10 +205,12 @@ class PrinterDiscovery {
                 }
             }
             // AFC lane discovery
-            else if (name.rfind("AFC_stepper ", 0) == 0) {
+            else if (name.rfind("AFC_stepper ", 0) == 0 || name.rfind("AFC_lane ", 0) == 0) {
                 has_mmu_ = true;
                 mmu_type_ = AmsType::AFC;
-                std::string lane_name = name.substr(12); // Remove "AFC_stepper " prefix
+                std::string lane_name = name.rfind("AFC_stepper ", 0) == 0
+                                            ? name.substr(12) // Remove "AFC_stepper " prefix
+                                            : name.substr(9); // Remove "AFC_lane " prefix
                 if (!lane_name.empty()) {
                     afc_lane_names_.push_back(lane_name);
                 }

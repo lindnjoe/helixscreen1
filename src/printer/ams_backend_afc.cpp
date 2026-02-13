@@ -389,15 +389,22 @@ void AmsBackendAfc::handle_status_update(const nlohmann::json& notification) {
             state_changed = true;
         }
 
-        // Parse AFC_stepper lane objects for sensor states.
+        // Parse AFC_stepper/AFC_lane lane objects for sensor states.
         // Build lane list directly from notification keys so we can handle lanes
         // not present in initial discovery (e.g., OpenAMS units that appear only
         // in runtime AFC object updates).
         std::vector<std::string> stepper_lane_names;
         for (auto it = params.begin(); it != params.end(); ++it) {
             static const std::string kStepperPrefix = "AFC_stepper ";
-            if (it.key().rfind(kStepperPrefix, 0) == 0 && it.value().is_object()) {
+            static const std::string kLanePrefix = "AFC_lane ";
+            if (!it.value().is_object()) {
+                continue;
+            }
+
+            if (it.key().rfind(kStepperPrefix, 0) == 0) {
                 stepper_lane_names.push_back(it.key().substr(kStepperPrefix.size()));
+            } else if (it.key().rfind(kLanePrefix, 0) == 0) {
+                stepper_lane_names.push_back(it.key().substr(kLanePrefix.size()));
             }
         }
 
@@ -446,9 +453,18 @@ void AmsBackendAfc::handle_status_update(const nlohmann::json& notification) {
             }
 
             for (const auto& lane_name : stepper_lane_names) {
-                std::string key = "AFC_stepper " + lane_name;
-                parse_afc_stepper(lane_name, params[key]);
-                state_changed = true;
+                std::string stepper_key = "AFC_stepper " + lane_name;
+                if (params.contains(stepper_key) && params[stepper_key].is_object()) {
+                    parse_afc_stepper(lane_name, params[stepper_key]);
+                    state_changed = true;
+                    continue;
+                }
+
+                std::string lane_key = "AFC_lane " + lane_name;
+                if (params.contains(lane_key) && params[lane_key].is_object()) {
+                    parse_afc_stepper(lane_name, params[lane_key]);
+                    state_changed = true;
+                }
             }
         }
 
@@ -1108,10 +1124,13 @@ void AmsBackendAfc::query_initial_state() {
     // Add main AFC object
     objects_to_query["AFC"] = nullptr;
 
-    // Add AFC_stepper objects for each lane
+    // Add AFC_stepper/AFC_lane objects for each lane
     for (const auto& lane_name : lane_names_) {
-        std::string key = "AFC_stepper " + lane_name;
-        objects_to_query[key] = nullptr;
+        std::string stepper_key = "AFC_stepper " + lane_name;
+        objects_to_query[stepper_key] = nullptr;
+
+        std::string lane_key = "AFC_lane " + lane_name;
+        objects_to_query[lane_key] = nullptr;
     }
 
     // Add AFC_hub objects

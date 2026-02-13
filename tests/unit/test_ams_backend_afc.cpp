@@ -778,6 +778,25 @@ TEST_CASE("AFC handle_status_update discovers lanes directly from AFC_stepper ke
     REQUIRE(slot1.spoolman_id == 202);
 }
 
+TEST_CASE("AFC handle_status_update discovers lanes from AFC_lane keys",
+          "[ams][afc][discovery][afc_lane_keys]") {
+    AmsBackendAfcTestHelper helper;
+
+    nlohmann::json params;
+    params["AFC_lane lane4"] = {{"material", "PLA"}, {"spool_id", 301}, {"prep", true}};
+    params["AFC_lane lane5"] = {{"material", "ABS"}, {"spool_id", 302}, {"prep", true}};
+    helper.feed_status_update(params);
+
+    REQUIRE(helper.get_lane_names().size() == 2);
+    REQUIRE(helper.get_lane_names()[0] == "lane4");
+    REQUIRE(helper.get_lane_names()[1] == "lane5");
+
+    SlotInfo slot0 = helper.get_slot_info(0);
+    SlotInfo slot1 = helper.get_slot_info(1);
+    REQUIRE(slot0.spoolman_id == 301);
+    REQUIRE(slot1.spoolman_id == 302);
+}
+
 TEST_CASE("AFC segment: works with discovered lanes", "[ams][afc][discovery][segment]") {
     AmsBackendAfcTestHelper helper;
 
