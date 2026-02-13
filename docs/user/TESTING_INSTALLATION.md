@@ -284,6 +284,7 @@ ps --no-headers -o comm 1
    VERSION=vX.Y.Z
    wget "https://github.com/prestonbrown/helixscreen/releases/download/${VERSION}/helixscreen-ad5m-${VERSION}.tar.gz"
    wget https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install.sh
+   # Windows users: use WSL, WinSCP (SCP protocol), or PuTTY's pscp instead of scp -O
    scp -O helixscreen-ad5m-${VERSION}.tar.gz install.sh root@<printer-ip>:/data/
    ```
 
@@ -344,6 +345,7 @@ ps --no-headers -o comm 1
    VERSION=vX.Y.Z
    wget "https://github.com/prestonbrown/helixscreen/releases/download/${VERSION}/helixscreen-ad5m-${VERSION}.tar.gz"
    wget https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install.sh
+   # Windows users: use WSL, WinSCP (SCP protocol), or PuTTY's pscp instead of scp -O
    scp -O helixscreen-ad5m-${VERSION}.tar.gz install.sh root@<printer-ip>:/data/
    ```
 
@@ -405,6 +407,7 @@ ps --no-headers -o comm 1
    VERSION=vX.Y.Z
    wget "https://github.com/prestonbrown/helixscreen/releases/download/${VERSION}/helixscreen-ad5m-${VERSION}.tar.gz"
    wget https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/install.sh
+   # Windows users: use WSL, WinSCP (SCP protocol), or PuTTY's pscp instead of scp -O
    scp -O helixscreen-ad5m-${VERSION}.tar.gz install.sh root@<printer-ip>:/mnt/data/
    ```
 

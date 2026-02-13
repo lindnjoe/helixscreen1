@@ -138,6 +138,7 @@ show_manual_install_instructions() {
     if [ "$platform" = "ad5m" ]; then
         # AD5M /tmp is a tiny tmpfs (~54MB), use /data/ instead
         printf '%b\n' "     ${CYAN}scp -O helixscreen-${platform}.tar.gz root@<this-ip>:/data/${NC}"
+        printf '%b\n' "     ${YELLOW}Windows: use WSL, WinSCP (SCP mode), or PuTTY pscp${NC}"
         printf '\n'
         printf '%b\n' "  4. Run the installer with the local file:"
         printf '%b\n' "     ${CYAN}sh /data/install.sh --local /data/helixscreen-${platform}.tar.gz${NC}"

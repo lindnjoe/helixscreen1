@@ -16,6 +16,7 @@ curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/script
 # On your computer (replace vX.Y.Z with actual version):
 VERSION=vX.Y.Z  # Check latest at https://github.com/prestonbrown/helixscreen/releases/latest
 wget "https://github.com/prestonbrown/helixscreen/releases/download/${VERSION}/helixscreen-ad5m-${VERSION}.tar.gz"
+# Windows users: use WSL, WinSCP (SCP protocol), or PuTTY's pscp instead of scp -O
 scp -O helixscreen-ad5m-${VERSION}.tar.gz root@<printer-ip>:/data/
 
 # On the printer (use the bundled install.sh):

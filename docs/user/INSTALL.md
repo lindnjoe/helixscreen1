@@ -245,6 +245,13 @@ wget https://raw.githubusercontent.com/prestonbrown/helixscreen/main/scripts/ins
 scp -O helixscreen-ad5m-vX.Y.Z.tar.gz install.sh root@<printer-ip>:/data/
 ```
 
+> **Windows users:** The `-O` flag is not supported by Windows 11's built-in OpenSSH.
+> Use one of these alternatives instead:
+> - **WSL** (recommended) — open a WSL terminal and run all commands as shown (Linux tools work natively)
+> - **[WinSCP](https://winscp.net/)** (free, GUI) — set the protocol to **SCP**, then drag and drop files to `/data/` on the printer
+> - **[PuTTY pscp](https://www.chiark.greenend.org.uk/~sgtatham/putty/latest.html)** (free, command-line):
+>   `pscp helixscreen-ad5m-vX.Y.Z.tar.gz install.sh root@<printer-ip>:/data/`
+
 **Step 3: SSH into the printer and run the installer**
 
 ```bash
@@ -283,6 +290,7 @@ wget "https://github.com/prestonbrown/helixscreen/releases/download/${VERSION}/h
 
 # Copy to printer (AD5M requires scp -O for legacy protocol)
 # Note: Use /data/ not /tmp/ - AD5M's /tmp is a tiny tmpfs (~54MB)
+# Windows users: use WinSCP (SCP protocol) or PuTTY's pscp instead — see note above
 scp -O helixscreen-ad5m-${VERSION}.tar.gz root@<printer-ip>:/data/
 
 # SSH into printer
@@ -320,6 +328,7 @@ VERSION=vX.Y.Z
 wget "https://github.com/prestonbrown/helixscreen/releases/download/${VERSION}/helixscreen-ad5m-${VERSION}.tar.gz"
 
 # Copy to printer's data partition (NOT /tmp - it's too small!)
+# Windows users: use WinSCP (SCP protocol) or PuTTY's pscp instead — see note above
 scp -O helixscreen-ad5m-${VERSION}.tar.gz root@<printer-ip>:/mnt/data/
 
 # SSH into printer
@@ -617,6 +626,7 @@ curl -sSL https://raw.githubusercontent.com/prestonbrown/helixscreen/main/script
 # On your computer (replace vX.Y.Z with actual version):
 VERSION=vX.Y.Z  # Check latest at https://github.com/prestonbrown/helixscreen/releases/latest
 wget "https://github.com/prestonbrown/helixscreen/releases/download/${VERSION}/helixscreen-ad5m-${VERSION}.tar.gz"
+# Windows users: use WSL, WinSCP (SCP protocol), or PuTTY's pscp instead of scp -O
 scp -O helixscreen-ad5m-${VERSION}.tar.gz root@<printer-ip>:/data/
 
 # On the printer (use the bundled install.sh - no need to download it again):
