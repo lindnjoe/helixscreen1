@@ -16,7 +16,7 @@ namespace helix::led {
 
 /// Describes what LED action to take for a given printer state
 struct LedStateAction {
-    std::string action_type; // "color", "effect", "wled_preset", "macro", "off"
+    std::string action_type; // "color", "brightness", "effect", "wled_preset", "macro", "off"
     uint32_t color = 0xFFFFFF;
     int brightness = 100;
     std::string effect_name; // For "effect" action

@@ -195,66 +195,6 @@ void LedController::discover_from_hardware(const helix::PrinterDiscovery& hardwa
                      macro_.macros().size());
     }
 
-    // If no configured macros exist but we discovered candidates, create defaults
-    if (configured_macros_.empty() && !discovered_led_macros_.empty()) {
-        std::string on_macro, off_macro;
-        std::vector<std::pair<std::string, std::string>> remaining_presets;
-
-        for (const auto& name : discovered_led_macros_) {
-            if (on_macro.empty() && (name.find("_ON") != std::string::npos ||
-                                     name.find("LIGHTS_ON") != std::string::npos)) {
-                on_macro = name;
-            } else if (off_macro.empty() && (name.find("_OFF") != std::string::npos ||
-                                             name.find("LIGHTS_OFF") != std::string::npos)) {
-                off_macro = name;
-            } else if (name.find("TOGGLE") != std::string::npos) {
-                // Skip toggles that pair with ON/OFF
-            } else {
-                // Title-case the display name
-                std::string display = name;
-                std::replace(display.begin(), display.end(), '_', ' ');
-                bool cap = true;
-                for (auto& c : display) {
-                    if (c == ' ') {
-                        cap = true;
-                    } else if (cap) {
-                        c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
-                        cap = false;
-                    } else {
-                        c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-                    }
-                }
-                remaining_presets.emplace_back(display, name);
-            }
-        }
-
-        // Create ON/OFF device if pair found
-        if (!on_macro.empty() && !off_macro.empty()) {
-            LedMacroInfo lights;
-            lights.display_name = "Lights";
-            lights.type = MacroLedType::ON_OFF;
-            lights.on_macro = on_macro;
-            lights.off_macro = off_macro;
-            configured_macros_.push_back(lights);
-            macro_.add_macro(lights);
-        }
-
-        // Create preset device if remaining macros exist
-        if (!remaining_presets.empty()) {
-            LedMacroInfo preset_device;
-            preset_device.display_name = "LED Modes";
-            preset_device.type = MacroLedType::PRESET;
-            preset_device.presets = remaining_presets;
-            configured_macros_.push_back(preset_device);
-            macro_.add_macro(preset_device);
-        }
-
-        if (!configured_macros_.empty()) {
-            spdlog::info("[LedController] Auto-created {} macro device(s) from discovered macros",
-                         configured_macros_.size());
-        }
-    }
-
     // Auto-select all native strips if nothing is selected yet
     // This ensures LEDs work out-of-the-box on first run (mock or real)
     if (selected_strips_.empty() && native_.is_available()) {

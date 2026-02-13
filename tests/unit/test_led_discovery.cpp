@@ -89,13 +89,6 @@ TEST_CASE("LedController discover_from_hardware with effects and macros", "[led]
     auto& ctrl = helix::led::LedController::instance();
     ctrl.deinit();
 
-    // Clear any macro_devices from previous tests so auto-creation kicks in
-    auto* cfg = Config::get_instance();
-    if (cfg) {
-        cfg->set("/printer/leds/macro_devices", nlohmann::json::array());
-        cfg->save();
-    }
-
     ctrl.init(nullptr, nullptr);
     ctrl.discover_from_hardware(discovery);
 
@@ -110,39 +103,18 @@ TEST_CASE("LedController discover_from_hardware with effects and macros", "[led]
     REQUIRE(ctrl.effects().effects()[0].icon_hint == "air");
     REQUIRE(ctrl.effects().effects()[1].display_name == "Fire Comet");
 
-    // Discovered macros stored as candidates
+    // Discovered macros stored as candidates (for UI dropdown)
     REQUIRE(ctrl.discovered_macros().size() == 3);
     REQUIRE(std::find(ctrl.discovered_macros().begin(), ctrl.discovered_macros().end(),
                       "LIGHTS_ON") != ctrl.discovered_macros().end());
 
-    // Auto-created macro devices from candidates (no config loaded)
-    REQUIRE(ctrl.macro().is_available());
-    // Should have auto-created "Lights" (ON_OFF) and "LED Modes" (PRESET: LED_PARTY)
-    REQUIRE(ctrl.macro().macros().size() == 2);
+    // No auto-creation of macro devices — macros are user-configured only
+    REQUIRE(ctrl.macro().macros().size() == 0);
+    REQUIRE(ctrl.macro().is_available() == false);
 
-    // Verify auto-created devices
-    const auto& macros = ctrl.macro().macros();
-    bool found_lights = false, found_modes = false;
-    for (const auto& m : macros) {
-        if (m.display_name == "Lights") {
-            found_lights = true;
-            REQUIRE(m.type == helix::led::MacroLedType::ON_OFF);
-            REQUIRE(m.on_macro == "LIGHTS_ON");
-            REQUIRE(m.off_macro == "LIGHTS_OFF");
-        }
-        if (m.display_name == "LED Modes") {
-            found_modes = true;
-            REQUIRE(m.type == helix::led::MacroLedType::PRESET);
-            REQUIRE(m.presets.size() == 1);
-            REQUIRE(m.presets[0].second == "LED_PARTY");
-        }
-    }
-    REQUIRE(found_lights);
-    REQUIRE(found_modes);
-
-    // All three backends available
+    // Only native + effects backends available (no macro backend)
     auto backends = ctrl.available_backends();
-    REQUIRE(backends.size() == 3);
+    REQUIRE(backends.size() == 2);
 
     ctrl.deinit();
 }

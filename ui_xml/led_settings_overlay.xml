@@ -36,22 +36,33 @@
                           label="Automatic LED Control" label_tag="Automatic LED Control" icon="tune_variant"
                           description="Change LED color based on printer state"
                           description_tag="Change LED color based on printer state" callback="on_auto_state_changed"/>
+      <!-- Auto-state mapping rows (populated dynamically in C++) -->
+      <lv_obj name="auto_state_rows_container"
+              width="100%" height="content" flex_flow="column"
+              style_pad_gap="0" style_bg_opa="0" style_border_width="0"
+              style_pad_left="0" style_pad_right="0" style_pad_top="#space_sm" style_pad_bottom="0"
+              scrollable="false">
+        <bind_flag_if_eq subject="led_auto_state_enabled" flag="hidden" ref_value="0"/>
+      </lv_obj>
       <!-- ================================================================== -->
       <!-- MACRO DEVICES SECTION -->
       <!-- ================================================================== -->
-      <setting_section_header title="MACRO DEVICES" title_tag="MACRO DEVICES" icon="code_braces"/>
+      <setting_section_header title="MACRO DEVICES" title_tag="MACRO DEVICES" icon="code_braces"
+                               action_button_text="Add" action_button_text_tag="Add"
+                               action_button_icon="plus" action_button_callback="on_add_macro_device"
+                               hide_action_button="false" hide_action_button_icon="false"/>
       <!-- Macro device cards are populated dynamically in C++ -->
       <lv_obj name="macro_devices_container"
               width="100%" height="content" flex_flow="column" style_pad_gap="#space_sm" style_bg_opa="0"
               style_border_width="0" style_pad_all="0" scrollable="false"/>
-      <!-- Info note about auto-detection -->
+      <!-- Info note about macro devices -->
       <lv_obj width="100%"
               height="content" scrollable="false" style_pad_left="#space_lg" style_pad_right="#space_lg"
               style_pad_top="#space_md" style_pad_bottom="#space_lg" flex_flow="row" style_flex_cross_place="center"
               style_pad_gap="#space_sm" style_bg_opa="0" style_border_width="0">
         <icon src="info" size="xs" variant="secondary"/>
-        <text_small text="Macro devices are auto-detected from your printer macros"
-                    translation_tag="Macro devices are auto-detected from your printer macros"/>
+        <text_small text="Assign Klipper macros to control LEDs via on/off, toggle, or presets"
+                    translation_tag="Assign Klipper macros to control LEDs via on/off, toggle, or presets"/>
       </lv_obj>
     </lv_obj>
   </view>

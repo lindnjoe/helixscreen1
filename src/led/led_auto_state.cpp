@@ -160,7 +160,25 @@ void LedAutoState::apply_action(const LedStateAction& action) {
         double b = (action.color & 0xFF) / 255.0;
         double scale = action.brightness / 100.0;
         for (const auto& strip : ctrl.selected_strips()) {
-            ctrl.native().set_color(strip, r * scale, g * scale, b * scale, 0.0);
+            // Check if this strip supports color
+            bool strip_supports_color = false;
+            for (const auto& s : ctrl.native().strips()) {
+                if (s.id == strip) {
+                    strip_supports_color = s.supports_color;
+                    break;
+                }
+            }
+            if (strip_supports_color) {
+                ctrl.native().set_color(strip, r * scale, g * scale, b * scale, 0.0);
+            } else {
+                // Non-color LED: fall back to brightness-only (white intensity)
+                ctrl.native().set_color(strip, scale, scale, scale, 0.0);
+            }
+        }
+    } else if (action.action_type == "brightness") {
+        double scale = action.brightness / 100.0;
+        for (const auto& strip : ctrl.selected_strips()) {
+            ctrl.native().set_color(strip, scale, scale, scale, 0.0);
         }
     } else if (action.action_type == "effect") {
         ctrl.effects().activate_effect(action.effect_name);

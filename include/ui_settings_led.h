@@ -19,8 +19,10 @@
 
 #pragma once
 
+#include "led/led_auto_state.h"
 #include "lvgl/lvgl.h"
 #include "overlay_base.h"
+#include "subject_managed_panel.h"
 
 #include <set>
 #include <string>
@@ -79,6 +81,10 @@ class LedSettingsOverlay : public OverlayBase {
 
     void handle_led_on_at_start_changed(bool enabled);
     void handle_auto_state_changed(bool enabled);
+    void handle_add_macro_device();
+    void handle_edit_macro_device(int index);
+    void handle_delete_macro_device(int index);
+    void handle_save_macro_device(int index);
 
   private:
     //
@@ -88,12 +94,34 @@ class LedSettingsOverlay : public OverlayBase {
     void init_led_on_at_start_toggle();
     void init_auto_state_toggle();
     void populate_macro_devices();
+    void rebuild_macro_edit_controls(lv_obj_t* container, int index);
     void populate_led_chips();
     void handle_led_chip_clicked(const std::string& led_name);
+
+    // Auto-state mapping editor
+    void populate_auto_state_rows();
+    void toggle_state_row(const std::string& state_key);
+    void rebuild_contextual_controls(const std::string& state_key, lv_obj_t* container);
+    void update_state_row_summary(const std::string& state_key);
+    void handle_action_type_changed(const std::string& state_key, int dropdown_index);
+    void handle_brightness_changed(const std::string& state_key, int value);
+    void handle_color_selected(const std::string& state_key, uint32_t color);
+    void handle_effect_selected(const std::string& state_key, const std::string& name);
+    void handle_wled_preset_selected(const std::string& state_key, int preset_id);
+    void handle_macro_selected(const std::string& state_key, const std::string& gcode);
+    void save_and_evaluate(const std::string& state_key);
+    static std::string action_summary(const helix::led::LedStateAction& action);
 
     // LED chip selection state
     std::vector<std::string> discovered_leds_;
     std::set<std::string> selected_leds_;
+
+    // Auto-state editor state
+    SubjectManager subjects_;
+    lv_subject_t auto_state_enabled_subject_{};
+    std::string expanded_state_key_;               // Empty = none expanded
+    std::vector<std::string> action_type_options_; // Maps dropdown index to action type string
+    int editing_macro_index_ = -1;                 // -1 = no macro device being edited
 
     //
     // === Static Callbacks ===
@@ -101,6 +129,7 @@ class LedSettingsOverlay : public OverlayBase {
 
     static void on_led_on_at_start_changed(lv_event_t* e);
     static void on_auto_state_changed(lv_event_t* e);
+    static void on_add_macro_device(lv_event_t* e);
 };
 
 /**
