@@ -992,7 +992,7 @@ void AmsBackendAfc::detect_afc_version() {
             }
 
             // Fallback for AFC deployments without afc-install namespace.
-            query_unit_snapshot();
+            query_lane_data();
         });
 }
 
@@ -1091,25 +1091,120 @@ void AmsBackendAfc::query_lane_data() {
         return;
     }
 
-    // Query Moonraker database for AFC lane_data
-    // Method: server.database.get_item
-    // Params: { "namespace": "AFC", "key": "lane_data" }
-    nlohmann::json params = {{"namespace", "AFC"}, {"key", "lane_data"}};
+    // Query Moonraker database for lane metadata.
+    // Newer/active AFC plugins write lanes to namespace "lane_data" with lane
+    // names as keys. Older deployments may keep it at namespace "AFC", key
+    // "lane_data".
+    nlohmann::json primary_params = {{"namespace", "lane_data"}};
+
+    auto parse_and_emit = [this](const nlohmann::json& response, const char* source) {
+        if (!(response.contains("value") && response["value"].is_object())) {
+            return false;
+        }
+
+        {
+            std::lock_guard<std::recursive_mutex> lock(mutex_);
+            parse_lane_data(response["value"]);
+        }
+
+        spdlog::debug("[AMS AFC] Parsed lane metadata from {}", source);
+        emit_event(EVENT_STATE_CHANGED);
+        return true;
+    };
+
+    client_->send_jsonrpc(
+        "server.database.get_item", primary_params,
+        [this, parse_and_emit](const nlohmann::json& response) {
+            if (parse_and_emit(response, "namespace lane_data")) {
+                return;
+            }
+
+            // Primary query returned no usable data; try legacy AFC key.
+            nlohmann::json legacy_params = {{"namespace", "AFC"}, {"key", "lane_data"}};
+            client_->send_jsonrpc(
+                "server.database.get_item", legacy_params,
+                [parse_and_emit](const nlohmann::json& legacy_response) {
+                    parse_and_emit(legacy_response, "AFC/lane_data");
+                },
+                [this](const MoonrakerError& legacy_err) {
+                    spdlog::warn("[AMS AFC] Failed legacy lane_data query: {}", legacy_err.message);
+                    query_unit_snapshot();
+                });
+        },
+        [this](const MoonrakerError& err) {
+            spdlog::warn("[AMS AFC] Failed lane_data namespace query: {}", err.message);
+
+            // Fallback to legacy AFC key layout.
+            nlohmann::json legacy_params = {{"namespace", "AFC"}, {"key", "lane_data"}};
+            client_->send_jsonrpc(
+                "server.database.get_item", legacy_params,
+                [this, parse_and_emit](const nlohmann::json& legacy_response) {
+                    if (!parse_and_emit(legacy_response, "AFC/lane_data")) {
+                        query_unit_snapshot();
+                    }
+                },
+                [this](const MoonrakerError& legacy_err) {
+                    spdlog::warn("[AMS AFC] Failed legacy lane_data query: {}", legacy_err.message);
+                    query_unit_snapshot();
+                });
+        });
+}
+
+void AmsBackendAfc::query_unit_snapshot() {
+    if (!client_) {
+        spdlog::warn("[AMS AFC] Cannot query AFC.var.unit: client is null");
+        return;
+    }
+
+    auto parse_snapshot = [this](const nlohmann::json& response, const char* source) {
+        if (!(response.contains("value") && response["value"].is_object())) {
+            return false;
+        }
+
+        {
+            std::lock_guard<std::recursive_mutex> lock(mutex_);
+            parse_afc_state(response["value"]);
+        }
+
+        spdlog::debug("[AMS AFC] Parsed lane metadata from {}", source);
+        emit_event(EVENT_STATE_CHANGED);
+        return true;
+    };
+
+    nlohmann::json params = {{"namespace", "AFC"}, {"key", "AFC.var.unit"}};
 
     client_->send_jsonrpc(
         "server.database.get_item", params,
-        [this](const nlohmann::json& response) {
-            if (response.contains("value") && response["value"].is_object()) {
-                {
-                    std::lock_guard<std::recursive_mutex> lock(mutex_);
-                    parse_lane_data(response["value"]);
-                }
-                // Emit OUTSIDE the lock to avoid deadlock with callbacks
-                emit_event(EVENT_STATE_CHANGED);
+        [this, parse_snapshot](const nlohmann::json& response) {
+            if (parse_snapshot(response, "AFC/AFC.var.unit")) {
+                return;
             }
+
+            // Alternate layout used by some AFC builds: namespace AFC.var, key unit.
+            nlohmann::json alt_params = {{"namespace", "AFC.var"}, {"key", "unit"}};
+            client_->send_jsonrpc(
+                "server.database.get_item", alt_params,
+                [parse_snapshot](const nlohmann::json& alt_response) {
+                    parse_snapshot(alt_response, "AFC.var/unit");
+                },
+                [](const MoonrakerError& alt_err) {
+                    spdlog::warn("[AMS AFC] Failed to query AFC.var/unit snapshot: {}",
+                                 alt_err.message);
+                });
         },
-        [](const MoonrakerError& err) {
-            spdlog::warn("[AMS AFC] Failed to query lane_data: {}", err.message);
+        [this, parse_snapshot](const MoonrakerError& err) {
+            spdlog::warn("[AMS AFC] Failed to query AFC/AFC.var.unit snapshot: {}", err.message);
+
+            nlohmann::json alt_params = {{"namespace", "AFC.var"}, {"key", "unit"}};
+            client_->send_jsonrpc(
+                "server.database.get_item", alt_params,
+                [parse_snapshot](const nlohmann::json& alt_response) {
+                    parse_snapshot(alt_response, "AFC.var/unit");
+                },
+                [](const MoonrakerError& alt_err) {
+                    spdlog::warn("[AMS AFC] Failed to query AFC.var/unit snapshot: {}",
+                                 alt_err.message);
+                });
         });
 }
 
