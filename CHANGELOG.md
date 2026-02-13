@@ -5,6 +5,24 @@ All notable changes to HelixScreen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.17] - 2026-02-13
+
+### Added
+- Full LED control system with four backends, auto-state mapping editor, macro device configuration, and settings overlay
+- Crash report dialog with automatic submission, QR code for manual upload, and local file fallback
+- Layer estimation from print progress when slicer lacks SET_PRINT_STATS_INFO (#37)
+- Rate limiting on crash and telemetry ingest workers
+
+### Fixed
+- Crash reporter now shows modal before TelemetryManager consumes the crash file
+- LED strip auto-selection on first discovery, lazy LED reads, icon and dropdown fixes
+- Installer config file operations use minimal permissions instead of broad sudo
+
+### Changed
+- Motion overlay refactored to declarative UI with homing indicators and theme colors
+- LED settings layout extracted to reusable XML components
+- User guide restructured into sub-pages with new screenshots
+
 ## [0.9.16] - 2026-02-12
 
 ### Added
@@ -420,6 +438,7 @@ Initial tagged release. Foundation for all subsequent development.
 - Automated GitHub Actions release pipeline
 - One-liner installation script with platform auto-detection
 
+[0.9.17]: https://github.com/prestonbrown/helixscreen/compare/v0.9.16...v0.9.17
 [0.9.16]: https://github.com/prestonbrown/helixscreen/compare/v0.9.15...v0.9.16
 [0.9.15]: https://github.com/prestonbrown/helixscreen/compare/v0.9.14...v0.9.15
 [0.9.14]: https://github.com/prestonbrown/helixscreen/compare/v0.9.13...v0.9.14
