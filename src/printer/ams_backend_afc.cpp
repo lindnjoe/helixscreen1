@@ -15,6 +15,49 @@
 #include <optional>
 #include <sstream>
 
+namespace {
+
+std::optional<int> parse_lane_index(const std::string& lane_name) {
+    static const std::string kPrefix = "lane";
+    if (lane_name.rfind(kPrefix, 0) != 0) {
+        return std::nullopt;
+    }
+
+    std::string suffix = lane_name.substr(kPrefix.size());
+    if (suffix.empty() || !std::all_of(suffix.begin(), suffix.end(), [](char c) {
+            return std::isdigit(static_cast<unsigned char>(c));
+        })) {
+        return std::nullopt;
+    }
+
+    try {
+        return std::stoi(suffix);
+    } catch (...) {
+        return std::nullopt;
+    }
+}
+
+void sort_and_dedupe_lane_names(std::vector<std::string>& lane_names) {
+    std::sort(lane_names.begin(), lane_names.end(),
+              [](const std::string& left, const std::string& right) {
+                  auto left_index = parse_lane_index(left);
+                  auto right_index = parse_lane_index(right);
+                  if (left_index && right_index) {
+                      return *left_index < *right_index;
+                  }
+                  if (left_index) {
+                      return true;
+                  }
+                  if (right_index) {
+                      return false;
+                  }
+                  return left < right;
+              });
+    lane_names.erase(std::unique(lane_names.begin(), lane_names.end()), lane_names.end());
+}
+
+} // namespace
+
 // ============================================================================
 // Construction / Destruction
 // ============================================================================
@@ -409,47 +452,20 @@ void AmsBackendAfc::handle_status_update(const nlohmann::json& notification) {
         }
 
         if (!stepper_lane_names.empty()) {
-            auto lane_index = [](const std::string& name) -> std::optional<int> {
-                static const std::string kPrefix = "lane";
-                if (name.rfind(kPrefix, 0) != 0) {
-                    return std::nullopt;
-                }
-                std::string suffix = name.substr(kPrefix.size());
-                if (suffix.empty() || !std::all_of(suffix.begin(), suffix.end(), [](char c) {
-                        return std::isdigit(static_cast<unsigned char>(c));
-                    })) {
-                    return std::nullopt;
-                }
-                try {
-                    return std::stoi(suffix);
-                } catch (...) {
-                    return std::nullopt;
-                }
-            };
+            sort_and_dedupe_lane_names(stepper_lane_names);
 
-            std::sort(stepper_lane_names.begin(), stepper_lane_names.end(),
-                      [&](const std::string& left, const std::string& right) {
-                          auto left_index = lane_index(left);
-                          auto right_index = lane_index(right);
-                          if (left_index && right_index) {
-                              return *left_index < *right_index;
-                          }
-                          if (left_index) {
-                              return true;
-                          }
-                          if (right_index) {
-                              return false;
-                          }
-                          return left < right;
-                      });
-            stepper_lane_names.erase(
-                std::unique(stepper_lane_names.begin(), stepper_lane_names.end()),
-                stepper_lane_names.end());
+            std::vector<std::string> merged_lane_names = stepper_lane_names;
+            if (lanes_initialized_) {
+                merged_lane_names.insert(merged_lane_names.end(), lane_names_.begin(),
+                                         lane_names_.end());
+                sort_and_dedupe_lane_names(merged_lane_names);
+            }
 
-            if (!lanes_initialized_ || stepper_lane_names != lane_names_) {
-                initialize_lanes(stepper_lane_names);
-                spdlog::debug("[AMS AFC] Lane map synchronized from stepper keys ({} lanes)",
-                              lane_names_.size());
+            if (!lanes_initialized_ || merged_lane_names != lane_names_) {
+                initialize_lanes(merged_lane_names);
+                spdlog::debug(
+                    "[AMS AFC] Lane map synchronized from stepper keys ({} lanes, merged)",
+                    lane_names_.size());
             }
 
             for (const auto& lane_name : stepper_lane_names) {
@@ -577,7 +593,7 @@ void AmsBackendAfc::parse_afc_state(const nlohmann::json& afc_data) {
     //   - object: { lane0: {...}, lane1: {...} }
     //   - array:  ["lane0", "lane1", ...]
     if (afc_data.contains("lanes") && afc_data["lanes"].is_object()) {
-        parse_lane_data(afc_data["lanes"]);
+        parse_lane_data(afc_data["lanes"], false);
     } else if (afc_data.contains("lanes") && afc_data["lanes"].is_array()) {
         std::vector<std::string> array_lane_names;
         for (const auto& lane_name : afc_data["lanes"]) {
@@ -587,50 +603,20 @@ void AmsBackendAfc::parse_afc_state(const nlohmann::json& afc_data) {
         }
 
         if (!array_lane_names.empty()) {
-            std::sort(array_lane_names.begin(), array_lane_names.end(),
-                      [](const std::string& left, const std::string& right) {
-                          auto parse_lane_index =
-                              [](const std::string& lane_name) -> std::optional<int> {
-                              static const std::string kPrefix = "lane";
-                              if (lane_name.rfind(kPrefix, 0) != 0) {
-                                  return std::nullopt;
-                              }
+            sort_and_dedupe_lane_names(array_lane_names);
 
-                              std::string suffix = lane_name.substr(kPrefix.size());
-                              if (suffix.empty() ||
-                                  !std::all_of(suffix.begin(), suffix.end(), [](char c) {
-                                      return std::isdigit(static_cast<unsigned char>(c));
-                                  })) {
-                                  return std::nullopt;
-                              }
+            std::vector<std::string> merged_lane_names = array_lane_names;
+            if (lanes_initialized_) {
+                merged_lane_names.insert(merged_lane_names.end(), lane_names_.begin(),
+                                         lane_names_.end());
+                sort_and_dedupe_lane_names(merged_lane_names);
+            }
 
-                              try {
-                                  return std::stoi(suffix);
-                              } catch (...) {
-                                  return std::nullopt;
-                              }
-                          };
-
-                          auto left_index = parse_lane_index(left);
-                          auto right_index = parse_lane_index(right);
-                          if (left_index && right_index) {
-                              return *left_index < *right_index;
-                          }
-                          if (left_index) {
-                              return true;
-                          }
-                          if (right_index) {
-                              return false;
-                          }
-                          return left < right;
-                      });
-            array_lane_names.erase(std::unique(array_lane_names.begin(), array_lane_names.end()),
-                                   array_lane_names.end());
-
-            if (!lanes_initialized_ || array_lane_names != lane_names_) {
-                initialize_lanes(array_lane_names);
-                spdlog::debug("[AMS AFC] Lane map synchronized from AFC lanes array ({} lanes)",
-                              lane_names_.size());
+            if (!lanes_initialized_ || merged_lane_names != lane_names_) {
+                initialize_lanes(merged_lane_names);
+                spdlog::debug(
+                    "[AMS AFC] Lane map synchronized from AFC lanes array ({} lanes, merged)",
+                    lane_names_.size());
             }
         }
     }
@@ -661,47 +647,20 @@ void AmsBackendAfc::parse_afc_state(const nlohmann::json& afc_data) {
         }
 
         if (!snapshot_lane_names.empty()) {
-            auto lane_index = [](const std::string& name) -> std::optional<int> {
-                static const std::string kPrefix = "lane";
-                if (name.rfind(kPrefix, 0) != 0) {
-                    return std::nullopt;
-                }
-                std::string suffix = name.substr(kPrefix.size());
-                if (suffix.empty() || !std::all_of(suffix.begin(), suffix.end(), [](char c) {
-                        return std::isdigit(static_cast<unsigned char>(c));
-                    })) {
-                    return std::nullopt;
-                }
-                try {
-                    return std::stoi(suffix);
-                } catch (...) {
-                    return std::nullopt;
-                }
-            };
+            sort_and_dedupe_lane_names(snapshot_lane_names);
 
-            std::sort(snapshot_lane_names.begin(), snapshot_lane_names.end(),
-                      [&](const std::string& left, const std::string& right) {
-                          auto left_index = lane_index(left);
-                          auto right_index = lane_index(right);
-                          if (left_index && right_index) {
-                              return *left_index < *right_index;
-                          }
-                          if (left_index) {
-                              return true;
-                          }
-                          if (right_index) {
-                              return false;
-                          }
-                          return left < right;
-                      });
-            snapshot_lane_names.erase(
-                std::unique(snapshot_lane_names.begin(), snapshot_lane_names.end()),
-                snapshot_lane_names.end());
+            std::vector<std::string> merged_lane_names = snapshot_lane_names;
+            if (lanes_initialized_) {
+                merged_lane_names.insert(merged_lane_names.end(), lane_names_.begin(),
+                                         lane_names_.end());
+                sort_and_dedupe_lane_names(merged_lane_names);
+            }
 
-            if (!lanes_initialized_ || snapshot_lane_names != lane_names_) {
-                initialize_lanes(snapshot_lane_names);
+            if (!lanes_initialized_ || merged_lane_names != lane_names_) {
+                initialize_lanes(merged_lane_names);
                 spdlog::debug(
-                    "[AMS AFC] Lane map synchronized from AFC.var.unit snapshot ({} lanes)",
+                    "[AMS AFC] Lane map synchronized from AFC.var.unit snapshot ({} lanes, "
+                    "merged)",
                     lane_names_.size());
             }
 
@@ -1077,7 +1036,8 @@ void AmsBackendAfc::detect_afc_version() {
         query_lane_data();
     };
 
-    client_->send_jsonrpc("server.database.get_item", params, on_detect_success, on_detect_error);
+    client_->send_jsonrpc("server.database.get_item", params, on_detect_success, on_detect_error, 0,
+                          true);
 }
 
 bool AmsBackendAfc::version_at_least(const std::string& required) const {
@@ -1191,7 +1151,7 @@ void AmsBackendAfc::query_lane_data() {
 
         {
             std::lock_guard<std::recursive_mutex> lock(mutex_);
-            parse_lane_data(response["value"]);
+            parse_lane_data(response["value"], true);
         }
 
         spdlog::debug("[AMS AFC] Parsed lane metadata from {}", source);
@@ -1221,7 +1181,8 @@ void AmsBackendAfc::query_lane_data() {
                 [this](const MoonrakerError& legacy_err) {
                     spdlog::warn("[AMS AFC] Failed legacy lane_data query: {}", legacy_err.message);
                     query_unit_snapshot();
-                });
+                },
+                0, true);
         },
         [this, parse_and_emit](const MoonrakerError& err) {
             spdlog::warn("[AMS AFC] Failed lane_data namespace query: {}", err.message);
@@ -1240,8 +1201,10 @@ void AmsBackendAfc::query_lane_data() {
                 [this](const MoonrakerError& legacy_err) {
                     spdlog::warn("[AMS AFC] Failed legacy lane_data query: {}", legacy_err.message);
                     query_unit_snapshot();
-                });
-        });
+                },
+                0, true);
+        },
+        0, true);
 }
 
 void AmsBackendAfc::query_unit_snapshot() {
@@ -1284,7 +1247,7 @@ void AmsBackendAfc::query_unit_snapshot() {
     auto try_lookup = std::make_shared<std::function<void(size_t)>>();
     *try_lookup = [this, parse_snapshot, lookups, try_lookup](size_t index) {
         if (index >= lookups.size()) {
-            spdlog::warn("[AMS AFC] Failed to query AFC unit snapshot from all known DB layouts");
+            spdlog::debug("[AMS AFC] AFC unit snapshot not available in known DB layouts");
             return;
         }
 
@@ -1302,13 +1265,14 @@ void AmsBackendAfc::query_unit_snapshot() {
                 spdlog::debug("[AMS AFC] Snapshot lookup {} failed: {}", lookup.source,
                               err.message);
                 (*try_lookup)(index + 1);
-            });
+            },
+            0, true);
     };
 
     (*try_lookup)(0);
 }
 
-void AmsBackendAfc::parse_lane_data(const nlohmann::json& lane_data) {
+void AmsBackendAfc::parse_lane_data(const nlohmann::json& lane_data, bool authoritative) {
     // Lane data format:
     // {
     //   "lane1": {"color": "FF0000", "material": "PLA", "loaded": false, ...},
@@ -1320,51 +1284,34 @@ void AmsBackendAfc::parse_lane_data(const nlohmann::json& lane_data) {
     for (auto it = lane_data.begin(); it != lane_data.end(); ++it) {
         new_lane_names.push_back(it.key());
     }
-    std::sort(new_lane_names.begin(), new_lane_names.end(),
-              [](const std::string& left, const std::string& right) {
-                  auto parse_lane_index = [](const std::string& lane_name) -> std::optional<int> {
-                      static const std::string kPrefix = "lane";
-                      if (lane_name.rfind(kPrefix, 0) != 0) {
-                          return std::nullopt;
-                      }
-
-                      std::string suffix = lane_name.substr(kPrefix.size());
-                      if (suffix.empty() || !std::all_of(suffix.begin(), suffix.end(), [](char c) {
-                              return std::isdigit(static_cast<unsigned char>(c));
-                          })) {
-                          return std::nullopt;
-                      }
-
-                      try {
-                          return std::stoi(suffix);
-                      } catch (...) {
-                          return std::nullopt;
-                      }
-                  };
-
-                  auto left_index = parse_lane_index(left);
-                  auto right_index = parse_lane_index(right);
-                  if (left_index && right_index) {
-                      return *left_index < *right_index;
-                  }
-                  if (left_index) {
-                      return true;
-                  }
-                  if (right_index) {
-                      return false;
-                  }
-                  return left < right;
-              });
+    sort_and_dedupe_lane_names(new_lane_names);
 
     // Initialize (or reinitialize) lanes when names differ from current mapping.
     // Name mismatches can happen when discovery synthesizes placeholder names
     // but AFC lane_data reports the authoritative lane keys.
-    if (!lanes_initialized_ || new_lane_names != lane_names_) {
-        initialize_lanes(new_lane_names);
+    std::vector<std::string> next_lane_names = new_lane_names;
+    if (!authoritative && lanes_initialized_) {
+        next_lane_names.insert(next_lane_names.end(), lane_names_.begin(), lane_names_.end());
+        sort_and_dedupe_lane_names(next_lane_names);
+    }
+
+    if (!lanes_initialized_ || next_lane_names != lane_names_) {
+        initialize_lanes(next_lane_names);
+    }
+
+    // Defensive consistency check: lane map and slot storage should always match.
+    // If they diverge (e.g., after unexpected runtime payload ordering), rebuild
+    // lanes before touching slot vectors.
+    if (!system_info_.units.empty() && system_info_.units[0].slots.size() != lane_names_.size()) {
+        spdlog::warn("[AMS AFC] Lane/slot size mismatch (lanes={}, slots={}), reinitializing",
+                     lane_names_.size(), system_info_.units[0].slots.size());
+        initialize_lanes(lane_names_);
     }
 
     // Update lane information
-    for (size_t i = 0; i < lane_names_.size() && !system_info_.units.empty(); ++i) {
+    for (size_t i = 0; i < lane_names_.size() && !system_info_.units.empty() &&
+                       i < system_info_.units[0].slots.size();
+         ++i) {
         const std::string& lane_name = lane_names_[i];
         if (!lane_data.contains(lane_name) || !lane_data[lane_name].is_object()) {
             continue;
