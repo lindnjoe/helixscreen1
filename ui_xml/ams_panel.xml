@@ -209,7 +209,7 @@
             <event_cb trigger="clicked" callback="ams_unload_clicked_cb"/>
           </ui_button>
           <!-- Reset Button (full width) -->
-          <ui_button name="btn_reset" width="100%" variant="secondary" icon="refresh" text="Reset" translation_tag="Reset">
+          <ui_button name="btn_reset" width="100%" variant="secondary" icon="refresh" text="Home All" translation_tag="Home All">
             <event_cb trigger="clicked" callback="ams_reset_clicked_cb"/>
           </ui_button>
           <!-- Settings Button (full width, primary variant by default) -->

@@ -1661,18 +1661,19 @@ void AmsPanel::handle_unload() {
 }
 
 void AmsPanel::handle_reset() {
-    spdlog::info("[{}] Reset requested", get_name());
+    spdlog::info("[{}] Home All requested", get_name());
 
-    AmsBackend* backend = AmsState::instance().get_backend();
-    if (!backend) {
-        NOTIFY_WARNING("AMS not available");
+    if (!api_) {
+        NOTIFY_WARNING("Printer not available");
         return;
     }
 
-    AmsError error = backend->reset();
-    if (error.result != AmsResult::SUCCESS) {
-        NOTIFY_ERROR("Reset failed: {}", error.user_msg);
-    }
+    NOTIFY_INFO("Homing all axes...");
+    api_->execute_gcode(
+        "G28", []() { NOTIFY_SUCCESS("Home All complete"); },
+        [](const MoonrakerError& error) {
+            NOTIFY_ERROR("Home All failed: {}", error.user_message());
+        });
 }
 
 void AmsPanel::handle_bypass_toggle() {
