@@ -953,47 +953,48 @@ void AmsBackendAfc::detect_afc_version() {
     // Namespace: afc-install (contains {"version": "1.0.0"})
     nlohmann::json params = {{"namespace", "afc-install"}};
 
-    client_->send_jsonrpc(
-        "server.database.get_item", params,
-        [this](const nlohmann::json& response) {
-            bool should_query_lane_data = false;
+    auto on_detect_success = [this](const nlohmann::json& response) {
+        bool should_query_lane_data = false;
 
-            if (response.contains("value") && response["value"].is_object()) {
-                const auto& value = response["value"];
-                if (value.contains("version") && value["version"].is_string()) {
-                    {
-                        std::lock_guard<std::recursive_mutex> lock(mutex_);
-                        afc_version_ = value["version"].get<std::string>();
-                        system_info_.version = afc_version_;
+        if (response.contains("value") && response["value"].is_object()) {
+            const auto& value = response["value"];
+            if (value.contains("version") && value["version"].is_string()) {
+                {
+                    std::lock_guard<std::recursive_mutex> lock(mutex_);
+                    afc_version_ = value["version"].get<std::string>();
+                    system_info_.version = afc_version_;
 
-                        // Set capability flags based on version
-                        has_lane_data_db_ = version_at_least("1.0.32");
-                        should_query_lane_data = has_lane_data_db_;
-                    }
-                    spdlog::info("[AMS AFC] Detected AFC version: {} (lane_data DB: {})",
-                                 afc_version_, has_lane_data_db_ ? "yes" : "no");
+                    // Set capability flags based on version
+                    has_lane_data_db_ = version_at_least("1.0.32");
+                    should_query_lane_data = has_lane_data_db_;
                 }
+                spdlog::info("[AMS AFC] Detected AFC version: {} (lane_data DB: {})", afc_version_,
+                             has_lane_data_db_ ? "yes" : "no");
             }
+        }
 
-            // For v1.0.32+, query lane_data database for richer data.
-            // Otherwise, query AFC.var.unit snapshot (used by some OpenAMS setups).
-            if (should_query_lane_data) {
-                query_lane_data();
-            } else {
-                query_unit_snapshot();
-            }
-        },
-        [this, parse_and_emit](const MoonrakerError& err) {
-            spdlog::warn("[AMS AFC] Could not detect AFC version: {}", err.message);
-            {
-                std::lock_guard<std::recursive_mutex> lock(mutex_);
-                afc_version_ = "unknown";
-                system_info_.version = "unknown";
-            }
-
-            // Fallback for AFC deployments without afc-install namespace.
+        // For v1.0.32+, query lane_data database for richer data.
+        // Otherwise, query AFC.var.unit snapshot (used by some OpenAMS setups).
+        if (should_query_lane_data) {
             query_lane_data();
-        });
+        } else {
+            query_unit_snapshot();
+        }
+    };
+
+    auto on_detect_error = [this](const MoonrakerError& err) {
+        spdlog::warn("[AMS AFC] Could not detect AFC version: {}", err.message);
+        {
+            std::lock_guard<std::recursive_mutex> lock(mutex_);
+            afc_version_ = "unknown";
+            system_info_.version = "unknown";
+        }
+
+        // Fallback for AFC deployments without afc-install namespace.
+        query_lane_data();
+    };
+
+    client_->send_jsonrpc("server.database.get_item", params, on_detect_success, on_detect_error);
 }
 
 bool AmsBackendAfc::version_at_least(const std::string& required) const {
