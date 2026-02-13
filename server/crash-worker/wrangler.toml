@@ -17,7 +17,7 @@ zone_name = "helixscreen.org"
 # Rate limiting: 5 crash reports per IP per 60 seconds
 # Prevents crash loops from flooding GitHub with duplicate issues
 [[ratelimits]]
-binding = "CRASH_LIMITER"
+name = "CRASH_LIMITER"
 namespace_id = "1002"
 [ratelimits.simple]
 limit = 5
