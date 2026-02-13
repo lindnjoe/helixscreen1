@@ -1291,8 +1291,19 @@ void AmsBackendAfc::parse_lane_data(const nlohmann::json& lane_data, bool author
         initialize_lanes(next_lane_names);
     }
 
+    // Defensive consistency check: lane map and slot storage should always match.
+    // If they diverge (e.g., after unexpected runtime payload ordering), rebuild
+    // lanes before touching slot vectors.
+    if (!system_info_.units.empty() && system_info_.units[0].slots.size() != lane_names_.size()) {
+        spdlog::warn("[AMS AFC] Lane/slot size mismatch (lanes={}, slots={}), reinitializing",
+                     lane_names_.size(), system_info_.units[0].slots.size());
+        initialize_lanes(lane_names_);
+    }
+
     // Update lane information
-    for (size_t i = 0; i < lane_names_.size() && !system_info_.units.empty(); ++i) {
+    for (size_t i = 0; i < lane_names_.size() && !system_info_.units.empty() &&
+                       i < system_info_.units[0].slots.size();
+         ++i) {
         const std::string& lane_name = lane_names_[i];
         if (!lane_data.contains(lane_name) || !lane_data[lane_name].is_object()) {
             continue;
