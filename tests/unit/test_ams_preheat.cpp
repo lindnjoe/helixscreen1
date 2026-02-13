@@ -314,6 +314,18 @@ inline void handle_load_complete(MockAmsBackendPreheat& backend) {
     backend.ui_initiated_heat_ = false;
 }
 
+/**
+ * @brief Handle external global cooldown while AMS preheat is pending
+ *
+ * Mirrors AmsPanel::cancel_pending_preheat(). Cooldown invalidates pending preheat/load
+ * state, so clear all UI-managed preheat bookkeeping.
+ */
+inline void handle_global_cooldown(MockAmsBackendPreheat& backend) {
+    backend.pending_load_slot_ = -1;
+    backend.pending_load_target_temp_ = 0;
+    backend.ui_initiated_heat_ = false;
+}
+
 // ============================================================================
 // Test Cases: get_load_temp_for_slot() - Temperature Priority Logic
 // ============================================================================
@@ -665,6 +677,19 @@ TEST_CASE("handle_load_complete: clears ui_initiated_heat after turning off heat
     backend.clear_captured_commands();
     handle_load_complete(backend);
     REQUIRE_FALSE(backend.has_command("SET_HEATER_TEMPERATURE"));
+}
+
+TEST_CASE("handle_global_cooldown: clears pending preheat state", "[ams][preheat][cooldown]") {
+    MockAmsBackendPreheat backend(4);
+    backend.pending_load_slot_ = 2;
+    backend.pending_load_target_temp_ = 235;
+    backend.ui_initiated_heat_ = true;
+
+    handle_global_cooldown(backend);
+
+    REQUIRE(backend.pending_load_slot_ == -1);
+    REQUIRE(backend.pending_load_target_temp_ == 0);
+    REQUIRE_FALSE(backend.ui_initiated_heat_);
 }
 
 // ============================================================================
