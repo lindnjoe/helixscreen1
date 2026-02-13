@@ -983,7 +983,7 @@ void AmsBackendAfc::detect_afc_version() {
                 query_unit_snapshot();
             }
         },
-        [this](const MoonrakerError& err) {
+        [this, parse_and_emit](const MoonrakerError& err) {
             spdlog::warn("[AMS AFC] Could not detect AFC version: {}", err.message);
             {
                 std::lock_guard<std::recursive_mutex> lock(mutex_);
@@ -1131,7 +1131,7 @@ void AmsBackendAfc::query_lane_data() {
                     query_unit_snapshot();
                 });
         },
-        [this](const MoonrakerError& err) {
+        [this, parse_and_emit](const MoonrakerError& err) {
             spdlog::warn("[AMS AFC] Failed lane_data namespace query: {}", err.message);
 
             // Fallback to legacy AFC key layout.
@@ -1205,34 +1205,6 @@ void AmsBackendAfc::query_unit_snapshot() {
                     spdlog::warn("[AMS AFC] Failed to query AFC.var/unit snapshot: {}",
                                  alt_err.message);
                 });
-        });
-}
-
-void AmsBackendAfc::query_unit_snapshot() {
-    if (!client_) {
-        spdlog::warn("[AMS AFC] Cannot query AFC.var.unit: client is null");
-        return;
-    }
-
-    nlohmann::json params = {{"namespace", "AFC"}, {"key", "AFC.var.unit"}};
-
-    client_->send_jsonrpc(
-        "server.database.get_item", params,
-        [this](const nlohmann::json& response) {
-            if (!(response.contains("value") && response["value"].is_object())) {
-                return;
-            }
-
-            {
-                std::lock_guard<std::recursive_mutex> lock(mutex_);
-                parse_afc_state(response["value"]);
-            }
-
-            spdlog::debug("[AMS AFC] Parsed lane metadata from AFC.var.unit snapshot");
-            emit_event(EVENT_STATE_CHANGED);
-        },
-        [](const MoonrakerError& err) {
-            spdlog::warn("[AMS AFC] Failed to query AFC.var.unit snapshot: {}", err.message);
         });
 }
 
