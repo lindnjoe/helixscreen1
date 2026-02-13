@@ -741,6 +741,23 @@ TEST_CASE("AFC lane_data accepts OpenAMS-style load/status fields",
     REQUIRE(helper.get_current_slot() == 1);
 }
 
+TEST_CASE("AFC synchronizes lane map from AFC lanes array", "[ams][afc][snapshot][lanes_array]") {
+    AmsBackendAfcTestHelper helper;
+
+    // Simulate AFC object payload (printer.objects.query) where lane names are
+    // published as an array instead of an object map.
+    nlohmann::json afc_data;
+    afc_data["lanes"] = nlohmann::json::array({"lane10", "lane4", "lane11", "lane5"});
+
+    helper.feed_afc_state(afc_data);
+
+    REQUIRE(helper.get_lane_names().size() == 4);
+    REQUIRE(helper.get_lane_names()[0] == "lane4");
+    REQUIRE(helper.get_lane_names()[1] == "lane5");
+    REQUIRE(helper.get_lane_names()[2] == "lane10");
+    REQUIRE(helper.get_lane_names()[3] == "lane11");
+}
+
 TEST_CASE("AFC handle_status_update discovers lanes directly from AFC_stepper keys",
           "[ams][afc][discovery][stepper_keys]") {
     AmsBackendAfcTestHelper helper;
