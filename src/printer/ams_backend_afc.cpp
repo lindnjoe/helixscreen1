@@ -1055,7 +1055,8 @@ void AmsBackendAfc::detect_afc_version() {
         query_lane_data();
     };
 
-    client_->send_jsonrpc("server.database.get_item", params, on_detect_success, on_detect_error);
+    client_->send_jsonrpc("server.database.get_item", params, on_detect_success, on_detect_error, 0,
+                          true);
 }
 
 bool AmsBackendAfc::version_at_least(const std::string& required) const {
@@ -1199,7 +1200,8 @@ void AmsBackendAfc::query_lane_data() {
                 [this](const MoonrakerError& legacy_err) {
                     spdlog::warn("[AMS AFC] Failed legacy lane_data query: {}", legacy_err.message);
                     query_unit_snapshot();
-                });
+                },
+                0, true);
         },
         [this, parse_and_emit](const MoonrakerError& err) {
             spdlog::warn("[AMS AFC] Failed lane_data namespace query: {}", err.message);
@@ -1218,8 +1220,10 @@ void AmsBackendAfc::query_lane_data() {
                 [this](const MoonrakerError& legacy_err) {
                     spdlog::warn("[AMS AFC] Failed legacy lane_data query: {}", legacy_err.message);
                     query_unit_snapshot();
-                });
-        });
+                },
+                0, true);
+        },
+        0, true);
 }
 
 void AmsBackendAfc::query_unit_snapshot() {
@@ -1262,7 +1266,7 @@ void AmsBackendAfc::query_unit_snapshot() {
     auto try_lookup = std::make_shared<std::function<void(size_t)>>();
     *try_lookup = [this, parse_snapshot, lookups, try_lookup](size_t index) {
         if (index >= lookups.size()) {
-            spdlog::warn("[AMS AFC] Failed to query AFC unit snapshot from all known DB layouts");
+            spdlog::debug("[AMS AFC] AFC unit snapshot not available in known DB layouts");
             return;
         }
 
@@ -1280,7 +1284,8 @@ void AmsBackendAfc::query_unit_snapshot() {
                 spdlog::debug("[AMS AFC] Snapshot lookup {} failed: {}", lookup.source,
                               err.message);
                 (*try_lookup)(index + 1);
-            });
+            },
+            0, true);
     };
 
     (*try_lookup)(0);
