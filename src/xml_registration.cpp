@@ -209,6 +209,7 @@ void register_xml_components() {
     register_xml("notification_history_item.xml");
 
     // Modal dialogs
+    register_xml("crash_report_modal.xml");
     register_xml("modal_dialog.xml");
     register_xml("numeric_keypad_panel.xml");
     register_xml("runout_guidance_modal.xml");
