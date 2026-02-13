@@ -295,7 +295,7 @@ class AmsBackendAfc : public AmsBackend {
      *
      * @param lane_data JSON object containing lane configurations
      */
-    void parse_lane_data(const nlohmann::json& lane_data);
+    void parse_lane_data(const nlohmann::json& lane_data, bool authoritative = true);
 
     /**
      * @brief Detect AFC version by querying afc-install database namespace
