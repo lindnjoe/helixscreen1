@@ -574,6 +574,20 @@ TEST_CASE("PrinterDiscovery synthesizes missing AFC lanes for OpenAMS units",
     REQUIRE(lanes.back() == "lane11");
 }
 
+TEST_CASE("PrinterDiscovery synthesizes missing AFC lanes using detected lane index base",
+          "[printer_discovery]") {
+    PrinterDiscovery hw;
+
+    json objects = {"AFC_BoxTurtle Turtle_1", "AFC_BoxTurtle Turtle_2", "AFC_stepper lane1",
+                    "AFC_stepper lane2",      "AFC_stepper lane3",      "AFC_stepper lane4"};
+    hw.parse_objects(objects);
+
+    auto lanes = hw.afc_lane_names();
+    REQUIRE(lanes.size() == 8);
+    REQUIRE(lanes.front() == "lane1");
+    REQUIRE(lanes.back() == "lane8");
+}
+
 // ============================================================================
 // Filament Sensor Detection Tests
 // ============================================================================
