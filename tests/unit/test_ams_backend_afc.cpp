@@ -758,6 +758,52 @@ TEST_CASE("AFC synchronizes lane map from AFC lanes array", "[ams][afc][snapshot
     REQUIRE(helper.get_lane_names()[3] == "lane11");
 }
 
+TEST_CASE("AFC incremental lanes array updates do not shrink lane map",
+          "[ams][afc][snapshot][lanes_array][incremental]") {
+    AmsBackendAfcTestHelper helper;
+
+    nlohmann::json initial;
+    initial["lanes"] = nlohmann::json::array({"lane1", "lane2", "lane3", "lane4"});
+    helper.feed_afc_state(initial);
+
+    REQUIRE(helper.get_lane_names().size() == 4);
+
+    nlohmann::json partial;
+    partial["lanes"] = nlohmann::json::array({"lane2"});
+    helper.feed_afc_state(partial);
+
+    REQUIRE(helper.get_lane_names().size() == 4);
+    REQUIRE(helper.get_lane_names()[0] == "lane1");
+    REQUIRE(helper.get_lane_names()[1] == "lane2");
+    REQUIRE(helper.get_lane_names()[2] == "lane3");
+    REQUIRE(helper.get_lane_names()[3] == "lane4");
+}
+
+TEST_CASE("AFC incremental lanes object updates do not shrink lane map",
+          "[ams][afc][lane_data][incremental]") {
+    AmsBackendAfcTestHelper helper;
+
+    nlohmann::json initial;
+    initial["lanes"]["lane1"] = {{"material", "PLA"}, {"spool_id", 11}};
+    initial["lanes"]["lane2"] = {{"material", "PETG"}, {"spool_id", 12}};
+    initial["lanes"]["lane3"] = {{"material", "ABS"}, {"spool_id", 13}};
+    helper.feed_afc_state(initial);
+
+    REQUIRE(helper.get_lane_names().size() == 3);
+
+    nlohmann::json partial;
+    partial["lanes"]["lane2"] = {{"material", "Nylon"}, {"spool_id", 22}};
+    helper.feed_afc_state(partial);
+
+    REQUIRE(helper.get_lane_names().size() == 3);
+    REQUIRE(helper.get_lane_names()[0] == "lane1");
+    REQUIRE(helper.get_lane_names()[1] == "lane2");
+    REQUIRE(helper.get_lane_names()[2] == "lane3");
+
+    SlotInfo lane2 = helper.get_slot_info(1);
+    REQUIRE(lane2.spoolman_id == 22);
+    REQUIRE(lane2.material == "Nylon");
+}
 TEST_CASE("AFC handle_status_update discovers lanes directly from AFC_stepper keys",
           "[ams][afc][discovery][stepper_keys]") {
     AmsBackendAfcTestHelper helper;
