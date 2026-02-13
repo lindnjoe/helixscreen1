@@ -886,6 +886,10 @@ void FilamentPanel::handle_cooldown() {
             });
     }
 
+    // If AMS preheat was in progress, cooldown invalidates that pending state.
+    // Clear it now to avoid stale preheat/load transitions on the next tool change.
+    get_global_ams_panel().cancel_pending_preheat();
+
     // Clear material selection since we're cooling down
     selected_material_ = -1;
     lv_subject_set_int(&material_selected_subject_, selected_material_);

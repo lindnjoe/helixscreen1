@@ -316,6 +316,13 @@ class AmsPanel : public PanelBase {
     void handle_slot_tap(int slot_index);
     void handle_unload();
     void handle_reset();
+    /**
+     * @brief Cancel UI-managed preheat state after an external global cooldown
+     *
+     * Called when another panel issues TURN_OFF_HEATERS. Clears pending load/preheat
+     * bookkeeping so the next tool change starts from a clean state.
+     */
+    void cancel_pending_preheat();
     void handle_bypass_toggle();
 };
 
