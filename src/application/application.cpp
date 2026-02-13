@@ -39,6 +39,7 @@
 #include "ui_bed_mesh.h"
 #include "ui_card.h"
 #include "ui_component_header_bar.h"
+#include "ui_crash_report_modal.h"
 #include "ui_dialog.h"
 #include "ui_emergency_stop.h"
 #include "ui_error_reporting.h"
@@ -97,6 +98,7 @@
 #include "printer_image_manager.h"
 #include "settings_manager.h"
 #include "system/crash_handler.h"
+#include "system/crash_reporter.h"
 #include "system/telemetry_manager.h"
 #include "system/update_checker.h"
 #include "theme_manager.h"
@@ -279,6 +281,14 @@ int Application::run(int argc, char** argv) {
     // Initialize UpdateChecker before panel subjects (subjects must exist for XML binding)
     UpdateChecker::instance().init();
 
+    // Initialize CrashReporter (independent of telemetry)
+    // Write mock crash file first if --mock-crash flag is set (requires --test)
+    if (get_runtime_config()->mock_crash) {
+        crash_handler::write_mock_crash_file("config/crash.txt");
+        spdlog::info("[Application] Wrote mock crash file for testing");
+    }
+    CrashReporter::instance().init("config");
+
     // Initialize TelemetryManager (opt-in, default OFF)
     // Note: record_session() is called after init_panel_subjects() so that
     // SettingsManager subjects are ready and the enabled state can be synced.
@@ -311,6 +321,15 @@ int Application::run(int argc, char** argv) {
     if (!init_ui()) {
         shutdown();
         return 1;
+    }
+
+    // Check for crash from previous session (after UI exists, before wizard)
+    if (CrashReporter::instance().has_crash_report()) {
+        spdlog::info("[Application] Previous crash detected — showing crash report dialog");
+        auto report = CrashReporter::instance().collect_report();
+        auto* modal = new CrashReportModal();
+        modal->set_report(report);
+        modal->show_modal(lv_screen_active());
     }
 
     // Phase 12: Run wizard if needed
