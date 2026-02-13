@@ -703,6 +703,90 @@ void AmsBackendAfc::parse_afc_state(const nlohmann::json& afc_data) {
         }
     }
 
+    // Parse AFC.var.unit snapshot format when provided.
+    // Format groups lanes by unit (Turtle/OpenAMS) with a top-level "system" object.
+    nlohmann::json unit_lane_payloads = nlohmann::json::object();
+    std::vector<std::string> unit_lane_names;
+    for (auto it = afc_data.begin(); it != afc_data.end(); ++it) {
+        const std::string& unit_name = it.key();
+        if (unit_name == "system" || unit_name == "Tools" || unit_name == "units" ||
+            unit_name == "lanes") {
+            continue;
+        }
+
+        if (!it.value().is_object()) {
+            continue;
+        }
+
+        for (auto lane_it = it.value().begin(); lane_it != it.value().end(); ++lane_it) {
+            const std::string& lane_name = lane_it.key();
+            if (lane_name.rfind("lane", 0) == 0 && lane_it.value().is_object()) {
+                unit_lane_payloads[lane_name] = lane_it.value();
+                unit_lane_names.push_back(lane_name);
+            }
+        }
+    }
+
+    if (!unit_lane_names.empty()) {
+        auto lane_index = [](const std::string& name) -> std::optional<int> {
+            static const std::string kPrefix = "lane";
+            if (name.rfind(kPrefix, 0) != 0) {
+                return std::nullopt;
+            }
+            std::string suffix = name.substr(kPrefix.size());
+            if (suffix.empty() || !std::all_of(suffix.begin(), suffix.end(), [](char c) {
+                    return std::isdigit(static_cast<unsigned char>(c));
+                })) {
+                return std::nullopt;
+            }
+            try {
+                return std::stoi(suffix);
+            } catch (...) {
+                return std::nullopt;
+            }
+        };
+
+        std::sort(unit_lane_names.begin(), unit_lane_names.end(),
+                  [&](const std::string& left, const std::string& right) {
+                      auto left_index = lane_index(left);
+                      auto right_index = lane_index(right);
+                      if (left_index && right_index) {
+                          return *left_index < *right_index;
+                      }
+                      if (left_index) {
+                          return true;
+                      }
+                      if (right_index) {
+                          return false;
+                      }
+                      return left < right;
+                  });
+        unit_lane_names.erase(std::unique(unit_lane_names.begin(), unit_lane_names.end()),
+                              unit_lane_names.end());
+
+        if (!lanes_initialized_ || unit_lane_names != lane_names_) {
+            initialize_lanes(unit_lane_names);
+            spdlog::debug("[AMS AFC] Lane map synchronized from AFC.var.unit snapshot ({} lanes)",
+                          lane_names_.size());
+        }
+
+        for (const auto& lane_name : unit_lane_names) {
+            parse_afc_stepper(lane_name, unit_lane_payloads[lane_name]);
+        }
+    }
+
+    if (afc_data.contains("system") && afc_data["system"].is_object()) {
+        const auto& system = afc_data["system"];
+        if (system.contains("current_load") && system["current_load"].is_string()) {
+            std::string load_lane = system["current_load"].get<std::string>();
+            auto it = lane_name_to_index_.find(load_lane);
+            if (it != lane_name_to_index_.end()) {
+                system_info_.current_slot = it->second;
+                system_info_.filament_loaded = true;
+            }
+        }
+    }
+
     // Parse unit information if available
     if (afc_data.contains("units") && afc_data["units"].is_array()) {
         // AFC may report multiple units (Box Turtles)
