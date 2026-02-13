@@ -652,10 +652,6 @@ class AmsState {
     // emits rapid incremental updates during tool-change sequences.
     std::atomic<bool> full_sync_queued_{false};
 
-    // Event coalescing: avoid queuing unbounded full-sync jobs when AFC/OpenAMS
-    // emits rapid incremental updates during tool-change sequences.
-    std::atomic<bool> full_sync_queued_{false};
-
     // Subject manager for automatic cleanup
     SubjectManager subjects_;
 
