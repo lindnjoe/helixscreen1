@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <limits>
 #include <optional>
 #include <string>
 #include <unordered_set>
@@ -319,11 +320,56 @@ class PrinterDiscovery {
             if (static_cast<int>(afc_lane_names_.size()) < expected_lanes) {
                 std::unordered_set<std::string> existing_lanes(afc_lane_names_.begin(),
                                                                afc_lane_names_.end());
+
+                int min_lane_index = std::numeric_limits<int>::max();
+                int max_lane_index = std::numeric_limits<int>::min();
+                bool all_numeric_lane_names = !afc_lane_names_.empty();
+
+                for (const auto& lane_name : afc_lane_names_) {
+                    if (lane_name.rfind("lane", 0) != 0 || lane_name.size() <= 4) {
+                        all_numeric_lane_names = false;
+                        break;
+                    }
+
+                    std::string suffix = lane_name.substr(4);
+                    bool suffix_is_numeric = std::all_of(suffix.begin(), suffix.end(), [](char c) {
+                        return std::isdigit(static_cast<unsigned char>(c));
+                    });
+                    if (!suffix_is_numeric) {
+                        all_numeric_lane_names = false;
+                        break;
+                    }
+
+                    try {
+                        int idx = std::stoi(suffix);
+                        min_lane_index = std::min(min_lane_index, idx);
+                        max_lane_index = std::max(max_lane_index, idx);
+                    } catch (...) {
+                        all_numeric_lane_names = false;
+                        break;
+                    }
+                }
+
                 afc_lane_names_.reserve(expected_lanes);
-                for (int i = 0; i < expected_lanes; ++i) {
-                    std::string lane_name = "lane" + std::to_string(i);
-                    if (existing_lanes.insert(lane_name).second) {
-                        afc_lane_names_.push_back(std::move(lane_name));
+
+                // If existing lane names follow laneN format, extend with matching index base
+                // (lane1..lane4 -> synthesize lane5..). Otherwise fallback to lane0..laneN.
+                if (all_numeric_lane_names) {
+                    int next_lane_index =
+                        (max_lane_index >= min_lane_index) ? (max_lane_index + 1) : 0;
+                    while (static_cast<int>(afc_lane_names_.size()) < expected_lanes) {
+                        std::string lane_name = "lane" + std::to_string(next_lane_index++);
+                        if (existing_lanes.insert(lane_name).second) {
+                            afc_lane_names_.push_back(std::move(lane_name));
+                        }
+                    }
+                } else {
+                    for (int i = 0; static_cast<int>(afc_lane_names_.size()) < expected_lanes;
+                         ++i) {
+                        std::string lane_name = "lane" + std::to_string(i);
+                        if (existing_lanes.insert(lane_name).second) {
+                            afc_lane_names_.push_back(std::move(lane_name));
+                        }
                     }
                 }
             }

@@ -281,6 +281,14 @@ class AmsBackendAfc : public AmsBackend {
     void query_lane_data();
 
     /**
+     * @brief Query AFC unit snapshot from Moonraker database
+     *
+     * Some AFC/OpenAMS setups expose lane metadata in the AFC.var.unit
+     * snapshot instead of AFC_stepper status objects.
+     */
+    void query_unit_snapshot();
+
+    /**
      * @brief Parse lane data from database response
      *
      * Processes the lane_data JSON object and updates system_info_.gates.

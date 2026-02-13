@@ -11,6 +11,8 @@
 #include "subject_managed_panel.h"
 #include "ui/temperature_observer_bundle.h"
 
+#include <string>
+
 // Forward declarations
 class TempControlPanel;
 
@@ -269,6 +271,7 @@ class FilamentPanel : public PanelBase {
     void update_preset_buttons_visual();
     void check_and_auto_select_preset(); ///< Auto-select preset if targets match
     void update_all_temps();             ///< Unified handler for temp observer bundle
+    [[nodiscard]] std::string get_active_extruder_heater() const;
 
     //
     // === Instance Handlers ===

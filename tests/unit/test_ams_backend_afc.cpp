@@ -655,6 +655,112 @@ TEST_CASE("AFC set_discovered_lanes: empty lanes doesn't overwrite existing",
     REQUIRE(helper.get_hub_names()[0] == "NewHub");
 }
 
+TEST_CASE("AFC lane_data reinitializes when lane names differ",
+          "[ams][afc][discovery][lane_data]") {
+    AmsBackendAfcTestHelper helper;
+
+    // Simulate synthesized discovery lanes that don't match authoritative AFC lane_data keys.
+    std::vector<std::string> lanes = {"lane1", "lane2", "lane3", "lane4",
+                                      "lane5", "lane6", "lane7", "lane8"};
+    helper.set_discovered_lanes(lanes, {"Turtle_1", "Turtle_2"});
+    helper.initialize_lanes_from_discovery();
+
+    nlohmann::json afc_data;
+    nlohmann::json lane_map;
+    for (int i = 0; i < 8; ++i) {
+        lane_map["lane" + std::to_string(i)] = {
+            {"material", "PLA"}, {"spool_id", 100 + i}, {"remaining_weight", 500.0f + i}};
+    }
+    afc_data["lanes"] = lane_map;
+
+    helper.feed_afc_state(afc_data);
+
+    REQUIRE(helper.get_lane_names().size() == 8);
+    REQUIRE(helper.get_lane_names().front() == "lane0");
+    REQUIRE(helper.get_lane_names().back() == "lane7");
+
+    SlotInfo slot0 = helper.get_slot_info(0);
+    SlotInfo slot7 = helper.get_slot_info(7);
+    REQUIRE(slot0.spoolman_id == 100);
+    REQUIRE(slot7.spoolman_id == 107);
+}
+
+TEST_CASE("AFC parses AFC.var.unit snapshot lanes", "[ams][afc][snapshot]") {
+    AmsBackendAfcTestHelper helper;
+
+    nlohmann::json afc_snapshot;
+    afc_snapshot["AMS_1"]["lane4"] = {{"material", "PLA"}, {"spool_id", 13}, {"color", "#000000"},
+                                      {"weight", 295.2},   {"map", "T4"},    {"prep", true},
+                                      {"load", true}};
+    afc_snapshot["AMS_2"]["lane8"] = {{"material", "ABS"}, {"spool_id", 23}, {"color", "#123456"},
+                                      {"weight", 966.9},   {"map", "T8"},    {"prep", true},
+                                      {"load", true}};
+    afc_snapshot["Turtle_1"]["lane0"] = {
+        {"material", "PLA"}, {"spool_id", 35}, {"color", "#328169"}, {"weight", 653.8},
+        {"map", "T0"},       {"prep", true},   {"load", true},       {"tool_loaded", true}};
+    afc_snapshot["system"] = {{"current_load", "lane4"}};
+
+    helper.feed_afc_state(afc_snapshot);
+
+    REQUIRE(helper.get_lane_names().size() == 3);
+    REQUIRE(helper.get_lane_names()[0] == "lane0");
+    REQUIRE(helper.get_lane_names()[1] == "lane4");
+    REQUIRE(helper.get_lane_names()[2] == "lane8");
+
+    REQUIRE(helper.get_current_slot() == 1);
+
+    SlotInfo lane4 = helper.get_slot_info(1);
+    SlotInfo lane8 = helper.get_slot_info(2);
+    REQUIRE(lane4.spoolman_id == 13);
+    REQUIRE(lane8.spoolman_id == 23);
+}
+
+TEST_CASE("AFC lane_data accepts OpenAMS-style load/status fields",
+          "[ams][afc][lane_data][openams]") {
+    AmsBackendAfcTestHelper helper;
+
+    nlohmann::json afc_data;
+    afc_data["lanes"]["lane4"] = {{"material", "PLA"},
+                                  {"spool_id", 13},
+                                  {"load", true},
+                                  {"status", "Loaded"},
+                                  {"weight", 295.2}};
+    afc_data["lanes"]["lane7"] = {
+        {"material", "PLA"}, {"spool_id", 42}, {"tool_loaded", true}, {"status", "Tooled"}};
+
+    helper.feed_afc_state(afc_data);
+
+    REQUIRE(helper.get_lane_names().size() == 2);
+
+    SlotInfo lane4 = helper.get_slot_info(0);
+    SlotInfo lane7 = helper.get_slot_info(1);
+    REQUIRE(lane4.spoolman_id == 13);
+    REQUIRE(lane7.spoolman_id == 42);
+    REQUIRE(lane4.status == SlotStatus::LOADED);
+    REQUIRE(lane7.status == SlotStatus::LOADED);
+    REQUIRE(helper.get_current_slot() == 1);
+}
+
+TEST_CASE("AFC handle_status_update discovers lanes directly from AFC_stepper keys",
+          "[ams][afc][discovery][stepper_keys]") {
+    AmsBackendAfcTestHelper helper;
+
+    // No discovered lanes configured. Feed runtime stepper keys directly.
+    nlohmann::json params;
+    params["AFC_stepper lane0"] = {{"material", "PLA"}, {"spool_id", 201}, {"prep", true}};
+    params["AFC_stepper lane1"] = {{"material", "PETG"}, {"spool_id", 202}, {"prep", true}};
+    helper.feed_status_update(params);
+
+    REQUIRE(helper.get_lane_names().size() == 2);
+    REQUIRE(helper.get_lane_names()[0] == "lane0");
+    REQUIRE(helper.get_lane_names()[1] == "lane1");
+
+    SlotInfo slot0 = helper.get_slot_info(0);
+    SlotInfo slot1 = helper.get_slot_info(1);
+    REQUIRE(slot0.spoolman_id == 201);
+    REQUIRE(slot1.spoolman_id == 202);
+}
+
 TEST_CASE("AFC segment: works with discovered lanes", "[ams][afc][discovery][segment]") {
     AmsBackendAfcTestHelper helper;
 
