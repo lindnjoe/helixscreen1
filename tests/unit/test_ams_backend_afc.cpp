@@ -715,6 +715,32 @@ TEST_CASE("AFC parses AFC.var.unit snapshot lanes", "[ams][afc][snapshot]") {
     REQUIRE(lane8.spoolman_id == 23);
 }
 
+TEST_CASE("AFC lane_data accepts OpenAMS-style load/status fields",
+          "[ams][afc][lane_data][openams]") {
+    AmsBackendAfcTestHelper helper;
+
+    nlohmann::json afc_data;
+    afc_data["lanes"]["lane4"] = {{"material", "PLA"},
+                                  {"spool_id", 13},
+                                  {"load", true},
+                                  {"status", "Loaded"},
+                                  {"weight", 295.2}};
+    afc_data["lanes"]["lane7"] = {
+        {"material", "PLA"}, {"spool_id", 42}, {"tool_loaded", true}, {"status", "Tooled"}};
+
+    helper.feed_afc_state(afc_data);
+
+    REQUIRE(helper.get_lane_names().size() == 2);
+
+    SlotInfo lane4 = helper.get_slot_info(0);
+    SlotInfo lane7 = helper.get_slot_info(1);
+    REQUIRE(lane4.spoolman_id == 13);
+    REQUIRE(lane7.spoolman_id == 42);
+    REQUIRE(lane4.status == SlotStatus::LOADED);
+    REQUIRE(lane7.status == SlotStatus::LOADED);
+    REQUIRE(helper.get_current_slot() == 1);
+}
+
 TEST_CASE("AFC handle_status_update discovers lanes directly from AFC_stepper keys",
           "[ams][afc][discovery][stepper_keys]") {
     AmsBackendAfcTestHelper helper;

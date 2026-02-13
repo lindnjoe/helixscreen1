@@ -973,12 +973,15 @@ void AmsBackendAfc::detect_afc_version() {
             }
         }
 
-        // For v1.0.32+, query lane_data database for richer data.
-        // Otherwise, query AFC.var.unit snapshot (used by some OpenAMS setups).
+        // Always query lane metadata from lane_data first, then merge with
+        // AFC.var.unit snapshot for status/tool-loaded fields used by OpenAMS.
+        // Backup analysis shows lane_data is authoritative for spool metadata while
+        // AFC.var.unit carries richer runtime lane state.
         if (should_query_lane_data) {
             query_lane_data();
         } else {
             query_unit_snapshot();
+            query_lane_data();
         }
     };
 
@@ -1117,6 +1120,9 @@ void AmsBackendAfc::query_lane_data() {
         "server.database.get_item", primary_params,
         [this, parse_and_emit](const nlohmann::json& response) {
             if (parse_and_emit(response, "namespace lane_data")) {
+                // Enrich lane_data metadata with runtime state from AFC.var.unit
+                // (load/tool status), especially for OpenAMS lanes.
+                query_unit_snapshot();
                 return;
             }
 
@@ -1124,8 +1130,10 @@ void AmsBackendAfc::query_lane_data() {
             nlohmann::json legacy_params = {{"namespace", "AFC"}, {"key", "lane_data"}};
             client_->send_jsonrpc(
                 "server.database.get_item", legacy_params,
-                [parse_and_emit](const nlohmann::json& legacy_response) {
-                    parse_and_emit(legacy_response, "AFC/lane_data");
+                [this, parse_and_emit](const nlohmann::json& legacy_response) {
+                    if (parse_and_emit(legacy_response, "AFC/lane_data")) {
+                        query_unit_snapshot();
+                    }
                 },
                 [this](const MoonrakerError& legacy_err) {
                     spdlog::warn("[AMS AFC] Failed legacy lane_data query: {}", legacy_err.message);
@@ -1142,7 +1150,9 @@ void AmsBackendAfc::query_lane_data() {
                 [this, parse_and_emit](const nlohmann::json& legacy_response) {
                     if (!parse_and_emit(legacy_response, "AFC/lane_data")) {
                         query_unit_snapshot();
+                        return;
                     }
+                    query_unit_snapshot();
                 },
                 [this](const MoonrakerError& legacy_err) {
                     spdlog::warn("[AMS AFC] Failed legacy lane_data query: {}", legacy_err.message);
@@ -1289,13 +1299,43 @@ void AmsBackendAfc::parse_lane_data(const nlohmann::json& lane_data) {
             slot.material = lane["material"].get<std::string>();
         }
 
-        // Parse loaded state
+        // Parse loaded state. Different AFC/OpenAMS payloads use different fields
+        // (loaded/load/tool_loaded/status), so normalize them here.
+        bool has_loaded_signal = false;
+        bool loaded = false;
+
         if (lane.contains("loaded") && lane["loaded"].is_boolean()) {
-            bool loaded = lane["loaded"].get<bool>();
+            loaded = lane["loaded"].get<bool>();
+            has_loaded_signal = true;
+        }
+        if (!has_loaded_signal && lane.contains("tool_loaded") &&
+            lane["tool_loaded"].is_boolean()) {
+            loaded = lane["tool_loaded"].get<bool>();
+            has_loaded_signal = true;
+        }
+        if (!has_loaded_signal && lane.contains("load") && lane["load"].is_boolean()) {
+            loaded = lane["load"].get<bool>();
+            has_loaded_signal = true;
+        }
+        if (!has_loaded_signal && lane.contains("status") && lane["status"].is_string()) {
+            const std::string status = lane["status"].get<std::string>();
+            if (status == "Loaded" || status == "Tool Loaded" || status == "Tooled") {
+                loaded = true;
+                has_loaded_signal = true;
+            } else if (status == "None" || status == "Empty" || status == "Ready") {
+                loaded = false;
+                has_loaded_signal = true;
+            }
+        }
+
+        if (has_loaded_signal) {
             if (loaded) {
                 slot.status = SlotStatus::LOADED;
-                system_info_.current_slot = static_cast<int>(i);
-                system_info_.filament_loaded = true;
+                if (lane.contains("tool_loaded") && lane["tool_loaded"].is_boolean() &&
+                    lane["tool_loaded"].get<bool>()) {
+                    system_info_.current_slot = static_cast<int>(i);
+                    system_info_.filament_loaded = true;
+                }
             } else {
                 // Check if filament is available (not loaded but present)
                 if (lane.contains("available") && lane["available"].is_boolean() &&
@@ -1322,10 +1362,26 @@ void AmsBackendAfc::parse_lane_data(const nlohmann::json& lane_data) {
 
         if (lane.contains("remaining_weight") && lane["remaining_weight"].is_number()) {
             slot.remaining_weight_g = lane["remaining_weight"].get<float>();
+        } else if (lane.contains("weight") && lane["weight"].is_number()) {
+            slot.remaining_weight_g = lane["weight"].get<float>();
         }
 
         if (lane.contains("total_weight") && lane["total_weight"].is_number()) {
             slot.total_weight_g = lane["total_weight"].get<float>();
+        }
+
+        if (lane.contains("nozzle_temp") && lane["nozzle_temp"].is_number_integer()) {
+            int temp = lane["nozzle_temp"].get<int>();
+            if (temp > 0) {
+                slot.nozzle_temp_min = temp;
+                slot.nozzle_temp_max = temp;
+            }
+        } else if (lane.contains("extruder_temp") && lane["extruder_temp"].is_number_integer()) {
+            int temp = lane["extruder_temp"].get<int>();
+            if (temp > 0) {
+                slot.nozzle_temp_min = temp;
+                slot.nozzle_temp_max = temp;
+            }
         }
     }
 }
