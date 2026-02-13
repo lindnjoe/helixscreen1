@@ -2141,6 +2141,20 @@ void AmsPanel::handle_load_complete() {
     }
 }
 
+void AmsPanel::cancel_pending_preheat() {
+    if (pending_load_slot_ < 0 && pending_load_target_temp_ == 0 && !ui_initiated_heat_) {
+        return;
+    }
+
+    spdlog::info("[AmsPanel] Clearing pending preheat state after global cooldown "
+                 "(slot={}, target={}, ui_initiated={})",
+                 pending_load_slot_, pending_load_target_temp_, ui_initiated_heat_);
+
+    pending_load_slot_ = -1;
+    pending_load_target_temp_ = 0;
+    ui_initiated_heat_ = false;
+}
+
 void AmsPanel::show_preheat_feedback(int slot_index, int target_temp) {
     LV_UNUSED(slot_index);
 
@@ -2187,6 +2201,7 @@ void destroy_ams_panel_ui() {
         }
 
         lv_obj_safe_delete(s_ams_panel_obj);
+        s_ams_panel_obj = nullptr;
 
         // Note: Widget registrations remain (LVGL doesn't support unregistration)
         // Note: g_ams_panel C++ object stays for state preservation

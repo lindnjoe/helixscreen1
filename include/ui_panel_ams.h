@@ -303,6 +303,14 @@ class AmsPanel : public PanelBase {
      */
     void show_preheat_feedback(int slot_index, int target_temp);
 
+    /**
+     * @brief Cancel UI-managed preheat state after an external global cooldown
+     *
+     * Called when another panel issues TURN_OFF_HEATERS. Clears pending load/preheat
+     * bookkeeping so the next tool change starts from a clean state.
+     */
+    void cancel_pending_preheat();
+
     // === UI Module Helpers (internal, show modals with callbacks) ===
 
     void show_context_menu(int slot_index, lv_obj_t* near_widget);
