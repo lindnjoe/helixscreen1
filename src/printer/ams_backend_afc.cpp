@@ -1208,6 +1208,34 @@ void AmsBackendAfc::query_unit_snapshot() {
         });
 }
 
+void AmsBackendAfc::query_unit_snapshot() {
+    if (!client_) {
+        spdlog::warn("[AMS AFC] Cannot query AFC.var.unit: client is null");
+        return;
+    }
+
+    nlohmann::json params = {{"namespace", "AFC"}, {"key", "AFC.var.unit"}};
+
+    client_->send_jsonrpc(
+        "server.database.get_item", params,
+        [this](const nlohmann::json& response) {
+            if (!(response.contains("value") && response["value"].is_object())) {
+                return;
+            }
+
+            {
+                std::lock_guard<std::recursive_mutex> lock(mutex_);
+                parse_afc_state(response["value"]);
+            }
+
+            spdlog::debug("[AMS AFC] Parsed lane metadata from AFC.var.unit snapshot");
+            emit_event(EVENT_STATE_CHANGED);
+        },
+        [](const MoonrakerError& err) {
+            spdlog::warn("[AMS AFC] Failed to query AFC.var.unit snapshot: {}", err.message);
+        });
+}
+
 void AmsBackendAfc::parse_lane_data(const nlohmann::json& lane_data) {
     // Lane data format:
     // {
