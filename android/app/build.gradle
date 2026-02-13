@@ -1,0 +1,54 @@
+apply plugin: 'com.android.application'
+
+android {
+    namespace "org.helixscreen.app"
+    compileSdkVersion 34
+
+    defaultConfig {
+        applicationId "org.helixscreen.app"
+        minSdkVersion 21
+        targetSdkVersion 34
+        versionCode 1
+        versionName "1.0.0"
+
+        externalNativeBuild {
+            cmake {
+                arguments "-DANDROID_STL=c++_shared"
+                abiFilters 'arm64-v8a', 'x86_64'
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path 'jni/CMakeLists.txt'
+        }
+    }
+
+    lint {
+        abortOnError false
+    }
+
+}
+
+// Copy project assets into APK assets directory, preserving directory structure.
+// The asset extractor on Android reads these and copies them to internal storage.
+task copyAssets(type: Copy) {
+    from('../../ui_xml') { into 'ui_xml' }
+    from('../../assets') { into 'assets' }
+    from('../../config') { into 'config' }
+    into 'src/main/assets'
+}
+
+preBuild.dependsOn copyAssets
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+}
