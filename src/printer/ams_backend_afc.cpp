@@ -649,10 +649,18 @@ void AmsBackendAfc::parse_afc_state(const nlohmann::json& afc_data) {
         if (!snapshot_lane_names.empty()) {
             sort_and_dedupe_lane_names(snapshot_lane_names);
 
-            if (!lanes_initialized_ || snapshot_lane_names != lane_names_) {
-                initialize_lanes(snapshot_lane_names);
+            std::vector<std::string> merged_lane_names = snapshot_lane_names;
+            if (lanes_initialized_) {
+                merged_lane_names.insert(merged_lane_names.end(), lane_names_.begin(),
+                                         lane_names_.end());
+                sort_and_dedupe_lane_names(merged_lane_names);
+            }
+
+            if (!lanes_initialized_ || merged_lane_names != lane_names_) {
+                initialize_lanes(merged_lane_names);
                 spdlog::debug(
-                    "[AMS AFC] Lane map synchronized from AFC.var.unit snapshot ({} lanes)",
+                    "[AMS AFC] Lane map synchronized from AFC.var.unit snapshot ({} lanes, "
+                    "merged)",
                     lane_names_.size());
             }
 

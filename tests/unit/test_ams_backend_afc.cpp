@@ -715,6 +715,36 @@ TEST_CASE("AFC parses AFC.var.unit snapshot lanes", "[ams][afc][snapshot]") {
     REQUIRE(lane8.spoolman_id == 23);
 }
 
+TEST_CASE("AFC partial AFC.var.unit snapshot updates do not shrink lane map",
+          "[ams][afc][snapshot][incremental]") {
+    AmsBackendAfcTestHelper helper;
+
+    nlohmann::json initial_snapshot;
+    initial_snapshot["AMS_1"]["lane0"] = {{"material", "PLA"}, {"spool_id", 10}};
+    initial_snapshot["AMS_1"]["lane1"] = {{"material", "PETG"}, {"spool_id", 11}};
+    initial_snapshot["AMS_2"]["lane4"] = {{"material", "ABS"}, {"spool_id", 14}};
+    helper.feed_afc_state(initial_snapshot);
+
+    REQUIRE(helper.get_lane_names().size() == 3);
+    REQUIRE(helper.get_lane_names()[0] == "lane0");
+    REQUIRE(helper.get_lane_names()[1] == "lane1");
+    REQUIRE(helper.get_lane_names()[2] == "lane4");
+
+    // Simulate incremental snapshot payload that only includes one updated lane.
+    nlohmann::json partial_snapshot;
+    partial_snapshot["AMS_1"]["lane1"] = {{"material", "Nylon"}, {"spool_id", 111}};
+    helper.feed_afc_state(partial_snapshot);
+
+    REQUIRE(helper.get_lane_names().size() == 3);
+    REQUIRE(helper.get_lane_names()[0] == "lane0");
+    REQUIRE(helper.get_lane_names()[1] == "lane1");
+    REQUIRE(helper.get_lane_names()[2] == "lane4");
+
+    SlotInfo lane1 = helper.get_slot_info(1);
+    REQUIRE(lane1.spoolman_id == 111);
+    REQUIRE(lane1.material == "Nylon");
+}
+
 TEST_CASE("AFC lane_data accepts OpenAMS-style load/status fields",
           "[ams][afc][lane_data][openams]") {
     AmsBackendAfcTestHelper helper;
