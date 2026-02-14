@@ -20,6 +20,7 @@
 #include "printer_state.h"
 #include "temperature_history_manager.h"
 #include "theme_manager.h"
+#include "tool_state.h"
 
 #include <spdlog/spdlog.h>
 
@@ -889,6 +890,20 @@ void TempControlPanel::setup_nozzle_panel(lv_obj_t* panel, lv_obj_t* parent_scre
             spdlog::debug("[TempPanel] Extruder list changed, rebuilding selector");
             self->rebuild_extruder_segments();
         });
+
+    // When active tool changes, auto-switch to that tool's extruder
+    auto& tool_state = helix::ToolState::instance();
+    if (tool_state.tool_count() > 1) {
+        active_tool_observer_ =
+            observe_int_sync<TempControlPanel>(tool_state.get_active_tool_subject(), this,
+                                               [](TempControlPanel* self, int /*tool_idx*/) {
+                                                   auto& ts = helix::ToolState::instance();
+                                                   const auto* tool = ts.active_tool();
+                                                   if (tool && tool->extruder_name) {
+                                                       self->select_extruder(*tool->extruder_name);
+                                                   }
+                                               });
+    }
 
     spdlog::debug("[TempPanel] Nozzle panel setup complete!");
 }

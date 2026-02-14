@@ -230,6 +230,7 @@ class TempControlPanel {
     // Multi-extruder support
     std::string active_extruder_name_ = "extruder"; ///< Current extruder klipper name
     ObserverGuard extruder_version_observer_;       ///< Rebuild selector on extruder discovery
+    ObserverGuard active_tool_observer_;            ///< Sync extruder with active tool changes
 
     void select_extruder(const std::string& name);
     void rebuild_extruder_segments();
