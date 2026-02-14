@@ -887,8 +887,10 @@ void FilamentPanel::handle_cooldown() {
     }
 
     // If AMS preheat was in progress, cooldown invalidates that pending state.
-    // Clear it now to avoid stale preheat/load transitions on the next tool change.
-    get_global_ams_panel().cancel_pending_preheat();
+    // Only clear when AMS singleton already exists (avoid lazy-creating AMS UI here).
+    if (AmsPanel* ams_panel = AmsPanel::get_active_instance()) {
+        ams_panel->cancel_pending_preheat();
+    }
 
     // Clear material selection since we're cooling down
     selected_material_ = -1;
