@@ -49,6 +49,10 @@
 // Global instance pointer for XML callback access (atomic for safety during destruction)
 static std::atomic<AmsPanel*> g_ams_panel_instance{nullptr};
 
+AmsPanel* AmsPanel::get_active_instance() {
+    return g_ams_panel_instance.load();
+}
+
 // Default slot width for endless arrows canvas (when layout not yet computed)
 static constexpr int32_t DEFAULT_SLOT_WIDTH = 80;
 
