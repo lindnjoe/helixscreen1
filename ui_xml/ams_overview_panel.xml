@@ -53,16 +53,9 @@
                    width="100%" height="content" style_radius="#border_radius" style_pad_all="#space_sm"
                    style_border_width="0" scrollable="false">
             <lv_obj name="detail_slot_area"
-                    width="100%" height="content" style_pad_all="0" scrollable="false"
-                    flex_flow="column" style_flex_main_place="start" style_flex_cross_place="center">
-              <!-- Slot Grid Container (filled dynamically by C++) -->
-              <lv_obj name="detail_slot_grid"
-                      width="content" height="content" style_pad_all="0" style_pad_row="0" style_pad_column="0"
-                      flex_flow="row" style_flex_main_place="start" style_flex_cross_place="start" scrollable="false"/>
-              <!-- Labels Layer - renders on top for overlapping slots -->
-              <lv_obj name="detail_labels_layer"
-                      width="100%" height="80" style_pad_all="0" scrollable="false" clickable="false"/>
-              <!-- Tray visual (theme colors for dark/light mode support) -->
+                    width="100%" height="content" style_pad_all="0" scrollable="false">
+              <!-- Tray visual drawn FIRST so it renders BEHIND slot widgets.
+                   Slot numbers and active glow need to be visible on top of the tray. -->
               <lv_obj name="detail_slot_tray"
                       width="100%" height="30" align="bottom_mid"
                       style_bg_color="#elevated_bg" style_bg_opa="200"
@@ -77,8 +70,20 @@
                         style_border_color="#text_muted" style_border_opa="180" style_border_side="right"
                         style_radius="#border_radius" style_pad_all="0" scrollable="false" clickable="false"/>
               </lv_obj>
+              <!-- Slot Grid Container (filled dynamically by C++) - renders ON TOP of tray -->
+              <lv_obj name="detail_slot_grid"
+                      width="content" height="content" style_pad_all="0" style_pad_row="0" style_pad_column="0"
+                      flex_flow="row" style_flex_main_place="start" style_flex_cross_place="start" scrollable="false"/>
+              <!-- Labels Layer - renders on top of everything for overlapping slots -->
+              <lv_obj name="detail_labels_layer"
+                      width="100%" height="80" style_pad_all="0" scrollable="false" clickable="false"/>
             </lv_obj>
           </ui_card>
+          <!-- Path Canvas - shows filament routing from slots through hub to nozzle -->
+          <lv_obj name="detail_path_container" width="100%" flex_grow="1" style_pad_all="0"
+                  flex_flow="column" style_flex_main_place="start" scrollable="false">
+            <filament_path_canvas name="detail_path_canvas" width="100%" flex_grow="1"/>
+          </lv_obj>
         </lv_obj>
       </lv_obj>
       <!-- Right column (loaded info + action buttons) -->

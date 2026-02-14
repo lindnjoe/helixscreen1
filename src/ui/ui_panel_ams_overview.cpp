@@ -8,6 +8,7 @@
 #include "ui_ams_slot_layout.h"
 #include "ui_error_reporting.h"
 #include "ui_event_safety.h"
+#include "ui_filament_path_canvas.h"
 #include "ui_nav.h"
 #include "ui_nav_manager.h"
 #include "ui_panel_ams.h"
@@ -22,12 +23,15 @@
 #include "app_globals.h"
 #include "lvgl/src/xml/lv_xml.h"
 #include "observer_factory.h"
+#include "printer_detector.h"
+#include "settings_manager.h"
 #include "static_panel_registry.h"
 #include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
+#include <functional>
 #include <memory>
 
 // ============================================================================
@@ -48,6 +52,15 @@ static constexpr int32_t MINI_BAR_HEIGHT_PX = 40;
 /// Border radius for bar corners
 static constexpr int32_t MINI_BAR_RADIUS_PX = 4;
 
+/// Zoom animation duration (ms) for detail view transitions
+static constexpr uint32_t DETAIL_ZOOM_DURATION_MS = 200;
+
+/// Zoom animation start scale (25% = 64/256)
+static constexpr int32_t DETAIL_ZOOM_SCALE_MIN = 64;
+
+/// Zoom animation end scale (100% = 256/256)
+static constexpr int32_t DETAIL_ZOOM_SCALE_MAX = 256;
+
 /// Height of status indicator line below each bar
 static constexpr int32_t STATUS_LINE_HEIGHT_PX = 3;
 
@@ -56,6 +69,24 @@ static constexpr int32_t STATUS_LINE_GAP_PX = 2;
 
 // Global instance pointer for XML callback access
 static std::atomic<AmsOverviewPanel*> g_overview_panel_instance{nullptr};
+
+/// Get a display name for a unit, falling back to "Unit N" (1-based)
+static std::string get_unit_display_name(const AmsUnit& unit, int unit_index) {
+    if (!unit.name.empty()) {
+        return unit.name;
+    }
+    return "Unit " + std::to_string(unit_index + 1);
+}
+
+/// Set a label to "N slots" text, with null-safety
+static void set_slot_count_label(lv_obj_t* label, int slot_count) {
+    if (!label) {
+        return;
+    }
+    char buf[16];
+    snprintf(buf, sizeof(buf), "%d slots", slot_count);
+    lv_label_set_text(label, buf);
+}
 
 // ============================================================================
 // XML Event Callback Wrappers
@@ -80,41 +111,33 @@ static void on_settings_clicked_xml(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_END();
 }
 
+/// Execute a backend operation with standard error handling
+static void dispatch_backend_op(const char* op_name,
+                                std::function<AmsError(AmsBackend*)> operation) {
+    AmsBackend* backend = AmsState::instance().get_backend();
+    if (!backend) {
+        NOTIFY_WARNING("AMS not available");
+        return;
+    }
+
+    spdlog::info("[AMS Overview] {} requested", op_name);
+    AmsError error = operation(backend);
+    if (error.result != AmsResult::SUCCESS) {
+        NOTIFY_ERROR("{} failed: {}", op_name, error.user_msg);
+    }
+}
+
 static void on_unload_clicked_xml(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[AMS Overview] on_unload_clicked");
     LV_UNUSED(e);
-
-    spdlog::info("[AMS Overview] Unload requested");
-
-    AmsBackend* backend = AmsState::instance().get_backend();
-    if (backend) {
-        AmsError error = backend->unload_filament();
-        if (error.result != AmsResult::SUCCESS) {
-            NOTIFY_ERROR("Unload failed: {}", error.user_msg);
-        }
-    } else {
-        NOTIFY_WARNING("AMS not available");
-    }
-
+    dispatch_backend_op("Unload", [](AmsBackend* b) { return b->unload_filament(); });
     LVGL_SAFE_EVENT_CB_END();
 }
 
 static void on_reset_clicked_xml(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[AMS Overview] on_reset_clicked");
     LV_UNUSED(e);
-
-    spdlog::info("[AMS Overview] Reset requested");
-
-    AmsBackend* backend = AmsState::instance().get_backend();
-    if (backend) {
-        AmsError error = backend->reset();
-        if (error.result != AmsResult::SUCCESS) {
-            NOTIFY_ERROR("Reset failed: {}", error.user_msg);
-        }
-    } else {
-        NOTIFY_WARNING("AMS not available");
-    }
-
+    dispatch_backend_op("Reset", [](AmsBackend* b) { return b->reset(); });
     LVGL_SAFE_EVENT_CB_END();
 }
 
@@ -190,6 +213,7 @@ void AmsOverviewPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     detail_slot_grid_ = lv_obj_find_by_name(panel_, "detail_slot_grid");
     detail_labels_layer_ = lv_obj_find_by_name(panel_, "detail_labels_layer");
     detail_slot_tray_ = lv_obj_find_by_name(panel_, "detail_slot_tray");
+    detail_path_canvas_ = lv_obj_find_by_name(panel_, "detail_path_canvas");
 
     // Store global instance for callback access
     g_overview_panel_instance.store(this);
@@ -251,8 +275,8 @@ void AmsOverviewPanel::refresh_units() {
                       old_unit_count, new_unit_count);
         create_unit_cards(info);
     } else {
-        // Same number of units - update existing cards
-        for (int i = 0; i < new_unit_count && i < static_cast<int>(unit_cards_.size()); ++i) {
+        // Same number of units - update existing cards in place
+        for (int i = 0; i < new_unit_count; ++i) {
             update_unit_card(unit_cards_[i], info.units[i], current_slot);
         }
     }
@@ -316,16 +340,10 @@ void AmsOverviewPanel::create_unit_cards(const AmsSystemInfo& info) {
 
         // Set dynamic content only — unit name and slot count vary per unit
         if (uc.name_label) {
-            std::string display_name =
-                unit.name.empty() ? ("Unit " + std::to_string(i + 1)) : unit.name;
-            lv_label_set_text(uc.name_label, display_name.c_str());
+            lv_label_set_text(uc.name_label, get_unit_display_name(unit, i).c_str());
         }
 
-        if (uc.slot_count_label) {
-            char count_buf[16];
-            snprintf(count_buf, sizeof(count_buf), "%d slots", unit.slot_count);
-            lv_label_set_text(uc.slot_count_label, count_buf);
-        }
+        set_slot_count_label(uc.slot_count_label, unit.slot_count);
 
         // Create the mini bars for this unit (dynamic — slot count varies)
         create_mini_bars(uc, unit, current_slot);
@@ -344,9 +362,7 @@ void AmsOverviewPanel::update_unit_card(UnitCard& card, const AmsUnit& unit, int
 
     // Update name label
     if (card.name_label) {
-        std::string display_name =
-            unit.name.empty() ? ("Unit " + std::to_string(card.unit_index + 1)) : unit.name;
-        lv_label_set_text(card.name_label, display_name.c_str());
+        lv_label_set_text(card.name_label, get_unit_display_name(unit, card.unit_index).c_str());
     }
 
     // Rebuild mini bars (slot colors/status may have changed)
@@ -356,11 +372,7 @@ void AmsOverviewPanel::update_unit_card(UnitCard& card, const AmsUnit& unit, int
     }
 
     // Update slot count
-    if (card.slot_count_label) {
-        char count_buf[16];
-        snprintf(count_buf, sizeof(count_buf), "%d slots", unit.slot_count);
-        lv_label_set_text(card.slot_count_label, count_buf);
-    }
+    set_slot_count_label(card.slot_count_label, unit.slot_count);
 }
 
 void AmsOverviewPanel::create_mini_bars(UnitCard& card, const AmsUnit& unit, int current_slot) {
@@ -489,18 +501,15 @@ void AmsOverviewPanel::refresh_system_path(const AmsSystemInfo& info, int curren
 
     for (int i = 0; i < unit_count && i < static_cast<int>(unit_cards_.size()); ++i) {
         if (unit_cards_[i].card) {
-            // Get card center X relative to the system path widget's parent
+            // Get card center X relative to the system path widget
             lv_obj_update_layout(unit_cards_[i].card);
             lv_area_t card_coords;
             lv_obj_get_coords(unit_cards_[i].card, &card_coords);
 
-            // Get system path widget position for relative offset
-            if (system_path_) {
-                lv_area_t path_coords;
-                lv_obj_get_coords(system_path_, &path_coords);
-                int32_t card_center_x = (card_coords.x1 + card_coords.x2) / 2 - path_coords.x1;
-                ui_system_path_canvas_set_unit_x(system_path_, i, card_center_x);
-            }
+            lv_area_t path_coords;
+            lv_obj_get_coords(system_path_, &path_coords);
+            int32_t card_center_x = (card_coords.x1 + card_coords.x2) / 2 - path_coords.x1;
+            ui_system_path_canvas_set_unit_x(system_path_, i, card_center_x);
         }
     }
 
@@ -520,12 +529,8 @@ void AmsOverviewPanel::refresh_system_path(const AmsSystemInfo& info, int curren
     ui_system_path_canvas_set_filament_loaded(system_path_, info.filament_loaded);
 
     // Set bypass path state (bypass is drawn inside the canvas, no card needed)
-    if (info.supports_bypass) {
-        bool bypass_active = (current_slot == -2);
-        ui_system_path_canvas_set_bypass(system_path_, true, bypass_active, 0x888888);
-    } else {
-        ui_system_path_canvas_set_bypass(system_path_, false, false, 0x888888);
-    }
+    bool bypass_active = info.supports_bypass && (current_slot == -2);
+    ui_system_path_canvas_set_bypass(system_path_, info.supports_bypass, bypass_active, 0x888888);
 
     // Set per-unit hub sensor states
     for (int i = 0; i < unit_count && i < static_cast<int>(info.units.size()); ++i) {
@@ -539,12 +544,8 @@ void AmsOverviewPanel::refresh_system_path(const AmsSystemInfo& info, int curren
             lv_subject_get_int(AmsState::instance().get_path_filament_segment_subject()));
         bool toolhead_triggered = (segment >= PathSegment::TOOLHEAD);
 
-        bool has_toolhead = false;
-        for (const auto& unit : info.units) {
-            if (unit.has_toolhead_sensor)
-                has_toolhead = true;
-        }
-
+        bool has_toolhead = std::any_of(info.units.begin(), info.units.end(),
+                                        [](const AmsUnit& u) { return u.has_toolhead_sensor; });
         ui_system_path_canvas_set_toolhead_sensor(system_path_, has_toolhead, toolhead_triggered);
     }
 
@@ -601,6 +602,9 @@ void AmsOverviewPanel::show_unit_detail(int unit_index) {
     if (!panel_ || !detail_container_ || !cards_row_)
         return;
 
+    // Cancel any in-flight zoom animations to prevent race conditions
+    lv_anim_delete(detail_container_, nullptr);
+
     auto* backend = AmsState::instance().get_backend();
     if (!backend)
         return;
@@ -608,6 +612,13 @@ void AmsOverviewPanel::show_unit_detail(int unit_index) {
     AmsSystemInfo info = backend->get_system_info();
     if (unit_index < 0 || unit_index >= static_cast<int>(info.units.size()))
         return;
+
+    // Capture clicked card's screen center BEFORE hiding overview elements
+    lv_area_t card_coords = {};
+    if (unit_index < static_cast<int>(unit_cards_.size()) && unit_cards_[unit_index].card) {
+        lv_obj_update_layout(unit_cards_[unit_index].card);
+        lv_obj_get_coords(unit_cards_[unit_index].card, &card_coords);
+    }
 
     detail_unit_index_ = unit_index;
     const AmsUnit& unit = info.units[unit_index];
@@ -620,32 +631,124 @@ void AmsOverviewPanel::show_unit_detail(int unit_index) {
     // Create slot widgets for this unit
     create_detail_slots(unit);
 
+    // Configure path canvas for this unit's filament routing
+    setup_detail_path_canvas(unit, info);
+
     // Swap visibility: hide overview elements, show detail
     lv_obj_add_flag(cards_row_, LV_OBJ_FLAG_HIDDEN);
     if (system_path_area_)
         lv_obj_add_flag(system_path_area_, LV_OBJ_FLAG_HIDDEN);
     lv_obj_remove_flag(detail_container_, LV_OBJ_FLAG_HIDDEN);
+
+    // Zoom-in animation (scale + fade) — gated on animations setting
+    if (SettingsManager::instance().get_animations_enabled()) {
+        // Set transform pivot to the clicked card's center relative to detail container
+        lv_obj_update_layout(detail_container_);
+        lv_area_t detail_coords;
+        lv_obj_get_coords(detail_container_, &detail_coords);
+        int32_t pivot_x = (card_coords.x1 + card_coords.x2) / 2 - detail_coords.x1;
+        int32_t pivot_y = (card_coords.y1 + card_coords.y2) / 2 - detail_coords.y1;
+        lv_obj_set_style_transform_pivot_x(detail_container_, pivot_x, LV_PART_MAIN);
+        lv_obj_set_style_transform_pivot_y(detail_container_, pivot_y, LV_PART_MAIN);
+
+        // Start small and transparent
+        lv_obj_set_style_transform_scale(detail_container_, DETAIL_ZOOM_SCALE_MIN, LV_PART_MAIN);
+        lv_obj_set_style_opa(detail_container_, LV_OPA_TRANSP, LV_PART_MAIN);
+
+        // Scale animation
+        lv_anim_t scale_anim;
+        lv_anim_init(&scale_anim);
+        lv_anim_set_var(&scale_anim, detail_container_);
+        lv_anim_set_values(&scale_anim, DETAIL_ZOOM_SCALE_MIN, DETAIL_ZOOM_SCALE_MAX);
+        lv_anim_set_duration(&scale_anim, DETAIL_ZOOM_DURATION_MS);
+        lv_anim_set_path_cb(&scale_anim, lv_anim_path_ease_out);
+        lv_anim_set_exec_cb(&scale_anim, [](void* obj, int32_t value) {
+            lv_obj_set_style_transform_scale(static_cast<lv_obj_t*>(obj), value, LV_PART_MAIN);
+        });
+        lv_anim_start(&scale_anim);
+
+        // Fade animation
+        lv_anim_t fade_anim;
+        lv_anim_init(&fade_anim);
+        lv_anim_set_var(&fade_anim, detail_container_);
+        lv_anim_set_values(&fade_anim, LV_OPA_TRANSP, LV_OPA_COVER);
+        lv_anim_set_duration(&fade_anim, DETAIL_ZOOM_DURATION_MS);
+        lv_anim_set_path_cb(&fade_anim, lv_anim_path_ease_out);
+        lv_anim_set_exec_cb(&fade_anim, [](void* obj, int32_t value) {
+            lv_obj_set_style_opa(static_cast<lv_obj_t*>(obj), value, LV_PART_MAIN);
+        });
+        lv_anim_start(&fade_anim);
+    } else {
+        // No animation — ensure final state
+        lv_obj_set_style_transform_scale(detail_container_, DETAIL_ZOOM_SCALE_MAX, LV_PART_MAIN);
+        lv_obj_set_style_opa(detail_container_, LV_OPA_COVER, LV_PART_MAIN);
+    }
 }
 
 void AmsOverviewPanel::show_overview() {
     if (!panel_ || !detail_container_ || !cards_row_)
         return;
 
+    // Cancel any in-flight zoom animations to prevent race conditions
+    lv_anim_delete(detail_container_, nullptr);
+
     spdlog::info("[{}] Returning to overview mode", get_name());
 
     detail_unit_index_ = -1;
 
-    // Destroy detail slots
-    destroy_detail_slots();
+    if (SettingsManager::instance().get_animations_enabled()) {
+        // Zoom-out animation: scale down + fade out, then swap visibility
+        // Transform pivot is still set from the zoom-in (card center position)
+        lv_anim_t scale_anim;
+        lv_anim_init(&scale_anim);
+        lv_anim_set_var(&scale_anim, detail_container_);
+        lv_anim_set_values(&scale_anim, DETAIL_ZOOM_SCALE_MAX, DETAIL_ZOOM_SCALE_MIN);
+        lv_anim_set_duration(&scale_anim, DETAIL_ZOOM_DURATION_MS);
+        lv_anim_set_path_cb(&scale_anim, lv_anim_path_ease_in);
+        lv_anim_set_exec_cb(&scale_anim, [](void* obj, int32_t value) {
+            lv_obj_set_style_transform_scale(static_cast<lv_obj_t*>(obj), value, LV_PART_MAIN);
+        });
+        // On complete: swap visibility and clean up
+        lv_anim_set_completed_cb(&scale_anim, [](lv_anim_t* anim) {
+            auto* container = static_cast<lv_obj_t*>(anim->var);
+            lv_obj_add_flag(container, LV_OBJ_FLAG_HIDDEN);
+            // Reset transform properties for next use
+            lv_obj_set_style_transform_scale(container, DETAIL_ZOOM_SCALE_MAX, LV_PART_MAIN);
+            lv_obj_set_style_opa(container, LV_OPA_COVER, LV_PART_MAIN);
 
-    // Swap visibility: show overview elements, hide detail
-    lv_obj_remove_flag(cards_row_, LV_OBJ_FLAG_HIDDEN);
-    if (system_path_area_)
-        lv_obj_remove_flag(system_path_area_, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(detail_container_, LV_OBJ_FLAG_HIDDEN);
+            // Show overview elements (use global instance since lambda has no 'this')
+            AmsOverviewPanel* self = g_overview_panel_instance.load();
+            if (self) {
+                self->destroy_detail_slots();
+                if (self->cards_row_)
+                    lv_obj_remove_flag(self->cards_row_, LV_OBJ_FLAG_HIDDEN);
+                if (self->system_path_area_)
+                    lv_obj_remove_flag(self->system_path_area_, LV_OBJ_FLAG_HIDDEN);
+                self->refresh_units();
+            }
+        });
+        lv_anim_start(&scale_anim);
 
-    // Refresh overview to pick up any changes that happened while in detail
-    refresh_units();
+        // Fade animation
+        lv_anim_t fade_anim;
+        lv_anim_init(&fade_anim);
+        lv_anim_set_var(&fade_anim, detail_container_);
+        lv_anim_set_values(&fade_anim, LV_OPA_COVER, LV_OPA_TRANSP);
+        lv_anim_set_duration(&fade_anim, DETAIL_ZOOM_DURATION_MS);
+        lv_anim_set_path_cb(&fade_anim, lv_anim_path_ease_in);
+        lv_anim_set_exec_cb(&fade_anim, [](void* obj, int32_t value) {
+            lv_obj_set_style_opa(static_cast<lv_obj_t*>(obj), value, LV_PART_MAIN);
+        });
+        lv_anim_start(&fade_anim);
+    } else {
+        // No animation — instant swap
+        destroy_detail_slots();
+        lv_obj_remove_flag(cards_row_, LV_OBJ_FLAG_HIDDEN);
+        if (system_path_area_)
+            lv_obj_remove_flag(system_path_area_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(detail_container_, LV_OBJ_FLAG_HIDDEN);
+        refresh_units();
+    }
 }
 
 void AmsOverviewPanel::update_detail_header(const AmsUnit& unit, const AmsSystemInfo& info) {
@@ -667,9 +770,7 @@ void AmsOverviewPanel::update_detail_header(const AmsUnit& unit, const AmsSystem
     // Update name
     lv_obj_t* name = lv_obj_find_by_name(panel_, "detail_unit_name");
     if (name) {
-        std::string display_name =
-            unit.name.empty() ? ("Unit " + std::to_string(detail_unit_index_ + 1)) : unit.name;
-        lv_label_set_text(name, display_name.c_str());
+        lv_label_set_text(name, get_unit_display_name(unit, detail_unit_index_).c_str());
     }
 }
 
@@ -728,6 +829,22 @@ void AmsOverviewPanel::create_detail_slots(const AmsUnit& unit) {
         lv_obj_set_height(detail_slot_tray_, tray_height);
     }
 
+    // Move labels to overlay layer so they render on top of overlapping slots.
+    // Only needed when slots overlap (5+ slots use negative column padding).
+    if (detail_labels_layer_ && count > 4) {
+        lv_obj_clean(detail_labels_layer_);
+
+        int32_t slot_spacing = layout.slot_width - layout.overlap;
+        for (int i = 0; i < count; ++i) {
+            if (detail_slot_widgets_[i]) {
+                int32_t slot_center_x = layout.slot_width / 2 + i * slot_spacing;
+                ui_ams_slot_move_label_to_layer(detail_slot_widgets_[i], detail_labels_layer_,
+                                                slot_center_x);
+            }
+        }
+        spdlog::debug("[{}] Moved {} detail labels to overlay layer", get_name(), count);
+    }
+
     spdlog::debug("[{}] Created {} detail slots (offset={}, width={})", get_name(), count,
                   slot_offset, layout.slot_width);
 }
@@ -736,10 +853,78 @@ void AmsOverviewPanel::destroy_detail_slots() {
     if (detail_slot_grid_) {
         lv_obj_clean(detail_slot_grid_);
     }
-    for (int i = 0; i < MAX_DETAIL_SLOTS; ++i) {
-        detail_slot_widgets_[i] = nullptr;
-    }
+    std::fill(std::begin(detail_slot_widgets_), std::end(detail_slot_widgets_), nullptr);
     detail_slot_count_ = 0;
+}
+
+void AmsOverviewPanel::setup_detail_path_canvas(const AmsUnit& unit, const AmsSystemInfo& info) {
+    if (!detail_path_canvas_)
+        return;
+
+    auto* backend = AmsState::instance().get_backend();
+    if (!backend)
+        return;
+
+    // Hub-only mode: only draw slots → hub, skip downstream (shown by system_path_canvas)
+    ui_filament_path_canvas_set_hub_only(detail_path_canvas_, true);
+
+    // Configure canvas for this unit's local slot count
+    ui_filament_path_canvas_set_slot_count(detail_path_canvas_, unit.slot_count);
+    ui_filament_path_canvas_set_topology(detail_path_canvas_,
+                                         static_cast<int>(backend->get_topology()));
+
+    // Sync slot sizing with the detail slot grid layout
+    if (detail_slot_grid_) {
+        lv_obj_t* slot_area = lv_obj_get_parent(detail_slot_grid_);
+        lv_obj_update_layout(slot_area);
+        int32_t available_width = lv_obj_get_content_width(slot_area);
+        auto layout = calculate_ams_slot_layout(available_width, unit.slot_count);
+
+        ui_filament_path_canvas_set_slot_width(detail_path_canvas_, layout.slot_width);
+        ui_filament_path_canvas_set_slot_overlap(detail_path_canvas_, layout.overlap);
+    }
+
+    // Map global active slot to local index for this unit
+    int local_active = info.current_slot - unit.first_slot_global_index;
+    if (local_active >= 0 && local_active < unit.slot_count) {
+        ui_filament_path_canvas_set_active_slot(detail_path_canvas_, local_active);
+
+        // Set filament color from the active slot
+        SlotInfo slot_info = backend->get_slot_info(info.current_slot);
+        ui_filament_path_canvas_set_filament_color(detail_path_canvas_, slot_info.color_rgb);
+    } else {
+        ui_filament_path_canvas_set_active_slot(detail_path_canvas_, -1);
+    }
+
+    // Set filament segment position
+    PathSegment segment = backend->get_filament_segment();
+    ui_filament_path_canvas_set_filament_segment(detail_path_canvas_, static_cast<int>(segment));
+
+    // Set error segment if any
+    PathSegment error_seg = backend->infer_error_segment();
+    ui_filament_path_canvas_set_error_segment(detail_path_canvas_, static_cast<int>(error_seg));
+
+    // Use Stealthburner toolhead for Voron printers
+    if (PrinterDetector::is_voron_printer()) {
+        ui_filament_path_canvas_set_faceted_toolhead(detail_path_canvas_, true);
+    }
+
+    // Set per-slot filament states using LOCAL indices (0..unit.slot_count-1)
+    ui_filament_path_canvas_clear_slot_filaments(detail_path_canvas_);
+    for (int i = 0; i < unit.slot_count; ++i) {
+        int global_idx = i + unit.first_slot_global_index;
+        PathSegment slot_seg = backend->get_slot_filament_segment(global_idx);
+        if (slot_seg != PathSegment::NONE) {
+            SlotInfo si = backend->get_slot_info(global_idx);
+            ui_filament_path_canvas_set_slot_filament(detail_path_canvas_, i,
+                                                      static_cast<int>(slot_seg), si.color_rgb);
+        }
+    }
+
+    ui_filament_path_canvas_refresh(detail_path_canvas_);
+
+    spdlog::debug("[{}] Detail path canvas configured: slots={}, topology={}", get_name(),
+                  unit.slot_count, static_cast<int>(backend->get_topology()));
 }
 
 // ============================================================================
@@ -761,16 +946,20 @@ void AmsOverviewPanel::clear_panel_reference() {
     cards_row_ = nullptr;
     unit_cards_.clear();
 
+    // Cancel any in-flight animations before clearing pointers (prevents use-after-free)
+    if (detail_container_) {
+        lv_anim_delete(detail_container_, nullptr);
+    }
+
     // Clear detail view state
     detail_container_ = nullptr;
     detail_slot_grid_ = nullptr;
     detail_labels_layer_ = nullptr;
     detail_slot_tray_ = nullptr;
+    detail_path_canvas_ = nullptr;
     detail_unit_index_ = -1;
     detail_slot_count_ = 0;
-    for (int i = 0; i < MAX_DETAIL_SLOTS; ++i) {
-        detail_slot_widgets_[i] = nullptr;
-    }
+    std::fill(std::begin(detail_slot_widgets_), std::end(detail_slot_widgets_), nullptr);
 
     // Reset subjects_initialized_ so observers are recreated on next access
     subjects_initialized_ = false;
@@ -805,8 +994,9 @@ static void ensure_overview_registered() {
         }
     });
 
-    // Register the system path canvas widget
+    // Register canvas widgets
     ui_system_path_canvas_register();
+    ui_filament_path_canvas_register();
 
     // Register AMS slot widgets for inline detail view
     // (safe to call multiple times — each register function has an internal guard)

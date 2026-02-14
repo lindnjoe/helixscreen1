@@ -95,6 +95,7 @@ class AmsOverviewPanel : public PanelBase {
     lv_obj_t* detail_slot_grid_ = nullptr;    ///< Slot grid in detail view
     lv_obj_t* detail_labels_layer_ = nullptr; ///< Labels overlay for staggered slots
     lv_obj_t* detail_slot_tray_ = nullptr;    ///< Tray visual
+    lv_obj_t* detail_path_canvas_ = nullptr;  ///< Filament path visualization
     lv_obj_t* detail_slot_widgets_[MAX_DETAIL_SLOTS] = {nullptr};
     int detail_slot_count_ = 0;
 
@@ -110,6 +111,7 @@ class AmsOverviewPanel : public PanelBase {
     // === Detail View Helpers ===
     void create_detail_slots(const AmsUnit& unit);
     void destroy_detail_slots();
+    void setup_detail_path_canvas(const AmsUnit& unit, const AmsSystemInfo& info);
     void update_detail_header(const AmsUnit& unit, const AmsSystemInfo& info);
 
     // === Event Handling ===

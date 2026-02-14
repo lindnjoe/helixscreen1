@@ -68,27 +68,8 @@
             <!-- Slots wrapper - contains grid, tray, and labels with relative positioning -->
             <lv_obj name="slots_wrapper"
                     width="100%" height="content" style_pad_all="0" scrollable="false">
-              <!-- Slot Grid Container (drawn first = behind)
-                   Uses flex_grow=1 on slots to divide space equally.
-                   Slot centers align with path canvas slot entry points:
-                   slot_x = card_padding + segment/2 + i*segment (where segment = effective_width/slot_count)
-                   Slots are created dynamically by C++ based on slot_count subject. -->
-              <lv_obj name="slot_grid"
-                      width="content" height="content" style_pad_all="0" style_pad_row="0" style_pad_column="0"
-                      flex_flow="row" style_flex_main_place="start" style_flex_cross_place="start" scrollable="false">
-                <!-- Slots created dynamically by AmsPanel::create_slots() based on slot_count -->
-              </lv_obj>
-              <!-- Endless Spool Arrows - shows backup relationships between slots
-                   Positioned at top of slot area, overlapping labels area.
-                   Uses absolute positioning relative to slot_area so it renders above spools. -->
-              <endless_spool_arrows name="endless_arrows"
-                                    width="100%" height="50" align="top_mid" clickable="false" scrollable="false"
-                                    style_bg_opa="0"/>
-              <!-- Labels Layer - renders ON TOP of slots so labels aren't obscured by overlapping slots
-                   Height matches slot stagger area; set dynamically by C++ for different gate counts -->
-              <lv_obj name="labels_layer"
-                      width="100%" height="80" style_pad_all="0" scrollable="false" clickable="false"/>
-              <!-- Tray - visual "holder" in front of spools, positioned at bottom
+              <!-- Tray drawn FIRST so it renders BEHIND slots.
+                   Slot numbers and active glow need to be visible on top of the tray.
                    Height set dynamically by C++ to 1/3 of slot height -->
               <lv_obj name="slot_tray"
                       width="100%" height="#tray_default_height" align="bottom_mid"
@@ -106,6 +87,26 @@
                         style_border_color="#text" style_border_opa="#tray_accent_border_opa" style_border_side="right"
                         style_radius="#border_radius" style_pad_all="0" scrollable="false" clickable="false"/>
               </lv_obj>
+              <!-- Slot Grid Container - renders ON TOP of tray.
+                   Uses flex_grow=1 on slots to divide space equally.
+                   Slot centers align with path canvas slot entry points:
+                   slot_x = card_padding + segment/2 + i*segment (where segment = effective_width/slot_count)
+                   Slots are created dynamically by C++ based on slot_count subject. -->
+              <lv_obj name="slot_grid"
+                      width="content" height="content" style_pad_all="0" style_pad_row="0" style_pad_column="0"
+                      flex_flow="row" style_flex_main_place="start" style_flex_cross_place="start" scrollable="false">
+                <!-- Slots created dynamically by AmsPanel::create_slots() based on slot_count -->
+              </lv_obj>
+              <!-- Endless Spool Arrows - shows backup relationships between slots
+                   Positioned at top of slot area, overlapping labels area.
+                   Uses absolute positioning relative to slot_area so it renders above spools. -->
+              <endless_spool_arrows name="endless_arrows"
+                                    width="100%" height="50" align="top_mid" clickable="false" scrollable="false"
+                                    style_bg_opa="0"/>
+              <!-- Labels Layer - renders ON TOP of everything so labels aren't obscured by overlapping slots
+                   Height matches slot stagger area; set dynamically by C++ for different gate counts -->
+              <lv_obj name="labels_layer"
+                      width="100%" height="80" style_pad_all="0" scrollable="false" clickable="false"/>
             </lv_obj>
           </lv_obj>
         </ui_card>
