@@ -2149,17 +2149,36 @@ void AmsPanel::handle_load_complete() {
 }
 
 void AmsPanel::cancel_pending_preheat() {
-    if (pending_load_slot_ < 0 && pending_load_target_temp_ == 0 && !ui_initiated_heat_) {
+    bool had_pending_preheat =
+        (pending_load_slot_ >= 0 || pending_load_target_temp_ > 0 || ui_initiated_heat_);
+    if (!had_pending_preheat) {
         return;
     }
 
     spdlog::info("[AmsPanel] Clearing pending preheat state after global cooldown "
-                 "(slot={}, target={}, ui_initiated={})",
-                 pending_load_slot_, pending_load_target_temp_, ui_initiated_heat_);
+                 "(slot={}, target={}, ui_initiated={}, action={})",
+                 pending_load_slot_, pending_load_target_temp_, ui_initiated_heat_,
+                 lv_subject_get_int(AmsState::instance().get_ams_action_subject()));
 
     pending_load_slot_ = -1;
     pending_load_target_temp_ = 0;
     ui_initiated_heat_ = false;
+
+    // If cooldown interrupts a UI-managed preheat, clear transient operation UI state
+    // so the next swap/load starts from a clean state machine.
+    target_load_slot_ = -1;
+    if (step_progress_container_) {
+        lv_obj_add_flag(step_progress_container_, LV_OBJ_FLAG_HIDDEN);
+    }
+    set_slot_continuous_pulse(-1, false);
+
+    // Reset synthetic HEATING action used by start_operation() when preheat is cancelled.
+    if (static_cast<AmsAction>(lv_subject_get_int(AmsState::instance().get_ams_action_subject())) ==
+        AmsAction::HEATING) {
+        AmsState::instance().set_action(AmsAction::IDLE);
+        AmsState::instance().set_action_detail("");
+        prev_ams_action_ = AmsAction::IDLE;
+    }
 }
 
 void AmsPanel::show_preheat_feedback(int slot_index, int target_temp) {
