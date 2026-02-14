@@ -887,7 +887,7 @@ void FilamentPanel::handle_cooldown() {
     }
 
     // If AMS preheat was in progress, cooldown invalidates that pending state.
-    // Only clear when AMS panel is already active (avoid lazy-creating AMS UI here).
+    // Only clear when AMS singleton already exists (avoid lazy-creating AMS UI here).
     if (AmsPanel* ams_panel = AmsPanel::get_active_instance()) {
         ams_panel->cancel_pending_preheat();
     }

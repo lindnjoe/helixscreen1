@@ -104,10 +104,10 @@ class AmsPanel : public PanelBase {
     void clear_panel_reference();
 
     /**
-     * @brief Get active AMS panel instance if already initialized
+     * @brief Get existing AMS panel singleton without creating UI
      *
-     * Returns nullptr when AMS panel has not been created yet or its UI was
-     * destroyed. Unlike get_global_ams_panel(), this never lazy-creates UI.
+     * Returns nullptr when AMS panel singleton has not been created yet.
+     * Unlike get_global_ams_panel(), this never lazy-creates panel/UI.
      */
     static AmsPanel* get_active_instance();
 
