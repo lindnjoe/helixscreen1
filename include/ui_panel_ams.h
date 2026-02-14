@@ -103,6 +103,14 @@ class AmsPanel : public PanelBase {
      */
     void clear_panel_reference();
 
+    /**
+     * @brief Get existing AMS panel singleton without creating UI
+     *
+     * Returns nullptr when AMS panel singleton has not been created yet.
+     * Unlike get_global_ams_panel(), this never lazy-creates panel/UI.
+     */
+    static AmsPanel* get_active_instance();
+
   private:
     // === Slot Management ===
 
@@ -302,14 +310,6 @@ class AmsPanel : public PanelBase {
      * @param target_temp Target temperature in °C
      */
     void show_preheat_feedback(int slot_index, int target_temp);
-
-    /**
-     * @brief Cancel UI-managed preheat state after an external global cooldown
-     *
-     * Called when another panel issues TURN_OFF_HEATERS. Clears pending load/preheat
-     * bookkeeping so the next tool change starts from a clean state.
-     */
-    void cancel_pending_preheat();
 
     // === UI Module Helpers (internal, show modals with callbacks) ===
 
