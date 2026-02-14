@@ -33,6 +33,14 @@ TEST_CASE("ToolInfo: default construction", "[tool][tool-state]") {
     REQUIRE_FALSE(info.active);
     REQUIRE_FALSE(info.mounted);
     REQUIRE(info.detect_state == DetectState::UNAVAILABLE);
+    REQUIRE(info.backend_index == -1);
+    REQUIRE(info.backend_slot == -1);
+}
+
+TEST_CASE("ToolInfo: default backend mapping is unassigned", "[tool][tool-state]") {
+    ToolInfo info;
+    REQUIRE(info.backend_index == -1);
+    REQUIRE(info.backend_slot == -1);
 }
 
 TEST_CASE("ToolInfo: effective_heater prefers heater_name", "[tool][tool-state]") {

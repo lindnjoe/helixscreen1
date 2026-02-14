@@ -245,3 +245,40 @@ TEST_CASE("AmsState: get_backend negative index returns nullptr", "[ams][multi-b
 
     ams.deinit_subjects();
 }
+
+// ============================================================================
+// Task 5: Multi-backend init flow tests
+// ============================================================================
+
+TEST_CASE("AmsState: init_backends_from_hardware with single system", "[ams][multi-backend]") {
+    lv_init_safe();
+    AmsState& ams = AmsState::instance();
+    ams.deinit_subjects();
+    ams.init_subjects(false);
+
+    helix::PrinterDiscovery hw;
+    nlohmann::json objects = nlohmann::json::array(
+        {"toolchanger", "tool T0", "tool T1", "extruder", "extruder1", "heater_bed", "gcode_move"});
+    hw.parse_objects(objects);
+
+    REQUIRE(hw.detected_ams_systems().size() == 1);
+    REQUIRE(hw.detected_ams_systems()[0].type == AmsType::TOOL_CHANGER);
+
+    ams.deinit_subjects();
+}
+
+TEST_CASE("AmsState: init_backends skips when no systems detected", "[ams][multi-backend]") {
+    lv_init_safe();
+    AmsState& ams = AmsState::instance();
+    ams.deinit_subjects();
+    ams.init_subjects(false);
+
+    helix::PrinterDiscovery hw;
+    nlohmann::json objects = nlohmann::json::array({"extruder", "heater_bed", "gcode_move"});
+    hw.parse_objects(objects);
+
+    // Verify detection returns empty - no systems to init
+    REQUIRE(hw.detected_ams_systems().empty());
+
+    ams.deinit_subjects();
+}

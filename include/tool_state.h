@@ -35,6 +35,8 @@ struct ToolInfo {
     bool active = false;
     bool mounted = false;
     DetectState detect_state = DetectState::UNAVAILABLE;
+    int backend_index = -1; ///< Which AMS backend feeds this tool (-1 = direct drive)
+    int backend_slot = -1;  ///< Fixed slot in that backend (-1 = any/dynamic)
 
     [[nodiscard]] std::string effective_heater() const {
         if (heater_name)

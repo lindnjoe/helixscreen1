@@ -301,62 +301,54 @@ void AmsState::deinit_subjects() {
 
 void AmsState::init_backend_from_hardware(const helix::PrinterDiscovery& hardware,
                                           MoonrakerAPI* api, MoonrakerClient* client) {
-    // Skip if no MMU or tool changer detected
-    if (!hardware.has_mmu() && !hardware.has_tool_changer()) {
-        spdlog::debug(
-            "[AMS State] No MMU or tool changer detected, skipping backend initialization");
+    init_backends_from_hardware(hardware, api, client);
+}
+
+void AmsState::init_backends_from_hardware(const helix::PrinterDiscovery& hardware,
+                                           MoonrakerAPI* api, MoonrakerClient* client) {
+    const auto& systems = hardware.detected_ams_systems();
+    if (systems.empty()) {
+        spdlog::debug("[AMS State] No AMS systems detected, skipping");
         return;
     }
 
-    // Skip if already in mock mode (mock backend was created at startup)
     if (get_runtime_config()->should_mock_ams()) {
         spdlog::debug("[AMS State] Mock mode active, skipping real backend initialization");
         return;
     }
 
-    // Check if backend already exists (with lock)
     {
         std::lock_guard<std::recursive_mutex> lock(mutex_);
         if (!backends_.empty()) {
-            spdlog::debug("[AMS State] Backend already exists, skipping initialization");
+            spdlog::debug("[AMS State] Backends already initialized, skipping");
             return;
         }
     }
 
-    AmsType detected_type = hardware.mmu_type();
-    spdlog::info("[AMS State] Detected MMU system: {}", ams_type_to_string(detected_type));
+    for (const auto& system : systems) {
+        spdlog::info("[AMS State] Creating backend for: {} ({})", system.name,
+                     ams_type_to_string(system.type));
 
-    auto backend = AmsBackend::create(detected_type, api, client);
-    if (backend) {
-        // Pass discovered configuration to backend through base class interface.
+        auto backend = AmsBackend::create(system.type, api, client);
+        if (!backend) {
+            spdlog::warn("[AMS State] Failed to create {} backend", system.name);
+            continue;
+        }
+
         backend->set_discovered_lanes(hardware.afc_lane_names(), hardware.afc_hub_names());
         backend->set_discovered_tools(hardware.tool_names());
 
-        // Set backend (registers event callback)
-        set_backend(std::move(backend));
+        int index = add_backend(std::move(backend));
 
-        // Now start the backend
-        {
-            std::lock_guard<std::recursive_mutex> lock(mutex_);
-            auto* primary = get_backend(0);
-            if (primary) {
-                spdlog::debug("[AMS State] Starting backend");
-                auto result = primary->start();
-                spdlog::debug("[AMS State] backend->start() returned, result={}",
-                              static_cast<bool>(result));
-            }
+        auto* b = get_backend(index);
+        if (b) {
+            auto result = b->start();
+            spdlog::debug("[AMS State] Backend {} started, result={}", index,
+                          static_cast<bool>(result));
         }
-
-        int slot_count = 0;
-        {
-            std::lock_guard<std::recursive_mutex> lock(mutex_);
-            slot_count = lv_subject_get_int(&ams_slot_count_);
-        }
-        spdlog::info("[AMS State] {} backend initialized ({} slots)",
-                     ams_type_to_string(detected_type), slot_count);
-    } else {
-        spdlog::warn("[AMS State] Failed to create {} backend", ams_type_to_string(detected_type));
     }
+
+    spdlog::info("[AMS State] Initialized {} backends", backend_count());
 }
 
 void AmsState::set_backend(std::unique_ptr<AmsBackend> backend) {

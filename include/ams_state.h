@@ -116,6 +116,20 @@ class AmsState {
                                     MoonrakerClient* client);
 
     /**
+     * @brief Initialize backends from all detected AMS/filament systems
+     *
+     * Called after Moonraker discovery completes. Creates a backend for each
+     * detected system (MMU, tool changer, AFC, etc.). Supports multiple
+     * concurrent backends for printers with multiple filament systems.
+     *
+     * @param hardware Discovered printer hardware
+     * @param api MoonrakerAPI instance for making API calls
+     * @param client MoonrakerClient instance for WebSocket communication
+     */
+    void init_backends_from_hardware(const helix::PrinterDiscovery& hardware, MoonrakerAPI* api,
+                                     MoonrakerClient* client);
+
+    /**
      * @brief Set the AMS backend
      *
      * Connects to the backend and starts receiving state updates.
