@@ -103,6 +103,14 @@ class AmsPanel : public PanelBase {
      */
     void clear_panel_reference();
 
+    /**
+     * @brief Get active AMS panel instance if already initialized
+     *
+     * Returns nullptr when AMS panel has not been created yet or its UI was
+     * destroyed. Unlike get_global_ams_panel(), this never lazy-creates UI.
+     */
+    static AmsPanel* get_active_instance();
+
   private:
     // === Slot Management ===
 
