@@ -34,6 +34,12 @@
 #define HAVE_BACKTRACE 1
 #endif
 
+// dl_iterate_phdr() for discovering ELF load base (ASLR offset)
+#if defined(__linux__)
+#include <link.h>
+#define HAVE_DL_ITERATE_PHDR 1
+#endif
+
 using json = nlohmann::json;
 namespace fs = std::filesystem;
 
@@ -54,6 +60,9 @@ static volatile sig_atomic_t s_installed = 0;
 /// Application start time (for uptime calculation)
 static time_t s_start_time = 0;
 
+/// ELF load base address (ASLR offset), discovered at install time
+static uintptr_t s_load_base = 0;
+
 /// Saved previous signal actions for restoration
 static struct sigaction s_old_sigsegv = {};
 static struct sigaction s_old_sigabrt = {};
@@ -64,6 +73,22 @@ static struct sigaction s_old_sigfpe = {};
 // Async-signal-safe helpers
 // These use ONLY functions from the POSIX async-signal-safe list.
 // =============================================================================
+
+// =============================================================================
+// ELF load base discovery (called at install time, NOT in signal handler)
+// =============================================================================
+
+#ifdef HAVE_DL_ITERATE_PHDR
+/// Callback for dl_iterate_phdr: find the main executable's load base.
+/// The main executable has an empty dlpi_name.
+static int find_load_base_cb(struct dl_phdr_info* info, size_t /*size*/, void* /*data*/) {
+    if (info->dlpi_name == nullptr || info->dlpi_name[0] == '\0') {
+        s_load_base = static_cast<uintptr_t>(info->dlpi_addr);
+        return 1; // stop iteration
+    }
+    return 0;
+}
+#endif
 
 namespace {
 
@@ -312,6 +337,14 @@ static void crash_signal_handler(int sig, siginfo_t* info, void* ucontext) {
 #endif
     }
 
+    // Write ELF load base (for ASLR address resolution)
+    // Discovered at install time via dl_iterate_phdr; zero on non-PIE or macOS
+    if (s_load_base != 0) {
+        safe_write(fd, "load_base:");
+        safe_write(fd, ptr_to_hex(hex_buf, sizeof(hex_buf), s_load_base));
+        safe_write(fd, "\n");
+    }
+
     // Write backtrace if available
     // backtrace() is not formally async-signal-safe but is widely used
     // in crash handlers on Linux (glibc) and macOS
@@ -363,6 +396,18 @@ void crash_handler::install(const std::string& crash_file_path) {
 
     // Record start time for uptime calculation
     s_start_time = time(nullptr);
+
+    // Discover ELF load base for ASLR address resolution
+    // Must be done before signal handler runs (dl_iterate_phdr is NOT async-signal-safe)
+#ifdef HAVE_DL_ITERATE_PHDR
+    s_load_base = 0;
+    dl_iterate_phdr(find_load_base_cb, nullptr);
+    if (s_load_base != 0) {
+        spdlog::debug("[CrashHandler] ELF load base: 0x{:x} (ASLR active)", s_load_base);
+    } else {
+        spdlog::debug("[CrashHandler] ELF load base: 0 (non-PIE or static)");
+    }
+#endif
 
     // Install signal handlers via sigaction (not signal())
     struct sigaction sa;
@@ -479,6 +524,8 @@ nlohmann::json crash_handler::read_crash_file(const std::string& crash_file_path
                 result["reg_lr"] = value;
             } else if (key == "reg_bp") {
                 result["reg_bp"] = value;
+            } else if (key == "load_base") {
+                result["load_base"] = value;
             } else if (key == "bt") {
                 backtrace_arr.push_back(value);
             }
@@ -532,6 +579,7 @@ void crash_handler::write_mock_crash_file(const std::string& crash_file_path) {
     ofs << "fault_code_name:SEGV_MAPERR\n";
     ofs << "reg_pc:0x00400abc\n";
     ofs << "reg_sp:0x7ffd12345678\n";
+    ofs << "load_base:0x00400000\n";
     ofs << "bt:0x00400abc\n";
     ofs << "bt:0x00400def\n";
     ofs << "bt:0x00401234\n";

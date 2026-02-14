@@ -16,10 +16,16 @@ set -euo pipefail
 readonly CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/helixscreen/symbols"
 readonly R2_BASE_URL="${HELIX_R2_URL:-https://releases.helixscreen.org}/symbols"
 
+LOAD_BASE=0
+
 usage() {
-    echo "Usage: $(basename "$0") <version> <platform> <addr1> [addr2] ..."
+    echo "Usage: $(basename "$0") [--base <load_base>] <version> <platform> <addr1> [addr2] ..."
     echo ""
     echo "Resolves raw backtrace addresses to function names using symbol maps."
+    echo ""
+    echo "Options:"
+    echo "  --base <hex>  ELF load base (ASLR offset) to subtract from addresses"
+    echo "                Use the load_base value from crash reports"
     echo ""
     echo "Arguments:"
     echo "  version   Release version (e.g., 0.9.9)"
@@ -27,10 +33,26 @@ usage() {
     echo "  addr*     Hex addresses to resolve (with or without 0x prefix)"
     echo ""
     echo "Environment:"
-    echo "  HELIX_R2_URL    Override R2 base URL (default: https://releases.helixscreen.com)"
+    echo "  HELIX_R2_URL    Override R2 base URL (default: https://releases.helixscreen.org)"
     echo "  HELIX_SYM_FILE  Use a local .sym file instead of downloading"
+    echo ""
+    echo "Examples:"
+    echo "  $(basename "$0") 0.9.19 pi 0x00412abc 0x00401234"
+    echo "  $(basename "$0") --base 0xaaaab0449000 0.9.19 pi 0xaaaab04a1234 0xaaaab04b5678"
     exit 1
 }
+
+# Parse --base option
+if [[ "${1:-}" == "--base" ]]; then
+    if [[ $# -lt 2 ]]; then
+        echo "Error: --base requires a hex address argument" >&2
+        exit 1
+    fi
+    base_hex="${2#0x}"
+    base_hex="${base_hex#0X}"
+    LOAD_BASE=$((16#$base_hex))
+    shift 2
+fi
 
 if [[ $# -lt 3 ]]; then
     usage
@@ -84,6 +106,13 @@ resolve_address() {
     local addr_dec
     addr_dec=$((16#$addr_hex))
 
+    # Subtract ASLR load base if provided
+    local orig_addr_hex="$addr_hex"
+    if (( LOAD_BASE > 0 )); then
+        addr_dec=$(( addr_dec - LOAD_BASE ))
+        addr_hex=$(printf '%x' "$addr_dec")
+    fi
+
     local best_name=""
     local best_addr=0
     local best_addr_hex=""
@@ -120,9 +149,17 @@ resolve_address() {
 
     if [[ -n "$best_name" ]]; then
         local offset=$(( addr_dec - best_addr ))
-        printf "0x%s → %s+0x%x\n" "$addr_hex" "$best_name" "$offset"
+        if (( LOAD_BASE > 0 )); then
+            printf "0x%s (file: 0x%s) → %s+0x%x\n" "$orig_addr_hex" "$addr_hex" "$best_name" "$offset"
+        else
+            printf "0x%s → %s+0x%x\n" "$addr_hex" "$best_name" "$offset"
+        fi
     else
-        printf "0x%s → (unknown)\n" "$addr_hex"
+        if (( LOAD_BASE > 0 )); then
+            printf "0x%s (file: 0x%s) → (unknown)\n" "$orig_addr_hex" "$addr_hex"
+        else
+            printf "0x%s → (unknown)\n" "$addr_hex"
+        fi
     fi
 }
 
@@ -138,6 +175,9 @@ for candidate in \
 done
 
 echo "Resolving ${#@} address(es) against v${VERSION}/${PLATFORM}..."
+if (( LOAD_BASE > 0 )); then
+    printf "ASLR load base: 0x%x (will subtract from addresses)\n" "$LOAD_BASE"
+fi
 echo ""
 
 for addr in "$@"; do
