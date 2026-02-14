@@ -3,7 +3,8 @@
 
 #include "humidity_sensor_manager.h"
 
-#include "async_helpers.h"
+#include "ui_update_queue.h"
+
 #include "format_utils.h"
 #include "spdlog/spdlog.h"
 
@@ -154,8 +155,8 @@ void HumiditySensorManager::update_from_status(const nlohmann::json& status) {
                 spdlog::debug("[HumiditySensorManager] sync_mode: updating subjects synchronously");
                 update_subjects();
             } else {
-                spdlog::debug("[HumiditySensorManager] async_mode: deferring via async::invoke");
-                helix::async::invoke(
+                spdlog::debug("[HumiditySensorManager] async_mode: deferring via ui_queue_update");
+                ui_queue_update(
                     [] { HumiditySensorManager::instance().update_subjects_on_main_thread(); });
             }
         }

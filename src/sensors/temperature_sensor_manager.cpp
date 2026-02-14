@@ -3,7 +3,8 @@
 
 #include "temperature_sensor_manager.h"
 
-#include "async_helpers.h"
+#include "ui_update_queue.h"
+
 #include "device_display_name.h"
 #include "spdlog/spdlog.h"
 
@@ -203,8 +204,9 @@ void TemperatureSensorManager::update_from_status(const nlohmann::json& status) 
                     "[TemperatureSensorManager] sync_mode: updating subjects synchronously");
                 update_subjects();
             } else {
-                spdlog::trace("[TemperatureSensorManager] async_mode: deferring via async::invoke");
-                helix::async::invoke(
+                spdlog::trace(
+                    "[TemperatureSensorManager] async_mode: deferring via ui_queue_update");
+                ui_queue_update(
                     [] { TemperatureSensorManager::instance().update_subjects_on_main_thread(); });
             }
         }

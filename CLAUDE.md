@@ -92,7 +92,7 @@ Note: `ui_theme_get_color()` for tokens, `ui_theme_parse_color()` for hex string
 ## Threading & Lifecycle
 
 WebSocket/libhv callbacks = background thread. **NEVER** call `lv_subject_set_*()` directly.
-Use `ui_async_call()` from `ui_update_queue.h`. Pattern: `printer_state.cpp` `set_*_internal()`
+Use `ui_queue_update()` from `ui_update_queue.h`. Pattern: `printer_state.cpp` `set_*_internal()`
 
 Use `ObserverGuard` for RAII cleanup. See `observer_factory.h` for `observe_int_sync`, `observe_int_async`, `observe_string`, `observe_string_async`.
 

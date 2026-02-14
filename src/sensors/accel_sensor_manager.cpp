@@ -3,7 +3,8 @@
 
 #include "accel_sensor_manager.h"
 
-#include "async_helpers.h"
+#include "ui_update_queue.h"
+
 #include "spdlog/spdlog.h"
 
 #include <algorithm>
@@ -142,8 +143,8 @@ void AccelSensorManager::update_from_status(const nlohmann::json& status) {
                 spdlog::debug("[AccelSensorManager] sync_mode: updating subjects synchronously");
                 update_subjects();
             } else {
-                spdlog::debug("[AccelSensorManager] async_mode: deferring via async::invoke");
-                helix::async::invoke(
+                spdlog::debug("[AccelSensorManager] async_mode: deferring via ui_queue_update");
+                ui_queue_update(
                     [] { AccelSensorManager::instance().update_subjects_on_main_thread(); });
             }
         }

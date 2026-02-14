@@ -3,7 +3,8 @@
 
 #include "width_sensor_manager.h"
 
-#include "async_helpers.h"
+#include "ui_update_queue.h"
+
 #include "format_utils.h"
 #include "spdlog/spdlog.h"
 
@@ -145,8 +146,8 @@ void WidthSensorManager::update_from_status(const nlohmann::json& status) {
                 spdlog::debug("[WidthSensorManager] sync_mode: updating subjects synchronously");
                 update_subjects();
             } else {
-                spdlog::debug("[WidthSensorManager] async_mode: deferring via async::invoke");
-                helix::async::invoke(
+                spdlog::debug("[WidthSensorManager] async_mode: deferring via ui_queue_update");
+                ui_queue_update(
                     [] { WidthSensorManager::instance().update_subjects_on_main_thread(); });
             }
         }

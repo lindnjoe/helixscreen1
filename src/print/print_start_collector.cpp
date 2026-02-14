@@ -3,7 +3,8 @@
 
 #include "print_start_collector.h"
 
-#include "async_helpers.h"
+#include "ui_update_queue.h"
+
 #include "config.h"
 #include "format_utils.h"
 
@@ -747,7 +748,7 @@ void PrintStartCollector::save_prediction_entry() {
     }
 
     // Persist to config (must be on main thread)
-    helix::async::invoke([entries]() {
+    ui_queue_update([entries]() {
         auto* cfg = Config::get_instance();
         if (!cfg) {
             return;

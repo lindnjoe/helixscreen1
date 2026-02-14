@@ -9,8 +9,8 @@
 #include "ui_nav.h"
 #include "ui_nav_manager.h"
 #include "ui_toast.h"
+#include "ui_update_queue.h"
 
-#include "async_helpers.h"
 #include "format_utils.h"
 #include "lvgl/src/others/translation/lv_translation.h"
 #include "moonraker_api.h"
@@ -428,14 +428,14 @@ void InputShaperPanel::on_activate() {
         auto alive = alive_;
         api_->get_input_shaper_config(
             [this, alive](const InputShaperConfig& config) {
-                helix::async::invoke([this, alive, config]() {
+                ui_queue_update([this, alive, config]() {
                     if (!alive->load())
                         return;
                     populate_current_config(config);
                 });
             },
             [this, alive](const MoonrakerError& err) {
-                helix::async::invoke([this, alive, msg = err.message]() {
+                ui_queue_update([this, alive, msg = err.message]() {
                     if (!alive->load())
                         return;
                     spdlog::debug("[InputShaper] Could not query config: {}", msg);
@@ -815,7 +815,7 @@ void InputShaperPanel::apply_y_after_x() {
             if (api_) {
                 api_->get_input_shaper_config(
                     [this, alive](const InputShaperConfig& config) {
-                        helix::async::invoke([this, alive, config]() {
+                        ui_queue_update([this, alive, config]() {
                             if (!alive->load())
                                 return;
                             populate_current_config(config);

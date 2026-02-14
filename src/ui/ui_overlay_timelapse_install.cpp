@@ -8,9 +8,9 @@
 #include "ui_nav_manager.h"
 #include "ui_step_progress.h"
 #include "ui_toast.h"
+#include "ui_update_queue.h"
 
 #include "app_globals.h"
-#include "async_helpers.h"
 #include "moonraker_api.h"
 #include "moonraker_client.h"
 #include "moonraker_types.h"
@@ -219,7 +219,7 @@ void TimelapseInstallOverlay::step_check_webcam() {
                 return;
             bool empty = webcams.empty();
             size_t count = webcams.size();
-            helix::async::invoke([this, alive, empty, count]() {
+            ui_queue_update([this, alive, empty, count]() {
                 if (!alive || !*alive || !wizard_active_)
                     return;
                 if (empty) {
@@ -235,7 +235,7 @@ void TimelapseInstallOverlay::step_check_webcam() {
             if (!alive || !*alive || !wizard_active_)
                 return;
             spdlog::warn("[{}] Webcam check failed: {}", get_name(), err.message);
-            helix::async::invoke([this, alive]() {
+            ui_queue_update([this, alive]() {
                 if (!alive || !*alive || !wizard_active_)
                     return;
                 set_status("Could not check webcam status.\nCheck printer connection.");
@@ -261,7 +261,7 @@ void TimelapseInstallOverlay::step_check_plugin() {
             if (!alive || !*alive || !wizard_active_)
                 return;
             spdlog::info("[{}] Timelapse plugin already installed", get_name());
-            helix::async::invoke([this, alive]() {
+            ui_queue_update([this, alive]() {
                 if (!alive || !*alive || !wizard_active_)
                     return;
                 set_status("Timelapse plugin is already installed!");
@@ -277,7 +277,7 @@ void TimelapseInstallOverlay::step_check_plugin() {
             if (!alive || !*alive || !wizard_active_)
                 return;
             spdlog::info("[{}] Plugin not detected, showing install instructions", get_name());
-            helix::async::invoke([this, alive]() {
+            ui_queue_update([this, alive]() {
                 if (!alive || !*alive || !wizard_active_)
                     return;
                 step_show_install_instructions();
@@ -321,7 +321,7 @@ void TimelapseInstallOverlay::recheck_after_install() {
             if (!alive || !*alive || !wizard_active_)
                 return;
             spdlog::info("[{}] Plugin detected after recheck!", get_name());
-            helix::async::invoke([this, alive]() {
+            ui_queue_update([this, alive]() {
                 if (!alive || !*alive || !wizard_active_)
                     return;
                 set_status("Timelapse plugin is installed!");
@@ -337,7 +337,7 @@ void TimelapseInstallOverlay::recheck_after_install() {
             if (!alive || !*alive || !wizard_active_)
                 return;
             spdlog::info("[{}] Plugin still not responding, proceeding to configure", get_name());
-            helix::async::invoke([this, alive]() {
+            ui_queue_update([this, alive]() {
                 if (!alive || !*alive || !wizard_active_)
                     return;
                 step_configure_moonraker();
@@ -377,7 +377,7 @@ void TimelapseInstallOverlay::download_and_modify_config() {
             // Check if [timelapse] section already exists (pure computation, safe on bg thread)
             if (has_timelapse_section(content)) {
                 spdlog::info("[{}] moonraker.conf already has [timelapse] section", get_name());
-                helix::async::invoke([this, alive]() {
+                ui_queue_update([this, alive]() {
                     if (!alive || !*alive || !wizard_active_)
                         return;
                     set_status("Configuration already present.");
@@ -396,7 +396,7 @@ void TimelapseInstallOverlay::download_and_modify_config() {
                     if (!alive || !*alive || !wizard_active_)
                         return;
                     spdlog::info("[{}] moonraker.conf updated successfully", get_name());
-                    helix::async::invoke([this, alive]() {
+                    ui_queue_update([this, alive]() {
                         if (!alive || !*alive || !wizard_active_)
                             return;
                         set_status("Configuration added successfully.");
@@ -407,7 +407,7 @@ void TimelapseInstallOverlay::download_and_modify_config() {
                     if (!alive || !*alive || !wizard_active_)
                         return;
                     spdlog::error("[{}] Failed to upload config: {}", get_name(), err.message);
-                    helix::async::invoke([this, alive]() {
+                    ui_queue_update([this, alive]() {
                         if (!alive || !*alive || !wizard_active_)
                             return;
                         set_status("Failed to update configuration.\nCheck printer connection.");
@@ -419,7 +419,7 @@ void TimelapseInstallOverlay::download_and_modify_config() {
             if (!alive || !*alive || !wizard_active_)
                 return;
             spdlog::error("[{}] Failed to download config: {}", get_name(), err.message);
-            helix::async::invoke([this, alive]() {
+            ui_queue_update([this, alive]() {
                 if (!alive || !*alive || !wizard_active_)
                     return;
                 set_status("Failed to download moonraker.conf.\nCheck printer connection.");
@@ -491,7 +491,7 @@ void TimelapseInstallOverlay::step_restart_moonraker() {
             if (!alive || !*alive || !wizard_active_)
                 return;
             spdlog::info("[{}] Moonraker restart initiated", get_name());
-            helix::async::invoke([this, alive]() {
+            ui_queue_update([this, alive]() {
                 if (!alive || !*alive || !wizard_active_)
                     return;
                 set_status("Moonraker restarting...\nWaiting for reconnection...");
@@ -511,7 +511,7 @@ void TimelapseInstallOverlay::step_restart_moonraker() {
             if (!alive || !*alive || !wizard_active_)
                 return;
             spdlog::error("[{}] Moonraker restart failed: {}", get_name(), err.message);
-            helix::async::invoke([this, alive]() {
+            ui_queue_update([this, alive]() {
                 if (!alive || !*alive || !wizard_active_)
                     return;
                 set_status("Failed to restart Moonraker.");
@@ -537,7 +537,7 @@ void TimelapseInstallOverlay::step_verify() {
             if (!alive || !*alive || !wizard_active_)
                 return;
             spdlog::info("[{}] Timelapse plugin verified!", get_name());
-            helix::async::invoke([this, alive]() {
+            ui_queue_update([this, alive]() {
                 if (!alive || !*alive || !wizard_active_)
                     return;
                 set_status("Timelapse plugin installed successfully!");
@@ -554,7 +554,7 @@ void TimelapseInstallOverlay::step_verify() {
             if (!alive || !*alive || !wizard_active_)
                 return;
             spdlog::warn("[{}] Verification failed - plugin not responding", get_name());
-            helix::async::invoke([this, alive]() {
+            ui_queue_update([this, alive]() {
                 if (!alive || !*alive || !wizard_active_)
                     return;
                 set_status("Plugin not responding after restart.\nIt may need more time to load.");

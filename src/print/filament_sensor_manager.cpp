@@ -4,10 +4,10 @@
 #include "filament_sensor_manager.h"
 
 #include "ui_error_reporting.h"
+#include "ui_update_queue.h"
 
 #include "app_constants.h"
 #include "app_globals.h"
-#include "async_helpers.h"
 #include "config.h"
 #include "spdlog/spdlog.h"
 
@@ -594,11 +594,11 @@ void FilamentSensorManager::update_from_status(const json& status) {
                 spdlog::info("[FilamentSensorManager] sync_mode: updating subjects synchronously");
                 update_subjects();
             } else {
-                // Defer subject updates to main LVGL thread via helix::async::invoke()
+                // Defer subject updates to main LVGL thread via ui_queue_update()
                 // This avoids the "Invalidate area not allowed during rendering" assertion
                 // and provides exception safety (try-catch wrapping)
-                spdlog::debug("[FilamentSensorManager] async_mode: deferring via async::invoke");
-                helix::async::invoke(
+                spdlog::debug("[FilamentSensorManager] async_mode: deferring via ui_queue_update");
+                ui_queue_update(
                     [] { FilamentSensorManager::instance().update_subjects_on_main_thread(); });
             }
         }

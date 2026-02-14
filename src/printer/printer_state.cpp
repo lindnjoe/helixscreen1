@@ -271,11 +271,11 @@ void PrinterState::update_from_notification(const json& notification) {
     }
 
     // Extract printer state from params[0] and delegate to update_from_status
-    // CRITICAL: Defer to main thread via helix::async::invoke to avoid LVGL assertion
+    // CRITICAL: Defer to main thread via ui_queue_update to avoid LVGL assertion
     // when subject updates trigger lv_obj_invalidate() during rendering
     auto params = notification["params"];
     if (params.is_array() && !params.empty()) {
-        helix::async::invoke([this, state_json = params[0]]() {
+        ui_queue_update([this, state_json = params[0]]() {
             // Debug check: log if we're somehow in render phase (should never happen)
             if (lvgl_is_rendering()) {
                 spdlog::error("[PrinterState] async status update running during render phase!");
@@ -423,7 +423,7 @@ void PrinterState::reset_for_new_print() {
 void PrinterState::set_printer_connection_state(int state, const char* message) {
     // Thread-safe wrapper: defer LVGL subject updates to main thread
     std::string msg = message ? message : "";
-    helix::async::invoke(
+    ui_queue_update(
         [this, state, msg]() { set_printer_connection_state_internal(state, msg.c_str()); });
 }
 
@@ -531,9 +531,9 @@ void PrinterState::set_timelapse_available(bool available) {
 }
 
 void PrinterState::set_helix_plugin_installed(bool installed) {
-    // Thread-safe: Use helix::async::invoke to update LVGL subject from any thread
+    // Thread-safe: Use ui_queue_update to update LVGL subject from any thread
     // We handle the async dispatch here because we need to update composite subjects after
-    helix::async::invoke([this, installed]() {
+    ui_queue_update([this, installed]() {
         plugin_status_state_.set_installed_sync(installed);
 
         // Update composite subjects for G-code modification options
