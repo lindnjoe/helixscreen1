@@ -253,24 +253,43 @@ bool is_update_available(const std::string& current_version, const std::string& 
  * @param args Argument list (argv[0] should be the program name)
  * @return Exit code of the child process, or -1 on fork/exec failure
  */
-int safe_exec(const std::vector<std::string>& args) {
+int safe_exec(const std::vector<std::string>& args, bool capture_stderr = false) {
     if (args.empty()) {
         return -1;
+    }
+
+    // Optionally capture stderr via pipe for error diagnostics
+    int stderr_pipe[2] = {-1, -1};
+    if (capture_stderr) {
+        if (pipe(stderr_pipe) < 0) {
+            capture_stderr = false; // fall back to /dev/null
+        }
     }
 
     pid_t pid = fork();
     if (pid < 0) {
         spdlog::error("[UpdateChecker] fork() failed: {}", strerror(errno));
+        if (capture_stderr) {
+            close(stderr_pipe[0]);
+            close(stderr_pipe[1]);
+        }
         return -1;
     }
 
     if (pid == 0) {
-        // Child process — redirect stdout/stderr to /dev/null
+        // Child process — redirect stdout to /dev/null, stderr to pipe or /dev/null
         int devnull = open("/dev/null", O_WRONLY);
         if (devnull >= 0) {
             dup2(devnull, STDOUT_FILENO);
-            dup2(devnull, STDERR_FILENO);
+            if (!capture_stderr) {
+                dup2(devnull, STDERR_FILENO);
+            }
             close(devnull);
+        }
+        if (capture_stderr) {
+            close(stderr_pipe[0]); // close read end in child
+            dup2(stderr_pipe[1], STDERR_FILENO);
+            close(stderr_pipe[1]);
         }
 
         // Build C-style argv array
@@ -287,17 +306,40 @@ int safe_exec(const std::vector<std::string>& args) {
         _exit(127);
     }
 
-    // Parent — wait for child
+    // Parent — read stderr if capturing, then wait for child
+    std::string stderr_output;
+    if (capture_stderr) {
+        close(stderr_pipe[1]); // close write end in parent
+        char buf[1024];
+        ssize_t n;
+        while ((n = read(stderr_pipe[0], buf, sizeof(buf) - 1)) > 0) {
+            buf[n] = '\0';
+            stderr_output.append(buf, static_cast<size_t>(n));
+            if (stderr_output.size() > 4096)
+                break; // cap captured output
+        }
+        close(stderr_pipe[0]);
+    }
+
     int status = 0;
     if (waitpid(pid, &status, 0) < 0) {
         spdlog::error("[UpdateChecker] waitpid() failed: {}", strerror(errno));
         return -1;
     }
 
-    if (WIFEXITED(status)) {
-        return WEXITSTATUS(status);
+    int exit_code = WIFEXITED(status) ? WEXITSTATUS(status) : -1;
+
+    // Log captured stderr on failure
+    if (capture_stderr && exit_code != 0 && !stderr_output.empty()) {
+        // Trim trailing whitespace
+        while (!stderr_output.empty() &&
+               (stderr_output.back() == '\n' || stderr_output.back() == '\r')) {
+            stderr_output.pop_back();
+        }
+        spdlog::error("[UpdateChecker] stderr from '{}': {}", args[0], stderr_output);
     }
-    return -1;
+
+    return exit_code;
 }
 
 } // anonymous namespace
@@ -870,14 +912,96 @@ void UpdateChecker::do_install(const std::string& tarball_path) {
 
     report_download_status(DownloadStatus::Installing, 100, "Installing update...");
 
-    // Find install.sh — resolve dynamically from exe location first,
-    // then fall back to well-known paths. The installer is placed at
-    // the install root (e.g., /opt/helixscreen/install.sh).
+    // Extract install.sh from the NEW tarball so we always run the version-matched
+    // installer. This prevents failures when the local install.sh is outdated and
+    // missing functions that the new version's main() calls.
     std::string install_script;
+    std::string extracted_dir = tarball_path + ".installer";
+    bool extracted_from_tarball = false;
 
-    // Build search paths dynamically — exe-relative path first so it works
-    // for any install location (Pi: /home/biqu/helixscreen, /home/pi/helixscreen, etc.)
+    mkdir(extracted_dir.c_str(), 0750);
+
+    // Try tar xzf first (GNU tar), fall back to gunzip+tar (BusyBox)
+    auto ext_ret =
+        safe_exec({"tar", "xzf", tarball_path, "-C", extracted_dir, "helixscreen/install.sh"});
+    if (ext_ret != 0) {
+        // BusyBox tar may not support -z; decompress then extract
+        std::string tar_path = tarball_path;
+        auto gz_pos = tar_path.rfind(".gz");
+        if (gz_pos != std::string::npos) {
+            tar_path = tar_path.substr(0, gz_pos);
+        }
+        // gunzip -k keeps original, creates .tar
+        if (safe_exec({"gunzip", "-k", "-f", tarball_path}) == 0) {
+            ext_ret =
+                safe_exec({"tar", "xf", tar_path, "-C", extracted_dir, "helixscreen/install.sh"});
+            std::remove(tar_path.c_str());
+        }
+    }
+
+    std::string extracted_installer = extracted_dir + "/helixscreen/install.sh";
+    if (ext_ret == 0 && access(extracted_installer.c_str(), R_OK) == 0) {
+        // Make executable
+        chmod(extracted_installer.c_str(), 0755);
+        install_script = extracted_installer;
+        extracted_from_tarball = true;
+        spdlog::info("[UpdateChecker] Using installer extracted from update tarball");
+    } else {
+        // Fall back to local install.sh (best effort for older tarballs without it)
+        spdlog::warn(
+            "[UpdateChecker] Could not extract install.sh from tarball, falling back to local");
+        safe_exec({"rm", "-rf", extracted_dir});
+        install_script = find_local_installer();
+    }
+
+    if (install_script.empty()) {
+        spdlog::error("[UpdateChecker] Cannot find install.sh");
+        report_download_status(DownloadStatus::Error, 0, "Error: Installer not found",
+                               "Cannot locate install.sh script");
+        return;
+    }
+
+    spdlog::info("[UpdateChecker] Running: {} --local {} --update", install_script, tarball_path);
+
+    auto ret = safe_exec({install_script, "--local", tarball_path, "--update"}, true);
+
+    // Clean up tarball and extracted installer regardless of result
+    std::remove(tarball_path.c_str());
+    if (extracted_from_tarball) {
+        safe_exec({"rm", "-rf", extracted_dir});
+    }
+
+    if (ret != 0) {
+        spdlog::error("[UpdateChecker] Install script failed with code {}", ret);
+        report_download_status(DownloadStatus::Error, 0, "Error: Installation failed",
+                               "install.sh returned error code " + std::to_string(ret));
+        return;
+    }
+
+    spdlog::info("[UpdateChecker] Update installed successfully!");
+
+    std::string version;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        version = cached_info_ ? cached_info_->version : "unknown";
+    }
+
+    report_download_status(DownloadStatus::Complete, 100,
+                           "v" + version + " installed! Restart to apply.");
+}
+
+// ============================================================================
+// Static helpers
+// ============================================================================
+
+std::string
+UpdateChecker::find_local_installer(const std::vector<std::string>& extra_search_paths) {
     std::vector<std::string> search_paths;
+
+    // Caller-supplied paths first (e.g., exe-relative)
+    for (const auto& p : extra_search_paths) {
+        search_paths.push_back(p);
+    }
 
     // Try resolving from /proc/self/exe → strip /bin/helix-screen → install root
     char exe_buf[PATH_MAX] = {};
@@ -905,42 +1029,11 @@ void UpdateChecker::do_install(const std::string& tarball_path) {
 
     for (const auto& path : search_paths) {
         if (access(path.c_str(), X_OK) == 0) {
-            install_script = path;
-            break;
+            return path;
         }
     }
 
-    if (install_script.empty()) {
-        spdlog::error("[UpdateChecker] Cannot find install.sh");
-        report_download_status(DownloadStatus::Error, 0, "Error: Installer not found",
-                               "Cannot locate install.sh script");
-        return;
-    }
-
-    spdlog::info("[UpdateChecker] Running: {} --local {} --update", install_script, tarball_path);
-
-    auto ret = safe_exec({install_script, "--local", tarball_path, "--update"});
-
-    // Clean up tarball regardless of result
-    std::remove(tarball_path.c_str());
-
-    if (ret != 0) {
-        spdlog::error("[UpdateChecker] Install script failed with code {}", ret);
-        report_download_status(DownloadStatus::Error, 0, "Error: Installation failed",
-                               "install.sh returned error code " + std::to_string(ret));
-        return;
-    }
-
-    spdlog::info("[UpdateChecker] Update installed successfully!");
-
-    std::string version;
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        version = cached_info_ ? cached_info_->version : "unknown";
-    }
-
-    report_download_status(DownloadStatus::Complete, 100,
-                           "v" + version + " installed! Restart to apply.");
+    return "";
 }
 
 // ============================================================================

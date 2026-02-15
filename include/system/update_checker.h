@@ -25,6 +25,7 @@
 #include <optional>
 #include <string>
 #include <thread>
+#include <vector>
 
 /**
  * @brief Async update checker for HelixScreen
@@ -193,6 +194,17 @@ class UpdateChecker {
 
     /** @brief Get platform key for current build ("pi", "ad5m", "k1") */
     static std::string get_platform_key();
+
+    /**
+     * @brief Find a local install.sh by searching well-known paths
+     * @param extra_search_paths Additional paths to search (prepended to default list)
+     * @return Path to install.sh if found, empty string otherwise
+     *
+     * Searches exe-relative path first, then well-known install locations.
+     * Used as fallback when installer cannot be extracted from update tarball.
+     */
+    static std::string
+    find_local_installer(const std::vector<std::string>& extra_search_paths = {});
 
     /** @brief Check if a version is dismissed (user chose to ignore) */
     bool is_version_dismissed(const std::string& version) const;
