@@ -34,6 +34,7 @@
 #include "streaming_policy.h"
 #include "subject_initializer.h"
 #include "temperature_history_manager.h"
+#include "timelapse_state.h"
 
 // UI headers
 #include "ui_ams_mini_status.h"
@@ -207,7 +208,10 @@ int Application::run(int argc, char** argv) {
 
     // Install crash handler early (before other init that could crash)
     // Uses the config directory for the crash file so TelemetryManager can find it on next startup
-    crash_handler::install("config/crash.txt");
+    // Skip in test mode — don't record or report crashes during development
+    if (!get_runtime_config()->is_test_mode()) {
+        crash_handler::install("config/crash.txt");
+    }
 
     // Phase 2: Initialize config system
     if (!init_config()) {
@@ -327,7 +331,11 @@ int Application::run(int argc, char** argv) {
     }
 
     // Check for crash from previous session (after UI exists, before wizard)
-    if (CrashReporter::instance().has_crash_report()) {
+    // Skip in test mode — don't show crash dialog during development
+    // Exception: --mock-crash explicitly requests the dialog for testing
+    bool show_crash_dialog =
+        !get_runtime_config()->is_test_mode() || get_runtime_config()->mock_crash;
+    if (show_crash_dialog && CrashReporter::instance().has_crash_report()) {
         spdlog::info("[Application] Previous crash detected — showing crash report dialog");
         auto report = CrashReporter::instance().collect_report();
         auto* modal = new CrashReportModal();
@@ -1507,6 +1515,12 @@ void Application::setup_discovery_callbacks() {
                                                     get_global_settings_panel().fetch_print_hours();
                                                 });
 
+            // Register for timelapse events when timelapse is detected
+            c->client->register_method_callback(
+                "notify_timelapse_event", "timelapse_state", [](const nlohmann::json& data) {
+                    helix::TimelapseState::instance().handle_timelapse_event(data);
+                });
+
             // Hardware validation: check config expectations vs discovered hardware
             HardwareValidator validator;
             auto validation_result = validator.validate(Config::get_instance(), c->hardware);
@@ -2150,6 +2164,12 @@ void Application::shutdown() {
     // History manager MUST be reset before moonraker (uses client for unregistration)
     m_history_manager.reset();
     m_temp_history_manager.reset();
+
+    // Unregister timelapse event callback
+    if (m_moonraker && m_moonraker->client()) {
+        m_moonraker->client()->unregister_method_callback("notify_timelapse_event",
+                                                          "timelapse_state");
+    }
 
     // Unregister action prompt callback before moonraker is destroyed
     if (m_moonraker && m_moonraker->client() && m_action_prompt_manager) {

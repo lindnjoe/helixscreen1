@@ -112,6 +112,64 @@ All timelapse API methods are in `MoonrakerAPI` (declared in `moonraker_api.h`, 
 
 ---
 
+## Phase 2: Event Handling & Video Management
+
+Phase 2 adds real-time timelapse event handling, render progress tracking, and video management to the settings overlay.
+
+### TimelapseState
+
+`TimelapseState` is a singleton (`TimelapseState::instance()`) that manages timelapse-specific state via LVGL subjects:
+
+| Subject | Type | Purpose |
+|---------|------|---------|
+| `timelapse_render_progress` | int (0-100) | Current render progress percentage |
+| `timelapse_render_status` | string | Render state: `"idle"`, `"rendering"`, `"complete"`, `"error"` |
+| `timelapse_frame_count` | int | Number of frames captured during current print |
+
+Subjects are initialized in `subject_initializer.cpp` and frame count resets when a new print starts.
+
+### Event Handling
+
+The moonraker-timelapse plugin emits `notify_timelapse_event` WebSocket notifications. HelixScreen subscribes to these in `application.cpp`:
+
+```cpp
+// On connect:
+register_method_callback("notify_timelapse_event", "timelapse_handler", callback);
+
+// On shutdown:
+unregister_method_callback("notify_timelapse_event", "timelapse_handler");
+```
+
+`TimelapseState::handle_timelapse_event()` dispatches based on the `action` field:
+
+- **`"newframe"`** -- increments `timelapse_frame_count` subject
+- **`"render"`** -- updates `timelapse_render_status` and `timelapse_render_progress`; triggers toast notifications at 25% progress boundaries to avoid UI spam
+
+### Render Progress Notifications
+
+Render events produce user-visible toast notifications:
+
+| Event | Notification |
+|-------|-------------|
+| Render starts (`progress == 0`) | "Rendering timelapse..." |
+| Progress at 25/50/75% | "Rendering timelapse... 25%" (throttled) |
+| Render complete (`status == "success"`) | "Timelapse rendered successfully" |
+| Render error (`status == "error"`) | "Timelapse render failed: {msg}" |
+
+### Video Management
+
+The timelapse settings overlay (Phase 1) was extended with video management capabilities:
+
+| Action | API Call | Description |
+|--------|----------|-------------|
+| List videos | `list_files("timelapse", ...)` | Shows rendered timelapse videos |
+| Render video | `render_timelapse()` | POST `/machine/timelapse/render` -- triggers manual render |
+| Save frames | `save_timelapse_frames()` | POST `/machine/timelapse/saveframes` -- saves frames as ZIP |
+| Get last frame | `get_last_frame_info()` | GET `/machine/timelapse/lastframeinfo` -- info about last captured frame |
+| Delete video | `delete_file("timelapse/filename.mp4")` | Removes a rendered timelapse file |
+
+---
+
 ## File Map
 
 | File | Purpose |
@@ -133,4 +191,6 @@ All timelapse API methods are in `MoonrakerAPI` (declared in `moonraker_api.h`, 
 | `tests/unit/test_timelapse_install.cpp` | 23 tests for config parsing |
 | `ui_xml/advanced_panel.xml` | Timelapse/Setup rows (beta-gated) |
 | `ui_xml/beta_feature.xml` | Beta feature wrapper component |
+| `include/timelapse_state.h` | TimelapseState singleton class |
+| `src/printer/timelapse_state.cpp` | Event dispatch, subject management, render notifications |
 | `docs/plans/TIMELAPSE_FEATURE.md` | Full design doc with future phases |
