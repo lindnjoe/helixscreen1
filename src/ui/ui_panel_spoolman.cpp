@@ -148,15 +148,11 @@ void SpoolmanPanel::on_activate() {
 
     spdlog::debug("[{}] on_activate()", get_name());
 
-    // Clear search on activation
+    // Clear search on activation (text_input handles clear button visibility internally)
     search_query_.clear();
     lv_obj_t* search_box = lv_obj_find_by_name(overlay_root_, "search_box");
     if (search_box) {
         lv_textarea_set_text(search_box, "");
-    }
-    lv_obj_t* clear_btn = lv_obj_find_by_name(overlay_root_, "search_clear_btn");
-    if (clear_btn) {
-        lv_obj_add_flag(clear_btn, LV_OBJ_FLAG_HIDDEN);
     }
 
     // Refresh spool list when panel becomes visible
@@ -590,12 +586,6 @@ void SpoolmanPanel::on_search_changed(lv_event_t* e) {
     const char* text = lv_textarea_get_text(textarea);
     panel.search_query_ = text ? text : "";
 
-    // Show/hide clear button based on whether there's text
-    lv_obj_t* clear_btn = lv_obj_find_by_name(panel.overlay_root_, "search_clear_btn");
-    if (clear_btn) {
-        lv_obj_set_flag(clear_btn, LV_OBJ_FLAG_HIDDEN, panel.search_query_.empty());
-    }
-
     // Debounce: cancel existing timer, start new one
     if (panel.search_debounce_timer_) {
         lv_timer_delete(panel.search_debounce_timer_);
@@ -607,21 +597,9 @@ void SpoolmanPanel::on_search_changed(lv_event_t* e) {
 }
 
 void SpoolmanPanel::on_search_clear(lv_event_t* /*e*/) {
+    // Text is already cleared by text_input's internal clear button handler.
+    // We just need to update the search state and repopulate immediately.
     auto& panel = get_global_spoolman_panel();
-
-    // Clear the search text
-    lv_obj_t* search_box = lv_obj_find_by_name(panel.overlay_root_, "search_box");
-    if (search_box) {
-        lv_textarea_set_text(search_box, "");
-    }
-
-    // Hide the clear button
-    lv_obj_t* clear_btn = lv_obj_find_by_name(panel.overlay_root_, "search_clear_btn");
-    if (clear_btn) {
-        lv_obj_add_flag(clear_btn, LV_OBJ_FLAG_HIDDEN);
-    }
-
-    // Clear query and repopulate immediately (no debounce needed for clear)
     panel.search_query_.clear();
     if (panel.search_debounce_timer_) {
         lv_timer_delete(panel.search_debounce_timer_);

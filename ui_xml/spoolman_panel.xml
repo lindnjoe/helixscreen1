@@ -15,18 +15,13 @@
     <!-- Search Row -->
     <lv_obj name="search_row"
             width="100%" height="content" flex_flow="row" style_flex_main_place="start" style_flex_cross_place="center"
-            style_pad_column="0" style_pad_left="#space_lg" style_pad_right="#space_lg"
+            style_pad_column="#space_md" style_pad_left="#space_lg" style_pad_right="#space_lg"
             style_pad_top="#space_sm" style_pad_bottom="#space_sm" scrollable="false">
       <text_input name="search_box"
                   placeholder_text="Search spools..." placeholder_tag="Search spools..." flex_grow="1" style_min_width="120"
-                  style_max_height="#input_height">
+                  style_max_height="#input_height" show_clear_button="true" clear_callback="on_spoolman_search_clear">
         <event_cb trigger="value_changed" callback="on_spoolman_search_changed"/>
       </text_input>
-      <!-- Clear button (Android-style, overlaps right edge of text_input) -->
-      <icon name="search_clear_btn" src="close_circle" size="sm" variant="secondary"
-            hidden="true" clickable="true" style_translate_x="-36">
-        <event_cb trigger="clicked" callback="on_spoolman_search_clear"/>
-      </icon>
     </lv_obj>
     <!-- Content Area -->
     <lv_obj name="overlay_content"
