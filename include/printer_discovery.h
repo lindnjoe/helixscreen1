@@ -20,6 +20,8 @@
 
 #include <algorithm>
 #include <cctype>
+#include <limits>
+#include <optional>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -213,17 +215,37 @@ class PrinterDiscovery {
                 }
             }
             // AFC lane discovery
-            else if (name.rfind("AFC_stepper ", 0) == 0) {
-                std::string lane_name = name.substr(12); // Remove "AFC_stepper " prefix
+            else if (name.rfind("AFC_stepper ", 0) == 0 || name.rfind("AFC_lane ", 0) == 0) {
+                has_mmu_ = true;
+                mmu_type_ = AmsType::AFC;
+                std::string lane_name = name.rfind("AFC_stepper ", 0) == 0
+                                            ? name.substr(12) // Remove "AFC_stepper " prefix
+                                            : name.substr(9); // Remove "AFC_lane " prefix
                 if (!lane_name.empty()) {
                     afc_lane_names_.push_back(lane_name);
                 }
             }
             // AFC hub discovery
             else if (name.rfind("AFC_hub ", 0) == 0) {
+                has_mmu_ = true;
+                mmu_type_ = AmsType::AFC;
                 std::string hub_name = name.substr(8); // Remove "AFC_hub " prefix
                 if (!hub_name.empty()) {
                     afc_hub_names_.push_back(hub_name);
+                }
+            }
+            // AFC extruder discovery (signals AFC installed even if main object is missing)
+            else if (name.rfind("AFC_extruder ", 0) == 0) {
+                has_mmu_ = true;
+                mmu_type_ = AmsType::AFC;
+            }
+            // OpenAMS units indicate AFC is installed
+            else if (name.rfind("AFC_OpenAMS ", 0) == 0) {
+                has_mmu_ = true;
+                mmu_type_ = AmsType::AFC;
+                std::string unit_name = name.substr(12); // Remove "AFC_OpenAMS " prefix
+                if (!unit_name.empty()) {
+                    openams_unit_names_.insert(unit_name);
                 }
             }
             // Tool changer detection
@@ -320,9 +342,106 @@ class PrinterDiscovery {
             }
         }
 
+        int expected_units = std::max(static_cast<int>(openams_unit_names_.size()),
+                                      static_cast<int>(afc_hub_names_.size()));
+        if (expected_units > 0) {
+            int expected_lanes = expected_units * 4;
+            if (static_cast<int>(afc_lane_names_.size()) < expected_lanes) {
+                std::unordered_set<std::string> existing_lanes(afc_lane_names_.begin(),
+                                                               afc_lane_names_.end());
+
+                int min_lane_index = std::numeric_limits<int>::max();
+                int max_lane_index = std::numeric_limits<int>::min();
+                bool all_numeric_lane_names = !afc_lane_names_.empty();
+
+                for (const auto& lane_name : afc_lane_names_) {
+                    if (lane_name.rfind("lane", 0) != 0 || lane_name.size() <= 4) {
+                        all_numeric_lane_names = false;
+                        break;
+                    }
+
+                    std::string suffix = lane_name.substr(4);
+                    bool suffix_is_numeric = std::all_of(suffix.begin(), suffix.end(), [](char c) {
+                        return std::isdigit(static_cast<unsigned char>(c));
+                    });
+                    if (!suffix_is_numeric) {
+                        all_numeric_lane_names = false;
+                        break;
+                    }
+
+                    try {
+                        int idx = std::stoi(suffix);
+                        min_lane_index = std::min(min_lane_index, idx);
+                        max_lane_index = std::max(max_lane_index, idx);
+                    } catch (...) {
+                        all_numeric_lane_names = false;
+                        break;
+                    }
+                }
+
+                afc_lane_names_.reserve(expected_lanes);
+
+                // If existing lane names follow laneN format, extend with matching index base
+                // (lane1..lane4 -> synthesize lane5..). Otherwise fallback to lane0..laneN.
+                if (all_numeric_lane_names) {
+                    int next_lane_index =
+                        (max_lane_index >= min_lane_index) ? (max_lane_index + 1) : 0;
+                    while (static_cast<int>(afc_lane_names_.size()) < expected_lanes) {
+                        std::string lane_name = "lane" + std::to_string(next_lane_index++);
+                        if (existing_lanes.insert(lane_name).second) {
+                            afc_lane_names_.push_back(std::move(lane_name));
+                        }
+                    }
+                } else {
+                    for (int i = 0; static_cast<int>(afc_lane_names_.size()) < expected_lanes;
+                         ++i) {
+                        std::string lane_name = "lane" + std::to_string(i);
+                        if (existing_lanes.insert(lane_name).second) {
+                            afc_lane_names_.push_back(std::move(lane_name));
+                        }
+                    }
+                }
+            }
+        }
+
         // Sort AFC lane names for consistent ordering
         if (!afc_lane_names_.empty()) {
-            std::sort(afc_lane_names_.begin(), afc_lane_names_.end());
+            auto lane_index = [](const std::string& name) -> std::optional<int> {
+                static const std::string kPrefix = "lane";
+                if (name.rfind(kPrefix, 0) != 0) {
+                    return std::nullopt;
+                }
+                std::string suffix = name.substr(kPrefix.size());
+                if (suffix.empty()) {
+                    return std::nullopt;
+                }
+                for (char c : suffix) {
+                    if (!std::isdigit(static_cast<unsigned char>(c))) {
+                        return std::nullopt;
+                    }
+                }
+                try {
+                    return std::stoi(suffix);
+                } catch (...) {
+                    return std::nullopt;
+                }
+            };
+
+            std::sort(afc_lane_names_.begin(), afc_lane_names_.end(),
+                      [&](const std::string& left, const std::string& right) {
+                          auto left_index = lane_index(left);
+                          auto right_index = lane_index(right);
+                          if (left_index && right_index) {
+                              return *left_index < *right_index;
+                          }
+                          if (left_index) {
+                              return true;
+                          }
+                          if (right_index) {
+                              return false;
+                          }
+                          return left < right;
+                      });
         }
 
         // Sort tool names for consistent ordering
@@ -344,8 +463,9 @@ class PrinterDiscovery {
             }
         }
 
-        // Update mmu_type_ for backward compat: toolchanger takes priority
-        if (has_tool_changer_ && !tool_names_.empty()) {
+        // Set mmu_type_ for tool changers after all objects are processed,
+        // but only if another MMU/AMS system was not already detected.
+        if (has_tool_changer_ && !tool_names_.empty() && mmu_type_ == AmsType::NONE) {
             mmu_type_ = AmsType::TOOL_CHANGER;
         }
     }
@@ -415,6 +535,7 @@ class PrinterDiscovery {
         filament_sensor_names_.clear();
         mmu_encoder_names_.clear();
         mmu_servo_names_.clear();
+        openams_unit_names_.clear();
 
         // Macros
         macros_.clear();
@@ -897,6 +1018,7 @@ class PrinterDiscovery {
     std::vector<std::string> filament_sensor_names_;
     std::vector<std::string> mmu_encoder_names_;
     std::vector<std::string> mmu_servo_names_;
+    std::unordered_set<std::string> openams_unit_names_;
 
     // Macros
     std::unordered_set<std::string> macros_;
