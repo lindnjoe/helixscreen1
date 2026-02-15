@@ -24,10 +24,8 @@
 using json = nlohmann::json;
 using namespace helix;
 
-// ============================================================================
-// Empty Input Tests
-// ============================================================================
-
+// =====================================================================// Empty Input Tests
+// =====================================================================
 TEST_CASE("PrinterDiscovery parses empty objects list", "[printer_discovery]") {
     PrinterDiscovery hw;
     hw.parse_objects(json::array());
@@ -78,10 +76,8 @@ TEST_CASE("PrinterDiscovery handles malformed input", "[printer_discovery]") {
     }
 }
 
-// ============================================================================
-// Heater Extraction Tests
-// ============================================================================
-
+// =====================================================================// Heater Extraction Tests
+// =====================================================================
 TEST_CASE("PrinterDiscovery parses heaters - extruders and bed", "[printer_discovery]") {
     PrinterDiscovery hw;
 
@@ -128,10 +124,8 @@ TEST_CASE("PrinterDiscovery parses heaters - extruders and bed", "[printer_disco
     }
 }
 
-// ============================================================================
-// Fan Extraction Tests
-// ============================================================================
-
+// =====================================================================// Fan Extraction Tests
+// =====================================================================
 TEST_CASE("PrinterDiscovery parses fans - all fan types", "[printer_discovery]") {
     PrinterDiscovery hw;
 
@@ -187,10 +181,8 @@ TEST_CASE("PrinterDiscovery parses fans - all fan types", "[printer_discovery]")
     }
 }
 
-// ============================================================================
-// Sensor Extraction Tests
-// ============================================================================
-
+// =====================================================================// Sensor Extraction Tests
+// =====================================================================
 TEST_CASE("PrinterDiscovery parses sensors - temperature sensors", "[printer_discovery]") {
     PrinterDiscovery hw;
 
@@ -221,10 +213,8 @@ TEST_CASE("PrinterDiscovery parses sensors - temperature sensors", "[printer_dis
     }
 }
 
-// ============================================================================
-// LED Extraction Tests
-// ============================================================================
-
+// =====================================================================// LED Extraction Tests
+// =====================================================================
 TEST_CASE("PrinterDiscovery parses LEDs - neopixel and dotstar", "[printer_discovery]") {
     PrinterDiscovery hw;
 
@@ -260,10 +250,8 @@ TEST_CASE("PrinterDiscovery parses LEDs - neopixel and dotstar", "[printer_disco
     }
 }
 
-// ============================================================================
-// Capability Detection Tests - Leveling
-// ============================================================================
-
+// =====================================================================// Capability Detection Tests - Leveling
+// =====================================================================
 TEST_CASE("PrinterDiscovery detects QGL when quad_gantry_level present", "[printer_discovery]") {
     PrinterDiscovery hw;
 
@@ -286,10 +274,8 @@ TEST_CASE("PrinterDiscovery detects z_tilt", "[printer_discovery]") {
     REQUIRE(hw.supports_leveling());
 }
 
-// ============================================================================
-// Capability Detection Tests - Probes
-// ============================================================================
-
+// =====================================================================// Capability Detection Tests - Probes
+// =====================================================================
 TEST_CASE("PrinterDiscovery detects probe when bltouch present", "[printer_discovery]") {
     PrinterDiscovery hw;
 
@@ -315,10 +301,8 @@ TEST_CASE("PrinterDiscovery detects probe when bltouch present", "[printer_disco
     }
 }
 
-// ============================================================================
-// Macro Detection Tests
-// ============================================================================
-
+// =====================================================================// Macro Detection Tests
+// =====================================================================
 TEST_CASE("PrinterDiscovery detects macros and caches common patterns", "[printer_discovery]") {
     PrinterDiscovery hw;
 
@@ -362,10 +346,8 @@ TEST_CASE("PrinterDiscovery detects macros and caches common patterns", "[printe
     }
 }
 
-// ============================================================================
-// AFC/MMU Detection Tests
-// ============================================================================
-
+// =====================================================================// AFC/MMU Detection Tests
+// =====================================================================
 TEST_CASE("PrinterDiscovery detects AFC and extracts lane names", "[printer_discovery]") {
     PrinterDiscovery hw;
 
@@ -513,10 +495,83 @@ TEST_CASE("PrinterDiscovery detects tool changer", "[printer_discovery]") {
     REQUIRE(tools.size() == 3);
 }
 
-// ============================================================================
-// Filament Sensor Detection Tests
-// ============================================================================
+TEST_CASE("PrinterDiscovery prefers AFC over tool changer when both are present",
+          "[printer_discovery]") {
+    PrinterDiscovery hw;
 
+    json objects = {"toolchanger", "tool T0", "tool T1", "AFC_stepper lane0", "AFC_hub Turtle_1"};
+    hw.parse_objects(objects);
+
+    REQUIRE(hw.has_tool_changer());
+    REQUIRE(hw.has_mmu());
+    REQUIRE(hw.mmu_type() == AmsType::AFC);
+}
+
+TEST_CASE("PrinterDiscovery detects AFC from OpenAMS objects", "[printer_discovery]") {
+    PrinterDiscovery hw;
+
+    json objects = {"toolchanger", "tool T0", "AFC_OpenAMS AMS_1", "AFC_hub Turtle_1"};
+    hw.parse_objects(objects);
+
+    REQUIRE(hw.has_mmu());
+    REQUIRE(hw.mmu_type() == AmsType::AFC);
+
+    auto lanes = hw.afc_lane_names();
+    REQUIRE(lanes.size() == 4);
+    REQUIRE(lanes[0] == "lane0");
+    REQUIRE(lanes[1] == "lane1");
+    REQUIRE(lanes[2] == "lane2");
+    REQUIRE(lanes[3] == "lane3");
+}
+
+TEST_CASE("PrinterDiscovery does not synthesize extra AFC lanes when lanes already exist",
+          "[printer_discovery]") {
+    PrinterDiscovery hw;
+
+    json objects = {"AFC_BoxTurtle Turtle_1", "AFC_OpenAMS AMS_1",  "AFC_OpenAMS AMS_2",
+                    "AFC_stepper lane0",      "AFC_stepper lane1",  "AFC_stepper lane2",
+                    "AFC_stepper lane3",      "AFC_stepper lane4",  "AFC_stepper lane5",
+                    "AFC_stepper lane6",      "AFC_stepper lane7",  "AFC_stepper lane8",
+                    "AFC_stepper lane9",      "AFC_stepper lane10", "AFC_stepper lane11"};
+    hw.parse_objects(objects);
+
+    auto lanes = hw.afc_lane_names();
+    REQUIRE(lanes.size() == 12);
+    REQUIRE(lanes.front() == "lane0");
+    REQUIRE(lanes.back() == "lane11");
+}
+
+TEST_CASE("PrinterDiscovery synthesizes missing AFC lanes for OpenAMS units",
+          "[printer_discovery]") {
+    PrinterDiscovery hw;
+
+    json objects = {"AFC_BoxTurtle Turtle_1", "AFC_OpenAMS AMS_1", "AFC_OpenAMS AMS_2",
+                    "AFC_stepper lane0",      "AFC_stepper lane1", "AFC_stepper lane2",
+                    "AFC_stepper lane3"};
+    hw.parse_objects(objects);
+
+    auto lanes = hw.afc_lane_names();
+    REQUIRE(lanes.size() == 12);
+    REQUIRE(lanes.front() == "lane0");
+    REQUIRE(lanes.back() == "lane11");
+}
+
+TEST_CASE("PrinterDiscovery synthesizes missing AFC lanes using detected lane index base",
+          "[printer_discovery]") {
+    PrinterDiscovery hw;
+
+    json objects = {"AFC_BoxTurtle Turtle_1", "AFC_BoxTurtle Turtle_2", "AFC_stepper lane1",
+                    "AFC_stepper lane2",      "AFC_stepper lane3",      "AFC_stepper lane4"};
+    hw.parse_objects(objects);
+
+    auto lanes = hw.afc_lane_names();
+    REQUIRE(lanes.size() == 8);
+    REQUIRE(lanes.front() == "lane1");
+    REQUIRE(lanes.back() == "lane8");
+}
+
+// =====================================================================// Filament Sensor Detection Tests
+// =====================================================================
 TEST_CASE("PrinterDiscovery detects filament sensors - both types", "[printer_discovery]") {
     PrinterDiscovery hw;
 
@@ -545,10 +600,8 @@ TEST_CASE("PrinterDiscovery detects filament sensors - both types", "[printer_di
     }
 }
 
-// ============================================================================
-// Stepper Extraction Tests
-// ============================================================================
-
+// =====================================================================// Stepper Extraction Tests
+// =====================================================================
 TEST_CASE("PrinterDiscovery parses steppers", "[printer_discovery]") {
     PrinterDiscovery hw;
 
@@ -563,14 +616,10 @@ TEST_CASE("PrinterDiscovery parses steppers", "[printer_discovery]") {
             hw.steppers().end());
 }
 
-// ============================================================================
-// Additional Capability Detection Tests
-// ============================================================================
-
-// ============================================================================
-// Accelerometer Detection Tests
-// ============================================================================
-// NOTE: Klipper's objects/list ONLY returns objects with get_status() method.
+// =====================================================================// Additional Capability Detection Tests
+// =====================================================================
+// =====================================================================// Accelerometer Detection Tests
+// =====================================================================// NOTE: Klipper's objects/list ONLY returns objects with get_status() method.
 // Accelerometers (adxl345, lis2dw, mpu9250, resonance_tester) intentionally
 // don't have get_status() since they're on-demand calibration tools.
 // Therefore: accelerometer detection MUST use parse_config_keys(), not parse_objects().
@@ -727,10 +776,8 @@ TEST_CASE("PrinterDiscovery detects chamber heater and sensor", "[printer_discov
     }
 }
 
-// ============================================================================
-// Clear/Reset Tests
-// ============================================================================
-
+// =====================================================================// Clear/Reset Tests
+// =====================================================================
 TEST_CASE("PrinterDiscovery clear resets all state", "[printer_discovery]") {
     PrinterDiscovery hw;
 
@@ -753,10 +800,8 @@ TEST_CASE("PrinterDiscovery clear resets all state", "[printer_discovery]") {
     REQUIRE(hw.macros().empty());
 }
 
-// ============================================================================
-// Real-world Configuration Tests
-// ============================================================================
-
+// =====================================================================// Real-world Configuration Tests
+// =====================================================================
 TEST_CASE("PrinterDiscovery handles full Voron 2.4 config", "[printer_discovery]") {
     PrinterDiscovery hw;
 
@@ -806,10 +851,8 @@ TEST_CASE("PrinterDiscovery handles full Voron 2.4 config", "[printer_discovery]
     REQUIRE(hw.nozzle_clean_macro() == "CLEAN_NOZZLE");
 }
 
-// ============================================================================
-// screws_tilt_adjust Detection Tests
-// ============================================================================
-// NOTE: screws_tilt_adjust doesn't implement get_status() in Klipper,
+// =====================================================================// screws_tilt_adjust Detection Tests
+// =====================================================================// NOTE: screws_tilt_adjust doesn't implement get_status() in Klipper,
 // so it typically won't appear in objects/list. Must detect from configfile.
 
 TEST_CASE("PrinterDiscovery detects screws_tilt_adjust from objects list", "[printer_discovery]") {
@@ -854,4 +897,22 @@ TEST_CASE("PrinterDiscovery detects screws_tilt_adjust from config when missing 
                    {"printer", {{"kinematics", "corexy"}}}};
     hw.parse_config_keys(config);
     REQUIRE(hw.has_screws_tilt());
+}
+TEST_CASE("PrinterDiscovery AFC: discovers lanes from AFC_lane objects",
+          "[discovery][afc][openams]") {
+    using nlohmann::json;
+    PrinterDiscovery discovery;
+
+    json objects = {
+        "AFC",           "AFC_OpenAMS AMS_1", "AFC_lane lane4", "AFC_lane lane5", "AFC_lane lane6",
+        "AFC_lane lane7"};
+
+    discovery.parse_objects(objects);
+
+    REQUIRE(discovery.has_mmu());
+    REQUIRE(discovery.get_mmu_type() == AmsType::AFC);
+    const auto& lanes = discovery.get_afc_lane_names();
+    REQUIRE(lanes.size() == 4);
+    REQUIRE(lanes[0] == "lane4");
+    REQUIRE(lanes[3] == "lane7");
 }

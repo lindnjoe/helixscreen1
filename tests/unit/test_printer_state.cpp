@@ -243,6 +243,25 @@ TEST_CASE("PrinterState: Update extruder temperature from status", "[state][temp
     REQUIRE(lv_subject_get_int(state.get_extruder_target_subject()) == 2100);
 }
 
+TEST_CASE("PrinterState: get_active_extruder_name uses toolhead.extruder", "[state][temp]") {
+    lv_init_safe();
+    PrinterState& state = get_printer_state();
+    PrinterStateTestAccess::reset(state);
+    state.init_subjects(false);
+
+    SECTION("defaults to extruder when toolhead is missing") {
+        json status = {{"extruder", {{"temperature", 200.0}, {"target", 210.0}}}};
+        state.update_from_status(status);
+        REQUIRE(state.get_active_extruder_name() == "extruder");
+    }
+
+    SECTION("returns active toolhead extruder name") {
+        json status = {{"toolhead", {{"extruder", "extruder1"}}}};
+        state.update_from_status(status);
+        REQUIRE(state.get_active_extruder_name() == "extruder1");
+    }
+}
+
 TEST_CASE("PrinterState: Update bed temperature from status", "[state][temp]") {
     lv_init_safe();
     PrinterState& state = get_printer_state();

@@ -414,6 +414,22 @@ json& PrinterState::get_json_state() {
     return json_state_;
 }
 
+std::string PrinterState::get_active_extruder_name() const {
+    std::lock_guard<std::mutex> lock(state_mutex_);
+
+    if (json_state_.contains("toolhead") && json_state_["toolhead"].is_object()) {
+        const auto& toolhead = json_state_["toolhead"];
+        if (toolhead.contains("extruder") && toolhead["extruder"].is_string()) {
+            std::string heater = toolhead["extruder"].get<std::string>();
+            if (!heater.empty()) {
+                return heater;
+            }
+        }
+    }
+
+    return "extruder";
+}
+
 void PrinterState::reset_for_new_print() {
     print_domain_.reset_for_new_print();
     helix::TimelapseState::instance().reset();
