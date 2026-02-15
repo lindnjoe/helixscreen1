@@ -5,6 +5,18 @@ All notable changes to HelixScreen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.22] - 2026-02-15
+
+### Added
+- Timelapse phase 2: event handling, render notifications, and video management
+- AD5M ready-made firmware image as primary install option in docs
+
+### Fixed
+- **Critical**: install.sh now included in release packages, fixing "Installer not found" error during UI-initiated updates (thanks @bassco)
+
+### Changed
+- CI release pipeline refactored to matrix builds for easier platform maintenance (thanks @bassco)
+
 ## [0.9.21] - 2026-02-14
 
 ### Added
@@ -511,6 +523,7 @@ Initial tagged release. Foundation for all subsequent development.
 - Automated GitHub Actions release pipeline
 - One-liner installation script with platform auto-detection
 
+[0.9.22]: https://github.com/prestonbrown/helixscreen/compare/v0.9.21...v0.9.22
 [0.9.21]: https://github.com/prestonbrown/helixscreen/compare/v0.9.20...v0.9.21
 [0.9.20]: https://github.com/prestonbrown/helixscreen/compare/v0.9.19...v0.9.20
 [0.9.19]: https://github.com/prestonbrown/helixscreen/compare/v0.9.18...v0.9.19
