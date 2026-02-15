@@ -3,6 +3,7 @@
 
 #include "ams_backend_happy_hare.h"
 
+#include "hh_defaults.h"
 #include "moonraker_api.h"
 
 #include <spdlog/fmt/fmt.h>
@@ -933,4 +934,108 @@ helix::printer::ToolMappingCapabilities AmsBackendHappyHare::get_tool_mapping_ca
 std::vector<int> AmsBackendHappyHare::get_tool_mapping() const {
     std::lock_guard<std::mutex> lock(mutex_);
     return system_info_.tool_to_slot_map;
+}
+
+// ============================================================================
+// Device Management
+// ============================================================================
+
+std::vector<helix::printer::DeviceSection> AmsBackendHappyHare::get_device_sections() const {
+    return helix::printer::hh_default_sections();
+}
+
+std::vector<helix::printer::DeviceAction> AmsBackendHappyHare::get_device_actions() const {
+    return helix::printer::hh_default_actions();
+}
+
+AmsError AmsBackendHappyHare::execute_device_action(const std::string& action_id,
+                                                    const std::any& value) {
+    spdlog::info("[AMS HappyHare] Executing device action: {}", action_id);
+
+    // --- Setup: Calibration buttons ---
+    if (action_id == "calibrate_bowden") {
+        return execute_gcode("MMU_CALIBRATE_BOWDEN");
+    } else if (action_id == "calibrate_encoder") {
+        return execute_gcode("MMU_CALIBRATE_ENCODER");
+    } else if (action_id == "calibrate_gear") {
+        return execute_gcode("MMU_CALIBRATE_GEAR");
+    } else if (action_id == "calibrate_gates") {
+        return execute_gcode("MMU_CALIBRATE_GATES");
+    } else if (action_id == "calibrate_servo") {
+        return execute_gcode("MMU_SERVO");
+    }
+
+    // --- Setup: LED mode dropdown ---
+    if (action_id == "led_mode") {
+        if (!value.has_value()) {
+            return AmsError(AmsResult::WRONG_STATE, "LED mode value required", "Missing value",
+                            "Select an LED mode");
+        }
+        try {
+            auto mode = std::any_cast<std::string>(value);
+            // Happy Hare LED effect: MMU_LED EXIT_EFFECT=<mode>
+            return execute_gcode("MMU_LED EXIT_EFFECT=" + mode);
+        } catch (const std::bad_any_cast&) {
+            return AmsError(AmsResult::WRONG_STATE, "Invalid LED mode type", "Invalid value type",
+                            "Select a valid LED mode");
+        }
+    }
+
+    // --- Speed: Slider actions ---
+    if (action_id == "gear_load_speed" || action_id == "gear_unload_speed" ||
+        action_id == "selector_speed") {
+        if (!value.has_value()) {
+            return AmsError(AmsResult::WRONG_STATE, "Speed value required", "Missing value",
+                            "Provide a speed value");
+        }
+        try {
+            float speed = std::any_cast<float>(value);
+            if (speed < 10.0f || speed > 300.0f) {
+                return AmsError(AmsResult::WRONG_STATE, "Speed must be 10-300 mm/s",
+                                "Invalid value", "Enter a speed between 10 and 300 mm/s");
+            }
+            // Happy Hare uses MMU_TEST_CONFIG to set speeds
+            std::string param;
+            if (action_id == "gear_load_speed")
+                param = "gear_from_buffer_speed";
+            else if (action_id == "gear_unload_speed")
+                param = "gear_from_buffer_speed"; // TODO: map to correct HH param
+            else
+                param = "selector_move_speed";
+            return execute_gcode(fmt::format("MMU_TEST_CONFIG {}={:.0f}", param, speed));
+        } catch (const std::bad_any_cast&) {
+            return AmsError(AmsResult::WRONG_STATE, "Invalid speed type", "Invalid value type",
+                            "Provide a numeric value");
+        }
+    }
+
+    // --- Maintenance: Button actions ---
+    if (action_id == "test_grip") {
+        return execute_gcode("MMU_TEST_GRIP");
+    } else if (action_id == "test_load") {
+        return execute_gcode("MMU_TEST_LOAD");
+    } else if (action_id == "servo_buzz") {
+        return execute_gcode("MMU_SERVO BUZZ=1");
+    } else if (action_id == "reset_servo_counter") {
+        return execute_gcode("MMU_STATS COUNTER=servo RESET=1");
+    } else if (action_id == "reset_blade_counter") {
+        return execute_gcode("MMU_STATS COUNTER=cutter RESET=1");
+    }
+
+    // --- Maintenance: Motors toggle ---
+    if (action_id == "motors_toggle") {
+        if (!value.has_value()) {
+            return AmsError(AmsResult::WRONG_STATE, "Motor state value required", "Missing value",
+                            "Provide on/off state");
+        }
+        try {
+            bool enable = std::any_cast<bool>(value);
+            return execute_gcode(enable ? "MMU_MOTORS_OFF HOLD=1" : "MMU_MOTORS_OFF");
+        } catch (const std::bad_any_cast&) {
+            return AmsError(AmsResult::WRONG_STATE, "Invalid motor state type",
+                            "Invalid value type", "Provide a boolean value");
+        }
+    }
+
+    return AmsErrorHelper::not_supported("Unknown action: " + action_id);
 }
