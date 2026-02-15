@@ -1670,7 +1670,7 @@ void MoonrakerClient::parse_objects(const json& objects) {
         // These need subscription for lane state, sensor data, and filament info
         else if (name == "AFC" || name.rfind("AFC_stepper ", 0) == 0 ||
                  name.rfind("AFC_lane ", 0) == 0 || name.rfind("AFC_hub ", 0) == 0 ||
-                 name.rfind("AFC_extruder ", 0) == 0 || name.rfind("AFC_OpenAMS ", 0) == 0 {
+                 name.rfind("AFC_extruder ", 0) == 0 || name.rfind("AFC_OpenAMS ", 0) == 0) {
             afc_objects_.push_back(name);
         }
         // Filament sensors (switch or motion type)
