@@ -452,15 +452,15 @@ class PrinterDiscovery {
         // Collect all detected AMS systems
         detected_ams_systems_.clear();
 
-        if (has_tool_changer_ && !tool_names_.empty()) {
-            detected_ams_systems_.push_back({AmsType::TOOL_CHANGER, "Tool Changer"});
-        }
         if (has_mmu_) {
             if (mmu_type_ == AmsType::HAPPY_HARE) {
                 detected_ams_systems_.push_back({AmsType::HAPPY_HARE, "Happy Hare"});
             } else if (mmu_type_ == AmsType::AFC) {
                 detected_ams_systems_.push_back({AmsType::AFC, "AFC"});
             }
+        }
+        if (has_tool_changer_ && !tool_names_.empty()) {
+            detected_ams_systems_.push_back({AmsType::TOOL_CHANGER, "Tool Changer"});
         }
 
         // Set mmu_type_ for tool changers after all objects are processed,

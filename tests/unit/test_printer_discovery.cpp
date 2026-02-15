@@ -505,6 +505,11 @@ TEST_CASE("PrinterDiscovery prefers AFC over tool changer when both are present"
     REQUIRE(hw.has_tool_changer());
     REQUIRE(hw.has_mmu());
     REQUIRE(hw.mmu_type() == AmsType::AFC);
+
+    const auto& systems = hw.detected_ams_systems();
+    REQUIRE(systems.size() == 2);
+    REQUIRE(systems[0].type == AmsType::AFC);
+    REQUIRE(systems[1].type == AmsType::TOOL_CHANGER);
 }
 
 TEST_CASE("PrinterDiscovery detects AFC from OpenAMS objects", "[printer_discovery]") {
