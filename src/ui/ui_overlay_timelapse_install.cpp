@@ -3,6 +3,7 @@
 
 #include "ui_overlay_timelapse_install.h"
 
+#include "ui_button.h"
 #include "ui_emergency_stop.h"
 #include "ui_nav.h"
 #include "ui_nav_manager.h"
@@ -102,10 +103,7 @@ lv_obj_t* TimelapseInstallOverlay::create(lv_obj_t* parent) {
     action_btn_ = lv_obj_find_by_name(overlay_root_, "action_button");
     ssh_container_ = lv_obj_find_by_name(overlay_root_, "ssh_instructions_container");
 
-    if (action_btn_) {
-        // ui_button stores its label as the first child
-        action_btn_label_ = lv_obj_get_child(action_btn_, 0);
-    }
+    // action_btn_ is a ui_button — use ui_button_set_text() to update its label
 
     // Create step progress widget programmatically (dynamic content)
     lv_obj_t* step_container = lv_obj_find_by_name(overlay_root_, "step_container");
@@ -186,9 +184,7 @@ void TimelapseInstallOverlay::show_action_button(const char* label,
     action_callback_ = std::move(callback);
     if (action_btn_) {
         lv_obj_remove_flag(action_btn_, LV_OBJ_FLAG_HIDDEN);
-        if (action_btn_label_) {
-            lv_label_set_text(action_btn_label_, label);
-        }
+        ui_button_set_text(action_btn_, label);
     }
 }
 
