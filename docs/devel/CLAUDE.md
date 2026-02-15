@@ -19,11 +19,12 @@ All developer documentation lives here. When working on features, look up the re
 
 | Doc | When to read |
 |-----|-------------|
+| `UI_CONTRIBUTOR_GUIDE.md` | **Start here** for UI/layout work: breakpoints, tokens, colors, widgets, layout overrides |
 | `LVGL9_XML_GUIDE.md` | XML syntax, all widgets (ui_card, ui_button, ui_markdown, etc.), bindings |
 | `DEVELOPER_QUICK_REFERENCE.md` | Quick code patterns: modals, CSV parser, layout, migration |
 | `MODAL_SYSTEM.md` | ui_dialog, modal_button_row, Modal subclass pattern |
-| `THEME_SYSTEM.md` | Color tokens, spacing tokens, responsive sizing |
-| `LAYOUT_SYSTEM.md` | Alternative layouts, LayoutManager, CLI override, ultrawide |
+| `THEME_SYSTEM.md` | Theme internals: style architecture, theme_core C API, adding themed widgets |
+| `LAYOUT_SYSTEM.md` | Layout system internals: LayoutManager C++ API, auto-detection logic |
 | `TRANSLATION_SYSTEM.md` | i18n: YAML strings -> code generation -> runtime lookups |
 | `UI_TESTING.md` | Headless LVGL testing, UITest utilities |
 | `GCODE_VIEWER_CONFIG.md` | GCode viewer configuration |

@@ -1,5 +1,7 @@
 # Theme System
 
+> **For contributors:** If you're doing layout or styling work, start with the **[UI Contributor Guide](UI_CONTRIBUTOR_GUIDE.md)** instead. This document covers the internal architecture of the theme system — style objects, theme_core C API, and extending the system with new themed widgets.
+
 ## Overview
 
 The reactive theme system enables **live theme switching** (dark/light modes) without recreating widgets. When the user toggles dark mode or previews a theme, all UI elements update instantly.
