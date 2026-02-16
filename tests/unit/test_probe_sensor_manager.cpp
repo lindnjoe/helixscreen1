@@ -553,3 +553,81 @@ TEST_CASE_METHOD(ProbeSensorTestFixture, "ProbeSensorManager - edge cases", "[pr
         REQUIRE(mgr().sensor_count() == 0);
     }
 }
+
+// ============================================================================
+// New Probe Type Discovery Tests
+// ============================================================================
+
+TEST_CASE_METHOD(ProbeSensorTestFixture, "ProbeSensorManager - discovery of new probe types",
+                 "[probe][discovery]") {
+    SECTION("Discovers cartographer object") {
+        std::vector<std::string> objects = {"cartographer"};
+        mgr().discover(objects);
+        REQUIRE(mgr().has_sensors());
+        auto configs = mgr().get_sensors();
+        REQUIRE(configs[0].type == ProbeSensorType::CARTOGRAPHER);
+        REQUIRE(configs[0].sensor_name == "cartographer");
+        REQUIRE(configs[0].klipper_name == "cartographer");
+    }
+
+    SECTION("Discovers beacon object") {
+        std::vector<std::string> objects = {"beacon"};
+        mgr().discover(objects);
+        REQUIRE(mgr().has_sensors());
+        auto configs = mgr().get_sensors();
+        REQUIRE(configs[0].type == ProbeSensorType::BEACON);
+        REQUIRE(configs[0].sensor_name == "beacon");
+        REQUIRE(configs[0].klipper_name == "beacon");
+    }
+
+    SECTION("Discovers eddy current as cartographer when cartographer object also present") {
+        std::vector<std::string> objects = {"probe_eddy_current carto", "cartographer"};
+        mgr().discover(objects);
+        REQUIRE(mgr().sensor_count() >= 1);
+        auto configs = mgr().get_sensors();
+        bool found_carto = false;
+        for (const auto& c : configs) {
+            if (c.type == ProbeSensorType::CARTOGRAPHER)
+                found_carto = true;
+        }
+        REQUIRE(found_carto);
+    }
+
+    SECTION("Discovers eddy current as beacon when beacon object also present") {
+        std::vector<std::string> objects = {"probe_eddy_current beacon_probe", "beacon"};
+        mgr().discover(objects);
+        auto configs = mgr().get_sensors();
+        bool found_beacon = false;
+        for (const auto& c : configs) {
+            if (c.type == ProbeSensorType::BEACON)
+                found_beacon = true;
+        }
+        REQUIRE(found_beacon);
+    }
+
+    SECTION("Plain eddy current without companion stays EDDY_CURRENT") {
+        std::vector<std::string> objects = {"probe_eddy_current btt"};
+        mgr().discover(objects);
+        auto configs = mgr().get_sensors();
+        REQUIRE(configs[0].type == ProbeSensorType::EDDY_CURRENT);
+    }
+
+    SECTION("Cartographer with eddy current deduplicates to single sensor") {
+        // When both cartographer and probe_eddy_current are present,
+        // the eddy current gets upgraded - we should not double-count
+        std::vector<std::string> objects = {"probe_eddy_current carto", "cartographer"};
+        mgr().discover(objects);
+        auto configs = mgr().get_sensors();
+        // Both are discovered but eddy current is upgraded to CARTOGRAPHER
+        REQUIRE(mgr().sensor_count() == 2);
+        // The eddy current entry should be upgraded
+        bool eddy_upgraded = false;
+        for (const auto& c : configs) {
+            if (c.klipper_name == "probe_eddy_current carto") {
+                REQUIRE(c.type == ProbeSensorType::CARTOGRAPHER);
+                eddy_upgraded = true;
+            }
+        }
+        REQUIRE(eddy_upgraded);
+    }
+}

@@ -71,6 +71,33 @@ void ProbeSensorManager::discover(const std::vector<std::string>& klipper_object
                       probe_type_to_string(type));
     }
 
+    // Post-discovery refinement: upgrade EDDY_CURRENT sensors when a companion
+    // Cartographer or Beacon object is also present. These probes register both
+    // their own named object ("cartographer"/"beacon") AND a probe_eddy_current entry.
+    bool has_cartographer = std::any_of(sensors_.begin(), sensors_.end(), [](const auto& s) {
+        return s.type == ProbeSensorType::CARTOGRAPHER;
+    });
+    bool has_beacon = std::any_of(sensors_.begin(), sensors_.end(),
+                                  [](const auto& s) { return s.type == ProbeSensorType::BEACON; });
+
+    if (has_cartographer || has_beacon) {
+        for (auto& sensor : sensors_) {
+            if (sensor.type == ProbeSensorType::EDDY_CURRENT) {
+                if (has_cartographer) {
+                    spdlog::debug("[ProbeSensorManager] Upgrading eddy current sensor '{}' to "
+                                  "CARTOGRAPHER (companion object present)",
+                                  sensor.sensor_name);
+                    sensor.type = ProbeSensorType::CARTOGRAPHER;
+                } else if (has_beacon) {
+                    spdlog::debug("[ProbeSensorManager] Upgrading eddy current sensor '{}' to "
+                                  "BEACON (companion object present)",
+                                  sensor.sensor_name);
+                    sensor.type = ProbeSensorType::BEACON;
+                }
+            }
+        }
+    }
+
     // Mark sensors that disappeared as unavailable
     for (auto& [name, state] : states_) {
         bool found = false;
@@ -426,6 +453,20 @@ void ProbeSensorManager::update_subjects_on_main_thread() {
 
 bool ProbeSensorManager::parse_klipper_name(const std::string& klipper_name,
                                             std::string& sensor_name, ProbeSensorType& type) const {
+    // Cartographer 3D scanning/contact probe
+    if (klipper_name == "cartographer") {
+        sensor_name = "cartographer";
+        type = ProbeSensorType::CARTOGRAPHER;
+        return true;
+    }
+
+    // Beacon eddy current probe
+    if (klipper_name == "beacon") {
+        sensor_name = "beacon";
+        type = ProbeSensorType::BEACON;
+        return true;
+    }
+
     // Standard probe
     if (klipper_name == "probe") {
         sensor_name = "probe";
