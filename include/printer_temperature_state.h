@@ -34,9 +34,10 @@ struct ExtruderInfo {
  * Extracted from PrinterState as part of god class decomposition.
  * All temperatures stored in centidegrees (value * 10 for 0.1C precision).
  *
- * Supports multiple extruders via a dynamic ExtruderInfo map, while maintaining
- * legacy static subjects (extruder_temp_, extruder_target_) that mirror the
- * first extruder ("extruder") for backward compatibility with XML bindings.
+ * Supports multiple extruders via a dynamic ExtruderInfo map. The "active extruder"
+ * subjects track whichever extruder is currently selected (via set_active_extruder),
+ * defaulting to "extruder". XML bindings use names "extruder_temp"/"extruder_target"
+ * for the active extruder subjects.
  */
 class PrinterTemperatureState {
   public:
@@ -89,13 +90,13 @@ class PrinterTemperatureState {
      */
     void init_extruders(const std::vector<std::string>& heaters);
 
-    // Legacy subject accessors (centidegrees: value * 10)
-    // These mirror the first extruder ("extruder") for backward compatibility
-    lv_subject_t* get_extruder_temp_subject() {
-        return &extruder_temp_;
+    // Active extruder subjects (centidegrees: value * 10)
+    // These track whichever extruder is currently active (set via set_active_extruder)
+    lv_subject_t* get_active_extruder_temp_subject() {
+        return &active_extruder_temp_;
     }
-    lv_subject_t* get_extruder_target_subject() {
-        return &extruder_target_;
+    lv_subject_t* get_active_extruder_target_subject() {
+        return &active_extruder_target_;
     }
 
     // Per-extruder subject accessors (returns nullptr if not found)
@@ -135,16 +136,33 @@ class PrinterTemperatureState {
         chamber_sensor_name_ = name;
     }
 
+    /**
+     * @brief Set which extruder is active (mirrors its data to active subjects)
+     *
+     * Validates that the name exists in the extruder map. If unknown, logs a
+     * warning and keeps the previous active extruder.
+     *
+     * @param name Klipper extruder name (e.g., "extruder", "extruder1")
+     */
+    void set_active_extruder(const std::string& name);
+
+    /**
+     * @brief Get the name of the currently active extruder
+     * @return Klipper name of active extruder (defaults to "extruder")
+     */
+    const std::string& active_extruder_name() const;
+
   private:
     friend class PrinterTemperatureStateTestAccess;
 
     SubjectManager subjects_;
     bool subjects_initialized_ = false;
 
-    // Legacy static temperature subjects (centidegrees: 205.3C stored as 2053)
-    // These mirror the first extruder ("extruder") for backward XML compatibility
-    lv_subject_t extruder_temp_{};
-    lv_subject_t extruder_target_{};
+    // Active extruder subjects (centidegrees: 205.3C stored as 2053)
+    // These track whichever extruder is currently active, defaulting to "extruder".
+    // Registered in XML as "extruder_temp"/"extruder_target" for binding compatibility.
+    lv_subject_t active_extruder_temp_{};
+    lv_subject_t active_extruder_target_{};
     lv_subject_t bed_temp_{};
     lv_subject_t bed_target_{};
     lv_subject_t chamber_temp_{};
@@ -152,6 +170,9 @@ class PrinterTemperatureState {
     // Dynamic per-extruder tracking
     std::unordered_map<std::string, ExtruderInfo> extruders_;
     lv_subject_t extruder_version_{}; ///< Bumped when extruder list changes
+
+    // Active extruder name (defaults to "extruder")
+    std::string active_extruder_name_ = "extruder";
 
     // Chamber sensor configuration
     std::string chamber_sensor_name_;

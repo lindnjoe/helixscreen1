@@ -320,6 +320,12 @@ void PrinterState::update_from_status(const json& state) {
             std::string kin = toolhead["kinematics"].get<std::string>();
             set_kinematics(kin);
         }
+
+        // Track active extruder from toolhead (for tool changers and multi-extruder setups)
+        if (toolhead.contains("extruder") && toolhead["extruder"].is_string()) {
+            std::string active_ext = toolhead["extruder"].get<std::string>();
+            temperature_state_.set_active_extruder(active_ext);
+        }
     }
 
     // Delegate fan state updates to fan component

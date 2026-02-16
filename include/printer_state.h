@@ -258,13 +258,12 @@ class PrinterState {
     // Example: 205.3C is stored as 2053. Divide by 10 for display.
     // Delegated to PrinterTemperatureState component.
 
-    // Legacy: returns static subject mirrored from "extruder" — NOT the same pointer
-    // as get_extruder_temp_subject("extruder"). Both track the same value.
-    lv_subject_t* get_extruder_temp_subject() {
-        return temperature_state_.get_extruder_temp_subject();
+    // Active extruder subjects — track whichever extruder is currently active
+    lv_subject_t* get_active_extruder_temp_subject() {
+        return temperature_state_.get_active_extruder_temp_subject();
     }
-    lv_subject_t* get_extruder_target_subject() {
-        return temperature_state_.get_extruder_target_subject();
+    lv_subject_t* get_active_extruder_target_subject() {
+        return temperature_state_.get_active_extruder_target_subject();
     }
 
     // Multi-extruder discovery
@@ -282,6 +281,10 @@ class PrinterState {
 
     int extruder_count() const {
         return temperature_state_.extruder_count();
+    }
+
+    const std::string& active_extruder_name() const {
+        return temperature_state_.active_extruder_name();
     }
 
     lv_subject_t* get_extruder_version_subject() {

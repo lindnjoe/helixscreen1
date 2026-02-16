@@ -137,7 +137,7 @@ TEST_CASE_METHOD(XMLTestFixture, "nozzle_temp_panel: temp_display shows current 
     // REQUIRE(register_component("header_bar"));
     // REQUIRE(register_component("overlay_panel"));
     // REQUIRE(register_component("nozzle_temp_panel"));
-    // lv_subject_set_int(state().get_extruder_temp_subject(), 20000);
+    // lv_subject_set_int(state().get_active_extruder_temp_subject(), 20000);
     // lv_obj_t* panel = create_component("nozzle_temp_panel");
     // REQUIRE(panel != nullptr);
     // process_lvgl(100);

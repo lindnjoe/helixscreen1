@@ -473,7 +473,7 @@ void FilamentPanel::handle_preset_button(int material_id) {
     // Send temperature commands to printer (both nozzle and bed)
     if (api_) {
         api_->set_temperature(
-            "extruder", static_cast<double>(nozzle_target_),
+            printer_state_.active_extruder_name(), static_cast<double>(nozzle_target_),
             [target = nozzle_target_]() { NOTIFY_SUCCESS("Nozzle target set to {}°C", target); },
             [](const MoonrakerError& error) {
                 NOTIFY_ERROR("Failed to set nozzle temp: {}", error.user_message());
@@ -537,7 +537,7 @@ void FilamentPanel::handle_custom_nozzle_confirmed(float value) {
     // Send temperature command to printer
     if (api_) {
         api_->set_temperature(
-            "extruder", static_cast<double>(nozzle_target_),
+            printer_state_.active_extruder_name(), static_cast<double>(nozzle_target_),
             [target = nozzle_target_]() { NOTIFY_SUCCESS("Nozzle target set to {}°C", target); },
             [](const MoonrakerError& error) {
                 NOTIFY_ERROR("Failed to set nozzle temp: {}", error.user_message());

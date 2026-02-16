@@ -579,8 +579,8 @@ class PrintStartCollectorHeaterFixture : public LVGLTestFixture {
      * @brief Set extruder temperature and target in PrinterState subjects
      */
     void set_extruder_temps(int temp_decideg, int target_decideg) {
-        lv_subject_set_int(state_.get_extruder_temp_subject(), temp_decideg);
-        lv_subject_set_int(state_.get_extruder_target_subject(), target_decideg);
+        lv_subject_set_int(state_.get_active_extruder_temp_subject(), temp_decideg);
+        lv_subject_set_int(state_.get_active_extruder_target_subject(), target_decideg);
     }
 
     /**

@@ -69,10 +69,10 @@ HomePanel::HomePanel(PrinterState& printer_state, MoonrakerAPI* api)
     using helix::ui::observe_string;
 
     extruder_temp_observer_ = observe_int_sync<HomePanel>(
-        printer_state_.get_extruder_temp_subject(), this,
+        printer_state_.get_active_extruder_temp_subject(), this,
         [](HomePanel* self, int temp) { self->on_extruder_temp_changed(temp); });
     extruder_target_observer_ = observe_int_sync<HomePanel>(
-        printer_state_.get_extruder_target_subject(), this,
+        printer_state_.get_active_extruder_target_subject(), this,
         [](HomePanel* self, int target) { self->on_extruder_target_changed(target); });
 
     // Subscribe to print state for dynamic print card updates
@@ -267,8 +267,10 @@ void HomePanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     if (temp_icon) {
         temp_icon_animator_.attach(temp_icon);
         // Initialize with cached values (observers may have already fired)
-        cached_extruder_temp_ = lv_subject_get_int(printer_state_.get_extruder_temp_subject());
-        cached_extruder_target_ = lv_subject_get_int(printer_state_.get_extruder_target_subject());
+        cached_extruder_temp_ =
+            lv_subject_get_int(printer_state_.get_active_extruder_temp_subject());
+        cached_extruder_target_ =
+            lv_subject_get_int(printer_state_.get_active_extruder_target_subject());
         temp_icon_animator_.update(cached_extruder_temp_, cached_extruder_target_);
         spdlog::debug("[{}] Heating icon animator attached", get_name());
     }

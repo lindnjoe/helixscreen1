@@ -86,10 +86,10 @@ TempControlPanel::TempControlPanel(PrinterState& printer_state, MoonrakerAPI* ap
     // Nozzle observers are separate so they can be rebound when switching
     // extruders in multi-extruder setups (bed observers stay constant).
     nozzle_temp_observer_ = observe_int_sync<TempControlPanel>(
-        printer_state_.get_extruder_temp_subject(), this,
+        printer_state_.get_active_extruder_temp_subject(), this,
         [](TempControlPanel* self, int temp) { self->on_nozzle_temp_changed(temp); });
     nozzle_target_observer_ = observe_int_sync<TempControlPanel>(
-        printer_state_.get_extruder_target_subject(), this,
+        printer_state_.get_active_extruder_target_subject(), this,
         [](TempControlPanel* self, int target) { self->on_nozzle_target_changed(target); });
     bed_temp_observer_ = observe_int_sync<TempControlPanel>(
         printer_state_.get_bed_temp_subject(), this,
@@ -793,8 +793,8 @@ void TempControlPanel::setup_nozzle_panel(lv_obj_t* panel, lv_obj_t* parent_scre
     // NOTE: Event callbacks are registered in constructor (before any lv_xml_create calls)
 
     // Read current values from PrinterState (observers only fire on changes, not initial state)
-    nozzle_current_ = lv_subject_get_int(printer_state_.get_extruder_temp_subject());
-    nozzle_target_ = lv_subject_get_int(printer_state_.get_extruder_target_subject());
+    nozzle_current_ = lv_subject_get_int(printer_state_.get_active_extruder_temp_subject());
+    nozzle_target_ = lv_subject_get_int(printer_state_.get_active_extruder_target_subject());
     spdlog::debug("[TempPanel] Nozzle initial state from PrinterState: current={}°C, target={}°C",
                   nozzle_current_, nozzle_target_);
 

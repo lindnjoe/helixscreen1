@@ -1109,8 +1109,8 @@ void PrintStatusPanel::on_resize_static() {
 
 void PrintStatusPanel::on_temperature_changed() {
     // Read all temperature values from PrinterState subjects
-    nozzle_current_ = lv_subject_get_int(printer_state_.get_extruder_temp_subject());
-    nozzle_target_ = lv_subject_get_int(printer_state_.get_extruder_target_subject());
+    nozzle_current_ = lv_subject_get_int(printer_state_.get_active_extruder_temp_subject());
+    nozzle_target_ = lv_subject_get_int(printer_state_.get_active_extruder_target_subject());
     bed_current_ = lv_subject_get_int(printer_state_.get_bed_temp_subject());
     bed_target_ = lv_subject_get_int(printer_state_.get_bed_target_subject());
 

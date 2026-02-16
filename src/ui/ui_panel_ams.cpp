@@ -276,11 +276,13 @@ void AmsPanel::init_subjects() {
                                             on_path_state_changed, this);
 
     // Extruder temperature observer for preheat completion detection
-    extruder_temp_observer_ = observe_int_sync<AmsPanel>(
-        printer_state_.get_extruder_temp_subject(), this, [](AmsPanel* self, int /*temp_centi*/) {
-            // Check if a pending load can proceed now that temp has changed
-            self->check_pending_load();
-        });
+    extruder_temp_observer_ =
+        observe_int_sync<AmsPanel>(printer_state_.get_active_extruder_temp_subject(), this,
+                                   [](AmsPanel* self, int /*temp_centi*/) {
+                                       // Check if a pending load can proceed now that temp has
+                                       // changed
+                                       self->check_pending_load();
+                                   });
 
     // Backend count observer for multi-backend selector
     backend_count_observer_ = observe_int_sync<AmsPanel>(
@@ -2025,7 +2027,7 @@ void AmsPanel::handle_load_with_preheat(int slot_index) {
     int target = get_load_temp_for_slot(slot_index);
 
     // Get current temp in centidegrees, convert to degrees
-    int current_centi = lv_subject_get_int(printer_state_.get_extruder_temp_subject());
+    int current_centi = lv_subject_get_int(printer_state_.get_active_extruder_temp_subject());
     int current = current_centi / 10;
 
     // Check if within threshold (5 degrees C)
@@ -2044,7 +2046,9 @@ void AmsPanel::handle_load_with_preheat(int slot_index) {
 
     // Send preheat command via API
     if (api_) {
-        api_->set_temperature("extruder", target, []() {}, [](const MoonrakerError& /*err*/) {});
+        api_->set_temperature(
+            printer_state_.active_extruder_name(), target, []() {},
+            [](const MoonrakerError& /*err*/) {});
     }
 
     // Show immediate visual feedback
@@ -2059,7 +2063,7 @@ void AmsPanel::check_pending_load() {
     }
 
     // Get current temp in centidegrees, convert to degrees
-    int current_centi = lv_subject_get_int(printer_state_.get_extruder_temp_subject());
+    int current_centi = lv_subject_get_int(printer_state_.get_active_extruder_temp_subject());
     int current = current_centi / 10;
 
     // Update display with current temperature while waiting
@@ -2088,7 +2092,9 @@ void AmsPanel::handle_load_complete() {
     // If backend auto-heated or user was already printing, don't touch the heater
     if (ui_initiated_heat_) {
         if (api_) {
-            api_->set_temperature("extruder", 0, []() {}, [](const MoonrakerError& /*err*/) {});
+            api_->set_temperature(
+                printer_state_.active_extruder_name(), 0, []() {},
+                [](const MoonrakerError& /*err*/) {});
         }
         spdlog::info("[AmsPanel] Load complete, turning off heater (UI-initiated heat)");
         ui_initiated_heat_ = false;
@@ -2099,7 +2105,7 @@ void AmsPanel::show_preheat_feedback(int slot_index, int target_temp) {
     LV_UNUSED(slot_index);
 
     // Get current temperature for display (convert centidegrees to degrees)
-    int current_centi = lv_subject_get_int(printer_state_.get_extruder_temp_subject());
+    int current_centi = lv_subject_get_int(printer_state_.get_active_extruder_temp_subject());
     int current_temp = current_centi / 10;
 
     // Update status text via AmsState subject to show heating progress

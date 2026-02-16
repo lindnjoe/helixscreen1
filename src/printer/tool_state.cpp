@@ -145,6 +145,31 @@ void ToolState::update_from_status(const nlohmann::json& status) {
         }
     }
 
+    // Cross-check active tool from toolhead.extruder field
+    // This handles non-toolchanger multi-extruder setups where the active
+    // extruder changes but there's no "toolchanger" object in status
+    if (status.contains("toolhead") && status["toolhead"].is_object()) {
+        const auto& toolhead = status["toolhead"];
+        if (toolhead.contains("extruder") && toolhead["extruder"].is_string()) {
+            std::string ext_name = toolhead["extruder"].get<std::string>();
+            // Find which tool maps to this extruder
+            for (int i = 0; i < static_cast<int>(tools_.size()); ++i) {
+                if (tools_[i].extruder_name.has_value() &&
+                    tools_[i].extruder_name.value() == ext_name) {
+                    if (i != active_tool_index_) {
+                        active_tool_index_ = i;
+                        lv_subject_set_int(&active_tool_, active_tool_index_);
+                        changed = true;
+                        spdlog::debug(
+                            "[ToolState] Active tool updated to {} (from toolhead.extruder={})", i,
+                            ext_name);
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
     // Parse per-tool status updates
     for (auto& tool : tools_) {
         std::string key = "tool " + tool.name;

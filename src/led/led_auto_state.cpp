@@ -137,7 +137,7 @@ std::string LedAutoState::compute_state_key() const {
     }
 
     // Check if heating (extruder target > 0 and not printing)
-    auto* ext_target_subj = printer_state_->get_extruder_target_subject();
+    auto* ext_target_subj = printer_state_->get_active_extruder_target_subject();
     if (ext_target_subj) {
         int target_centi = lv_subject_get_int(ext_target_subj);
         if (target_centi > 0) {
@@ -222,7 +222,7 @@ void LedAutoState::subscribe_observers() {
             klippy_subj, this, [](LedAutoState* self, int) { self->on_state_changed(); });
     }
 
-    auto* ext_target_subj = printer_state_->get_extruder_target_subject();
+    auto* ext_target_subj = printer_state_->get_active_extruder_target_subject();
     if (ext_target_subj) {
         extruder_target_observer_ = observe_int_sync<LedAutoState>(
             ext_target_subj, this, [](LedAutoState* self, int) { self->on_state_changed(); });

@@ -115,7 +115,7 @@ class TemperatureHistoryManagerTestFixture {
      * Value is in centidegrees (temp * 10).
      */
     void set_extruder_temp(int centidegrees) {
-        lv_subject_set_int(printer_state_.get_extruder_temp_subject(), centidegrees);
+        lv_subject_set_int(printer_state_.get_active_extruder_temp_subject(), centidegrees);
         UpdateQueueTestAccess::drain(helix::ui::UpdateQueue::instance());
     }
 
@@ -123,7 +123,7 @@ class TemperatureHistoryManagerTestFixture {
      * @brief Set extruder target temperature
      */
     void set_extruder_target(int centidegrees) {
-        lv_subject_set_int(printer_state_.get_extruder_target_subject(), centidegrees);
+        lv_subject_set_int(printer_state_.get_active_extruder_target_subject(), centidegrees);
         UpdateQueueTestAccess::drain(helix::ui::UpdateQueue::instance());
     }
 

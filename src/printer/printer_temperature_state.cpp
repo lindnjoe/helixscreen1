@@ -4,8 +4,8 @@
  * @brief Temperature state management extracted from PrinterState
  *
  * Manages extruder and bed temperature subjects with centidegree precision.
- * Supports multiple extruders via dynamic ExtruderInfo map while maintaining
- * legacy static subjects for backward compatibility.
+ * Supports multiple extruders via dynamic ExtruderInfo map. The "active extruder"
+ * subjects track whichever extruder is currently selected, defaulting to "extruder".
  */
 
 #include "printer_temperature_state.h"
@@ -26,9 +26,21 @@ void PrinterTemperatureState::init_subjects(bool register_xml) {
     spdlog::trace("[PrinterTemperatureState] Initializing subjects (register_xml={})",
                   register_xml);
 
-    // Legacy temperature subjects (integer, centidegrees for 0.1C resolution)
-    INIT_SUBJECT_INT(extruder_temp, 0, subjects_, register_xml);
-    INIT_SUBJECT_INT(extruder_target, 0, subjects_, register_xml);
+    // Active extruder subjects (track whichever extruder is currently active)
+    // XML names stay as "extruder_temp"/"extruder_target" for XML binding compatibility
+    lv_subject_init_int(&active_extruder_temp_, 0);
+    subjects_.register_subject(&active_extruder_temp_);
+    if (register_xml) {
+        lv_xml_register_subject(nullptr, "extruder_temp", &active_extruder_temp_);
+    }
+
+    lv_subject_init_int(&active_extruder_target_, 0);
+    subjects_.register_subject(&active_extruder_target_);
+    if (register_xml) {
+        lv_xml_register_subject(nullptr, "extruder_target", &active_extruder_target_);
+    }
+
+    // Bed and chamber temperature subjects
     INIT_SUBJECT_INT(bed_temp, 0, subjects_, register_xml);
     INIT_SUBJECT_INT(bed_target, 0, subjects_, register_xml);
     INIT_SUBJECT_INT(chamber_temp, 0, subjects_, register_xml);
@@ -58,6 +70,9 @@ void PrinterTemperatureState::deinit_subjects() {
     }
     extruders_.clear();
 
+    // Reset active extruder to default
+    active_extruder_name_ = "extruder";
+
     subjects_.deinit_all();
     subjects_initialized_ = false;
 }
@@ -69,8 +84,8 @@ void PrinterTemperatureState::register_xml_subjects() {
     }
 
     spdlog::debug("[PrinterTemperatureState] Re-registering subjects with XML system");
-    lv_xml_register_subject(nullptr, "extruder_temp", &extruder_temp_);
-    lv_xml_register_subject(nullptr, "extruder_target", &extruder_target_);
+    lv_xml_register_subject(nullptr, "extruder_temp", &active_extruder_temp_);
+    lv_xml_register_subject(nullptr, "extruder_target", &active_extruder_target_);
     lv_xml_register_subject(nullptr, "bed_temp", &bed_temp_);
     lv_xml_register_subject(nullptr, "bed_target", &bed_target_);
     lv_xml_register_subject(nullptr, "chamber_temp", &chamber_temp_);
@@ -148,6 +163,38 @@ lv_subject_t* PrinterTemperatureState::get_extruder_target_subject(const std::st
     return nullptr;
 }
 
+void PrinterTemperatureState::set_active_extruder(const std::string& name) {
+    // Verify the extruder exists in our map
+    auto it = extruders_.find(name);
+    if (it == extruders_.end()) {
+        spdlog::warn("[PrinterTemperatureState] Unknown extruder '{}', keeping '{}'", name,
+                     active_extruder_name_);
+        return;
+    }
+
+    if (name == active_extruder_name_) {
+        return; // No change needed
+    }
+
+    spdlog::info("[PrinterTemperatureState] Active extruder: {} -> {}", active_extruder_name_,
+                 name);
+    active_extruder_name_ = name;
+
+    // Sync current values from per-extruder subjects to active subjects
+    const auto& info = it->second;
+    if (info.temp_subject) {
+        lv_subject_set_int(&active_extruder_temp_, lv_subject_get_int(info.temp_subject.get()));
+        lv_subject_notify(&active_extruder_temp_);
+    }
+    if (info.target_subject) {
+        lv_subject_set_int(&active_extruder_target_, lv_subject_get_int(info.target_subject.get()));
+    }
+}
+
+const std::string& PrinterTemperatureState::active_extruder_name() const {
+    return active_extruder_name_;
+}
+
 void PrinterTemperatureState::update_from_status(const nlohmann::json& status) {
     // Update dynamic per-extruder subjects
     for (auto& [name, info] : extruders_) {
@@ -170,19 +217,19 @@ void PrinterTemperatureState::update_from_status(const nlohmann::json& status) {
         }
     }
 
-    // Legacy: update static extruder subjects from "extruder" key (backward compatibility)
-    if (status.contains("extruder")) {
-        const auto& extruder = status["extruder"];
+    // Update active extruder subjects from the currently active extruder's data
+    if (status.contains(active_extruder_name_)) {
+        const auto& active = status[active_extruder_name_];
 
-        if (extruder.contains("temperature") && extruder["temperature"].is_number()) {
-            int temp_centi = helix::units::json_to_centidegrees(extruder, "temperature");
-            lv_subject_set_int(&extruder_temp_, temp_centi);
-            lv_subject_notify(&extruder_temp_); // Force notify for graph updates even if unchanged
+        if (active.contains("temperature") && active["temperature"].is_number()) {
+            int temp_centi = helix::units::json_to_centidegrees(active, "temperature");
+            lv_subject_set_int(&active_extruder_temp_, temp_centi);
+            lv_subject_notify(&active_extruder_temp_);
         }
 
-        if (extruder.contains("target") && extruder["target"].is_number()) {
-            int target_centi = helix::units::json_to_centidegrees(extruder, "target");
-            lv_subject_set_int(&extruder_target_, target_centi);
+        if (active.contains("target") && active["target"].is_number()) {
+            int target_centi = helix::units::json_to_centidegrees(active, "target");
+            lv_subject_set_int(&active_extruder_target_, target_centi);
         }
     }
 

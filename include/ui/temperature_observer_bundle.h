@@ -6,7 +6,7 @@
  * @brief Bundle for managing common temperature subject observers (nozzle + bed)
  *
  * Encapsulates the repetitive pattern of subscribing to 4 temperature subjects
- * (extruder temp/target, bed temp/target) that appears in 5+ panels.
+ * (active extruder temp/target, bed temp/target) that appears in 5+ panels.
  *
  * Reduces ~12-15 lines of boilerplate per panel to a single setup call.
  *
@@ -80,11 +80,11 @@ template <typename Panel> class TemperatureObserverBundle {
         clear();
 
         nozzle_temp_observer_ =
-            observe_int_sync<Panel>(state.get_extruder_temp_subject(), panel,
+            observe_int_sync<Panel>(state.get_active_extruder_temp_subject(), panel,
                                     std::forward<NozzleTempHandler>(on_nozzle_temp));
 
         nozzle_target_observer_ =
-            observe_int_sync<Panel>(state.get_extruder_target_subject(), panel,
+            observe_int_sync<Panel>(state.get_active_extruder_target_subject(), panel,
                                     std::forward<NozzleTargetHandler>(on_nozzle_target));
 
         bed_temp_observer_ = observe_int_sync<Panel>(state.get_bed_temp_subject(), panel,
@@ -121,11 +121,11 @@ template <typename Panel> class TemperatureObserverBundle {
         auto update_copy = update_handler;
 
         nozzle_temp_observer_ =
-            observe_int_async<Panel>(state.get_extruder_temp_subject(), panel,
+            observe_int_async<Panel>(state.get_active_extruder_temp_subject(), panel,
                                      std::forward<CacheNozzleTemp>(cache_nozzle_temp), update_copy);
 
         nozzle_target_observer_ = observe_int_async<Panel>(
-            state.get_extruder_target_subject(), panel,
+            state.get_active_extruder_target_subject(), panel,
             std::forward<CacheNozzleTarget>(cache_nozzle_target), update_copy);
 
         bed_temp_observer_ =

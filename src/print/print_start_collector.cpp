@@ -254,8 +254,8 @@ void PrintStartCollector::check_fallback_completion() {
     }
 
     // Get temperature data for proactive and completion fallback checks
-    int ext_temp = lv_subject_get_int(state_.get_extruder_temp_subject());
-    int ext_target = lv_subject_get_int(state_.get_extruder_target_subject());
+    int ext_temp = lv_subject_get_int(state_.get_active_extruder_temp_subject());
+    int ext_target = lv_subject_get_int(state_.get_active_extruder_target_subject());
     int bed_temp = lv_subject_get_int(state_.get_bed_temp_subject());
     int bed_target = lv_subject_get_int(state_.get_bed_target_subject());
 
