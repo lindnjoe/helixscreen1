@@ -97,6 +97,10 @@ def should_skip_text(text: str) -> bool:
     if "$" in text:
         return True
 
+    # Skip subject references (e.g., @spoolman_edit_save_text)
+    if text.startswith("@"):
+        return True
+
     # Skip icon font references
     if ICON_PATTERN.match(text):
         return True

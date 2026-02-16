@@ -1,14 +1,17 @@
 locale: zh
 translations:
   ' elapsed · ': ' elapsed · '
+  ' frames captured': ' 帧已捕获'
   ' left': ' left'
   + Add Preset: + 添加预设
+  + Create New Filament: '+ 创建新耗材'
+  + Create New Vendor: '+ 创建新供应商'
   '- Check [resonance_tester] in printer.cfg': '- 检查 printer.cfg 中的 [resonance_tester]'
   '- Ensure ADXL345 is connected': '- 确保 ADXL345 已连接'
   '- Try Measure Noise first': '- 先尝试测量噪声'
   0 slots: '{0} 个料仓'
   0.4-2mm direct drive, 4-6mm bowden: 直驱 0.4-2mm，远程挤出 4-6mm
-  1 more tap to {} beta features: ''
+  1 more tap to {} beta features: '再点击 1 次以{}测试功能'
   1. Printer homes and probes the bed: 1. 打印机归位并探测热床
   1. Printer will home and probe each screw: 1. 打印机将归位并探测每个螺丝位置
   2. Place paper between nozzle and bed: 2. 将纸张放在喷嘴和热床之间
@@ -18,9 +21,9 @@ translations:
   3D Preview: 3D 预览
   4. Paper should move but with resistance: 4. 纸张应能移动但有阻力
   4. Repeat until bed is level: 4. 重复直到热床水平
+  5V: 5V
   = Loosen: = 松开
   = Tighten: = 拧紧
-  '@spoolman_edit_save_text': ''
   ABOUT: 关于
   ABS: ABS
   ADXL: ADXL
@@ -49,7 +52,9 @@ translations:
   Actions: 操作
   Active: 活动
   Add: 添加
+  Add Filament: 添加耗材
   Add Hidden Network: 添加隐藏网络
+  Add Vendor: 添加供应商
   Adjust screen brightness level: 调整屏幕亮度
   Adjust screws, then re-probe.: 调整螺丝，然后重新探测。
   Adjustments stay active until restart. Save after print completes.: 调整在重启前保持有效。打印完成后保存。
@@ -68,6 +73,7 @@ translations:
   Animations: 动画
   Anonymous data to help improve HelixScreen: 匿名数据以帮助改进 HelixScreen
   Anonymous stats — no personal data, ever.: 匿名统计 — 绝不收集个人数据。
+  Any additional notes...: 任何附加说明…
   App Background: 应用背景
   Apply: 应用
   Apply Changes: 应用更改
@@ -91,6 +97,7 @@ translations:
   Available Networks: 可用网络
   Available networks: 可用网络
   BETA: BETA
+  BLTouch Controls: BLTouch 控制
   Back: 返回
   Backup: 备份
   Bed: 热床
@@ -101,6 +108,7 @@ translations:
   Bed Mesh Render: 热床网格渲染
   Bed Screw Adjustment: 热床螺丝调整
   Bed Screws: 热床螺丝
+  Bed Temp: 热床温度
   Bed is Level!: 热床已水平！
   Bed °C: 热床 °C
   'Bed:': 热床：
@@ -114,6 +122,7 @@ translations:
   Border Radius: 边框圆角
   Border Width: 边框宽度
   Border transparency (0 = invisible, 255 = solid): 边框透明度（0 = 不可见，255 = 实心）
+  Both: 两者
   Brightness: 亮度
   Browse: 浏览
   Button taps and navigation sounds: 按钮点击和导航声音
@@ -129,14 +138,14 @@ translations:
   Calibrate All: 全部校准
   Calibrate X: 校准 X 轴
   Calibrate Y: 校准 Y 轴
-  Calibrated: ''
+  Calibrated: 已校准
   Calibrating...: 正在校准...
   Calibration & Tools: 校准与工具
   Calibration Complete!: 校准完成！
   Calibration Failed: 校准失败
   Calibration saved but cannot apply on SDL display: 校准已保存，但无法在 SDL 显示上应用
   Cancel: 取消
-  Cancel Escalation: ''
+  Cancel Escalation: 取消升级
   Cancel Print: 取消打印
   Cancelled: 已取消
   Chamber: 腔体
@@ -171,6 +180,7 @@ translations:
   Color: 颜色
   Color Mismatch: 颜色不匹配
   Color Sensors: 颜色传感器
+  'Color:': '颜色：'
   Complete: 完成
   Completed: 已完成
   Completed in 3 probes: 已完成 3 次探测
@@ -210,7 +220,11 @@ translations:
   Correction (Ki): 校正 (Ki)
   Could not check webcam status.\nCheck printer connection.: 无法检查摄像头状态。\n请检查打印机连接。
   Crash report sent — thank you!: 崩溃报告已发送 — 谢谢！
+  Create New Filament: 创建新耗材
+  Create New Vendor: 创建新供应商
+  Create Spool: 创建料盘
   Create video when print completes: 打印完成时创建视频
+  Creating spool...: 正在创建料盘…
   Current / Target: 当前 / 目标
   Current Configuration: 当前配置
   Current Mesh: 当前网格
@@ -218,7 +232,6 @@ translations:
   Current Version: 当前版本
   Current Z Position: 当前 Z 位置
   'Current name:': 当前名称：
-  Currently Loaded: 当前已加载
   Currently printing: 正在打印
   Custom: 自定义
   Custom...: 自定义...
@@ -228,6 +241,7 @@ translations:
   Damping (Kd): 阻尼 (Kd)
   Danger: 危险
   Dark Mode: 深色模式
+  Database: 数据库
   Day: 日
   Default border thickness: 默认边框厚度
   Define macros in your printer.cfg: 在 printer.cfg 中定义宏
@@ -236,7 +250,8 @@ translations:
   Delete Profile?: 删除配置？
   Delete Spool?: 删除料盘？
   'Delta:': 差值：
-  Dev channel requires dev_url in config: ''
+  Deploy: 部署
+  Dev channel requires dev_url in config: 开发频道需要在配置中设置 dev_url
   Device name is required: 设备名称为必填项
   Disable: 禁用
   Disable Motors?: 关闭电机？
@@ -251,8 +266,8 @@ translations:
   Don't Save: 不保存
   Don't ask again: 不再询问
   Done: 完成
-  Download update?: ''
-  Download v{}?: ''
+  Download update?: 下载更新？
+  Download v{}?: '下载 v{}？'
   Downloading...: 下载中...
   Drop shadow strength (0 = disabled): 阴影强度（0 = 禁用）
   Dryer: 干燥器
@@ -295,8 +310,8 @@ translations:
   Enter password: 输入密码
   Error: 错误
   Error state: 错误状态
-  Escalate to emergency stop if cancel doesn't respond: ''
-  Escalation Timeout: ''
+  Escalate to emergency stop if cancel doesn't respond: 如果取消无响应则升级为紧急停止
+  Escalation Timeout: 升级超时
   Ethernet: 以太网
   Events appear here after sessions and prints: 会话和打印后事件将显示在此处
   Exclude: 排除
@@ -347,6 +362,7 @@ translations:
   Filament diameter sensors for flow compensation: 耗材直径传感器用于流量补偿
   Filament runout and motion detection sensors: 耗材用尽和运动检测传感器
   Filament tracking and inventory: 耗材跟踪和库存
+  'Filament:': '耗材：'
   File: 文件
   File Info: 文件信息
   Filename: 文件名
@@ -432,6 +448,7 @@ translations:
   Intensity: 强度
   Interactive 3D G-code during prints: 打印期间的交互式 3D G-code
   Interactive probe calibration: 交互式探针校准
+  Interactive probe offset adjustment: 交互式探针偏移调整
   Issue description: 问题描述
   Just now: 刚刚
   Keep Printing: 继续打印
@@ -452,6 +469,7 @@ translations:
   LEDs: LED
   LEDs controlled by the light button: 由灯光按钮控制的 LED
   LOADED: 已加载
+  LOT-2024-001: LOT-2024-001
   Label printing coming soon: 标签打印即将推出
   Language: 语言
   Last print cancelled: 上次打印已取消
@@ -472,8 +490,10 @@ translations:
   Loading filament...: 正在加载耗材...
   Loading history...: 正在加载历史...
   Loading spools...: 正在加载料盘...
+  Loading vendors...: 正在加载供应商…
   Loading...: 正在加载...
   Locked during print: 打印期间锁定
+  Lot Number (optional): 批号（可选）
   Lot/Batch Nr: 批次号
   M to toggle: 按 M 切换
   'MAC:': MAC：
@@ -539,12 +559,15 @@ translations:
   NEWLY DISCOVERED: 新发现
   NOTIFICATIONS: 通知
   Name: 名称
-  Named actions in the LED control panel (long-press).: ''
+  Name (optional): 名称（可选）
+  Named actions in the LED control panel (long-press).: LED 控制面板中的命名操作（长按）。
+  Net Weight (g): 净重（克）
   Network Address: 网络地址
   Network Name: 网络名称
   Network Name (SSID): 网络名称 (SSID)
   Network Settings: 网络设置
   Network Test: 网络测试
+  New Spool: 新料盘
   New Version Available: 发现新版本
   New profile name: 新配置名称
   Next: 下一步
@@ -561,6 +584,7 @@ translations:
   No Spools: 无料盘
   No effects available: 无可用特效
   No events queued: 无排队事件
+  No filaments found: 未找到耗材
   No file loaded: 未加载文件
   No files available for printing: 没有可用于打印的文件
   No macros available: 无可用宏
@@ -577,21 +601,26 @@ translations:
   No profiles available: 无可用配置
   No sensors detected: 未检测到传感器
   No spools available: 无可用料盘
+  No timelapse videos found: 未找到延时视频
+  No vendors found: 未找到供应商
   No webcam detected.\nA webcam is required for timelapse.: 未检测到摄像头。\n延时摄影需要摄像头。
   Not Now: 暂不
-  Not calibrated: ''
+  Not calibrated: 未校准
   Not connected: 未连接
   Not connected to printer: 未连接到打印机
   Not yet calibrated: 尚未校准
   Notes: 备注
+  Notes (optional): 备注（可选）
   Notifications: 通知
   Notify when print finishes: 打印完成时通知
   Nozzle: 喷嘴
   Nozzle Clean: 喷嘴清洁
   Nozzle Priming: 喷嘴预挤
+  Nozzle Temp: 喷嘴温度
   Nozzle Temperature: 喷嘴温度
   Nozzle °C: 喷嘴 °C
   'Nozzle:': 喷嘴：
+  OD: OD
   OK: 确定
   OS: OS
   'Off': 关
@@ -603,6 +632,7 @@ translations:
   Optimize Your Printing: 优化您的打印
   Optimizes temperature control for stable, consistent heating.: 优化温度控制，实现稳定一致的加热。
   Or Enter Manually: 或手动输入
+  Output Mode: 输出模式
   PA: PA
   PETG: PETG
   PLA: PLA
@@ -681,8 +711,12 @@ translations:
   Prints Trend: 打印趋势
   'Private:': 私有：
   Probe: 探针
+  Probe Accuracy Test: 探针精度测试
+  Probe Management: 探针管理
   Probe Sensor: 探针传感器
   Probe Sensors: 探针传感器
+  Probe bed surface for compensation: 探测热床表面以进行补偿
+  Probe controls, accuracy test, and settings: 探针控制、精度测试和设置
   Probing Bed Mesh: 正在探测热床网格
   Probing Bed Screws...: 正在探测热床螺丝...
   Probing Bed...: 正在探测热床...
@@ -706,19 +740,23 @@ translations:
   Recalibrate or view detailed results anytime in Settings.: 可随时在设置中重新校准或查看详细结果。
   Record Timelapse: 录制延时摄影
   Record timelapses of your prints: 录制打印延时摄影
+  Recorded Videos: 已录制视频
   Recording Mode: 录制模式
   Recover: 恢复
   Recovering AFC system...: AFC系统恢复中...
   Recovery failed: 恢复失败
+  Red: 红色
   Reduce ringing and ghosting artifacts: 减少振纹和残影
   Reduce vibration artifacts like ringing and ghosting: 减少振纹和残影等振动伪影
   Refresh Interval: 刷新间隔
   Release all stepper motors. Position will be lost.: 释放所有步进电机。位置信息将丢失。
   Remaining: 剩余
   Remaining (g): 剩余 (g)
+  Remaining Weight (g): 剩余重量（克）
   Remove plugin from printer: 从打印机移除插件
   Rename: 重命名
   Rename Mesh Profile: 重命名网格配置
+  Render Now: 立即渲染
   Report saved to crash_report.txt: 报告已保存到 crash_report.txt
   Reprint: 重新打印
   Require confirmation before emergency stop: 紧急停止前需要确认
@@ -735,7 +773,7 @@ translations:
   Restart Required: 需要重启
   'Restart failed: not connected': '重启失败: 未连接'
   Restart the display application: 重启显示应用程序
-  Restarting HelixScreen...: ''
+  Restarting HelixScreen...: 正在重启 HelixScreen…
   Restarting Klipper...: 正在重启 Klipper...
   Restarting Moonraker...: 正在重启 Moonraker...
   Resume: 恢复
@@ -780,6 +818,7 @@ translations:
   Scroll Speed: 滚动速度
   Search filename...: 搜索文件名...
   Search spools...: 搜索料盘...
+  Search vendors...: 搜索供应商…
   Searching...: 搜索中...
   Secondary: 次要
   Section Detail: 区域详情
@@ -794,13 +833,14 @@ translations:
   Select macro for first button: 为第一个按钮选择宏
   Select macro for second button: 为第二个按钮选择宏
   Selecting slot...: 正在选择料仓...
+  Self-Test: 自检
   Semantic Size Parameter Tests: 语义大小参数测试
   Send Report: 发送报告
   Send commands directly to printer: 直接向打印机发送命令
   Send this crash report to help improve HelixScreen.: 发送此崩溃报告以帮助改进 HelixScreen。
   Sending...: 正在发送...
   Sensors: 传感器
-  Separate on/off macros. HelixScreen tracks the state.: ''
+  Separate on/off macros. HelixScreen tracks the state.: 独立的开/关宏。HelixScreen 跟踪状态。
   'Set ': '设置 '
   Set Active: 设为活动
   Settings: 设置
@@ -811,7 +851,7 @@ translations:
   'Shininess:': 光泽度：
   Show detailed print preparation status: 显示详细的打印准备状态
   Side: 侧面
-  Single toggle macro. State is not tracked.: ''
+  Single toggle macro. State is not tracked.: 单个切换宏。不跟踪状态。
   Size: 大小
   Skip: 跳过
   Sleep While Printing: 打印时休眠
@@ -827,6 +867,7 @@ translations:
   Speed of retraction movement: 回抽移动速度
   Spool: 料盘
   Spool Visualization (Pseudo-3D Canvas): 料盘可视化（伪 3D 画布）
+  Spool Weight (g): 料盘重量（克）
   Spool deleted: 料盘已删除
   Spool saved: 料盘已保存
   Spool wt (g): 料盘重量 (g)
@@ -844,11 +885,13 @@ translations:
   Status: 状态
   Status icons: 状态图标
   Step: 步骤
+  'Step ': '步骤 '
   Step Progress Widget Test: 步骤进度组件测试
   Stop: 停止
   Stop Drying: 停止干燥
   Stop Print?: 停止打印？
   Stops all motion. Requires firmware restart.: 停止所有运动。需要固件重启。
+  Stow: 收回
   Success Rate: 成功率
   Success!: 成功！
   Surfaces inherit app background tokens for light and dark modes.: 表面继承应用背景色用于浅色和深色模式。
@@ -876,6 +919,7 @@ translations:
   Test Connection: 测试连接
   Test Network: 测试网络
   Test Sound: 测试声音
+  Test probe repeatability: 测试探针重复性
   Thanks! Anonymous usage data helps improve HelixScreen.: 感谢！匿名使用数据有助于改进 HelixScreen。
   Thanks! TOTALLY anonymous usage data helps improve HelixScreen.: 感谢！完全匿名的使用数据有助于改进
     HelixScreen。
@@ -910,7 +954,7 @@ translations:
   This will restart Klipper.: 这将重启 Klipper。
   Time: 时间
   Time Format: 时间格式
-  Time to wait before escalating to emergency stop: ''
+  Time to wait before escalating to emergency stop: 升级为紧急停止前的等待时间
   Timelapse: 延时摄影
   Timelapse Available: 延时摄影可用
   Timelapse Settings: 延时摄影设置
@@ -963,6 +1007,8 @@ translations:
   ValgACE (ACE Pro): ValgACE (ACE Pro)
   Velocity and acceleration limits: 速度和加速度限制
   Vendor: 供应商
+  Vendor Name: 供应商名称
+  'Vendor:': '供应商：'
   Verifying timelapse plugin...: 正在验证延时摄影插件...
   Verifying...: 验证中...
   Version: 版本
@@ -985,6 +1031,7 @@ translations:
   Warming Bed...: 正在预热热床...
   Warning: 警告
   Webcam: 摄像头
+  Website (optional): 网站（可选）
   Week: 周
   ? Weight data is synced from Spoolman to display remaining filament. Changes are
     also synced when prints start, pause, or complete.
@@ -1014,6 +1061,7 @@ translations:
   Z: Z
   Z Calibration: Z 轴校准
   Z Movement: Z 轴移动
+  Z Offset: Z 偏移
   Z Range: Z 范围
   Z probes for bed leveling and mesh generation: 用于热床调平和网格生成的 Z 探针
   Z-Offset: Z 偏移
@@ -1026,10 +1074,12 @@ translations:
   'Z:': 'Z:'
   'Z: 0.000': 'Z: 0.000'
   Zoom: 缩放
-  disable: ''
+  disable: 禁用
   disabled: 已禁用
+  e.g. Jet Black: 例如 炭黑
+  e.g. Polymaker: 例如 Polymaker
   elapsed: 已用时
-  enable: ''
+  enable: 启用
   enabled: 已启用
   est: est
   layers: 层
@@ -1038,4 +1088,4 @@ translations:
   started: 已启动
   used: 已使用
   v{} is available. Tap to update.: v{} 可用。点击以更新。
-  '{} more taps to {} beta features': ''
+  '{} more taps to {} beta features': '再点击 {} 次以{}测试功能'

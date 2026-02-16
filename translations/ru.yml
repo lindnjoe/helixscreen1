@@ -1,15 +1,18 @@
 locale: ru
 translations:
   ' elapsed · ': ' истёк · '
+  ' frames captured': ' кадров захвачено'
   ' left': ' осталось'
   + Add Preset: + Добавить пресет
+  + Create New Filament: '+ Создать новый филамент'
+  + Create New Vendor: '+ Создать нового производителя'
   '- Check [resonance_tester] in printer.cfg': '- Проверьте блок [resonance_tester]
     в printer.cfg'
   '- Ensure ADXL345 is connected': '- Убедитесь, что ADXL345 подключен'
   '- Try Measure Noise first': '- Сначала попробуйте измерить шум акселерометра'
   0 slots: '{0} Слотов'
   0.4-2mm direct drive, 4-6mm bowden: 0.4-2мм для директа, 4-6мм для боудена
-  1 more tap to {} beta features: ''
+  1 more tap to {} beta features: '1 нажатие до {} бета-функций'
   1. Printer homes and probes the bed: 1. Принтер паркуется и зондирует стол
   1. Printer will home and probe each screw: 1. Принтер запаркуется и проверит каждый
     винт
@@ -22,9 +25,9 @@ translations:
   3D Preview: 3D-просмотр
   4. Paper should move but with resistance: 4. Бумага должна двигаться, но с сопротивлением
   4. Repeat until bed is level: 4. Повторяйте, пока стол не выровняется
+  5V: 5V
   = Loosen: = Ослабить
   = Tighten: = Затянуть
-  '@spoolman_edit_save_text': ''
   ABOUT: О ПРОГРАММЕ
   ABS: ABS
   ADXL: ADXL
@@ -53,7 +56,9 @@ translations:
   Actions: Действия
   Active: Активно
   Add: Добавить
+  Add Filament: Добавить филамент
   Add Hidden Network: Добавить скрытую сеть
+  Add Vendor: Добавить производителя
   Adjust screen brightness level: Настроить уровень яркости экрана
   Adjust screws, then re-probe.: Отрегулируйте винты, затем перепроверьте.
   Adjustments stay active until restart. Save after print completes.: Настройки активны
@@ -78,6 +83,7 @@ translations:
   Anonymous data to help improve HelixScreen: Анонимные данные для улучшения HelixScreen
   Anonymous stats — no personal data, ever.: Анонимная статистика — никаких личных
     данных.
+  Any additional notes...: Любые дополнительные заметки...
   App Background: Фон приложения
   Apply: Применить
   Apply Changes: Применить изменения
@@ -105,6 +111,7 @@ translations:
   Available Networks: Доступные сети
   Available networks: Доступные сети
   BETA: BETA
+  BLTouch Controls: Управление BLTouch
   Back: Назад
   Backup: Резервная копия
   Bed: Стол
@@ -115,6 +122,7 @@ translations:
   Bed Mesh Render: Рендер сетки стола
   Bed Screw Adjustment: Регулировка винтов стола
   Bed Screws: Винты стола
+  Bed Temp: Темп. стола
   Bed is Level!: Стол выровнен!
   Bed °C: Стол °C
   'Bed:': 'Стол:'
@@ -130,6 +138,7 @@ translations:
   Border Width: Толщина границы
   Border transparency (0 = invisible, 255 = solid): Прозрачность границы (0 = невидимая,
     255 = сплошная)
+  Both: Оба
   Brightness: Яркость
   Browse: Обзор
   Button taps and navigation sounds: Звуки нажатий и навигации
@@ -145,7 +154,7 @@ translations:
   Calibrate All: Калибровать всё
   Calibrate X: Калибровать X
   Calibrate Y: Калибровать Y
-  Calibrated: ''
+  Calibrated: Откалиброван
   Calibrating...: Калибровка...
   Calibration & Tools: Калибровка и инструменты
   Calibration Complete!: Калибровка завершена!
@@ -153,7 +162,7 @@ translations:
   Calibration saved but cannot apply on SDL display: Калибровка сохранена, но не может
     быть применена на SDL дисплее
   Cancel: Отмена
-  Cancel Escalation: ''
+  Cancel Escalation: Отменить эскалацию
   Cancel Print: Отменить печать
   Cancelled: Отменено
   Chamber: Камера
@@ -196,6 +205,7 @@ translations:
   Color: Цвет
   Color Mismatch: Несоответствие цвета
   Color Sensors: Датчики цвета
+  'Color:': 'Цвет:'
   Complete: Завершено
   Completed: Завершено
   Completed in 3 probes: Завершено за 3 замера
@@ -242,7 +252,11 @@ translations:
   Could not check webcam status.\nCheck printer connection.: Не удалось проверить
     статус веб-камеры.\nПроверьте подключение принтера.
   Crash report sent — thank you!: Отчёт об ошибке отправлен — спасибо!
+  Create New Filament: Создать новый филамент
+  Create New Vendor: Создать нового производителя
+  Create Spool: Создать катушку
   Create video when print completes: Создать видео после завершения печати
+  Creating spool...: Создание катушки...
   Current / Target: Текущая / Цель
   Current Configuration: Текущая конфигурация
   Current Mesh: Текущая сетка
@@ -250,7 +264,6 @@ translations:
   Current Version: Текущая версия
   Current Z Position: Текущая позиция Z
   'Current name:': 'Текущее имя:'
-  Currently Loaded: Сейчас загружен
   Currently printing: Сейчас печатается
   Custom: Свой
   Custom...: Настроить...
@@ -260,6 +273,7 @@ translations:
   Damping (Kd): Демпфирование (Kd)
   Danger: Опасность
   Dark Mode: Тёмный режим
+  Database: База данных
   Day: День
   Default border thickness: Толщина границы по умолчанию
   Define macros in your printer.cfg: Определите макросы в вашем printer.cfg
@@ -268,7 +282,8 @@ translations:
   Delete Profile?: Удалить профиль?
   Delete Spool?: Удалить катушку?
   'Delta:': 'Дельта:'
-  Dev channel requires dev_url in config: ''
+  Deploy: Развернуть
+  Dev channel requires dev_url in config: Dev-канал требует dev_url в конфиге
   Device name is required: Требуется название устройства
   Disable: Отключить
   Disable Motors?: Отключить моторы?
@@ -283,8 +298,8 @@ translations:
   Don't Save: Не сохранять
   Don't ask again: Больше не спрашивать
   Done: Готово
-  Download update?: ''
-  Download v{}?: ''
+  Download update?: 'Загрузить обновление?'
+  Download v{}?: 'Загрузить v{}?'
   Downloading...: Загрузка...
   Drop shadow strength (0 = disabled): Интенсивность тени (0 = отключено)
   Dryer: Сушилка
@@ -330,8 +345,8 @@ translations:
   Enter password: Введите пароль
   Error: Ошибка
   Error state: Состояние ошибки
-  Escalate to emergency stop if cancel doesn't respond: ''
-  Escalation Timeout: ''
+  Escalate to emergency stop if cancel doesn't respond: 'Эскалация до аварийной остановки, если отмена не отвечает'
+  Escalation Timeout: Тайм-аут эскалации
   Ethernet: Ethernet
   Events appear here after sessions and prints: События появятся здесь после сессий
     и печатей
@@ -387,6 +402,7 @@ translations:
     компенсации потока
   Filament runout and motion detection sensors: Датчики окончания и движения филамента
   Filament tracking and inventory: Отслеживание и учёт филамента
+  'Filament:': 'Филамент:'
   File: Файл
   File Info: Информация о файле
   Filename: Имя файла
@@ -483,6 +499,7 @@ translations:
   Intensity: Интенсивность
   Interactive 3D G-code during prints: Интерактивный 3D G-code во время печати
   Interactive probe calibration: Интерактивная калибровка зонда
+  Interactive probe offset adjustment: Интерактивная настройка смещения датчика
   Issue description: Описание проблемы
   Just now: Только что
   Keep Printing: Продолжить печать
@@ -505,6 +522,7 @@ translations:
   LEDs: LED
   LEDs controlled by the light button: LED, управляемые кнопкой света
   LOADED: ЗАГРУЖЕН
+  LOT-2024-001: LOT-2024-001
   Label printing coming soon: Печать этикеток скоро появится
   Language: Язык
   Last print cancelled: Последняя печать отменена
@@ -527,8 +545,10 @@ translations:
   Loading filament...: Загрузка филамента...
   Loading history...: Загрузка истории...
   Loading spools...: Загрузка катушек...
+  Loading vendors...: Загрузка производителей...
   Loading...: Загрузка...
   Locked during print: Заблокировано во время печати
+  Lot Number (optional): Номер партии (необязательно)
   Lot/Batch Nr: Nr. партии/серии
   M to toggle: M для переключения
   'MAC:': 'MAC:'
@@ -600,12 +620,15 @@ translations:
   NEWLY DISCOVERED: НЕДАВНО ОБНАРУЖЕНО
   NOTIFICATIONS: УВЕДОМЛЕНИЯ
   Name: Название
-  Named actions in the LED control panel (long-press).: ''
+  Name (optional): Название (необязательно)
+  Named actions in the LED control panel (long-press).: Именованные действия в панели управления LED (долгое нажатие).
+  Net Weight (g): Вес нетто (г)
   Network Address: Сетевой адрес
   Network Name: Название сети
   Network Name (SSID): Название сети (SSID)
   Network Settings: Сетевые настройки
   Network Test: Тест сети
+  New Spool: Новая катушка
   New Version Available: Доступна новая версия
   New profile name: Новое имя профиля
   Next: Далее
@@ -623,6 +646,7 @@ translations:
   No Spools: Нет катушек
   No effects available: Нет доступных эффектов
   No events queued: Нет событий в очереди
+  No filaments found: Филаменты не найдены
   No file loaded: Файл не загружен
   No files available for printing: Нет файлов для печати
   No macros available: Нет доступных макросов
@@ -640,22 +664,27 @@ translations:
   No profiles available: Профили недоступны
   No sensors detected: Датчики не обнаружены
   No spools available: Катушки недоступны
+  No timelapse videos found: Таймлапс-видео не найдены
+  No vendors found: Производители не найдены
   No webcam detected.\nA webcam is required for timelapse.: Веб-камера не обнаружена.\nДля
     таймлапса необходима веб-камера.
   Not Now: Не сейчас
-  Not calibrated: ''
+  Not calibrated: Не откалиброван
   Not connected: Не подключен
   Not connected to printer: Нет подключения к принтеру
   Not yet calibrated: Ещё не откалибровано
   Notes: Заметки
+  Notes (optional): Заметки (необязательно)
   Notifications: Уведомления
   Notify when print finishes: Уведомить о завершении печати
   Nozzle: Сопло
   Nozzle Clean: Очистка сопла
   Nozzle Priming: Подготовка сопла
+  Nozzle Temp: Темп. сопла
   Nozzle Temperature: Температура сопла
   Nozzle °C: Сопло °C
   'Nozzle:': 'Сопло:'
+  OD: OD
   OK: OK
   OS: OS
   'Off': Выкл
@@ -668,6 +697,7 @@ translations:
   Optimizes temperature control for stable, consistent heating.: Оптимизирует контроль
     температуры для стабильного и равномерного нагрева.
   Or Enter Manually: Или введите вручную
+  Output Mode: Режим вывода
   PA: PA
   PETG: PETG
   PLA: PLA
@@ -750,8 +780,12 @@ translations:
   Prints Trend: Тренд печатей
   'Private:': 'Закрытая:'
   Probe: Зонд
+  Probe Accuracy Test: Тест точности датчика
+  Probe Management: Управление датчиком
   Probe Sensor: Датчик пробы
   Probe Sensors: Датчики пробы
+  Probe bed surface for compensation: Зондировать поверхность стола для компенсации
+  Probe controls, accuracy test, and settings: 'Управление датчиком, тест точности и настройки'
   Probing Bed Mesh: Зондирование сетки стола
   Probing Bed Screws...: Проверка винтов стола...
   Probing Bed...: Зондирование стола...
@@ -776,10 +810,12 @@ translations:
     подробные результаты в любое время в Настройках.
   Record Timelapse: Записать таймлапс
   Record timelapses of your prints: Записывайте таймлапсы ваших печатей
+  Recorded Videos: Записанные видео
   Recording Mode: Режим записи
   Recover: Восстановить
   Recovering AFC system...: Восстановление системы AFC...
   Recovery failed: Восстановление не удалось
+  Red: Красный
   Reduce ringing and ghosting artifacts: Уменьшить артефакты звона и двоения
   Reduce vibration artifacts like ringing and ghosting: Уменьшить артефакты вибрации,
     такие как звон и двоение
@@ -788,9 +824,11 @@ translations:
     Позиция будет потеряна.
   Remaining: Осталось
   Remaining (g): Осталось (г)
+  Remaining Weight (g): Оставшийся вес (г)
   Remove plugin from printer: Удалить плагин с принтера
   Rename: Переименовать
   Rename Mesh Profile: Переименовать профиль сетки
+  Render Now: Отрендерить сейчас
   Report saved to crash_report.txt: Отчёт сохранён в crash_report.txt
   Reprint: Повторить печать
   Require confirmation before emergency stop: Требовать подтверждение перед аварийной
@@ -808,7 +846,7 @@ translations:
   Restart Required: Требуется перезапуск
   'Restart failed: not connected': 'Перезапуск не удался: нет подключения'
   Restart the display application: Перезапустить приложение дисплея
-  Restarting HelixScreen...: ''
+  Restarting HelixScreen...: Перезапуск HelixScreen...
   Restarting Klipper...: Перезапуск Klipper...
   Restarting Moonraker...: Перезапуск Moonraker...
   Resume: Продолжить
@@ -858,6 +896,7 @@ translations:
   Scroll Speed: Скорость прокрутки
   Search filename...: Поиск файла...
   Search spools...: Поиск катушек...
+  Search vendors...: Поиск производителей...
   Searching...: Поиск...
   Secondary: Вторичный
   Section Detail: Детали раздела
@@ -874,6 +913,7 @@ translations:
   Select macro for first button: Выберите макрос для первой кнопки
   Select macro for second button: Выберите макрос для второй кнопки
   Selecting slot...: Выбор слота...
+  Self-Test: Самотестирование
   Semantic Size Parameter Tests: Тесты семантических параметров размера
   Send Report: Отправить отчёт
   Send commands directly to printer: Отправлять команды напрямую принтеру
@@ -881,7 +921,7 @@ translations:
     чтобы помочь улучшить HelixScreen.
   Sending...: Отправка...
   Sensors: Датчики
-  Separate on/off macros. HelixScreen tracks the state.: ''
+  Separate on/off macros. HelixScreen tracks the state.: Отдельные макросы вкл/выкл. HelixScreen отслеживает состояние.
   'Set ': 'Установить '
   Set Active: Сделать активной
   Settings: Настройки
@@ -893,7 +933,7 @@ translations:
   Show detailed print preparation status: Показывать детальный статус подготовки к
     печати
   Side: Сбоку
-  Single toggle macro. State is not tracked.: ''
+  Single toggle macro. State is not tracked.: Один макрос переключения. Состояние не отслеживается.
   Size: Размер
   Skip: Пропустить
   Sleep While Printing: Спящий режим при печати
@@ -911,6 +951,7 @@ translations:
   Speed of retraction movement: Скорость ретракта
   Spool: Катушка
   Spool Visualization (Pseudo-3D Canvas): Визуализация катушки (псевдо-3D)
+  Spool Weight (g): Вес катушки (г)
   Spool deleted: Катушка удалена
   Spool saved: Катушка сохранена
   Spool wt (g): Вес катушки (г)
@@ -928,12 +969,14 @@ translations:
   Status: Статус
   Status icons: Иконки статуса
   Step: Шаг
+  'Step ': 'Шаг '
   Step Progress Widget Test: Тест виджета пошагового прогресса
   Stop: Стоп
   Stop Drying: Остановить сушку
   Stop Print?: Остановить печать?
   Stops all motion. Requires firmware restart.: Останавливает всё движение. Требуется
     перезапуск прошивки.
+  Stow: Убрать
   Success Rate: Процент успеха
   Success!: Успешно!
   Surfaces inherit app background tokens for light and dark modes.: Поверхности наследуют
@@ -963,6 +1006,7 @@ translations:
   Test Connection: Тест соединения
   Test Network: Тест сети
   Test Sound: Тестовый звук
+  Test probe repeatability: Тест повторяемости датчика
   Thanks! Anonymous usage data helps improve HelixScreen.: Спасибо! Анонимные данные
     использования помогают улучшить HelixScreen.
   Thanks! TOTALLY anonymous usage data helps improve HelixScreen.: Спасибо! ПОЛНОСТЬЮ
@@ -1009,7 +1053,7 @@ translations:
   This will restart Klipper.: Это перезапустит Klipper.
   Time: Время
   Time Format: Формат времени
-  Time to wait before escalating to emergency stop: ''
+  Time to wait before escalating to emergency stop: Время ожидания перед эскалацией до аварийной остановки
   Timelapse: Таймлапс
   Timelapse Available: Таймлапс доступен
   Timelapse Settings: Настройки таймлапса
@@ -1064,6 +1108,8 @@ translations:
   ValgACE (ACE Pro): ValgACE (ACE Pro)
   Velocity and acceleration limits: Ограничения скорости и ускорения
   Vendor: Производитель
+  Vendor Name: Название производителя
+  'Vendor:': 'Производитель:'
   Verifying timelapse plugin...: Проверка плагина таймлапса...
   Verifying...: Проверка...
   Version: Версия
@@ -1087,6 +1133,7 @@ translations:
   Warming Bed...: Прогрев стола...
   Warning: Предупреждение
   Webcam: Веб-камера
+  Website (optional): Веб-сайт (необязательно)
   Week: Неделя
   ? Weight data is synced from Spoolman to display remaining filament. Changes are
     also synced when prints start, pause, or complete.
@@ -1119,6 +1166,7 @@ translations:
   Z: Z
   Z Calibration: Калибровка Z
   Z Movement: Движение Z
+  Z Offset: Z Offset
   Z Range: Диапазон Z
   Z probes for bed leveling and mesh generation: Z-зонды для выравнивания стола и
     создания сетки
@@ -1132,10 +1180,12 @@ translations:
   'Z:': 'Z:'
   'Z: 0.000': 'Z: 0.000'
   Zoom: Масштаб
-  disable: ''
+  disable: отключить
   disabled: отключено
+  e.g. Jet Black: напр. Чёрный
+  e.g. Polymaker: напр. Polymaker
   elapsed: прошло
-  enable: ''
+  enable: включить
   enabled: включено
   est: est
   layers: слои
@@ -1144,4 +1194,4 @@ translations:
   started: запущено
   used: использ.
   v{} is available. Tap to update.: v{} доступна. Нажмите для обновления.
-  '{} more taps to {} beta features': ''
+  '{} more taps to {} beta features': '{} нажатий до {} бета-функций'

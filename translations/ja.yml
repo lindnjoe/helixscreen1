@@ -1,15 +1,18 @@
 locale: ja
 translations:
   ' elapsed · ': ' elapsed · '
+  ' frames captured': ' フレームをキャプチャしました'
   ' left': ' left'
   + Add Preset: + プリセットを追加
+  + Create New Filament: '+ 新しいフィラメントを作成'
+  + Create New Vendor: '+ 新しいベンダーを作成'
   '- Check [resonance_tester] in printer.cfg': '- printer.cfg の [resonance_tester]
     を確認してください'
   '- Ensure ADXL345 is connected': '- ADXL345 が接続されていることを確認してください'
   '- Try Measure Noise first': '- まず「ノイズ測定」をお試しください'
   0 slots: '{0} スロット'
   0.4-2mm direct drive, 4-6mm bowden: 0.4-2mm ダイレクトドライブ、4-6mm ボーデン
-  1 more tap to {} beta features: ''
+  1 more tap to {} beta features: 'あと1回タップでベータ機能を{}'
   1. Printer homes and probes the bed: 1. プリンターがホーミングしてベッドをプローブします
   1. Printer will home and probe each screw: 1. プリンターがホーミングして各ネジをプローブします
   2. Place paper between nozzle and bed: 2. ノズルとベッドの間に紙を置いてください
@@ -19,9 +22,9 @@ translations:
   3D Preview: 3Dプレビュー
   4. Paper should move but with resistance: 4. 紙が抵抗を感じながら動く状態が適切です
   4. Repeat until bed is level: 4. ベッドが水平になるまで繰り返してください
+  5V: 5V
   = Loosen: = 緩める
   = Tighten: = 締める
-  '@spoolman_edit_save_text': ''
   ABOUT: 情報
   ABS: ABS
   ADXL: ADXL
@@ -50,7 +53,9 @@ translations:
   Actions: アクション
   Active: アクティブ
   Add: 追加
+  Add Filament: フィラメントを追加
   Add Hidden Network: 非公開ネットワークを追加
+  Add Vendor: ベンダーを追加
   Adjust screen brightness level: 画面の明るさを調整します
   Adjust screws, then re-probe.: ネジを調整して、再度プローブしてください。
   Adjustments stay active until restart. Save after print completes.: 調整は再起動まで有効です。印刷完了後に保存してください。
@@ -69,6 +74,7 @@ translations:
   Animations: アニメーション
   Anonymous data to help improve HelixScreen: HelixScreen改善のための匿名データ
   Anonymous stats — no personal data, ever.: 匿名の統計情報 — 個人データは一切収集しません。
+  Any additional notes...: 追加のメモ...
   App Background: アプリ背景
   Apply: 適用
   Apply Changes: 変更を適用
@@ -92,6 +98,7 @@ translations:
   Available Networks: 利用可能なネットワーク
   Available networks: 利用可能なネットワーク
   BETA: BETA
+  BLTouch Controls: BLTouchコントロール
   Back: 戻る
   Backup: バックアップ
   Bed: ベッド
@@ -102,6 +109,7 @@ translations:
   Bed Mesh Render: ベッドメッシュ描画
   Bed Screw Adjustment: ベッドネジ調整
   Bed Screws: ベッドネジ
+  Bed Temp: ベッド温度
   Bed is Level!: ベッドが水平です！
   Bed °C: ベッド °C
   'Bed:': 'ベッド:'
@@ -115,6 +123,7 @@ translations:
   Border Radius: 角の丸み
   Border Width: 境界線の幅
   Border transparency (0 = invisible, 255 = solid): 境界線の透明度 (0 = 透明、255 = 不透明)
+  Both: 両方
   Brightness: 明るさ
   Browse: 参照
   Button taps and navigation sounds: ボタンタップとナビゲーション音
@@ -130,14 +139,14 @@ translations:
   Calibrate All: すべてキャリブレート
   Calibrate X: X軸をキャリブレート
   Calibrate Y: Y軸をキャリブレート
-  Calibrated: ''
+  Calibrated: キャリブレーション済み
   Calibrating...: キャリブレーション中...
   Calibration & Tools: キャリブレーションとツール
   Calibration Complete!: キャリブレーション完了！
   Calibration Failed: キャリブレーション失敗
   Calibration saved but cannot apply on SDL display: キャリブレーションは保存されましたが SDL ディスプレイには適用できません
   Cancel: キャンセル
-  Cancel Escalation: ''
+  Cancel Escalation: エスカレーションをキャンセル
   Cancel Print: 印刷をキャンセル
   Cancelled: キャンセル済み
   Chamber: チャンバー
@@ -172,6 +181,7 @@ translations:
   Color: 色
   Color Mismatch: 色の不一致
   Color Sensors: カラーセンサー
+  'Color:': '色：'
   Complete: 完了
   Completed: 完了
   Completed in 3 probes: 3回のプローブで完了
@@ -211,7 +221,11 @@ translations:
   Correction (Ki): 補正 (Ki)
   Could not check webcam status.\nCheck printer connection.: ウェブカメラの状態を確認できませんでした。\nプリンター接続を確認してください。
   Crash report sent — thank you!: クラッシュレポートを送信しました — ありがとうございます！
+  Create New Filament: 新しいフィラメントを作成
+  Create New Vendor: 新しいベンダーを作成
+  Create Spool: スプールを作成
   Create video when print completes: 印刷完了時に動画を作成
+  Creating spool...: スプールを作成中...
   Current / Target: 現在 / 目標
   Current Configuration: 現在の設定
   Current Mesh: 現在のメッシュ
@@ -219,7 +233,6 @@ translations:
   Current Version: 現在のバージョン
   Current Z Position: 現在のZ位置
   'Current name:': '現在の名前:'
-  Currently Loaded: 現在装填中
   Currently printing: 印刷中
   Custom: カスタム
   Custom...: カスタム...
@@ -229,6 +242,7 @@ translations:
   Damping (Kd): 減衰 (Kd)
   Danger: 危険
   Dark Mode: ダークモード
+  Database: データベース
   Day: 日
   Default border thickness: デフォルトの境界線の太さ
   Define macros in your printer.cfg: printer.cfg でマクロを定義してください
@@ -237,7 +251,8 @@ translations:
   Delete Profile?: プロファイルを削除しますか？
   Delete Spool?: スプールを削除しますか？
   'Delta:': '差分:'
-  Dev channel requires dev_url in config: ''
+  Deploy: 展開
+  Dev channel requires dev_url in config: 開発チャンネルには設定にdev_urlが必要です
   Device name is required: デバイス名は必須です
   Disable: 無効化
   Disable Motors?: モーターを無効にしますか？
@@ -252,8 +267,8 @@ translations:
   Don't Save: 保存しない
   Don't ask again: 今後表示しない
   Done: 完了
-  Download update?: ''
-  Download v{}?: ''
+  Download update?: アップデートをダウンロードしますか？
+  Download v{}?: 'v{}をダウンロードしますか？'
   Downloading...: ダウンロード中...
   Drop shadow strength (0 = disabled): 影の強さ (0 = 無効)
   Dryer: ドライヤー
@@ -296,8 +311,8 @@ translations:
   Enter password: パスワードを入力
   Error: エラー
   Error state: エラー状態
-  Escalate to emergency stop if cancel doesn't respond: ''
-  Escalation Timeout: ''
+  Escalate to emergency stop if cancel doesn't respond: キャンセルが応答しない場合は緊急停止にエスカレート
+  Escalation Timeout: エスカレーションタイムアウト
   Ethernet: イーサネット
   Events appear here after sessions and prints: セッションと印刷の後にイベントがここに表示されます
   Exclude: 除外
@@ -347,6 +362,7 @@ translations:
   Filament diameter sensors for flow compensation: フロー補正用フィラメント直径センサー
   Filament runout and motion detection sensors: フィラメント切れとモーション検出センサー
   Filament tracking and inventory: フィラメント追跡と在庫管理
+  'Filament:': 'フィラメント：'
   File: ファイル
   File Info: ファイル情報
   Filename: ファイル名
@@ -432,6 +448,7 @@ translations:
   Intensity: 強度
   Interactive 3D G-code during prints: 印刷中のインタラクティブ 3D G-code
   Interactive probe calibration: インタラクティブプローブキャリブレーション
+  Interactive probe offset adjustment: 対話型プローブオフセット調整
   Issue description: 問題の説明
   Just now: たった今
   Keep Printing: 印刷を続行
@@ -452,6 +469,7 @@ translations:
   LEDs: LED
   LEDs controlled by the light button: ライトボタンで制御される LED
   LOADED: 装填済み
+  LOT-2024-001: LOT-2024-001
   Label printing coming soon: ラベル印刷は近日公開
   Language: 言語
   Last print cancelled: 前回の印刷がキャンセルされました
@@ -472,8 +490,10 @@ translations:
   Loading filament...: フィラメントを装填中...
   Loading history...: 履歴を読み込み中...
   Loading spools...: スプールを読み込み中...
+  Loading vendors...: ベンダーを読み込み中...
   Loading...: 読み込み中...
   Locked during print: 印刷中はロックされています
+  Lot Number (optional): ロット番号（オプション）
   Lot/Batch Nr: ロット/バッチ番号
   M to toggle: M で切り替え
   'MAC:': 'MAC:'
@@ -539,12 +559,15 @@ translations:
   NEWLY DISCOVERED: 新規検出
   NOTIFICATIONS: 通知
   Name: 名前
-  Named actions in the LED control panel (long-press).: ''
+  Name (optional): 名前（オプション）
+  Named actions in the LED control panel (long-press).: LEDコントロールパネルの名前付きアクション（長押し）。
+  Net Weight (g): 正味重量（g）
   Network Address: ネットワークアドレス
   Network Name: ネットワーク名
   Network Name (SSID): ネットワーク名 (SSID)
   Network Settings: ネットワーク設定
   Network Test: ネットワークテスト
+  New Spool: 新しいスプール
   New Version Available: 新バージョンあり
   New profile name: 新しいプロファイル名
   Next: 次へ
@@ -561,6 +584,7 @@ translations:
   No Spools: スプールなし
   No effects available: 利用可能なエフェクトがありません
   No events queued: キューにイベントはありません
+  No filaments found: フィラメントが見つかりません
   No file loaded: ファイルが読み込まれていません
   No files available for printing: 印刷可能なファイルがありません
   No macros available: 利用可能なマクロがありません
@@ -577,21 +601,26 @@ translations:
   No profiles available: 利用可能なプロファイルがありません
   No sensors detected: センサーが検出されませんでした
   No spools available: 利用可能なスプールがありません
+  No timelapse videos found: タイムラプス動画が見つかりません
+  No vendors found: ベンダーが見つかりません
   No webcam detected.\nA webcam is required for timelapse.: ウェブカメラが検出されませんでした。\nタイムラプスにはウェブカメラが必要です。
   Not Now: 今はしない
-  Not calibrated: ''
+  Not calibrated: キャリブレーション未実施
   Not connected: 未接続
   Not connected to printer: プリンターに未接続
   Not yet calibrated: 未キャリブレーション
   Notes: メモ
+  Notes (optional): メモ（オプション）
   Notifications: 通知
   Notify when print finishes: 印刷完了時に通知
   Nozzle: ノズル
   Nozzle Clean: ノズル清掃
   Nozzle Priming: ノズルプライミング
+  Nozzle Temp: ノズル温度
   Nozzle Temperature: ノズル温度
   Nozzle °C: ノズル °C
   'Nozzle:': 'ノズル:'
+  OD: OD
   OK: OK
   OS: OS
   'Off': オフ
@@ -603,6 +632,7 @@ translations:
   Optimize Your Printing: 印刷を最適化
   Optimizes temperature control for stable, consistent heating.: 安定した一貫性のある加熱のために温度制御を最適化します。
   Or Enter Manually: または手動で入力
+  Output Mode: 出力モード
   PA: PA
   PETG: PETG
   PLA: PLA
@@ -680,8 +710,12 @@ translations:
   Prints Trend: 印刷傾向
   'Private:': 'プライベート:'
   Probe: プローブ
+  Probe Accuracy Test: プローブ精度テスト
+  Probe Management: プローブ管理
   Probe Sensor: プローブセンサー
   Probe Sensors: プローブセンサー
+  Probe bed surface for compensation: 補正のためベッド表面をプローブ
+  Probe controls, accuracy test, and settings: プローブコントロール、精度テスト、設定
   Probing Bed Mesh: ベッドメッシュをプローブ中
   Probing Bed Screws...: ベッドネジをプローブ中...
   Probing Bed...: ベッドをプローブ中...
@@ -705,19 +739,23 @@ translations:
   Recalibrate or view detailed results anytime in Settings.: 設定からいつでも再キャリブレーションや詳細結果の確認ができます。
   Record Timelapse: タイムラプスを録画
   Record timelapses of your prints: 印刷のタイムラプスを録画
+  Recorded Videos: 録画された動画
   Recording Mode: 録画モード
   Recover: 回復
   Recovering AFC system...: AFCシステムを復旧中...
   Recovery failed: 復旧失敗
+  Red: 赤
   Reduce ringing and ghosting artifacts: リンギングとゴーストのアーティファクトを軽減
   Reduce vibration artifacts like ringing and ghosting: リンギングやゴーストなどの振動アーティファクトを軽減
   Refresh Interval: 更新間隔
   Release all stepper motors. Position will be lost.: すべてのステッピングモーターを解放します。位置情報は失われます。
   Remaining: 残り
   Remaining (g): 残量 (g)
+  Remaining Weight (g): 残量（g）
   Remove plugin from printer: プリンターからプラグインを削除
   Rename: 名前を変更
   Rename Mesh Profile: メッシュプロファイルの名前を変更
+  Render Now: 今すぐレンダリング
   Report saved to crash_report.txt: crash_report.txt にレポートを保存しました
   Reprint: 再印刷
   Require confirmation before emergency stop: 緊急停止前に確認を求める
@@ -734,7 +772,7 @@ translations:
   Restart Required: 再起動が必要です
   'Restart failed: not connected': '再起動に失敗: 未接続'
   Restart the display application: ディスプレイアプリケーションを再起動
-  Restarting HelixScreen...: ''
+  Restarting HelixScreen...: HelixScreenを再起動中...
   Restarting Klipper...: Klipper を再起動中...
   Restarting Moonraker...: Moonrakerを再起動中...
   Resume: 再開
@@ -779,6 +817,7 @@ translations:
   Scroll Speed: スクロール速度
   Search filename...: ファイル名を検索...
   Search spools...: スプール検索...
+  Search vendors...: ベンダーを検索...
   Searching...: 検索中...
   Secondary: セカンダリ
   Section Detail: セクション詳細
@@ -793,13 +832,14 @@ translations:
   Select macro for first button: 最初のボタンのマクロを選択
   Select macro for second button: 2番目のボタンのマクロを選択
   Selecting slot...: スロットを選択中...
+  Self-Test: セルフテスト
   Semantic Size Parameter Tests: セマンティックサイズパラメータテスト
   Send Report: レポートを送信
   Send commands directly to printer: プリンターに直接コマンドを送信
   Send this crash report to help improve HelixScreen.: HelixScreen の改善にこのクラッシュレポートを送信してください。
   Sending...: 送信中...
   Sensors: センサー
-  Separate on/off macros. HelixScreen tracks the state.: ''
+  Separate on/off macros. HelixScreen tracks the state.: 個別のオン/オフマクロ。HelixScreenが状態を追跡します。
   'Set ': '設定 '
   Set Active: アクティブに設定
   Settings: 設定
@@ -810,7 +850,7 @@ translations:
   'Shininess:': '光沢:'
   Show detailed print preparation status: 詳細な印刷準備ステータスを表示
   Side: 側面
-  Single toggle macro. State is not tracked.: ''
+  Single toggle macro. State is not tracked.: 単一のトグルマクロ。状態は追跡されません。
   Size: サイズ
   Skip: スキップ
   Sleep While Printing: 印刷中のスリープ
@@ -826,6 +866,7 @@ translations:
   Speed of retraction movement: リトラクション動作の速度
   Spool: スプール
   Spool Visualization (Pseudo-3D Canvas): スプール可視化（疑似3Dキャンバス）
+  Spool Weight (g): スプール重量（g）
   Spool deleted: スプールを削除しました
   Spool saved: スプールを保存しました
   Spool wt (g): スプール重量 (g)
@@ -843,11 +884,13 @@ translations:
   Status: ステータス
   Status icons: ステータスアイコン
   Step: ステップ
+  'Step ': 'ステップ '
   Step Progress Widget Test: ステッププログレスウィジェットテスト
   Stop: 停止
   Stop Drying: 乾燥を停止
   Stop Print?: 印刷を停止しますか？
   Stops all motion. Requires firmware restart.: すべての動作を停止します。ファームウェアの再起動が必要です。
+  Stow: 格納
   Success Rate: 成功率
   Success!: 成功！
   Surfaces inherit app background tokens for light and dark modes.: サーフェスはライトモードとダークモードのアプリ背景トークンを継承します。
@@ -875,6 +918,7 @@ translations:
   Test Connection: 接続テスト
   Test Network: ネットワークテスト
   Test Sound: テストサウンド
+  Test probe repeatability: プローブの再現性をテスト
   Thanks! Anonymous usage data helps improve HelixScreen.: ご協力ありがとうございます！匿名の使用データが
     HelixScreen の改善に役立ちます。
   Thanks! TOTALLY anonymous usage data helps improve HelixScreen.: ご協力ありがとうございます！完全匿名の使用データが
@@ -911,7 +955,7 @@ translations:
   This will restart Klipper.: これにより Klipper が再起動します。
   Time: 時間
   Time Format: 時間形式
-  Time to wait before escalating to emergency stop: ''
+  Time to wait before escalating to emergency stop: 緊急停止にエスカレートするまでの待機時間
   Timelapse: タイムラプス
   Timelapse Available: タイムラプス利用可能
   Timelapse Settings: タイムラプス設定
@@ -964,6 +1008,8 @@ translations:
   ValgACE (ACE Pro): ValgACE (ACE Pro)
   Velocity and acceleration limits: 速度と加速度の制限
   Vendor: ベンダー
+  Vendor Name: ベンダー名
+  'Vendor:': 'ベンダー：'
   Verifying timelapse plugin...: タイムラプスプラグインを確認中...
   Verifying...: 検証中...
   Version: バージョン
@@ -986,6 +1032,7 @@ translations:
   Warming Bed...: ベッド予熱中...
   Warning: 警告
   Webcam: ウェブカメラ
+  Website (optional): ウェブサイト（オプション）
   Week: 週
   ? Weight data is synced from Spoolman to display remaining filament. Changes are
     also synced when prints start, pause, or complete.
@@ -1015,6 +1062,7 @@ translations:
   Z: Z
   Z Calibration: Z キャリブレーション
   Z Movement: Z移動
+  Z Offset: Zオフセット
   Z Range: Z 範囲
   Z probes for bed leveling and mesh generation: ベッドレベリングとメッシュ生成用 Z プローブ
   Z-Offset: Z-Offset
@@ -1027,10 +1075,12 @@ translations:
   'Z:': 'Z:'
   'Z: 0.000': 'Z: 0.000'
   Zoom: ズーム
-  disable: ''
+  disable: 無効化
   disabled: 無効
+  e.g. Jet Black: 例：ジェットブラック
+  e.g. Polymaker: 例：Polymaker
   elapsed: 経過
-  enable: ''
+  enable: 有効化
   enabled: 有効
   est: est
   layers: レイヤー
@@ -1039,4 +1089,4 @@ translations:
   started: 開始
   used: 使用
   v{} is available. Tap to update.: v{} が利用可能です。タップして更新してください。
-  '{} more taps to {} beta features': ''
+  '{} more taps to {} beta features': 'あと{}回タップでベータ機能を{}'

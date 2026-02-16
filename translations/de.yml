@@ -1,8 +1,11 @@
 locale: de
 translations:
   ' elapsed · ': ' elapsed · '
+  ' frames captured': ' Bilder aufgenommen'
   ' left': ' left'
   + Add Preset: + Voreinstellung
+  + Create New Filament: '+ Neues Filament erstellen'
+  + Create New Vendor: '+ Neuen Hersteller erstellen'
   '- Check [resonance_tester] in printer.cfg': '- Prüfen Sie [resonance_tester] in
     printer.cfg'
   '- Ensure ADXL345 is connected': '- Stellen Sie sicher, dass der ADXL345 angeschlossen
@@ -10,7 +13,7 @@ translations:
   '- Try Measure Noise first': '- Versuchen Sie zuerst Rauschen messen'
   0 slots: 0 Slots
   0.4-2mm direct drive, 4-6mm bowden: 0,4-2mm Direct Drive, 4-6mm Bowden
-  1 more tap to {} beta features: ''
+  1 more tap to {} beta features: '1 weiteres Mal tippen, um Beta-Funktionen zu {}'
   1. Printer homes and probes the bed: 1. Drucker referenziert und prüft das Bett
   1. Printer will home and probe each screw: 1. Drucker referenziert und prüft jede
     Schraube
@@ -25,9 +28,9 @@ translations:
   4. Paper should move but with resistance: 4. Papier sollte sich bewegen, aber mit
     Widerstand
   4. Repeat until bed is level: 4. Wiederholen bis das Bett nivelliert ist
+  5V: 5V
   = Loosen: = Lösen
   = Tighten: = Anziehen
-  '@spoolman_edit_save_text': ''
   ABOUT: INFO
   ABS: ABS
   ADXL: ADXL
@@ -57,7 +60,9 @@ translations:
   Actions: Aktionen
   Active: Aktiv
   Add: Hinzufügen
+  Add Filament: Filament hinzufügen
   Add Hidden Network: Verstecktes Netzwerk hinzufügen
+  Add Vendor: Hersteller hinzufügen
   Adjust screen brightness level: Bildschirmhelligkeit anpassen
   Adjust screws, then re-probe.: Schrauben einstellen, dann erneut prüfen.
   Adjustments stay active until restart. Save after print completes.: Anpassungen
@@ -83,6 +88,7 @@ translations:
   Anonymous data to help improve HelixScreen: Anonyme Daten zur Verbesserung von HelixScreen
   Anonymous stats — no personal data, ever.: Anonyme Statistiken — niemals persönliche
     Daten.
+  Any additional notes...: Zusätzliche Notizen...
   App Background: App-Hintergrund
   Apply: Anwenden
   Apply Changes: Änderungen anwenden
@@ -112,6 +118,7 @@ translations:
   Available Networks: Verfügbare Netzwerke
   Available networks: Verfügbare Netzwerke
   BETA: BETA
+  BLTouch Controls: BLTouch-Steuerung
   Back: Zurück
   Backup: Sicherung
   Bed: Heizbett
@@ -122,6 +129,7 @@ translations:
   Bed Mesh Render: Bettnetz-Darstellung
   Bed Screw Adjustment: Bettschrauben-Einstellung
   Bed Screws: Bettschrauben
+  Bed Temp: Betttemperatur
   Bed is Level!: Bett ist nivelliert!
   Bed °C: Bett °C
   'Bed:': 'Bett:'
@@ -137,6 +145,7 @@ translations:
   Border Width: Rahmenbreite
   Border transparency (0 = invisible, 255 = solid): Rahmentransparenz (0 = unsichtbar,
     255 = solid)
+  Both: Beide
   Brightness: Helligkeit
   Browse: Durchsuchen
   Button taps and navigation sounds: Tastentöne und Navigationstöne
@@ -152,7 +161,7 @@ translations:
   Calibrate All: Alle kalibrieren
   Calibrate X: X kalibrieren
   Calibrate Y: Y kalibrieren
-  Calibrated: ''
+  Calibrated: Kalibriert
   Calibrating...: Kalibriere...
   Calibration & Tools: Kalibrierung & Werkzeuge
   Calibration Complete!: Kalibrierung abgeschlossen!
@@ -160,7 +169,7 @@ translations:
   Calibration saved but cannot apply on SDL display: Kalibrierung gespeichert, kann
     aber auf SDL-Display nicht angewendet werden
   Cancel: Abbrechen
-  Cancel Escalation: ''
+  Cancel Escalation: Eskalation abbrechen
   Cancel Print: Druck abbrechen
   Cancelled: Abgebrochen
   Chamber: Kammer
@@ -203,6 +212,7 @@ translations:
   Color: Farbe
   Color Mismatch: Farbabweichung
   Color Sensors: Farbsensoren
+  'Color:': 'Farbe:'
   Complete: Abgeschlossen
   Completed: Abgeschlossen
   Completed in 3 probes: Abgeschlossen in 3 Messungen
@@ -248,7 +258,11 @@ translations:
   Could not check webcam status.\nCheck printer connection.: Webcam-Status konnte
     nicht geprüft werden.\nDruckerverbindung prüfen.
   Crash report sent — thank you!: Absturzbericht gesendet — vielen Dank!
+  Create New Filament: Neues Filament erstellen
+  Create New Vendor: Neuen Hersteller erstellen
+  Create Spool: Spule erstellen
   Create video when print completes: Video erstellen wenn Druck abgeschlossen
+  Creating spool...: Spule wird erstellt...
   Current / Target: Aktuell / Ziel
   Current Configuration: Aktuelle Konfiguration
   Current Mesh: Aktuelles Netz
@@ -256,7 +270,6 @@ translations:
   Current Version: Aktuelle Version
   Current Z Position: Aktuelle Z-Position
   'Current name:': 'Aktueller Name:'
-  Currently Loaded: Aktuell geladen
   Currently printing: Aktueller Druck
   Custom: Benutzerdefiniert
   Custom...: Benutzerdefiniert...
@@ -266,6 +279,7 @@ translations:
   Damping (Kd): Dämpfung (Kd)
   Danger: Gefahr
   Dark Mode: Dunkelmodus
+  Database: Datenbank
   Day: Tag
   Default border thickness: Standard-Rahmendicke
   Define macros in your printer.cfg: Makros in Ihrer printer.cfg definieren
@@ -274,7 +288,8 @@ translations:
   Delete Profile?: Profil löschen?
   Delete Spool?: Spule löschen?
   'Delta:': 'Delta:'
-  Dev channel requires dev_url in config: ''
+  Deploy: Ausfahren
+  Dev channel requires dev_url in config: Dev-Kanal erfordert dev_url in der Konfiguration
   Device name is required: Gerätename ist erforderlich
   Disable: Deaktivieren
   Disable Motors?: Motoren deaktivieren?
@@ -290,8 +305,8 @@ translations:
   Don't Save: Nicht speichern
   Don't ask again: Nicht erneut fragen
   Done: Fertig
-  Download update?: ''
-  Download v{}?: ''
+  Download update?: 'Update herunterladen?'
+  Download v{}?: 'v{} herunterladen?'
   Downloading...: Wird heruntergeladen...
   Drop shadow strength (0 = disabled): Schattenstärke (0 = deaktiviert)
   Dryer: Trockner
@@ -338,8 +353,8 @@ translations:
   Enter password: Passwort eingeben
   Error: Fehler
   Error state: Fehlerzustand
-  Escalate to emergency stop if cancel doesn't respond: ''
-  Escalation Timeout: ''
+  Escalate to emergency stop if cancel doesn't respond: 'Auf Not-Stopp eskalieren, falls Abbruch nicht reagiert'
+  Escalation Timeout: Eskalations-Zeitüberschreitung
   Ethernet: Ethernet
   Events appear here after sessions and prints: Ereignisse erscheinen hier nach Sitzungen
     und Drucken
@@ -395,6 +410,7 @@ translations:
     Flusskompensation
   Filament runout and motion detection sensors: Filament-Auslauf- und Bewegungserkennungssensoren
   Filament tracking and inventory: Filamentverfolgung und Inventar
+  'Filament:': 'Filament:'
   File: Datei
   File Info: Dateiinfo
   Filename: Dateiname
@@ -491,6 +507,7 @@ translations:
   Intensity: Intensität
   Interactive 3D G-code during prints: Interaktiver 3D-G-Code während des Drucks
   Interactive probe calibration: Interaktive Sondenkalibrierung
+  Interactive probe offset adjustment: Interaktive Taster-Offset-Anpassung
   Issue description: Problembeschreibung
   Just now: Gerade eben
   Keep Printing: Weiter drucken
@@ -515,6 +532,7 @@ translations:
   LEDs: LEDs
   LEDs controlled by the light button: LEDs gesteuert durch die Lichttaste
   LOADED: GELADEN
+  LOT-2024-001: LOT-2024-001
   Label printing coming soon: Etikettendruck kommt bald
   Language: Sprache
   Last print cancelled: Letzter Druck abgebrochen
@@ -536,8 +554,10 @@ translations:
   Loading filament...: Filament wird geladen...
   Loading history...: Lade Verlauf...
   Loading spools...: Lade Spulen...
+  Loading vendors...: Hersteller werden geladen...
   Loading...: Lade...
   Locked during print: Während des Drucks gesperrt
+  Lot Number (optional): Chargennummer (optional)
   Lot/Batch Nr: Los-/Chargennr.
   M to toggle: M zum Umschalten
   'MAC:': 'MAC:'
@@ -609,12 +629,15 @@ translations:
   NEWLY DISCOVERED: NEU ENTDECKT
   NOTIFICATIONS: BENACHRICHTIGUNGEN
   Name: Name
-  Named actions in the LED control panel (long-press).: ''
+  Name (optional): Name (optional)
+  Named actions in the LED control panel (long-press).: Benannte Aktionen im LED-Bedienfeld (gedrückt halten).
+  Net Weight (g): Nettogewicht (g)
   Network Address: Netzwerkadresse
   Network Name: Netzwerkname
   Network Name (SSID): Netzwerkname (SSID)
   Network Settings: Netzwerkeinstellungen
   Network Test: Netzwerktest
+  New Spool: Neue Spule
   New Version Available: Neue Version verfügbar
   New profile name: Neuer Profilname
   Next: Weiter
@@ -633,6 +656,7 @@ translations:
   No Spools: Keine Spulen
   No effects available: Keine Effekte verfügbar
   No events queued: Keine Ereignisse in Warteschlange
+  No filaments found: Keine Filamente gefunden
   No file loaded: Keine Datei geladen
   No files available for printing: Keine Dateien zum Drucken verfügbar
   No macros available: Keine Makros verfügbar
@@ -650,22 +674,27 @@ translations:
   No profiles available: Keine Profile verfügbar
   No sensors detected: Keine Sensoren erkannt
   No spools available: Keine Spulen verfügbar
+  No timelapse videos found: Keine Zeitraffer-Videos gefunden
+  No vendors found: Keine Hersteller gefunden
   No webcam detected.\nA webcam is required for timelapse.: Keine Webcam erkannt.\nEine
     Webcam wird für Zeitraffer benötigt.
   Not Now: Nicht jetzt
-  Not calibrated: ''
+  Not calibrated: Nicht kalibriert
   Not connected: Nicht verbunden
   Not connected to printer: Nicht mit Drucker verbunden
   Not yet calibrated: Noch nicht kalibriert
   Notes: Notizen
+  Notes (optional): Notizen (optional)
   Notifications: Benachrichtigungen
   Notify when print finishes: Benachrichtigen wenn Druck beendet
   Nozzle: Düse
   Nozzle Clean: Düsenreinigung
   Nozzle Priming: Düsen-Priming
+  Nozzle Temp: Düsentemperatur
   Nozzle Temperature: Düsentemperatur
   Nozzle °C: Düse °C
   'Nozzle:': 'Düse:'
+  OD: OD
   OK: OK
   OS: OS
   'Off': Aus
@@ -679,6 +708,7 @@ translations:
   Optimizes temperature control for stable, consistent heating.: Optimiert die Temperaturregelung
     für stabiles, gleichmäßiges Heizen.
   Or Enter Manually: Oder manuell eingeben
+  Output Mode: Ausgabemodus
   PA: PA
   PETG: PETG
   PLA: PLA
@@ -761,8 +791,12 @@ translations:
   Prints Trend: Drucktrend
   'Private:': 'Privat:'
   Probe: Sonde
+  Probe Accuracy Test: Taster-Genauigkeitstest
+  Probe Management: Taster-Verwaltung
   Probe Sensor: Abtastsensor
   Probe Sensors: Abtastsensoren
+  Probe bed surface for compensation: Bettoberfläche für Kompensation abtasten
+  Probe controls, accuracy test, and settings: 'Taster-Steuerung, Genauigkeitstest und Einstellungen'
   Probing Bed Mesh: Bettnetz wird abgetastet
   Probing Bed Screws...: Bettschrauben werden abgetastet...
   Probing Bed...: Bett wird abgetastet...
@@ -787,10 +821,12 @@ translations:
     neu kalibrieren oder detaillierte Ergebnisse anzeigen.
   Record Timelapse: Zeitraffer aufnehmen
   Record timelapses of your prints: Zeitraffer Ihrer Drucke aufnehmen
+  Recorded Videos: Aufgezeichnete Videos
   Recording Mode: Aufnahmemodus
   Recover: Wiederherstellen
   Recovering AFC system...: AFC-Wiederherstellung...
   Recovery failed: Wiederherstellung fehlgeschlagen
+  Red: Rot
   Reduce ringing and ghosting artifacts: Klingel- und Geisterartefakte reduzieren
   Reduce vibration artifacts like ringing and ghosting: Vibrationsartefakte wie Klingeln
     und Geisterbilder reduzieren
@@ -799,9 +835,11 @@ translations:
     Position geht verloren.
   Remaining: Verbleibend
   Remaining (g): Verbleibend (g)
+  Remaining Weight (g): Restgewicht (g)
   Remove plugin from printer: Plugin vom Drucker entfernen
   Rename: Umbenennen
   Rename Mesh Profile: Netzprofil umbenennen
+  Render Now: Jetzt rendern
   Report saved to crash_report.txt: Bericht in crash_report.txt gespeichert
   Reprint: Erneut drucken
   Require confirmation before emergency stop: Bestätigung vor Notaus erforderlich
@@ -819,7 +857,7 @@ translations:
   Restart Required: Neustart erforderlich
   'Restart failed: not connected': 'Neustart fehlgeschlagen: nicht verbunden'
   Restart the display application: Anzeigeanwendung neu starten
-  Restarting HelixScreen...: ''
+  Restarting HelixScreen...: HelixScreen wird neu gestartet...
   Restarting Klipper...: Klipper wird neu gestartet...
   Restarting Moonraker...: Moonraker wird neu gestartet...
   Resume: Fortsetzen
@@ -871,6 +909,7 @@ translations:
   Scroll Speed: Scroll-Geschwindigkeit
   Search filename...: Dateiname suchen...
   Search spools...: Spulen suchen...
+  Search vendors...: Hersteller suchen...
   Searching...: Suche...
   Secondary: Sekundär
   Section Detail: Abschnittdetails
@@ -889,6 +928,7 @@ translations:
   Select macro for first button: Makro für erste Taste auswählen
   Select macro for second button: Makro für zweite Taste auswählen
   Selecting slot...: Slot wird ausgewählt...
+  Self-Test: Selbsttest
   Semantic Size Parameter Tests: Semantische Größenparameter-Tests
   Send Report: Bericht senden
   Send commands directly to printer: Befehle direkt an Drucker senden
@@ -896,7 +936,7 @@ translations:
     um HelixScreen zu verbessern.
   Sending...: Wird gesendet...
   Sensors: Sensoren
-  Separate on/off macros. HelixScreen tracks the state.: ''
+  Separate on/off macros. HelixScreen tracks the state.: Separate Ein-/Aus-Makros. HelixScreen verfolgt den Status.
   'Set ': 'Setzen '
   Set Active: Aktiv setzen
   Settings: Einstellungen
@@ -907,7 +947,7 @@ translations:
   'Shininess:': 'Glanz:'
   Show detailed print preparation status: Detaillierten Druckvorbereitungsstatus anzeigen
   Side: Seite
-  Single toggle macro. State is not tracked.: ''
+  Single toggle macro. State is not tracked.: Einzelnes Umschalt-Makro. Status wird nicht verfolgt.
   Size: Größe
   Skip: Überspringen
   Sleep While Printing: Ruhemodus beim Drucken
@@ -925,6 +965,7 @@ translations:
   Speed of retraction movement: Geschwindigkeit der Rückzugsbewegung
   Spool: Spule
   Spool Visualization (Pseudo-3D Canvas): Spulen-Visualisierung (Pseudo-3D-Canvas)
+  Spool Weight (g): Spulengewicht (g)
   Spool deleted: Spule gelöscht
   Spool saved: Spule gespeichert
   Spool wt (g): Spulengewicht (g)
@@ -942,11 +983,13 @@ translations:
   Status: Status
   Status icons: Status-Icons
   Step: Schritt
+  'Step ': 'Schritt '
   Step Progress Widget Test: Schrittfortschritts-Widget-Test
   Stop: Stoppen
   Stop Drying: Trocknen stoppen
   Stop Print?: Druck stoppen?
   Stops all motion. Requires firmware restart.: Stoppt alle Bewegung. Erfordert Firmware-Neustart.
+  Stow: Einfahren
   Success Rate: Erfolgsrate
   Success!: Erfolg!
   Surfaces inherit app background tokens for light and dark modes.: Oberflächen erben
@@ -976,6 +1019,7 @@ translations:
   Test Connection: Verbindung testen
   Test Network: Netzwerk testen
   Test Sound: Testton
+  Test probe repeatability: Taster-Wiederholbarkeit testen
   Thanks! Anonymous usage data helps improve HelixScreen.: Danke! Anonyme Nutzungsdaten
     helfen, HelixScreen zu verbessern.
   Thanks! TOTALLY anonymous usage data helps improve HelixScreen.: Danke! VÖLLIG anonyme
@@ -1024,7 +1068,7 @@ translations:
   This will restart Klipper.: Dies startet Klipper neu.
   Time: Zeit
   Time Format: Zeitformat
-  Time to wait before escalating to emergency stop: ''
+  Time to wait before escalating to emergency stop: Wartezeit vor Eskalation zum Not-Stopp
   Timelapse: Zeitraffer
   Timelapse Available: Zeitraffer verfügbar
   Timelapse Settings: Zeitraffer-Einstellungen
@@ -1080,6 +1124,8 @@ translations:
   ValgACE (ACE Pro): ValgACE (ACE Pro)
   Velocity and acceleration limits: Geschwindigkeits- und Beschleunigungslimits
   Vendor: Hersteller
+  Vendor Name: Herstellername
+  'Vendor:': 'Hersteller:'
   Verifying timelapse plugin...: Zeitraffer-Plugin wird überprüft...
   Verifying...: Wird überprüft...
   Version: Version
@@ -1103,6 +1149,7 @@ translations:
   Warming Bed...: Bett wird vorgeheizt...
   Warning: Warnung
   Webcam: Webcam
+  Website (optional): Webseite (optional)
   Week: Woche
   ? Weight data is synced from Spoolman to display remaining filament. Changes are
     also synced when prints start, pause, or complete.
@@ -1137,6 +1184,7 @@ translations:
   Z: Z
   Z Calibration: Z-Kalibrierung
   Z Movement: Z-Bewegung
+  Z Offset: Z Offset
   Z Range: Z-Bereich
   Z probes for bed leveling and mesh generation: Z-Sonden für Bettnivellierung und
     Netzerzeugung
@@ -1151,10 +1199,12 @@ translations:
   'Z:': 'Z:'
   'Z: 0.000': 'Z: 0.000'
   Zoom: Zoom
-  disable: ''
+  disable: deaktivieren
   disabled: deaktiviert
+  e.g. Jet Black: z.B. Tiefschwarz
+  e.g. Polymaker: z.B. Polymaker
   elapsed: vergangen
-  enable: ''
+  enable: aktivieren
   enabled: aktiviert
   est: est
   layers: Schichten
@@ -1163,4 +1213,4 @@ translations:
   started: gestartet
   used: verbraucht
   v{} is available. Tap to update.: v{} ist verfügbar. Tippen zum Aktualisieren.
-  '{} more taps to {} beta features': ''
+  '{} more taps to {} beta features': '{} weitere Male tippen, um Beta-Funktionen zu {}'
