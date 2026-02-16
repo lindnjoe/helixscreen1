@@ -143,6 +143,12 @@ class ControlsPanel : public PanelBase {
     // === V2 Dashboard Subjects (for XML bind_text/bind_value) ===
     //
 
+    // Nozzle label (dynamic: "Nozzle:" or "Nozzle N:" for multi-tool)
+    lv_subject_t nozzle_label_subject_{};
+    char nozzle_label_buf_[32] = {};
+    ObserverGuard active_tool_observer_;
+    void update_nozzle_label();
+
     // Nozzle temperature display
     lv_subject_t nozzle_temp_subject_{};
     char nozzle_temp_buf_[32] = {};

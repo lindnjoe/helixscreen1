@@ -181,6 +181,12 @@ class FilamentPanel : public PanelBase {
     lv_subject_t material_nozzle_temp_subject_;
     lv_subject_t material_bed_temp_subject_;
 
+    // Nozzle label (dynamic: "Nozzle" or "Nozzle N" for multi-tool)
+    lv_subject_t nozzle_label_subject_;
+    char nozzle_label_buf_[32] = {};
+    ObserverGuard active_tool_observer_;
+    void update_nozzle_label();
+
     // Left card temperature subjects (current and target for nozzle/bed)
     lv_subject_t nozzle_current_subject_;
     lv_subject_t nozzle_target_subject_;

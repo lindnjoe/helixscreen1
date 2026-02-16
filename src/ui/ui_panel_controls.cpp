@@ -35,6 +35,7 @@
 #include "subject_managed_panel.h"
 #include "temperature_sensor_manager.h"
 #include "theme_manager.h"
+#include "tool_state.h"
 #include "ui/ui_cleanup_helpers.h"
 #include "ui/ui_event_trampoline.h"
 #include "ui/ui_lazy_panel_helper.h"
@@ -106,6 +107,10 @@ void ControlsPanel::init_subjects() {
 
     // Initialize dashboard display subjects for card live data
     // Using UI_MANAGED_SUBJECT_* macros for automatic RAII cleanup via SubjectManager
+
+    // Nozzle label (dynamic for multi-tool)
+    UI_MANAGED_SUBJECT_STRING(nozzle_label_subject_, nozzle_label_buf_, "Nozzle",
+                              "controls_nozzle_label", subjects_);
 
     // Nozzle temperature display
     UI_MANAGED_SUBJECT_STRING(nozzle_temp_subject_, nozzle_temp_buf_, "—°C", "controls_nozzle_temp",
@@ -421,6 +426,12 @@ void ControlsPanel::register_observers() {
         printer_state_.get_fans_version_subject(), this,
         [](ControlsPanel* self, int /* version */) { self->populate_secondary_fans(); });
 
+    // Subscribe to active tool changes for dynamic nozzle label
+    active_tool_observer_ = observe_int_sync<ControlsPanel>(
+        helix::ToolState::instance().get_active_tool_subject(), this,
+        [](ControlsPanel* self, int /* tool_idx */) { self->update_nozzle_label(); });
+    update_nozzle_label(); // Set initial value
+
     // Subscribe to temperature sensor count changes
     temp_sensor_count_observer_ = observe_int_sync<ControlsPanel>(
         helix::sensors::TemperatureSensorManager::instance().get_sensor_count_subject(), this,
@@ -468,6 +479,24 @@ void ControlsPanel::register_observers() {
 // ============================================================================
 // DISPLAY UPDATE HELPERS
 // ============================================================================
+
+void ControlsPanel::update_nozzle_label() {
+    auto& ts = helix::ToolState::instance();
+    if (ts.tool_count() <= 1) {
+        std::snprintf(nozzle_label_buf_, sizeof(nozzle_label_buf_), "Nozzle");
+    } else {
+        const auto* tool = ts.active_tool();
+        if (tool) {
+            std::snprintf(nozzle_label_buf_, sizeof(nozzle_label_buf_), "Nozzle %s",
+                          tool->name.c_str());
+        } else {
+            std::snprintf(nozzle_label_buf_, sizeof(nozzle_label_buf_), "Nozzle");
+        }
+    }
+    if (subjects_initialized_) {
+        lv_subject_copy_string(&nozzle_label_subject_, nozzle_label_buf_);
+    }
+}
 
 void ControlsPanel::update_nozzle_temp_display() {
     auto result = helix::fmt::heater_display(cached_extruder_temp_, cached_extruder_target_);

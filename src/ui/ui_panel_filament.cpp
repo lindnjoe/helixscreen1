@@ -28,6 +28,7 @@
 #include "standard_macros.h"
 #include "static_panel_registry.h"
 #include "theme_manager.h"
+#include "tool_state.h"
 
 #include <spdlog/fmt/fmt.h>
 #include <spdlog/spdlog.h>
@@ -44,6 +45,7 @@ static constexpr int PRESET_COUNT = 4;
 static constexpr const char* SAFETY_WARNING_FMT = "Heat to at least %d°C to load/unload";
 
 using helix::ui::observe_int_async;
+using helix::ui::observe_int_sync;
 using helix::ui::temperature::centi_to_degrees;
 using helix::ui::temperature::format_target_or_off;
 using helix::ui::temperature::get_heating_state_color;
@@ -106,6 +108,12 @@ FilamentPanel::FilamentPanel(PrinterState& printer_state, MoonrakerAPI* api)
         [](FilamentPanel* self, int raw) { self->bed_current_ = centi_to_degrees(raw); },
         [](FilamentPanel* self, int raw) { self->bed_target_ = centi_to_degrees(raw); },
         [](FilamentPanel* self) { self->update_all_temps(); });
+
+    // Subscribe to active tool changes for dynamic nozzle label
+    active_tool_observer_ = observe_int_sync<FilamentPanel>(
+        helix::ToolState::instance().get_active_tool_subject(), this,
+        [](FilamentPanel* self, int /* tool_idx */) { self->update_nozzle_label(); });
+    update_nozzle_label();
 }
 
 FilamentPanel::~FilamentPanel() {
@@ -155,6 +163,10 @@ void FilamentPanel::init_subjects() {
                                   material_nozzle_buf_, "filament_material_nozzle_temp", subjects_);
         UI_MANAGED_SUBJECT_STRING(material_bed_temp_subject_, material_bed_buf_, material_bed_buf_,
                                   "filament_material_bed_temp", subjects_);
+
+        // Nozzle label (dynamic for multi-tool)
+        UI_MANAGED_SUBJECT_STRING(nozzle_label_subject_, nozzle_label_buf_, "Nozzle",
+                                  "filament_nozzle_label", subjects_);
 
         // Left card temperature subjects (current and target for nozzle/bed)
         UI_MANAGED_SUBJECT_STRING(nozzle_current_subject_, nozzle_current_buf_, nozzle_current_buf_,
@@ -379,6 +391,24 @@ void FilamentPanel::check_and_auto_select_preset() {
             spdlog::debug("[{}] No matching preset for nozzle={}°C, bed={}°C", get_name(),
                           nozzle_target_, bed_target_);
         }
+    }
+}
+
+void FilamentPanel::update_nozzle_label() {
+    auto& ts = helix::ToolState::instance();
+    if (ts.tool_count() <= 1) {
+        std::snprintf(nozzle_label_buf_, sizeof(nozzle_label_buf_), "Nozzle");
+    } else {
+        const auto* tool = ts.active_tool();
+        if (tool) {
+            std::snprintf(nozzle_label_buf_, sizeof(nozzle_label_buf_), "Nozzle %s",
+                          tool->name.c_str());
+        } else {
+            std::snprintf(nozzle_label_buf_, sizeof(nozzle_label_buf_), "Nozzle");
+        }
+    }
+    if (subjects_initialized_) {
+        lv_subject_copy_string(&nozzle_label_subject_, nozzle_label_buf_);
     }
 }
 
