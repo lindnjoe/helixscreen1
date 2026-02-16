@@ -867,7 +867,7 @@ void AmsState::sync_current_loaded_from_backend() {
     if (!backend) {
         // No backend - show empty state
         lv_subject_copy_string(&current_material_text_, "---");
-        lv_subject_copy_string(&current_slot_text_, "None");
+        lv_subject_copy_string(&current_slot_text_, "Currently Loaded");
         lv_subject_copy_string(&current_weight_text_, "");
         lv_subject_set_int(&current_has_weight_, 0);
         lv_subject_set_int(&current_color_, 0x505050);
@@ -880,7 +880,7 @@ void AmsState::sync_current_loaded_from_backend() {
     // Check for bypass mode (slot_index == -2)
     if (slot_index == -2 && backend->is_bypass_active()) {
         lv_subject_copy_string(&current_material_text_, "External");
-        lv_subject_copy_string(&current_slot_text_, "Bypass");
+        lv_subject_copy_string(&current_slot_text_, "Current: Bypass");
         lv_subject_copy_string(&current_weight_text_, "");
         lv_subject_set_int(&current_has_weight_, 0);
         lv_subject_set_int(&current_color_, 0x888888);
@@ -937,10 +937,10 @@ void AmsState::sync_current_loaded_from_backend() {
                 }
             }
             if (unit_name && sys.units.size() > 1) {
-                snprintf(current_slot_text_buf_, sizeof(current_slot_text_buf_), "%s · Slot %d",
-                         unit_name, local_slot);
+                snprintf(current_slot_text_buf_, sizeof(current_slot_text_buf_),
+                         "Current: %s · Slot %d", unit_name, local_slot);
             } else {
-                snprintf(current_slot_text_buf_, sizeof(current_slot_text_buf_), "Slot %d",
+                snprintf(current_slot_text_buf_, sizeof(current_slot_text_buf_), "Current: Slot %d",
                          local_slot);
             }
             lv_subject_copy_string(&current_slot_text_, current_slot_text_buf_);
@@ -959,7 +959,7 @@ void AmsState::sync_current_loaded_from_backend() {
     } else {
         // No filament loaded - show empty state
         lv_subject_copy_string(&current_material_text_, "---");
-        lv_subject_copy_string(&current_slot_text_, "None");
+        lv_subject_copy_string(&current_slot_text_, "Currently Loaded");
         lv_subject_copy_string(&current_weight_text_, "");
         lv_subject_set_int(&current_has_weight_, 0);
         lv_subject_set_int(&current_color_, 0x505050);

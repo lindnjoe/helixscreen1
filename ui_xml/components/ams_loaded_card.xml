@@ -10,10 +10,10 @@
 
     Binds to AmsState subjects:
     - ams_current_material_text: Material name (e.g., "Red PLA")
-    - ams_current_slot_text: Slot location (e.g., "Box Turtle 1 · Slot 1")
     - ams_current_weight_text: Remaining weight (e.g., "1000g")
     - ams_current_has_weight: Show/hide weight line (0 = hidden)
 
+    Slot info is shown in the section header above (bound to ams_current_slot_text).
     Color swatch updated by C++ via lv_obj_find_by_name(card, "loaded_swatch").
   -->
   <view name="ams_loaded_card" extends="ui_card"
@@ -34,8 +34,6 @@
       <!-- Material name (wraps for long names) -->
       <text_body name="loaded_material" width="100%"
                  bind_text="ams_current_material_text" long_mode="wrap"/>
-      <!-- Slot location -->
-      <text_small name="loaded_slot" bind_text="ams_current_slot_text"/>
       <!-- Weight (hidden when not available) -->
       <text_small name="loaded_weight" bind_text="ams_current_weight_text">
         <bind_flag_if_eq subject="ams_current_has_weight" flag="hidden" ref_value="0"/>

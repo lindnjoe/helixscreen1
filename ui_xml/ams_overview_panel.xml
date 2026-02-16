@@ -67,8 +67,8 @@
       <lv_obj name="right_column"
               height="100%" width="240" style_pad_all="#space_sm" style_pad_gap="#space_sm" flex_flow="column"
               style_flex_main_place="start" style_flex_cross_place="start" scrollable="false">
-        <!-- Currently Loaded Section Header -->
-        <text_small width="100%" text="Currently Loaded" translation_tag="Currently Loaded"/>
+        <!-- Currently Loaded Section Header (e.g., "Current: Slot 1") -->
+        <text_small width="100%" bind_text="ams_current_slot_text"/>
         <!-- Shared loaded card component -->
         <ams_loaded_card name="current_loaded_card"/>
         <!-- Spacer to push buttons to bottom -->

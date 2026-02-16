@@ -125,6 +125,10 @@ void ams_detail_update_tray(AmsDetailWidgets& w) {
     lv_obj_set_height(w.slot_tray, tray_height);
     lv_obj_align(w.slot_tray, LV_ALIGN_BOTTOM_MID, 0, 0);
 
+    // Move tray behind slot_grid so slot badges and active glow render on top.
+    // The tray peeks out below/beside spool bottoms for the "holder" visual.
+    lv_obj_move_to_index(w.slot_tray, 0);
+
     spdlog::debug("[AmsDetail] Tray sized to {}px (1/3 of {}px grid)", tray_height, grid_height);
 }
 
