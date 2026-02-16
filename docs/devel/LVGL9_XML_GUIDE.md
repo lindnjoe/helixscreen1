@@ -229,9 +229,9 @@ LVGL XML uses prefix sigils to distinguish different value types:
 |-------|---------|---------|---------|
 | `#` | Design token / const | `style_pad_all="#space_md"` | Spacing, colors, sizes |
 | `$` | Component prop | `text="$primary_text"` | Inside component templates |
-| `@` | Subject binding | `bind_text="@my_subject"` | Reactive data on `ui_button` |
+| `@` | Subject binding | `text="@my_subject"` | Reactive data on `ui_button` |
 
-The `@` prefix is used on `ui_button`'s `bind_text` attribute to explicitly mark a value as a subject reference (reactive) vs. a literal string (static). Without `@`, the value is always treated as literal text. See [ui_button](#ui_button) for details.
+The `@` prefix on `ui_button`'s `text` attribute marks a value as a subject reference (reactive) vs. a literal string (static). Alternatively, `bind_text` always treats its value as a subject name (no `@` needed). See [ui_button](#ui_button) for details.
 
 #### Simple Attribute Bindings
 
@@ -607,28 +607,22 @@ Semantic button with variant-based styling and auto-contrast text.
 
 **Built-in defaults:** Responsive `button_height` (48/52/72px), `border_radius`, auto-contrast text color
 
-**Reactive text with `bind_text`:**
+**Reactive text with subject binding:**
 
-`ui_button` supports a `bind_text` attribute that can be either a literal string or a subject reference. Use the `@` prefix to indicate a subject binding:
+`ui_button` supports two ways to bind text to a subject:
 
 ```xml
 <!-- Literal text (static) -->
-<ui_button bind_text="Save"/>
+<ui_button text="Save"/>
 
-<!-- Subject binding (reactive — updates when subject changes) -->
-<ui_button bind_text="@my_button_text_subject"/>
+<!-- Subject binding via text= with '@' prefix -->
+<ui_button text="@my_button_text_subject"/>
+
+<!-- Subject binding via bind_text (LVGL standard — always a subject, no '@' needed) -->
+<ui_button bind_text="my_button_text_subject"/>
 ```
 
-The `@` prefix is required to distinguish subject references from literal strings. Without `@`, the value is always treated as literal text. This convention works through component props:
-
-```xml
-<!-- Parent passes subject reference as prop -->
-<modal_button_row primary_text="@save_button_subject" .../>
-
-<!-- modal_button_row.xml template uses $prop substitution -->
-<ui_button bind_text="$primary_text"/>
-<!-- Resolves to bind_text="@save_button_subject" → reactive binding -->
-```
+Both `text="@subject"` and `bind_text="subject"` produce identical reactive bindings. Use whichever reads better in context. `bind_text` is the LVGL-standard attribute and always expects a subject name. `text` with `@` prefix is syntactic sugar for the same thing.
 
 When bound to a subject, the button label updates automatically, and a deferred invalidation ensures the button background repaints correctly (avoids partial-redraw artifacts).
 
