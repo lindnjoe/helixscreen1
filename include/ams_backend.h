@@ -84,6 +84,15 @@ class AmsBackend {
     virtual void stop() = 0;
 
     /**
+     * @brief Release subscriptions without unsubscribing
+     *
+     * Use during shutdown when the MoonrakerClient may already be destroyed.
+     * This abandons the subscription rather than trying to call into the client.
+     * Backends that hold SubscriptionGuards should call release() on them.
+     */
+    virtual void release_subscriptions() {}
+
+    /**
      * @brief Check if backend is currently running/initialized
      * @return true if backend is active and ready for operations
      */

@@ -156,6 +156,10 @@ void AmsBackendAfc::stop() {
     spdlog::info("[AMS AFC] Backend stopped");
 }
 
+void AmsBackendAfc::release_subscriptions() {
+    subscription_.release();
+}
+
 bool AmsBackendAfc::is_running() const {
     return running_;
 }

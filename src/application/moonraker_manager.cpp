@@ -94,11 +94,13 @@ void MoonrakerManager::shutdown() {
     // Clean up macro analysis manager
     m_macro_analysis.reset();
 
-    // Release observer guards
-    m_print_start_observer.reset();
-    m_print_start_phase_observer.reset();
-    m_print_layer_fallback_observer.reset();
-    m_print_progress_fallback_observer.reset();
+    // Release observer guards without calling lv_observer_remove().
+    // During shutdown, subjects may already be deinitialized (which frees observers).
+    // Using release() avoids double-free of already-removed observers.
+    m_print_start_observer.release();
+    m_print_start_phase_observer.release();
+    m_print_layer_fallback_observer.release();
+    m_print_progress_fallback_observer.release();
 
     // Clear API before client (API uses client)
     m_api.reset();

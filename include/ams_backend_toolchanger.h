@@ -79,6 +79,7 @@ class AmsBackendToolChanger : public AmsBackend {
     // Lifecycle
     AmsError start() override;
     void stop() override;
+    void release_subscriptions() override;
     [[nodiscard]] bool is_running() const override;
 
     // Events

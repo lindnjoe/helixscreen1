@@ -127,6 +127,10 @@ void AmsBackendToolChanger::stop() {
     spdlog::info("[AMS ToolChanger] Backend stopped");
 }
 
+void AmsBackendToolChanger::release_subscriptions() {
+    subscription_.release();
+}
+
 bool AmsBackendToolChanger::is_running() const {
     return running_;
 }

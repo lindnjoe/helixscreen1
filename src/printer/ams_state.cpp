@@ -138,10 +138,14 @@ AmsState::~AmsState() {
         spoolman_poll_timer_ = nullptr;
     }
 
-    // Note: During static destruction, the MoonrakerClient may already be destroyed.
-    // We just release the backends without calling stop() to avoid accessing
-    // potentially destroyed dependencies. The RAII SubscriptionGuard in the backend
-    // will handle cleanup safely.
+    // During static destruction, the MoonrakerClient may already be destroyed.
+    // Release subscriptions without unsubscribing to avoid calling into dead objects.
+    // SubscriptionGuard::release() abandons the subscription — no mutex access needed.
+    for (auto& b : backends_) {
+        if (b) {
+            b->release_subscriptions();
+        }
+    }
     backends_.clear();
 }
 

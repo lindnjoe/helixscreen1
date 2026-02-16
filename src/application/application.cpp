@@ -2188,7 +2188,11 @@ void Application::shutdown() {
     helix::ActionPromptManager::set_instance(nullptr);
     m_action_prompt_manager.reset();
 
-    m_moonraker.reset();
+    // Stop AMS backend subscriptions BEFORE destroying MoonrakerClient.
+    // Backends hold SubscriptionGuards with raw MoonrakerClient* pointers —
+    // they must unsubscribe while the client's mutex is still alive.
+    AmsState::instance().clear_backends();
+
     m_panels.reset();
     m_subjects.reset();
 
@@ -2219,6 +2223,11 @@ void Application::shutdown() {
     // After this, widgets have no observer callbacks, so lv_deinit() deletes them
     // cleanly without firing stale unsubscribe callbacks on corrupted linked lists.
     StaticSubjectRegistry::instance().deinit_all();
+
+    // Destroy MoonrakerManager (releases its ObserverGuards and client).
+    // Safe here: LVGL subjects are deinitialized but lv_deinit() hasn't run yet,
+    // so lv_observer_remove() can still operate on the observer linked lists.
+    m_moonraker.reset();
 
     // Shutdown display (calls lv_deinit). All observer callbacks were already
     // removed above, so widget deletion is clean — no observer linked list access.

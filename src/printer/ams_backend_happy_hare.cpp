@@ -109,6 +109,10 @@ void AmsBackendHappyHare::stop() {
     spdlog::info("[AMS HappyHare] Backend stopped");
 }
 
+void AmsBackendHappyHare::release_subscriptions() {
+    subscription_.release();
+}
+
 bool AmsBackendHappyHare::is_running() const {
     return running_;
 }
