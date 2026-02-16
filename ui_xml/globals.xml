@@ -77,6 +77,14 @@
     <string name="icon_size_large" value="xl"/>
 
     <!-- ===================================================================== -->
+    <!-- Responsive Badge Sizes (badge_size)                                   -->
+    <!-- ===================================================================== -->
+    <!-- Small round badge for tool numbers, counts, etc. overlaid on icons -->
+    <px name="badge_size_small" value="16"/>
+    <px name="badge_size_medium" value="18"/>
+    <px name="badge_size_large" value="20"/>
+
+    <!-- ===================================================================== -->
     <!-- Responsive Spinner Sizes (spinner_*)                                  -->
     <!-- ===================================================================== -->
     <!-- Runtime selects appropriate variant via ui_theme_register_responsive_spacing()
