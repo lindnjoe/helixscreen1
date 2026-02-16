@@ -9,8 +9,10 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <set>
 #include <sstream>
+#include <thread>
 
 namespace helix::system {
 
@@ -814,6 +816,125 @@ void KlipperConfigEditor::cleanup_backups(MoonrakerAPI& api, SuccessCallback on_
             if (on_complete)
                 on_complete();
         });
+}
+
+void KlipperConfigEditor::safe_edit_value(MoonrakerAPI& api, const std::string& section,
+                                          const std::string& key, const std::string& new_value,
+                                          SuccessCallback on_success, ErrorCallback on_error,
+                                          int restart_timeout_ms) {
+    spdlog::info("[ConfigEditor] Starting safe edit: [{}] {} = {}", section, key, new_value);
+
+    // Step 1: Apply the edit (backup + write)
+    edit_value(
+        api, section, key, new_value,
+        [this, &api, on_success, on_error, restart_timeout_ms]() {
+            // Step 2: Edit succeeded, send FIRMWARE_RESTART
+            spdlog::info("[ConfigEditor] Edit written, sending FIRMWARE_RESTART");
+
+            api.restart_firmware(
+                [this, &api, on_success, on_error, restart_timeout_ms]() {
+                    // Step 3: FIRMWARE_RESTART command accepted, monitor reconnection.
+                    // Spawn a background thread to poll connection state.
+                    // Capture callbacks and timeout by value for thread safety.
+                    auto poll_thread = std::thread([this, &api, on_success, on_error,
+                                                    restart_timeout_ms]() {
+                        const auto poll_interval = std::chrono::milliseconds(500);
+                        const auto timeout = std::chrono::milliseconds(restart_timeout_ms);
+                        const auto start = std::chrono::steady_clock::now();
+
+                        // Phase 1: Wait for disconnect (Klipper going down).
+                        // It may already be disconnected by the time we check.
+                        bool saw_disconnect = false;
+                        while (std::chrono::steady_clock::now() - start < timeout) {
+                            if (!api.is_connected()) {
+                                saw_disconnect = true;
+                                spdlog::debug("[ConfigEditor] Klipper disconnected after "
+                                              "FIRMWARE_RESTART");
+                                break;
+                            }
+                            std::this_thread::sleep_for(poll_interval);
+                        }
+
+                        if (!saw_disconnect) {
+                            // Klipper never disconnected. It might have restarted so fast
+                            // we missed it, or the restart failed silently.
+                            // Treat as success since it's still connected.
+                            spdlog::info("[ConfigEditor] Klipper stayed connected after "
+                                         "FIRMWARE_RESTART (fast restart)");
+                            cleanup_backups(api, [on_success]() {
+                                spdlog::info("[ConfigEditor] Safe edit complete (fast restart)");
+                                if (on_success)
+                                    on_success();
+                            });
+                            return;
+                        }
+
+                        // Phase 2: Wait for reconnect within remaining timeout.
+                        while (std::chrono::steady_clock::now() - start < timeout) {
+                            if (api.is_connected()) {
+                                auto elapsed =
+                                    std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::steady_clock::now() - start);
+                                spdlog::info("[ConfigEditor] Klipper reconnected after {}ms",
+                                             elapsed.count());
+                                cleanup_backups(api, [on_success]() {
+                                    spdlog::info("[ConfigEditor] Safe edit complete, backups "
+                                                 "cleaned up");
+                                    if (on_success)
+                                        on_success();
+                                });
+                                return;
+                            }
+                            std::this_thread::sleep_for(poll_interval);
+                        }
+
+                        // Timeout: Klipper did not come back. Revert the edit.
+                        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                            std::chrono::steady_clock::now() - start);
+                        spdlog::error("[ConfigEditor] Klipper failed to reconnect within "
+                                      "{}ms, reverting config",
+                                      elapsed.count());
+
+                        restore_backups(
+                            api,
+                            [&api, on_error]() {
+                                // Backups restored, try another FIRMWARE_RESTART to recover
+                                spdlog::info("[ConfigEditor] Backups restored, sending "
+                                             "recovery FIRMWARE_RESTART");
+                                api.restart_firmware(
+                                    [on_error]() {
+                                        if (on_error)
+                                            on_error("Config change caused Klipper to fail. "
+                                                     "Original config restored.");
+                                    },
+                                    [on_error](const MoonrakerError& err) {
+                                        spdlog::error("[ConfigEditor] Recovery "
+                                                      "FIRMWARE_RESTART failed: {}",
+                                                      err.message);
+                                        if (on_error)
+                                            on_error("Config change caused Klipper to fail. "
+                                                     "Backups restored but restart failed: " +
+                                                     err.message);
+                                    });
+                            },
+                            [on_error](const std::string& restore_err) {
+                                spdlog::error("[ConfigEditor] Failed to restore backups: {}",
+                                              restore_err);
+                                if (on_error)
+                                    on_error("Config change caused Klipper to fail AND backup "
+                                             "restore failed: " +
+                                             restore_err);
+                            });
+                    });
+                    poll_thread.detach();
+                },
+                [on_error](const MoonrakerError& err) {
+                    spdlog::error("[ConfigEditor] FIRMWARE_RESTART failed: {}", err.message);
+                    if (on_error)
+                        on_error("Failed to send FIRMWARE_RESTART: " + err.message);
+                });
+        },
+        on_error);
 }
 
 } // namespace helix::system

@@ -114,6 +114,20 @@ class KlipperConfigEditor {
     /// Get cached file content by path
     std::optional<std::string> get_cached_file(const std::string& path) const;
 
+    /// Perform a safe config edit: edit value, restart firmware, monitor health.
+    /// If Klipper fails to restart within the timeout, auto-restore backups
+    /// and restart again.
+    /// @param api Moonraker API instance
+    /// @param section Config section to edit
+    /// @param key Key to edit
+    /// @param new_value New value
+    /// @param on_success Called when edit is confirmed working
+    /// @param on_error Called with error message if edit failed and was reverted
+    /// @param restart_timeout_ms How long to wait for Klipper to come back (default 15000ms)
+    void safe_edit_value(MoonrakerAPI& api, const std::string& section, const std::string& key,
+                         const std::string& new_value, SuccessCallback on_success,
+                         ErrorCallback on_error, int restart_timeout_ms = 15000);
+
   private:
     /// Cached section map from last load_config_files()
     std::map<std::string, SectionLocation> section_map_;
