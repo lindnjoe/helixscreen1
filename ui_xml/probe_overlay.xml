@@ -14,8 +14,8 @@
       <!-- ============================================================ -->
       <!-- PROBE IDENTITY CARD -->
       <!-- ============================================================ -->
-      <lv_obj width="100%" height="content"
-              style_bg_color="#screen_bg" style_bg_opa="255" style_radius="#border_radius"
+      <lv_obj width="100%"
+              height="content" style_bg_color="#screen_bg" style_bg_opa="255" style_radius="#border_radius"
               style_pad_all="#space_lg" flex_flow="column" style_pad_gap="#space_sm" scrollable="false">
 
         <!-- Probe name and type -->
@@ -23,8 +23,8 @@
         <text_small bind_text="probe_type_label" style_text_color="#text_muted"/>
 
         <!-- Status row: indicator + Z offset -->
-        <lv_obj width="100%" height="content"
-                style_pad_all="0" style_pad_top="#space_sm" flex_flow="row"
+        <lv_obj width="100%"
+                height="content" style_pad_all="0" style_pad_top="#space_sm" flex_flow="row"
                 style_flex_cross_place="center" style_pad_gap="#space_lg" scrollable="false">
           <text_body text="Status" translation_tag="Status"/>
           <probe_indicator/>
@@ -36,8 +36,7 @@
       <!-- ============================================================ -->
       <!-- TYPE-SPECIFIC PANEL (swapped on activation) -->
       <!-- ============================================================ -->
-      <lv_obj name="probe_type_panel" width="100%" height="content"
-              style_pad_all="0" scrollable="false"/>
+      <lv_obj name="probe_type_panel" width="100%" height="content" style_pad_all="0" scrollable="false"/>
 
       <!-- ============================================================ -->
       <!-- UNIVERSAL ACTIONS -->
@@ -45,15 +44,14 @@
 
       <!-- Probe Accuracy Test -->
       <setting_action_row name="btn_probe_accuracy"
-                          label="Probe Accuracy Test" label_tag="Probe Accuracy Test"
-                          icon="target"
+                          label="Probe Accuracy Test" label_tag="Probe Accuracy Test" icon="target"
                           description="Test probe repeatability" description_tag="Test probe repeatability">
         <event_cb trigger="clicked" callback="on_probe_accuracy"/>
       </setting_action_row>
 
       <!-- Accuracy result (hidden by default) -->
-      <lv_obj width="100%" height="content"
-              style_bg_color="#screen_bg" style_bg_opa="255" style_radius="#border_radius"
+      <lv_obj width="100%"
+              height="content" style_bg_color="#screen_bg" style_bg_opa="255" style_radius="#border_radius"
               style_pad_all="#space_md" scrollable="false">
         <bind_flag_if_eq subject="probe_accuracy_visible" flag="hidden" ref_value="0"/>
         <text_small bind_text="probe_accuracy_result" style_text_color="#text_muted"/>
@@ -61,17 +59,17 @@
 
       <!-- Z-Offset Calibration -->
       <setting_action_row name="btn_zoffset"
-                          label="Z-Offset Calibration" label_tag="Z-Offset Calibration"
-                          icon="z_closer"
-                          description="Interactive probe offset adjustment" description_tag="Interactive probe offset adjustment">
+                          label="Z-Offset Calibration" label_tag="Z-Offset Calibration" icon="z_closer"
+                          description="Interactive probe offset adjustment"
+                          description_tag="Interactive probe offset adjustment">
         <event_cb trigger="clicked" callback="on_zoffset_cal"/>
       </setting_action_row>
 
       <!-- Bed Mesh -->
       <setting_action_row name="btn_bedmesh"
-                          label="Bed Mesh" label_tag="Bed Mesh"
-                          icon="grid_large"
-                          description="Probe bed surface for compensation" description_tag="Probe bed surface for compensation">
+                          label="Bed Mesh" label_tag="Bed Mesh" icon="grid_large"
+                          description="Probe bed surface for compensation"
+                          description_tag="Probe bed surface for compensation">
         <event_cb trigger="clicked" callback="on_bed_mesh"/>
       </setting_action_row>
 
