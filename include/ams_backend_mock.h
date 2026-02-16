@@ -140,6 +140,20 @@ class AmsBackendMock : public AmsBackend {
     void force_slot_status(int slot_index, SlotStatus status);
 
     /**
+     * @brief Set per-slot error state (for testing error visualization)
+     * @param slot_index Slot to modify
+     * @param error Error to set, or nullopt to clear
+     */
+    void set_slot_error(int slot_index, std::optional<SlotError> error);
+
+    /**
+     * @brief Set per-slot buffer health (for testing buffer health visualization)
+     * @param slot_index Slot to modify
+     * @param health Buffer health to set, or nullopt to clear
+     */
+    void set_slot_buffer_health(int slot_index, std::optional<BufferHealth> health);
+
+    /**
      * @brief Set whether this mock simulates a hardware bypass sensor
      * @param has_sensor true=hardware sensor (auto-detect), false=virtual (manual toggle)
      *

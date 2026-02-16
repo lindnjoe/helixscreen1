@@ -739,6 +739,28 @@ void AmsBackendMock::force_slot_status(int slot_index, SlotStatus status) {
     }
 }
 
+void AmsBackendMock::set_slot_error(int slot_index, std::optional<SlotError> error) {
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    auto* slot = system_info_.get_slot_global(slot_index);
+    if (slot) {
+        slot->error = std::move(error);
+        spdlog::debug("[AmsBackendMock] Slot {} error {}", slot_index,
+                      slot->error.has_value() ? slot->error->message : "cleared");
+    }
+}
+
+void AmsBackendMock::set_slot_buffer_health(int slot_index, std::optional<BufferHealth> health) {
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    auto* slot = system_info_.get_slot_global(slot_index);
+    if (slot) {
+        slot->buffer_health = std::move(health);
+        spdlog::debug("[AmsBackendMock] Slot {} buffer health {}", slot_index,
+                      slot->buffer_health.has_value() ? "set" : "cleared");
+    }
+}
+
 void AmsBackendMock::set_has_hardware_bypass_sensor(bool has_sensor) {
     std::lock_guard<std::mutex> lock(mutex_);
     system_info_.has_hardware_bypass_sensor = has_sensor;
@@ -1098,18 +1120,40 @@ void AmsBackendMock::set_afc_mode(bool enabled) {
             unit.slots.push_back(slot);
         }
 
-        // Lane 4: empty
+        // Lane 4: error state (for testing error visualization)
         {
             SlotInfo slot;
             slot.slot_index = 3;
             slot.global_index = 3;
-            slot.material = "";
-            slot.color_name = "";
-            slot.status = SlotStatus::EMPTY;
+            slot.material = "TPU";
+            slot.color_rgb = 0xFF6600;
+            slot.color_name = "Orange";
+            slot.status = SlotStatus::AVAILABLE;
             slot.mapped_tool = 3;
-            slot.total_weight_g = 0.0f;
-            slot.remaining_weight_g = 0.0f;
+            slot.total_weight_g = 1000.0f;
+            slot.remaining_weight_g = 200.0f;
+            SlotError err;
+            err.message = "Lane 4 load failed";
+            err.severity = SlotError::ERROR;
+            slot.error = err;
             unit.slots.push_back(slot);
+        }
+
+        // Pre-populate buffer health for all lanes (AFC has TurtleNeck buffers)
+        for (auto& slot : unit.slots) {
+            BufferHealth health;
+            health.fault_detection_enabled = true;
+            health.state = "Advancing";
+            // Lane 3 (index 2): approaching fault (warning visualization)
+            if (slot.slot_index == 2) {
+                health.distance_to_fault = 12.5f;
+                // Also add a WARNING-level error for the approaching fault
+                SlotError warn;
+                warn.message = "Buffer fault approaching (12.5mm)";
+                warn.severity = SlotError::WARNING;
+                slot.error = warn;
+            }
+            slot.buffer_health = health;
         }
 
         system_info_.units.push_back(unit);
