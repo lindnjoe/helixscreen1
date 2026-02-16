@@ -559,6 +559,22 @@ void HardwareValidator::validate_configured_hardware(Config* config,
 void HardwareValidator::validate_new_hardware(Config* config,
                                               const helix::PrinterDiscovery& hardware,
                                               HardwareValidationResult& result) {
+    // Load hardware/expected list — items the user has already acknowledged via Save
+    std::vector<std::string> expected_hardware;
+    if (config) {
+        try {
+            json& expected_list = config->get_json(config->df() + "hardware/expected");
+            if (expected_list.is_array()) {
+                for (const auto& item : expected_list) {
+                    if (item.is_string()) {
+                        expected_hardware.push_back(item.get<std::string>());
+                    }
+                }
+            }
+        } catch (...) {
+        }
+    }
+
     const auto& leds = hardware.leds();
 
     // Check for LEDs not in config
@@ -600,7 +616,7 @@ void HardwareValidator::validate_new_hardware(Config* config,
             suggested = leds[0];
         }
 
-        if (!suggested.empty()) {
+        if (!suggested.empty() && !contains_name(expected_hardware, suggested)) {
             result.newly_discovered.push_back(
                 HardwareIssue::info(suggested, HardwareType::LED,
                                     "LED strip available. Add to config for lighting control?"));
@@ -633,7 +649,7 @@ void HardwareValidator::validate_new_hardware(Config* config,
             spdlog::debug("[HardwareValidator] Skipping AMS sensor: {}", sensor);
             continue;
         }
-        if (!contains_name(configured_names, sensor)) {
+        if (!contains_name(configured_names, sensor) && !contains_name(expected_hardware, sensor)) {
             result.newly_discovered.push_back(HardwareIssue::info(
                 sensor, HardwareType::FILAMENT_SENSOR,
                 "Filament sensor available. Add to config for runout detection?"));
