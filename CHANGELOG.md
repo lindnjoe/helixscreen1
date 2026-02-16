@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Noisy WLED and REST 404 logs downgraded from warn to debug
 - AMS slot info updates logged on every poll instead of only on change
 - Installer using bare sudo instead of file_sudo for release swap/restore
+- AMS edit modal Spoolman callbacks not marshalled to main thread
 
 ### Changed
 - Spoolman vendor/filament creation moved to modal dialogs
