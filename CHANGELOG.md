@@ -5,6 +5,39 @@ All notable changes to HelixScreen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.1] - 2026-02-16
+
+### Added
+- Debug bundle upload for streamlined support diagnostics
+- Unified active extruder temperature tracking across multi-tool setups
+- Dynamic nozzle label showing tool number for multi-tool printers
+- Configurable size property for filament sensor indicator
+- PrusaWire added to printer database
+- Email notifications for debug bundle uploads (crash worker)
+- 69 new translations across 8 languages
+
+### Fixed
+- Use-after-free in deferred observer callbacks (fixes #83)
+- Crash from error callbacks firing during MoonrakerClient destruction
+- Crash from SubscriptionGuard accessing destroyed MoonrakerClient on shutdown
+- Crash from theme token mismatch in AMS backend selector
+- Observer crash on quit from NavigationManager init ordering
+- Spdlog call in ObserverGuard static destructor causing shutdown hang
+- Tool badge showing unnecessarily with single-tool printers
+- Hardware discovery falsely flagging expected devices as new
+- Setup wizard not clearing hardware config on re-run
+- Wizard port input accepting non-numeric characters
+- Splash screen suppressing rendering without an external splash process
+- Noisy WLED and REST 404 logs downgraded from warn to debug
+- AMS slot info updates logged on every poll instead of only on change
+- Installer using bare sudo instead of file_sudo for release swap/restore
+
+### Changed
+- Spoolman vendor/filament creation moved to modal dialogs
+- Spool wizard graduated from beta
+- Lifetime checks added to SubscriptionGuard and ObserverGuard
+- Shutdown cleanup self-registered in all init_subjects() methods
+
 ## [0.10.0] - 2026-02-15
 
 Major feature release bringing full Spoolman spool management, a guided spool creation wizard, multi-unit AMS support for AFC and Happy Hare, probe management, and a Klipper config editor. Also adds Elegoo Centauri Carbon 1 support and fixes several crash bugs.
@@ -572,6 +605,7 @@ Initial tagged release. Foundation for all subsequent development.
 - Automated GitHub Actions release pipeline
 - One-liner installation script with platform auto-detection
 
+[0.10.1]: https://github.com/prestonbrown/helixscreen/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/prestonbrown/helixscreen/compare/v0.9.24...v0.10.0
 [0.9.24]: https://github.com/prestonbrown/helixscreen/compare/v0.9.23...v0.9.24
 [0.9.23]: https://github.com/prestonbrown/helixscreen/compare/v0.9.22...v0.9.23
