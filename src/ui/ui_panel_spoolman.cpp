@@ -15,6 +15,7 @@
 
 #include "ams_state.h"
 #include "app_globals.h"
+#include "config.h"
 #include "format_utils.h"
 #include "lvgl/src/others/translation/lv_translation.h"
 #include "moonraker_api.h"
@@ -133,6 +134,13 @@ lv_obj_t* SpoolmanPanel::create(lv_obj_t* parent) {
         lv_obj_t* title = lv_obj_find_by_name(header, "header_title");
         if (title) {
             lv_label_bind_text(title, &header_title_subject_, nullptr);
+        }
+
+        // Gate "+" (add spool) button behind beta features
+        lv_obj_t* add_btn = lv_obj_find_by_name(header, "action_button_2");
+        lv_subject_t* beta_subject = lv_xml_get_subject(nullptr, "show_beta_features");
+        if (add_btn && beta_subject) {
+            lv_obj_bind_flag_if_eq(add_btn, beta_subject, LV_OBJ_FLAG_HIDDEN, 0);
         }
     }
 
@@ -570,6 +578,13 @@ void SpoolmanPanel::on_refresh_clicked(lv_event_t* /*e*/) {
 }
 
 void SpoolmanPanel::on_add_spool_clicked(lv_event_t* /*e*/) {
+    // Gate behind beta features (defense-in-depth — button is also hidden via subject binding)
+    Config* config = Config::get_instance();
+    if (config && !config->is_beta_features_enabled()) {
+        spdlog::debug("[SpoolmanPanel] Beta features disabled, ignoring add spool");
+        return;
+    }
+
     spdlog::info("[SpoolmanPanel] Add spool clicked — launching wizard");
     auto& panel = get_global_spoolman_panel();
 

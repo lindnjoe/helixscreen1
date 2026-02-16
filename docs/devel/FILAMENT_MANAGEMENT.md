@@ -801,6 +801,21 @@ See `tests/unit/test_ams_backend_happy_hare.cpp`, `test_ams_tool_mapping.cpp`, `
 
 ---
 
+## Spoolman Management & Spool Wizard
+
+Beyond slot assignment, HelixScreen provides full Spoolman spool management:
+
+- **SpoolmanPanel overlay** — Browse, search, edit, and delete spools
+- **New Spool Wizard** (beta) — 3-step guided creation: Vendor → Filament → Spool Details
+- **Context menu** — Per-spool actions: Set Active, Edit, Delete
+- **Edit modal** — Update weight, price, lot number, notes via PATCH
+
+The wizard merges data from the user's Spoolman server and SpoolmanDB external catalog, with atomic creation (vendor → filament → spool) and best-effort rollback on failure.
+
+See `docs/devel/plans/2026-02-15-spool-wizard-status.md` for full implementation status and visual test plan.
+
+---
+
 ## Troubleshooting
 
 ### Common Issues by Backend

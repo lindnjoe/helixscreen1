@@ -1,8 +1,7 @@
 # Spool Wizard — Implementation Status
 
-**Date**: 2026-02-15
-**Branch**: `feature/spool-wizard-v2` (worktree: `.worktrees/spool-wizard-v2`)
-**Based on**: `feature/multi-unit-ams` (76 commits ahead of `main`)
+**Date**: 2026-02-15 (updated after merge)
+**Branch**: `feature/multi-unit-ams` (merged from `feature/spool-wizard-v2`)
 **Phase**: Phase 3 of Spoolman Management design (`2026-02-09-spoolman-management-design.md`)
 
 ---
@@ -11,19 +10,26 @@
 
 The wizard was originally built on `feature/spool-wizard` branched from `main` (10 commits). This was a mistake — it missed all the Spoolman infrastructure built in `feature/multi-unit-ams` (VendorInfo, FilamentInfo, SpoolInfo types, callback types, existing CRUD methods, SpoolmanPanel overlay, context menu, edit modal, etc.).
 
-**`feature/spool-wizard-v2`** was created from `feature/multi-unit-ams` HEAD and the wizard-specific files were ported over, adapted to use the v2 types (`FilamentInfo.display_name()` instead of `.name`, `float` types instead of `double`, etc.).
+`feature/spool-wizard-v2` was created from `feature/multi-unit-ams` HEAD and the wizard-specific files were ported over, adapted to use the v2 types (`FilamentInfo.display_name()` instead of `.name`, `float` types instead of `double`, etc.).
 
-**The old `feature/spool-wizard` branch can be deleted.** All its work is now in `feature/spool-wizard-v2`.
+**Both old branches have been deleted.** All wizard work is now merged into `feature/multi-unit-ams`:
+- `feature/spool-wizard` — deleted (superseded)
+- `feature/spool-wizard-v2` — merged into `feature/multi-unit-ams` at `642e5cea`, then deleted
 
 ---
 
-## What's Built (Committed: `29231b75`)
+## What's Built
+
+### Key Commits
+- `29231b75` — feat(spoolman): add spool creation wizard with 3-step flow (14 files, ~3400 lines)
+- `aa1daa95` — fix(spoolman): address P0-P3 review findings in spool wizard
+- `642e5cea` — Merge branch 'feature/spool-wizard-v2' into feature/multi-unit-ams
 
 ### Files Added (6 new)
 | File | Lines | Purpose |
 |------|-------|---------|
 | `include/ui_spool_wizard.h` | 352 | SpoolWizardOverlay class — 3-step wizard state machine |
-| `src/ui/ui_spool_wizard.cpp` | ~1500 | Full wizard implementation: vendor/filament steps, creation chain |
+| `src/ui/ui_spool_wizard.cpp` | ~1550 | Full wizard implementation: vendor/filament steps, creation chain |
 | `tests/unit/test_spool_wizard.cpp` | ~780 | 46 test cases, 144 assertions (all passing) |
 | `ui_xml/spool_wizard.xml` | 356 | Full 3-step wizard XML layout with subject bindings |
 | `ui_xml/wizard_vendor_row.xml` | 18 | Vendor list row template (name + source badge area) |
@@ -37,7 +43,7 @@ The wizard was originally built on `feature/spool-wizard` branched from `main` (
 | `src/api/moonraker_api_advanced.cpp` | +146 lines: implementations via `server.spoolman.proxy` RPC |
 | `src/api/moonraker_api_mock.cpp` | +147 lines: mock data for Hatchbox/Polymaker/eSUN/Prusament vendors + PLA/PETG filaments |
 | `include/ui_panel_spoolman.h` | +SpoolWizardOverlay include, `wizard_panel_` member, `on_add_spool_clicked` callback |
-| `src/ui/ui_panel_spoolman.cpp` | +`on_add_spool_clicked` → lazy_create_and_push_overlay with completion callback for refresh |
+| `src/ui/ui_panel_spoolman.cpp` | +`on_add_spool_clicked` → lazy_create_and_push_overlay with completion callback for refresh; beta feature gating |
 | `ui_xml/spoolman_panel.xml` | +action_button_2 ("+" button with primary bg) alongside refresh button |
 | `src/xml_registration.cpp` | +3 component registrations (wizard_vendor_row, wizard_filament_row, spool_wizard) |
 
@@ -50,6 +56,7 @@ The wizard was originally built on `feature/spool-wizard` branched from `main` (
 - **Async data loading**: Dual-source merge (Spoolman server + SpoolmanDB external API) with `std::atomic<int>` coordination
 - **Atomic creation chain**: vendor → filament → spool with best-effort rollback on failure
 - **Thread safety**: All async callbacks wrapped in `ui_queue_update()` for LVGL thread marshaling
+- **Beta gating**: "+" button bound to `show_beta_features` subject + defense-in-depth check in click handler
 
 ### New API Methods
 | Method | Endpoint | Purpose |
@@ -74,24 +81,24 @@ The wizard was originally built on `feature/spool-wizard` branched from `main` (
 
 ---
 
-## Known Bugs (from Code Review — P0/P1)
+## Known Bugs — FIXED
 
-These were identified during review but **not yet fixed**:
+All P0-P3 bugs from code review were fixed in `aa1daa95`:
 
-| Priority | Issue | Description |
-|----------|-------|-------------|
-| **P0** | No error toast | `on_creation_error()` logs but never shows the user why creation failed |
-| **P0** | Wizard stays open on success | `on_creation_success()` fires completion callback but doesn't `ui_nav_go_back()` |
-| **P0** | Silent API response swallow | `create_spoolman_vendor/filament/spool` success callbacks have no else-branch — if response format is unexpected, neither `on_success` nor `on_error` fires; wizard hangs in "creating" state |
-| **P1** | Incomplete state reset | `on_activate()` resets vendor state but not filament/spool state — reopening wizard leaks prior session's filament selection, spool weight, etc. |
-| **P1** | Creation callbacks on deactivated overlay | If user navigates away mid-creation, `ui_queue_update` callbacks still fire and mutate state on a deactivated overlay |
+| Priority | Issue | Fix |
+|----------|-------|-----|
+| ~~P0~~ | No error toast | Added `ui_toast_show(ToastSeverity::ERROR, ...)` in `on_creation_error()` |
+| ~~P0~~ | Wizard stays open on success | Added `ui_toast_show(SUCCESS)` + `ui_nav_go_back()` in `on_creation_success()` |
+| ~~P0~~ | Silent API response swallow | Added else-branch with `on_error` callback in all 3 create methods |
+| ~~P1~~ | Incomplete state reset | Added `reset_state()` that clears ALL wizard state, called from `on_activate()` |
+| ~~P1~~ | Creation callbacks on deactivated overlay | Added `is_visible()` guard in all 3 creation chain callbacks |
+| ~~P3~~ | No input length validation | Added `MAX_VENDOR_NAME_LEN`/`MAX_VENDOR_URL_LEN` constants + `substr()` clamping |
 
-### Code Quality Notes (from review, non-blocking)
+### Code Quality Notes (non-blocking, deferred)
 - Hardcoded colors in 3 places (color swatches — acceptable exception)
 - `lv_obj_add_event_cb` for scroll (pre-existing in SpoolmanPanel)
 - No test coverage for creation chain (would need mock API injection)
 - Inconsistent log tag format (static callbacks use `[SpoolWizard]`, instance methods use `get_name()`)
-- No input length validation on vendor name/URL
 
 ---
 
@@ -101,7 +108,6 @@ These were identified during review but **not yet fixed**:
 
 | Step | Status | Description |
 |------|--------|-------------|
-| P0 Bug Fixes | **NOT STARTED** | Fix 3 P0 bugs + 2 P1 issues from review above |
 | Step 9: filamentcolors.xyz | **NOT STARTED** | Optional network color enhancement — query `filamentcolors.xyz/api/swatch/` for better color names, in-memory cache, graceful degradation |
 | Creation chain tests | **NOT STARTED** | Mock API injection to test vendor→filament→spool chain, partial failure rollback |
 
@@ -111,12 +117,13 @@ All 10 visual tests require running `./build/bin/helix-screen --test -vv` and ma
 
 #### VT-1: Launch Wizard from SpoolmanPanel
 1. Navigate to Spoolman panel overlay
-2. Verify "+" button visible in header bar (alongside refresh button)
-3. Tap "+" button
-4. Verify wizard overlay slides in showing Step 1 (Vendor)
-5. Verify step indicator shows "Step 1 of 3"
-6. Verify Next button is disabled (no vendor selected)
-7. Verify Back button is visible
+2. **With beta features enabled:** Verify "+" button visible in header bar (alongside refresh button)
+3. **With beta features disabled:** Verify "+" button is NOT visible
+4. Tap "+" button (beta enabled)
+5. Verify wizard overlay slides in showing Step 1 (Vendor)
+6. Verify step indicator shows "Step 1 of 3"
+7. Verify Next button is disabled (no vendor selected)
+8. Verify Back button is visible
 
 #### VT-2: Vendor Search and Selection
 1. On Step 1, verify vendor list populates (mock: Hatchbox, Polymaker, eSUN, Prusament from external + server vendors merged)
@@ -157,7 +164,7 @@ All 10 visual tests require running `./build/bin/helix-screen --test -vv` and ma
 #### VT-7: Full Creation Flow (Existing Vendor + Existing Filament)
 1. Select existing vendor → select existing filament → fill spool details → "Create Spool"
 2. Verify creating spinner appears
-3. Verify wizard closes on success (**currently broken — P0 bug**)
+3. Verify wizard closes on success with success toast
 4. Verify SpoolmanPanel refreshes spool list
 5. Verify new spool appears in list
 
@@ -165,7 +172,7 @@ All 10 visual tests require running `./build/bin/helix-screen --test -vv` and ma
 1. Create new vendor → create new filament (custom material/color/temps) → fill spool details → "Create Spool"
 2. Verify atomic creation chain: vendor created, then filament, then spool
 3. Verify spinner shown during creation
-4. Verify success closes wizard (**currently broken — P0 bug**)
+4. Verify success closes wizard with toast
 
 #### VT-9: Back Navigation Preserves State
 1. Fill Step 1 (select vendor), go to Step 2, Back to Step 1 — vendor still selected
@@ -176,7 +183,7 @@ All 10 visual tests require running `./build/bin/helix-screen --test -vv` and ma
 1. Empty vendor list (no Spoolman configured) — verify empty state or helpful message
 2. Vendor with no filaments — verify empty filament list with create option visible
 3. Clear remaining weight to 0 — verify Create button disables
-4. Simulate network error mid-creation — verify spinner stops (**currently broken — P0: no error toast**)
+4. Simulate network error mid-creation — verify spinner stops, error toast shown
 
 ---
 
@@ -191,6 +198,7 @@ All 10 visual tests require running `./build/bin/helix-screen --test -vv` and ma
 | Atomic creation with rollback | If filament creation fails after vendor was created, attempt to delete the vendor |
 | `DEFINE_GLOBAL_PANEL` singleton | Consistent with all other overlays; static callbacks access global instance |
 | Subject-driven step visibility | XML `bind_flag_if_not_eq` on step index — no imperative `lv_obj_add_flag(HIDDEN)` |
+| Beta feature gating | "+" button reactively hidden via `show_beta_features` subject + C++ guard in handler |
 
 ---
 
@@ -201,7 +209,7 @@ From the original Spoolman Management design (`2026-02-09`):
 | Feature | Status |
 |---------|--------|
 | Spool CRUD (browse, edit, delete) | **Done** (in multi-unit-ams, SpoolmanPanel) |
-| New Spool wizard | **In progress** (this branch) |
+| New Spool wizard | **Done** (merged into multi-unit-ams, gated behind beta features) |
 | QR code label printing | **Not started** |
 | USB barcode scanner input | **Not started** |
 | Shared reusable components | **Done** (ams_unit_detail, ams_loaded_card, etc.) |
@@ -211,9 +219,7 @@ From the original Spoolman Management design (`2026-02-09`):
 ## How to Test
 
 ```bash
-cd .worktrees/spool-wizard-v2
-
-# Build
+# On feature/multi-unit-ams branch
 make -j
 
 # Run wizard unit tests
@@ -223,6 +229,7 @@ make -j
 # Visual testing (mock printer mode)
 ./build/bin/helix-screen --test -vv
 # Navigate: Home → Filament → Spoolman → tap "+" button
+# Note: "+" button only visible with beta features enabled (7-tap version in Settings)
 ```
 
 ---
@@ -231,14 +238,14 @@ make -j
 
 ```
 include/
-  ui_spool_wizard.h          ← Wizard class (339 lines)
+  ui_spool_wizard.h          ← Wizard class (352 lines)
   moonraker_api.h            ← +5 methods
   moonraker_api_mock.h       ← +5 mock overrides
   ui_panel_spoolman.h        ← +wizard_panel_ member, +on_add_spool_clicked
 
 src/
-  ui/ui_spool_wizard.cpp     ← Wizard implementation (~1500 lines)
-  ui/ui_panel_spoolman.cpp   ← +on_add_spool_clicked callback
+  ui/ui_spool_wizard.cpp     ← Wizard implementation (~1550 lines)
+  ui/ui_panel_spoolman.cpp   ← +on_add_spool_clicked callback, beta gating
   api/moonraker_api_advanced.cpp  ← +5 API implementations
   api/moonraker_api_mock.cpp      ← +5 mock implementations
   xml_registration.cpp       ← +3 component registrations
