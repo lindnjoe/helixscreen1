@@ -234,6 +234,10 @@ bool MoonrakerAPI::unsubscribe_notifications(SubscriptionId id) {
     return client_.unsubscribe_notify_update(id);
 }
 
+std::weak_ptr<bool> MoonrakerAPI::client_lifetime_weak() const {
+    return client_.lifetime_weak();
+}
+
 void MoonrakerAPI::register_method_callback(const std::string& method, const std::string& name,
                                             std::function<void(json)> callback) {
     client_.register_method_callback(method, name, std::move(callback));

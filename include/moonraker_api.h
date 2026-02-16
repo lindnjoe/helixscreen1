@@ -1072,6 +1072,9 @@ class MoonrakerAPI {
     /// Unsubscribe from status update notifications
     virtual bool unsubscribe_notifications(SubscriptionId id);
 
+    /// Get client lifetime guard (for SubscriptionGuard safety)
+    std::weak_ptr<bool> client_lifetime_weak() const;
+
     /// Register a persistent callback for a specific notification method
     virtual void register_method_callback(const std::string& method, const std::string& name,
                                           std::function<void(json)> callback);

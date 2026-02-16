@@ -5,6 +5,6 @@
 #include "moonraker_api.h"
 
 SubscriptionGuard::SubscriptionGuard(MoonrakerAPI* api, SubscriptionId id)
-    : subscription_id_(id),
+    : subscription_id_(id), lifetime_(api ? api->client_lifetime_weak() : std::weak_ptr<bool>{}),
       unsubscribe_fn_(api ? [api](SubscriptionId sid) { api->unsubscribe_notifications(sid); }
                           : std::function<void(SubscriptionId)>{}) {}

@@ -536,6 +536,17 @@ class MoonrakerClient : public hv::WebSocketClient {
         // No-op in real client - only mock client implements
     }
 
+    /**
+     * @brief Get lifetime guard for safe destructor-aware captures
+     *
+     * Callers capture a weak_ptr from this. When the client is destroyed,
+     * the shared_ptr is reset first, so weak_ptr::lock() returns nullptr.
+     * Used by SubscriptionGuard to avoid calling into a destroyed client.
+     */
+    std::weak_ptr<bool> lifetime_weak() const {
+        return lifetime_guard_;
+    }
+
   protected:
     /**
      * @brief Transition to new connection state
