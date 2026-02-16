@@ -13,11 +13,9 @@
 
 #pragma once
 
+#include "json_fwd.h"
+
 #include <string>
-
-#include "hv/json.hpp"
-
-using json = nlohmann::json;
 
 /**
  * @brief Configuration for a user-customizable macro button

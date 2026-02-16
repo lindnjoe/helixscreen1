@@ -4,12 +4,9 @@
 #pragma once
 
 #include "format_utils.h"
+#include "json_fwd.h"
 
 #include <string>
-
-#include "hv/json.hpp"
-
-using json = nlohmann::json;
 
 /**
  * @brief Error types for Moonraker operations

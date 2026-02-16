@@ -3,16 +3,13 @@
 
 #pragma once
 
+#include "json_fwd.h"
 #include "spdlog/spdlog.h"
 
 #include <mutex>
 #include <random>
 #include <string>
 #include <vector>
-
-#include "hv/json.hpp"
-
-using json = nlohmann::json;
 
 /**
  * @brief Printing tip data structure

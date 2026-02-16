@@ -14,13 +14,11 @@
 
 #pragma once
 
+#include "json_fwd.h"
+
 #include <optional>
 #include <string>
 #include <vector>
-
-#include "hv/json.hpp"
-
-using json = nlohmann::json;
 
 // Forward declarations
 class Config;

@@ -5,14 +5,13 @@
 
 #include "ui_observer_guard.h"
 
+#include "json_fwd.h"
 #include "runtime_config.h"
 
 #include <atomic>
 #include <chrono>
 #include <memory>
 #include <queue>
-
-#include "hv/json.hpp"
 
 // Forward declarations
 class Config;
@@ -27,8 +26,6 @@ class PrintStartCollector;
 namespace helix {
 class MacroModificationManager;
 }
-
-using json = nlohmann::json;
 
 /**
  * @brief Manages Moonraker client and API lifecycle

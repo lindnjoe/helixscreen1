@@ -37,6 +37,7 @@
 #pragma once
 
 #include "hv/WebSocketClient.h"
+#include "json_fwd.h"
 #include "moonraker_error.h"
 #include "moonraker_events.h"
 #include "moonraker_request.h"
@@ -52,10 +53,6 @@
 #include <mutex>
 #include <string>
 #include <vector>
-
-#include "hv/json.hpp" // libhv's nlohmann json (via cpputil/)
-
-using json = nlohmann::json;
 
 /**
  * @brief Unique identifier for notification subscriptions
