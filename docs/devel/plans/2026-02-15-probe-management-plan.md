@@ -10,7 +10,7 @@
 
 **Design doc:** `docs/devel/plans/2026-02-15-probe-management-design.md`
 
-**Status:** Phases 1-2 complete (on `feature/probe-management` branch). Phases 3-5 remaining.
+**Status:** Phases 1-2 complete. Phase 3 tasks 3.1-3.3 complete (probe overlay skeleton, status subjects, BLTouch panel). Tasks 3.4-3.6 and Phases 4-5 remaining. All work on `feature/probe-management` branch.
 
 **Key docs to read before starting:**
 - `docs/devel/LVGL9_XML_GUIDE.md` — XML widget patterns, bindings, event callbacks
@@ -902,179 +902,92 @@ git commit -m "feat(config): add post-edit health check with automatic backup re
 
 ## Phase 3: Probe Overlay
 
-### Task 3.1: Create probe overlay skeleton
+### Task 3.1: Create probe overlay skeleton ✅ COMPLETE
 
-**Files:**
-- Create: `include/ui_probe_overlay.h`
-- Create: `src/ui/overlays/ui_probe_overlay.cpp`
-- Create: `ui_xml/probe_overlay.xml`
-- Modify: `src/application/application.cpp` (register overlay)
-- Modify: `src/ui/panels/ui_panel_advanced.cpp` or calibration menu (add entry point)
+**Files created/modified:**
+- Created: `include/ui_probe_overlay.h` — ProbeOverlay class extending OverlayBase
+- Created: `src/ui/ui_probe_overlay.cpp` — Full implementation (NOTE: lives in `src/ui/`, NOT `src/ui/overlays/` because Makefile wildcard `$(SRC_DIR)/*/*.cpp` only goes one level deep)
+- Created: `ui_xml/probe_overlay.xml` — Overlay layout with header_bar, identity card, type panel placeholder, action buttons
+- Modified: `src/application/application.cpp` — Added `#include "ui_probe_overlay.h"`, calls `ui_probe_overlay_register_callbacks()`
+- Modified: `src/application/subject_initializer.cpp` — Added `init_probe_row_handler()` call
+- Modified: `ui_xml/advanced_panel.xml` — Added "Probe Management" row in CALIBRATION section, gated by `<beta_feature>` wrapper and `printer_has_probe` subject
+- Modified: `src/xml_registration.cpp` — Registered `probe_overlay.xml`
 
-**Step 1: Create the overlay class following OverlayBase pattern**
+**Implementation details:**
+- ProbeOverlay class: singleton via `get_global_probe_overlay()` with `StaticPanelRegistry::register_destroy()`
+- Entry point: `setting_action_row` in Advanced panel → `on_probe_row_clicked` callback → lazy-creates overlay
+- Subjects: `probe_display_name`, `probe_type_label`, `probe_z_offset_display`, `probe_overlay_state`, `probe_accuracy_result`, `probe_accuracy_visible` — all managed via `SubjectManager` and `UI_MANAGED_SUBJECT_*` macros
+- Uses `lv_subject_copy_string()` (NOT `lv_subject_set_string` which doesn't exist in LVGL 9.4)
+- Type panel loading: `load_type_panel()` switches on `ProbeSensorType` to dynamically create type-specific XML component into `probe_type_panel` container
 
-Follow the exact pattern from `BedMeshPanel` / `InputShaperPanel`:
-- Singleton with `get_global_probe_overlay()`
-- `StaticPanelRegistry` destruction registration
-- `init_subjects()`, `register_callbacks()`, `create()`, `on_activate()`, `on_deactivate()`
-
-**Step 2: Create minimal XML layout**
-
-```xml
-<!-- ui_xml/probe_overlay.xml -->
-<lv_obj name="probe_overlay" style_bg_color="#surface" style_size="fill"
-        style_pad_all="#space_md" style_flex_flow="column"
-        style_flex_main_place="start" style_flex_cross_place="center"
-        style_row_gap="#space_md">
-
-    <!-- Header: Probe identity + status -->
-    <lv_obj name="probe_header" style_size="fill_h_content"
-            style_bg_color="#card_bg" style_radius="#radius_lg"
-            style_pad_all="#space_md" style_flex_flow="column"
-            style_row_gap="#space_sm">
-
-        <text_heading name="probe_title" bind_text="probe_display_name"/>
-        <text_body name="probe_subtitle" bind_text="probe_type_label"/>
-
-        <lv_obj style_size="fill_h_content" style_flex_flow="row"
-                style_column_gap="#space_lg">
-            <text_body text="Status:"/>
-            <probe_indicator/>
-            <text_body text="Z Offset:"/>
-            <text_body name="probe_offset" bind_text="probe_z_offset_display"/>
-        </lv_obj>
-    </lv_obj>
-
-    <!-- Middle: Type-specific panel placeholder -->
-    <lv_obj name="probe_type_panel" style_size="fill_h_content"/>
-
-    <!-- Bottom: Universal actions -->
-    <lv_obj name="probe_actions" style_size="fill_h_content"
-            style_flex_flow="column" style_row_gap="#space_sm">
-
-        <lv_obj name="btn_probe_accuracy" style_size="fill_h_content"
-                style_bg_color="#card_bg" style_radius="#radius_md"
-                style_pad_all="#space_md">
-            <text_body text="Probe Accuracy Test"/>
-            <event_cb trigger="clicked" callback="on_probe_accuracy"/>
-        </lv_obj>
-
-        <lv_obj name="btn_zoffset" style_size="fill_h_content"
-                style_bg_color="#card_bg" style_radius="#radius_md"
-                style_pad_all="#space_md">
-            <text_body text="Z-Offset Calibration"/>
-            <event_cb trigger="clicked" callback="on_zoffset_cal"/>
-        </lv_obj>
-
-        <lv_obj name="btn_bedmesh" style_size="fill_h_content"
-                style_bg_color="#card_bg" style_radius="#radius_md"
-                style_pad_all="#space_md">
-            <text_body text="Bed Mesh"/>
-            <event_cb trigger="clicked" callback="on_bed_mesh"/>
-        </lv_obj>
-    </lv_obj>
-</lv_obj>
-```
-
-**Step 3: Register in application and calibration menu**
-
-Add to the advanced/calibration panel's menu as a new row that opens the probe overlay.
-
-**Step 4: Verify it builds and renders**
-
-Run: `make -j && ./build/bin/helix-screen --test -vv`
-Navigate to the probe overlay — should show the skeleton layout.
-
-**Step 5: Commit**
-
-```bash
-git add include/ui_probe_overlay.h src/ui/overlays/ui_probe_overlay.cpp ui_xml/probe_overlay.xml src/application/application.cpp
-git commit -m "feat(probe): add probe overlay skeleton with status header and action buttons"
-```
+**Gotchas encountered:**
+- `bullseye` icon doesn't exist in the icon set → used `target` instead
+- File placement: `src/ui/overlays/` not scanned by Makefile → must use `src/ui/`
+- `lv_subject_set_string` doesn't exist → use `lv_subject_copy_string`
 
 ---
 
-### Task 3.2: Wire probe status subjects to overlay
+### Task 3.2: Wire probe status subjects to overlay ✅ COMPLETE
 
-**Files:**
-- Modify: `src/ui/overlays/ui_probe_overlay.cpp`
-- Modify: `src/sensors/probe_sensor_manager.cpp` (add new subjects if needed)
+**Files modified:**
+- `src/ui/ui_probe_overlay.cpp` — Added display subject updates, action handlers
 
-**Step 1: Add new subjects for display**
-
-The overlay needs:
-- `probe_display_name` (string subject) — e.g., "Cartographer" or "BLTouch"
-- `probe_type_label` (string subject) — e.g., "Eddy Current Scanning Probe"
-- `probe_z_offset_display` (string subject) — formatted offset like "-0.425mm"
-
-These should be updated in `ProbeSensorManager` when a probe is discovered.
-
-**Step 2: Bind existing subjects**
-
-Wire the existing `probe_triggered`, `probe_last_z`, `probe_z_offset` subjects from `ProbeSensorManager` to the overlay XML via observer bindings.
-
-**Step 3: Implement PROBE_ACCURACY action**
-
-On button press:
-1. Send `PROBE_ACCURACY` GCode
-2. Parse the results from Klipper's response (standard deviation, range, max, min)
-3. Display results inline below the button
-
-**Step 4: Wire navigation shortcuts**
-
-"Z-Offset Calibration" → `ui_nav_push_overlay()` to existing z-offset overlay
-"Bed Mesh" → `ui_nav_push_overlay()` to existing bed mesh overlay
-
-**Step 5: Commit**
-
-```bash
-git add src/ui/overlays/ui_probe_overlay.cpp src/sensors/probe_sensor_manager.cpp include/probe_sensor_manager.h
-git commit -m "feat(probe): wire probe status subjects and universal actions to overlay"
-```
+**Implementation details:**
+- `update_display_subjects()` reads from `ProbeSensorManager::instance()` to populate display name, type label (e.g., "Eddy Current Scanning Probe"), and formatted z-offset ("%.3fmm")
+- `handle_probe_accuracy()` sends `PROBE_ACCURACY` via `MoonrakerClient::gcode_script()`, shows "Running..." → result/error in bound subject
+- `handle_zoffset_cal()` lazy-creates and opens existing z-offset calibration overlay via `get_global_zoffset_cal_panel()`
+- `handle_bed_mesh()` lazy-creates and opens existing bed mesh overlay via `get_global_bed_mesh_panel()`
+- All handlers use `get_moonraker_client()` / `get_moonraker_api()` global accessors
 
 ---
 
-### Task 3.3: BLTouch type-specific panel
+### Task 3.3: BLTouch type-specific panel ✅ COMPLETE
 
-**Files:**
-- Create: `ui_xml/components/probe_bltouch_panel.xml`
-- Modify: `src/ui/overlays/ui_probe_overlay.cpp`
+**Files created/modified:**
+- Created: `ui_xml/probe_bltouch_panel.xml` — BLTouch control panel (NOTE: lives in `ui_xml/`, NOT `ui_xml/components/` — all XML files are flat in `ui_xml/`)
+- Modified: `src/ui/ui_probe_overlay.cpp` — Added BLTouch callbacks and `send_probe_gcode()` helper
+- Modified: `src/xml_registration.cpp` — Registered `probe_bltouch_panel.xml`
 
-**Step 1: Create BLTouch panel XML**
+**Implementation details:**
+- Panel XML: 2x2 button grid (Deploy/Stow/Self-Test/Reset) + output mode row (5V/OD buttons)
+- Callbacks registered in `ui_probe_overlay_register_callbacks()`:
+  - `on_bltouch_deploy` → `BLTOUCH_DEBUG COMMAND=pin_down`
+  - `on_bltouch_stow` → `BLTOUCH_DEBUG COMMAND=pin_up`
+  - `on_bltouch_reset` → `BLTOUCH_DEBUG COMMAND=reset`
+  - `on_bltouch_selftest` → `BLTOUCH_DEBUG COMMAND=self_test`
+  - `on_bltouch_output_5v` → `SET_BLTOUCH OUTPUT_MODE=5V`
+  - `on_bltouch_output_od` → `SET_BLTOUCH OUTPUT_MODE=OD`
+- `send_probe_gcode()` helper dispatches GCode via `MoonrakerClient::gcode_script()`
+- `load_type_panel()` creates `probe_bltouch_panel` component when `ProbeSensorType::BLTOUCH`
 
-Buttons for Deploy, Stow, Reset, Self-Test. Output mode selector.
+### Mock infrastructure for probe testing ✅ COMPLETE
 
-**Step 2: Register event callbacks**
+**Files modified:**
+- `src/api/moonraker_client_mock.cpp` — Added `HELIX_MOCK_PROBE_TYPE` env var support to inject probe objects into mock hardware discovery
+- `include/printer_discovery.h` — Extended `has_probe_` detection to recognize `"cartographer"`, `"beacon"`, `"smart_effector"` (in addition to existing `"probe"`, `"bltouch"`, `"probe_eddy_current ..."`)
 
-- `on_bltouch_deploy` → `BLTOUCH_DEBUG COMMAND=pin_down`
-- `on_bltouch_stow` → `BLTOUCH_DEBUG COMMAND=pin_up`
-- `on_bltouch_reset` → `BLTOUCH_DEBUG COMMAND=reset`
-- `on_bltouch_selftest` → `BLTOUCH_DEBUG COMMAND=self_test`
-- `on_bltouch_output_mode` → `SET_BLTOUCH OUTPUT_MODE=5V` or `OD`
+**How mock probe type selection works:**
+- `HELIX_MOCK_PROBE_TYPE` env var (default: `cartographer`)
+- Valid values: `cartographer`, `bltouch`, `beacon`, `tap`, `klicky`, `standard`, `none`
+- The mock client injects the corresponding Klipper object name into `mock_objects`:
+  - `cartographer` → `"cartographer"` object
+  - `bltouch` → `"bltouch"` object
+  - `beacon` → `"beacon"` object
+  - `tap`/`klicky`/`standard` → `"probe"` object (generic)
+  - `none` → no probe object
+- `hardware_.parse_objects()` processes the object list, setting `has_probe_ = true`
+- `PrinterCapabilitiesState::set_hardware()` reads `has_probe()` → sets `printer_has_probe` subject
+- The Advanced panel row uses `bind_flag_if_eq subject="printer_has_probe" flag="hidden" ref_value="0"` to show/hide
 
-**Step 3: Load this panel when probe type is BLTOUCH**
-
-In the overlay's `on_activate()`, check probe type and create the appropriate type panel component into the `probe_type_panel` container.
-
-**Step 4: Test manually**
-
-Run: `make -j && ./build/bin/helix-screen --test -vv`
-(BLTouch won't be detected in test mode unless mocked, but verify the panel renders if forced)
-
-**Step 5: Commit**
-
-```bash
-git add ui_xml/components/probe_bltouch_panel.xml src/ui/overlays/ui_probe_overlay.cpp
-git commit -m "feat(probe): add BLTouch control panel (deploy/stow/self-test/output mode)"
-```
+**Testing:** `./build/bin/helix-screen --test -vv` (default cartographer) or `HELIX_MOCK_PROBE_TYPE=bltouch ./build/bin/helix-screen --test -vv`
 
 ---
 
 ### Task 3.4: Cartographer type-specific panel
 
 **Files:**
-- Create: `ui_xml/components/probe_cartographer_panel.xml`
-- Modify: `src/ui/overlays/ui_probe_overlay.cpp`
+- Create: `ui_xml/probe_cartographer_panel.xml`
+- Modify: `src/ui/ui_probe_overlay.cpp`
 
 **Step 1: Create Cartographer panel XML**
 
@@ -1096,7 +1009,7 @@ Use `query_configfile()` or Moonraker object query to get available models and c
 **Step 4: Commit**
 
 ```bash
-git add ui_xml/components/probe_cartographer_panel.xml src/ui/overlays/ui_probe_overlay.cpp
+git add ui_xml/probe_cartographer_panel.xml src/ui/ui_probe_overlay.cpp
 git commit -m "feat(probe): add Cartographer control panel (model select, calibrate, temp)"
 ```
 
@@ -1105,8 +1018,8 @@ git commit -m "feat(probe): add Cartographer control panel (model select, calibr
 ### Task 3.5: Beacon type-specific panel
 
 **Files:**
-- Create: `ui_xml/components/probe_beacon_panel.xml`
-- Modify: `src/ui/overlays/ui_probe_overlay.cpp`
+- Create: `ui_xml/probe_beacon_panel.xml`
+- Modify: `src/ui/ui_probe_overlay.cpp`
 
 **Step 1: Create Beacon panel XML**
 
@@ -1124,7 +1037,7 @@ git commit -m "feat(probe): add Cartographer control panel (model select, calibr
 **Step 3: Commit**
 
 ```bash
-git add ui_xml/components/probe_beacon_panel.xml src/ui/overlays/ui_probe_overlay.cpp
+git add ui_xml/probe_beacon_panel.xml src/ui/ui_probe_overlay.cpp
 git commit -m "feat(probe): add Beacon control panel (model select, temp comp, calibrate)"
 ```
 
@@ -1133,8 +1046,8 @@ git commit -m "feat(probe): add Beacon control panel (model select, temp comp, c
 ### Task 3.6: Generic/Klicky fallback panel
 
 **Files:**
-- Create: `ui_xml/components/probe_generic_panel.xml`
-- Modify: `src/ui/overlays/ui_probe_overlay.cpp`
+- Create: `ui_xml/probe_generic_panel.xml`
+- Modify: `src/ui/ui_probe_overlay.cpp`
 
 **Step 1: Create generic panel**
 
@@ -1143,7 +1056,7 @@ For Standard, Smart Effector, Tap, and unknown probes — just type identificati
 **Step 2: Commit**
 
 ```bash
-git add ui_xml/components/probe_generic_panel.xml src/ui/overlays/ui_probe_overlay.cpp
+git add ui_xml/probe_generic_panel.xml src/ui/ui_probe_overlay.cpp
 git commit -m "feat(probe): add generic and Klicky probe panels"
 ```
 
@@ -1154,7 +1067,7 @@ git commit -m "feat(probe): add generic and Klicky probe panels"
 ### Task 4.1: Wire config editor to probe overlay
 
 **Files:**
-- Modify: `src/ui/overlays/ui_probe_overlay.cpp`
+- Modify: `src/ui/ui_probe_overlay.cpp`
 
 **Step 1: Add editable fields to probe overlay**
 
@@ -1181,7 +1094,7 @@ Show progress: "Creating backup..." → "Writing config..." → "Restarting firm
 **Step 4: Commit**
 
 ```bash
-git add src/ui/overlays/ui_probe_overlay.cpp
+git add src/ui/ui_probe_overlay.cpp
 git commit -m "feat(probe): wire config editor for probe settings (offsets, samples, speed)"
 ```
 
@@ -1256,20 +1169,31 @@ git commit -m "feat(wizard): replace AMS + probe steps with consolidated Detecte
 
 ## Summary
 
-| Phase | Tasks | Estimated Commits |
-|-------|-------|-------------------|
-| 1. Probe Detection | 1.1–1.4 | 4 |
-| 2. Config Editor | 2.1–2.5 | 5 |
-| 3. Probe Overlay | 3.1–3.6 | 6 |
-| 4. Config Editing UI | 4.1 | 1 |
-| 5. Wizard Step | 5.1 | 1 |
-| **Total** | **17 tasks** | **~17 commits** |
+| Phase | Tasks | Status |
+|-------|-------|--------|
+| 1. Probe Detection | 1.1–1.4 | ✅ COMPLETE |
+| 2. Config Editor | 2.1–2.5 | ✅ COMPLETE |
+| 3. Probe Overlay | 3.1–3.3 | ✅ COMPLETE |
+| 3. Probe Overlay | 3.4–3.6 | ⏳ REMAINING |
+| 4. Config Editing UI | 4.1 | ⏳ REMAINING |
+| 5. Wizard Step | 5.1 | ⏳ REMAINING |
+
+**Remaining work (5 tasks):**
+- Task 3.4: Cartographer type-specific panel (model select, calibrate, touch calibrate, coil temp)
+- Task 3.5: Beacon type-specific panel (model select, auto-calibrate, temp comp)
+- Task 3.6: Generic/Klicky fallback panel (type info + Klicky deploy/dock macros)
+- Task 4.1: Wire KlipperConfigEditor to probe overlay for live config editing
+- Task 5.1: Consolidated "Detected Hardware" wizard step (replaces separate AMS + probe steps)
+
+**Key implementation notes for remaining work:**
+- All XML files go in `ui_xml/` (flat directory, no subdirectories)
+- Overlay C++ file is `src/ui/ui_probe_overlay.cpp` (not `src/ui/overlays/`)
+- `load_type_panel()` in ProbeOverlay already switches on probe type — just need to create the XML components and register them
+- Mock probe type is controlled by `HELIX_MOCK_PROBE_TYPE` env var (default: `cartographer`)
+- Probe Management row in Advanced panel is gated by `<beta_feature>` wrapper
+- String subjects use `lv_subject_copy_string()` (NOT `lv_subject_set_string`)
 
 **Dependencies:**
-- Phase 1 (detection) is independent — can start immediately
-- Phase 2 (config editor) is independent — can run in parallel with Phase 1
-- Phase 3 (overlay) depends on Phase 1 (needs new probe types)
-- Phase 4 (config editing UI) depends on Phase 2 + Phase 3
-- Phase 5 (wizard) depends on Phase 1 (needs expanded detection)
-
-**Parallelization opportunity:** Phase 1 and Phase 2 can run in parallel since they're independent.
+- Tasks 3.4-3.6 are independent of each other (can be done in any order)
+- Task 4.1 depends on Phase 2 (config editor) + Phase 3 (overlay)
+- Task 5.1 depends on Phase 1 (probe detection) — no dependency on overlay
