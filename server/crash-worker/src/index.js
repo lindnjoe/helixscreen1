@@ -13,6 +13,7 @@
 //   INGEST_API_KEY  - API key baked into HelixScreen binaries
 //   GITHUB_TOKEN    - GitHub PAT with repo scope
 //   ADMIN_API_KEY   - Admin API key for retrieving debug bundles
+//   RESEND_API_KEY  - Resend API key for email notifications
 
 export default {
   async fetch(request, env) {
@@ -275,6 +276,14 @@ async function handleDebugBundleUpload(request, env) {
     },
   });
 
+  // --- Send email notification (best-effort, don't fail the upload) ---
+  try {
+    const metadata = await extractBundleMetadata(body);
+    await sendBundleNotification(env, shareCode, clientIP, metadata);
+  } catch (err) {
+    console.error("Failed to send bundle notification:", err.message);
+  }
+
   return jsonResponse(201, { share_code: shareCode });
 }
 
@@ -309,6 +318,111 @@ async function handleDebugBundleRetrieve(request, env, url) {
       ...corsHeaders(),
     },
   });
+}
+
+/**
+ * Decompress a gzipped ArrayBuffer and extract metadata from the JSON bundle.
+ * Returns an object with version, printer_model, timestamp, etc.
+ */
+async function extractBundleMetadata(gzippedBody) {
+  try {
+    const ds = new DecompressionStream("gzip");
+    const writer = ds.writable.getWriter();
+    writer.write(new Uint8Array(gzippedBody));
+    writer.close();
+
+    const reader = ds.readable.getReader();
+    const chunks = [];
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+
+    const text = new TextDecoder().decode(
+      chunks.reduce((acc, chunk) => {
+        const merged = new Uint8Array(acc.length + chunk.length);
+        merged.set(acc);
+        merged.set(chunk, acc.length);
+        return merged;
+      }, new Uint8Array())
+    );
+
+    const json = JSON.parse(text);
+    return {
+      version: json.version || "unknown",
+      printer_model: json.printer_info?.model || "unknown",
+      klipper_version: json.printer_info?.klipper_version || "unknown",
+      platform: json.system_info?.platform || "unknown",
+      timestamp: json.timestamp || new Date().toISOString(),
+    };
+  } catch {
+    return {
+      version: "unknown",
+      printer_model: "unknown",
+      klipper_version: "unknown",
+      platform: "unknown",
+      timestamp: new Date().toISOString(),
+    };
+  }
+}
+
+/**
+ * Send a notification email via Resend when a debug bundle is uploaded.
+ */
+async function sendBundleNotification(env, shareCode, clientIP, metadata) {
+  if (!env.RESEND_API_KEY) {
+    console.warn("RESEND_API_KEY not set, skipping notification");
+    return;
+  }
+
+  const from = env.EMAIL_FROM || "HelixScreen <noreply@helixscreen.org>";
+  const to = env.NOTIFICATION_EMAIL;
+  if (!to) {
+    console.warn("NOTIFICATION_EMAIL not set, skipping notification");
+    return;
+  }
+
+  const subject = `Debug Bundle: ${shareCode} — ${metadata.printer_model} v${metadata.version}`;
+
+  const html = `
+    <h2>New Debug Bundle Uploaded</h2>
+    <table style="border-collapse: collapse; font-family: monospace;">
+      <tr><td style="padding: 4px 12px 4px 0; font-weight: bold;">Share Code</td><td>${shareCode}</td></tr>
+      <tr><td style="padding: 4px 12px 4px 0; font-weight: bold;">Version</td><td>${metadata.version}</td></tr>
+      <tr><td style="padding: 4px 12px 4px 0; font-weight: bold;">Printer</td><td>${metadata.printer_model}</td></tr>
+      <tr><td style="padding: 4px 12px 4px 0; font-weight: bold;">Klipper</td><td>${metadata.klipper_version}</td></tr>
+      <tr><td style="padding: 4px 12px 4px 0; font-weight: bold;">Platform</td><td>${metadata.platform}</td></tr>
+      <tr><td style="padding: 4px 12px 4px 0; font-weight: bold;">Client IP</td><td>${clientIP}</td></tr>
+      <tr><td style="padding: 4px 12px 4px 0; font-weight: bold;">Time</td><td>${metadata.timestamp}</td></tr>
+    </table>
+    <p style="margin-top: 16px;">Retrieve with:</p>
+    <pre style="background: #f4f4f4; padding: 8px; border-radius: 4px;">curl --compressed -H "X-Admin-Key: \$HELIX_ADMIN_KEY" https://crash.helixscreen.org/v1/debug-bundle/${shareCode}</pre>
+  `;
+
+  const text = `New Debug Bundle: ${shareCode}
+Version: ${metadata.version}
+Printer: ${metadata.printer_model}
+Klipper: ${metadata.klipper_version}
+Platform: ${metadata.platform}
+IP: ${clientIP}
+Time: ${metadata.timestamp}
+
+Retrieve: curl --compressed -H "X-Admin-Key: $HELIX_ADMIN_KEY" https://crash.helixscreen.org/v1/debug-bundle/${shareCode}`;
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ from, to: [to], subject, html, text }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Resend API ${response.status}: ${err}`);
+  }
 }
 
 /**

@@ -5,11 +5,14 @@ workers_dev = false
 
 [vars]
 GITHUB_REPO = "prestonbrown/helixscreen"
+NOTIFICATION_EMAIL = "pbrown+helixscreen@brown-house.net"
+EMAIL_FROM = "HelixScreen <noreply@helixscreen.org>"
 
 # Secrets (set via wrangler secret put):
 # INGEST_API_KEY - matches key baked into HelixScreen binary
 # GITHUB_TOKEN - GitHub PAT with Issues: Read and write scope
 # ADMIN_API_KEY - Admin API key for retrieving debug bundles
+# RESEND_API_KEY - Resend API key for email notifications
 
 [[routes]]
 pattern = "crash.helixscreen.org/*"
@@ -30,10 +33,10 @@ namespace_id = "1002"
 limit = 5
 period = 60
 
-# Rate limiting for debug bundles: 3 per IP per 5 minutes
+# Rate limiting for debug bundles: 3 per IP per 60 seconds
 [[ratelimits]]
 name = "DEBUG_BUNDLE_LIMITER"
 namespace_id = "1003"
 [ratelimits.simple]
 limit = 3
-period = 300
+period = 60
