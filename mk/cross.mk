@@ -39,7 +39,9 @@ ifeq ($(PLATFORM_TARGET),pi)
     # - /usr/include/libdrm: drm.h (needed by xf86drmMode.h)
     # -Wno-error=conversion: LVGL headers have int32_t->float conversions that GCC 12 flags
     # -DHELIX_RELEASE_BUILD: Disables debug features like LV_USE_ASSERT_STYLE
-    TARGET_CFLAGS := -march=armv8-a -I/usr/aarch64-linux-gnu/include -I/usr/include/libdrm -Wno-error=conversion -Wno-error=sign-conversion -DHELIX_RELEASE_BUILD
+    # -funwind-tables: Emit ARM unwind info (.ARM.exidx) so backtrace() can walk
+    # the full call stack in crash reports. ~5-10% code size increase, zero runtime cost.
+    TARGET_CFLAGS := -march=armv8-a -funwind-tables -I/usr/aarch64-linux-gnu/include -I/usr/include/libdrm -Wno-error=conversion -Wno-error=sign-conversion -DHELIX_RELEASE_BUILD
     DISPLAY_BACKEND := drm
     ENABLE_SDL := no
     ENABLE_TINYGL_3D := yes
@@ -61,7 +63,9 @@ else ifeq ($(PLATFORM_TARGET),pi32)
     CROSS_COMPILE ?= arm-linux-gnueabihf-
     TARGET_ARCH := armv7-a
     TARGET_TRIPLE := arm-linux-gnueabihf
-    TARGET_CFLAGS := -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard \
+    # -funwind-tables: Emit ARM unwind info (.ARM.exidx) so backtrace() can walk
+    # the full call stack in crash reports. ~5-10% code size increase, zero runtime cost.
+    TARGET_CFLAGS := -march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard -funwind-tables \
         -I/usr/arm-linux-gnueabihf/include -I/usr/include/libdrm \
         -Wno-error=conversion -Wno-error=sign-conversion -DHELIX_RELEASE_BUILD -DHELIX_PLATFORM_PI32
     DISPLAY_BACKEND := drm

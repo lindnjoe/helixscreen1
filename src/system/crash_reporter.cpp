@@ -94,13 +94,20 @@ CrashReporter::CrashReport CrashReporter::collect_report() {
         }
     }
 
-    // Fault info (Phase 2)
+    // Fault info
     if (crash_data.contains("fault_addr"))
         report.fault_addr = crash_data["fault_addr"];
     if (crash_data.contains("fault_code"))
         report.fault_code = crash_data["fault_code"];
     if (crash_data.contains("fault_code_name"))
         report.fault_code_name = crash_data["fault_code_name"];
+
+    // Memory map (from /proc/self/maps)
+    if (crash_data.contains("memory_map") && crash_data["memory_map"].is_array()) {
+        for (const auto& line : crash_data["memory_map"]) {
+            report.memory_map.push_back(line.get<std::string>());
+        }
+    }
 
     // Register state (Phase 2)
     if (crash_data.contains("reg_pc"))
@@ -239,6 +246,20 @@ nlohmann::json CrashReporter::report_to_json(const CrashReport& report) {
         j["load_base"] = report.load_base;
     }
 
+    // Memory map (executable mappings only — filter to keep payload small)
+    if (!report.memory_map.empty()) {
+        json maps = json::array();
+        for (const auto& line : report.memory_map) {
+            // Only include executable mappings (r-xp) to keep payload reasonable
+            if (line.find("r-xp") != std::string::npos) {
+                maps.push_back(line);
+            }
+        }
+        if (!maps.empty()) {
+            j["memory_map"] = maps;
+        }
+    }
+
     // Worker expects log_tail as an array of lines
     if (!report.log_tail.empty()) {
         json lines = json::array();
@@ -296,6 +317,16 @@ std::string CrashReporter::report_to_text(const CrashReport& report) {
         ss << "--- Backtrace ---\n";
         for (const auto& addr : report.backtrace) {
             ss << addr << "\n";
+        }
+        ss << "\n";
+    }
+
+    if (!report.memory_map.empty()) {
+        ss << "--- Memory Map (executable) ---\n";
+        for (const auto& line : report.memory_map) {
+            if (line.find("r-xp") != std::string::npos) {
+                ss << line << "\n";
+            }
         }
         ss << "\n";
     }

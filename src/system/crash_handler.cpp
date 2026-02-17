@@ -359,6 +359,43 @@ static void crash_signal_handler(int sig, siginfo_t* info, void* ucontext) {
     }
 #endif
 
+    // Dump /proc/self/maps so we can distinguish binary vs shared library frames.
+    // Not formally async-signal-safe, but /proc is a kernel pseudo-filesystem that
+    // doesn't involve userspace state. Widely used in crash handlers (Chromium, Firefox).
+#ifdef __linux__
+    {
+        int maps_fd = open("/proc/self/maps", O_RDONLY);
+        if (maps_fd >= 0) {
+            // Read in chunks and write executable mappings as "map:" lines.
+            // /proc/self/maps is typically 2-8 KB. We use a static buffer to
+            // avoid any heap allocation in the signal handler.
+            static char maps_buf[8192];
+            ssize_t n;
+            while ((n = read(maps_fd, maps_buf, sizeof(maps_buf) - 1)) > 0) {
+                maps_buf[n] = '\0';
+                // Write each line prefixed with "map:"
+                char* line_start = maps_buf;
+                for (ssize_t i = 0; i < n; ++i) {
+                    if (maps_buf[i] == '\n') {
+                        maps_buf[i] = '\0';
+                        safe_write(fd, "map:");
+                        safe_write(fd, line_start);
+                        safe_write(fd, "\n");
+                        line_start = maps_buf + i + 1;
+                    }
+                }
+                // Handle trailing partial line
+                if (line_start < maps_buf + n) {
+                    safe_write(fd, "map:");
+                    safe_write(fd, line_start);
+                    safe_write(fd, "\n");
+                }
+            }
+            close(maps_fd);
+        }
+    }
+#endif
+
     close(fd);
 
     // Re-raise with default handler so the process exits with the correct status
@@ -528,6 +565,12 @@ nlohmann::json crash_handler::read_crash_file(const std::string& crash_file_path
                 result["load_base"] = value;
             } else if (key == "bt") {
                 backtrace_arr.push_back(value);
+            } else if (key == "map") {
+                // Memory map lines from /proc/self/maps
+                if (!result.contains("memory_map")) {
+                    result["memory_map"] = json::array();
+                }
+                result["memory_map"].push_back(value);
             }
         }
 

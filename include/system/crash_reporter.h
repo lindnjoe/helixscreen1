@@ -71,6 +71,9 @@ class CrashReporter {
         // ASLR load base (for symbol resolution)
         std::string load_base;
 
+        // Memory map (/proc/self/maps lines, for mapping addresses to libraries)
+        std::vector<std::string> memory_map;
+
         // Additional context (collected at startup)
         std::string platform;
         std::string printer_model;
