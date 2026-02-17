@@ -122,7 +122,7 @@ bool is_usb_input_device(const std::string& device_path) {
  * @return Calibration coefficients (check .valid before use)
  */
 helix::TouchCalibration load_touch_calibration() {
-    Config* cfg = Config::get_instance();
+    helix::Config* cfg = helix::Config::get_instance();
     helix::TouchCalibration cal;
 
     if (!cfg) {
