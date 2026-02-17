@@ -569,7 +569,7 @@ static void sync_from_ams_state(AmsMiniStatusData* data) {
         slot_bar->fill_pct = ams_draw::fill_percent_from_slot(slot, 0);
         slot_bar->present = slot.is_present();
         slot_bar->loaded = (slot.status == SlotStatus::LOADED);
-        slot_bar->has_error = (slot.status == SlotStatus::BLOCKED);
+        slot_bar->has_error = (slot.status == SlotStatus::BLOCKED || slot.error.has_value());
         slot_bar->severity = slot.error.has_value() ? slot.error->severity : SlotError::INFO;
     }
 

@@ -409,14 +409,7 @@ static void apply_slot_error(AmsSlotData* data, const SlotInfo& slot) {
     }
 
     if (slot.error.has_value()) {
-        lv_color_t badge_color;
-        if (slot.error->severity == SlotError::ERROR) {
-            badge_color = theme_manager_get_color("danger");
-        } else if (slot.error->severity == SlotError::WARNING) {
-            badge_color = theme_manager_get_color("warning");
-        } else {
-            badge_color = theme_manager_get_color("text_muted");
-        }
+        lv_color_t badge_color = ams_draw::severity_color(slot.error->severity);
         lv_obj_set_style_bg_color(data->error_indicator, badge_color, LV_PART_MAIN);
         lv_obj_remove_flag(data->error_indicator, LV_OBJ_FLAG_HIDDEN);
 
