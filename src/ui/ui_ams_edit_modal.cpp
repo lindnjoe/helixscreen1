@@ -7,10 +7,13 @@
 #include "ui_update_queue.h"
 
 #include "ams_state.h"
+#include "color_utils.h"
 #include "filament_database.h"
 #include "format_utils.h"
 #include "moonraker_api.h"
+#include "spoolman_slot_saver.h"
 #include "spoolman_types.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -46,7 +49,8 @@ AmsEditModal::AmsEditModal(AmsEditModal&& other) noexcept
       completion_callback_(std::move(other.completion_callback_)),
       remaining_pre_edit_pct_(other.remaining_pre_edit_pct_),
       color_picker_(std::move(other.color_picker_)),
-      subjects_initialized_(other.subjects_initialized_) {
+      subjects_initialized_(other.subjects_initialized_),
+      cached_spools_(std::move(other.cached_spools_)) {
     // Copy buffers
     std::memcpy(slot_indicator_buf_, other.slot_indicator_buf_, sizeof(slot_indicator_buf_));
     std::memcpy(color_name_buf_, other.color_name_buf_, sizeof(color_name_buf_));
@@ -71,6 +75,7 @@ AmsEditModal& AmsEditModal::operator=(AmsEditModal&& other) noexcept {
         remaining_pre_edit_pct_ = other.remaining_pre_edit_pct_;
         color_picker_ = std::move(other.color_picker_);
         subjects_initialized_ = other.subjects_initialized_;
+        cached_spools_ = std::move(other.cached_spools_);
         std::memcpy(slot_indicator_buf_, other.slot_indicator_buf_, sizeof(slot_indicator_buf_));
         std::memcpy(color_name_buf_, other.color_name_buf_, sizeof(color_name_buf_));
         std::memcpy(temp_nozzle_buf_, other.temp_nozzle_buf_, sizeof(temp_nozzle_buf_));
@@ -105,6 +110,7 @@ bool AmsEditModal::show_for_slot(lv_obj_t* parent, int slot_index, const SlotInf
     working_info_ = initial_info;
     api_ = api;
     remaining_pre_edit_pct_ = 0;
+    cached_spools_.clear();
 
     // Reset remaining mode subject before showing (0 = view mode)
     lv_subject_set_int(&remaining_mode_subject_, 0);
@@ -116,6 +122,20 @@ bool AmsEditModal::show_for_slot(lv_obj_t* parent, int slot_index, const SlotInf
 
     // Store 'this' in modal's user_data for callback traversal
     lv_obj_set_user_data(dialog_, this);
+
+    // Determine first view: picker for empty slots with Spoolman, form otherwise
+    bool has_spoolman = false;
+    auto* spoolman_subj = lv_xml_get_subject(nullptr, "printer_has_spoolman");
+    if (spoolman_subj) {
+        has_spoolman = lv_subject_get_int(spoolman_subj) == 1;
+    }
+    bool slot_empty = initial_info.material.empty() && initial_info.brand.empty();
+
+    if (has_spoolman && slot_empty && initial_info.spoolman_id == 0) {
+        switch_to_picker();
+    } else {
+        switch_to_form();
+    }
 
     spdlog::info("[AmsEditModal] Shown for slot {}", slot_index);
     return true;
@@ -172,6 +192,9 @@ void AmsEditModal::on_show() {
 
     // Set initial sync button state (disabled since nothing is dirty yet)
     update_sync_button_state();
+
+    // Set initial Spoolman button state
+    update_spoolman_button_state();
 }
 
 void AmsEditModal::on_hide() {
@@ -192,7 +215,13 @@ void AmsEditModal::on_hide() {
     // Reset edit mode subject
     if (subjects_initialized_) {
         lv_subject_set_int(&remaining_mode_subject_, 0);
+        lv_subject_set_int(&view_mode_subject_, 0);
+        lv_subject_set_int(&picker_state_subject_, 0);
     }
+
+    // Clear cached picker data
+    cached_spools_.clear();
+
     spdlog::debug("[AmsEditModal] on_hide()");
 }
 
@@ -243,6 +272,12 @@ void AmsEditModal::init_subjects() {
 
     // Initialize remaining mode subject (0=view, 1=edit) - registered globally for XML binding
     UI_MANAGED_SUBJECT_INT(remaining_mode_subject_, 0, "edit_remaining_mode", subjects_);
+
+    // Initialize view mode subject (0=form, 1=picker) - registered globally for XML binding
+    UI_MANAGED_SUBJECT_INT(view_mode_subject_, 0, "edit_modal_view", subjects_);
+
+    // Initialize picker state subject (0=loading, 1=empty, 2=content) - registered globally
+    UI_MANAGED_SUBJECT_INT(picker_state_subject_, 0, "edit_picker_state", subjects_);
 
     subjects_initialized_ = true;
     spdlog::debug("[AmsEditModal] Subjects initialized");
@@ -332,6 +367,232 @@ void AmsEditModal::update_vendor_dropdown() {
         }
     }
     lv_dropdown_set_selected(vendor_dropdown, vendor_idx);
+}
+
+// ============================================================================
+// View Switching
+// ============================================================================
+
+void AmsEditModal::switch_to_picker() {
+    if (!subjects_initialized_) {
+        return;
+    }
+    lv_subject_set_int(&view_mode_subject_, 1);
+    populate_picker();
+    spdlog::debug("[AmsEditModal] Switched to picker view");
+}
+
+void AmsEditModal::switch_to_form() {
+    if (!subjects_initialized_) {
+        return;
+    }
+    lv_subject_set_int(&view_mode_subject_, 0);
+    spdlog::debug("[AmsEditModal] Switched to form view");
+}
+
+void AmsEditModal::populate_picker() {
+    if (!dialog_ || !api_) {
+        // No API - show empty state
+        lv_subject_set_int(&picker_state_subject_, 1);
+        return;
+    }
+
+    // Show loading state
+    lv_subject_set_int(&picker_state_subject_, 0);
+
+    // Clear any existing spool items from previous population
+    lv_obj_t* spool_list = find_widget("picker_spool_list");
+    if (spool_list) {
+        lv_obj_clean(spool_list);
+    }
+
+    // Use weak_ptr pattern for async callback safety [L012]
+    std::weak_ptr<bool> weak_guard = callback_guard_;
+
+    api_->get_spoolman_spools(
+        [this, weak_guard](const std::vector<SpoolInfo>& spools) {
+            // Marshal to main thread — callback fires on WebSocket thread
+            helix::ui::queue_update([this, weak_guard, spools]() {
+                if (weak_guard.expired() || !dialog_ || !subjects_initialized_) {
+                    spdlog::trace("[AmsEditModal] Picker callback ignored - modal destroyed");
+                    return;
+                }
+
+                if (spools.empty()) {
+                    lv_subject_set_int(&picker_state_subject_, 1); // Empty state
+                    return;
+                }
+
+                // Show content state
+                lv_subject_set_int(&picker_state_subject_, 2);
+
+                // Cache spools for lookup on selection
+                cached_spools_ = spools;
+
+                // Find the spool list container
+                lv_obj_t* spool_list = find_widget("picker_spool_list");
+                if (!spool_list) {
+                    spdlog::error("[AmsEditModal] picker_spool_list not found");
+                    return;
+                }
+
+                // Create a spool item for each spool
+                for (const auto& spool : spools) {
+                    lv_obj_t* item =
+                        static_cast<lv_obj_t*>(lv_xml_create(spool_list, "spool_item", nullptr));
+                    if (!item) {
+                        continue;
+                    }
+
+                    // Store spool_id in user_data for click handler
+                    lv_obj_set_user_data(item,
+                                         reinterpret_cast<void*>(static_cast<intptr_t>(spool.id)));
+
+                    // Update spool name (vendor + material)
+                    lv_obj_t* name_label = lv_obj_find_by_name(item, "spool_name");
+                    if (name_label) {
+                        std::string name = spool.vendor.empty()
+                                               ? spool.material
+                                               : (spool.vendor + " " + spool.material);
+                        lv_label_set_text(name_label, name.c_str());
+                    }
+
+                    // Update color name
+                    lv_obj_t* color_label = lv_obj_find_by_name(item, "spool_color");
+                    if (color_label && !spool.color_name.empty()) {
+                        lv_label_set_text(color_label, spool.color_name.c_str());
+                    }
+
+                    // Update weight
+                    lv_obj_t* weight_label = lv_obj_find_by_name(item, "spool_weight");
+                    if (weight_label && spool.remaining_weight_g > 0) {
+                        char buf[32];
+                        snprintf(buf, sizeof(buf), "%.0fg", spool.remaining_weight_g);
+                        lv_label_set_text(weight_label, buf);
+                    }
+
+                    // Update color swatch
+                    lv_obj_t* swatch = lv_obj_find_by_name(item, "spool_swatch");
+                    if (swatch && !spool.color_hex.empty()) {
+                        lv_color_t color = theme_manager_parse_hex_color(spool.color_hex.c_str());
+                        lv_obj_set_style_bg_color(swatch, color, 0);
+                        lv_obj_set_style_border_color(swatch, color, 0);
+                    }
+
+                    // Show checkmark if this is the currently assigned spool
+                    if (spool.id == working_info_.spoolman_id) {
+                        lv_obj_t* check_icon = lv_obj_find_by_name(item, "selected_icon");
+                        if (check_icon) {
+                            lv_obj_remove_flag(check_icon, LV_OBJ_FLAG_HIDDEN);
+                        }
+                    }
+                }
+
+                spdlog::info("[AmsEditModal] Picker populated with {} spools", spools.size());
+            });
+        },
+        [this, weak_guard](const MoonrakerError& err) {
+            // Marshal to main thread — callback fires on WebSocket thread
+            helix::ui::queue_update([this, weak_guard, msg = err.message]() {
+                if (weak_guard.expired() || !dialog_ || !subjects_initialized_) {
+                    return;
+                }
+                spdlog::warn("[AmsEditModal] Failed to fetch spools for picker: {}", msg);
+                lv_subject_set_int(&picker_state_subject_, 1); // Empty/error state
+            });
+        });
+}
+
+void AmsEditModal::handle_spool_selected(int spool_id) {
+    spdlog::info("[AmsEditModal] Spool {} selected for slot {}", spool_id, slot_index_);
+
+    // Look up SpoolInfo from cached spools
+    for (const auto& spool : cached_spools_) {
+        if (spool.id == spool_id) {
+            // Auto-fill working_info_ from the selected spool
+            working_info_.spoolman_id = spool.id;
+            working_info_.color_name = spool.color_name;
+            working_info_.material = spool.material;
+            working_info_.brand = spool.vendor;
+            working_info_.spool_name = spool.vendor + " " + spool.material;
+            working_info_.remaining_weight_g = static_cast<float>(spool.remaining_weight_g);
+            working_info_.total_weight_g = static_cast<float>(spool.initial_weight_g);
+            working_info_.nozzle_temp_min = spool.nozzle_temp_min;
+            working_info_.nozzle_temp_max = spool.nozzle_temp_max;
+            working_info_.bed_temp = spool.bed_temp_recommended;
+
+            // Parse color hex to RGB
+            if (!spool.color_hex.empty()) {
+                uint32_t rgb = 0;
+                if (helix::parse_hex_color(spool.color_hex.c_str(), rgb)) {
+                    working_info_.color_rgb = rgb;
+                } else {
+                    spdlog::warn("[AmsEditModal] Failed to parse color hex: {}", spool.color_hex);
+                }
+            }
+
+            break;
+        }
+    }
+
+    // Switch to form view and refresh UI
+    switch_to_form();
+    update_ui();
+    update_sync_button_state();
+    update_spoolman_button_state();
+}
+
+void AmsEditModal::handle_manual_entry() {
+    spdlog::debug("[AmsEditModal] Manual entry requested - switching to form");
+    switch_to_form();
+}
+
+void AmsEditModal::handle_change_spool() {
+    spdlog::debug("[AmsEditModal] Change spool requested - switching to picker");
+    switch_to_picker();
+}
+
+void AmsEditModal::handle_unlink() {
+    spdlog::info("[AmsEditModal] Unlink requested for slot {}", slot_index_);
+    working_info_.spoolman_id = 0;
+    working_info_.spool_name.clear();
+    update_ui();
+    update_sync_button_state();
+    update_spoolman_button_state();
+}
+
+void AmsEditModal::update_spoolman_button_state() {
+    if (!dialog_) {
+        return;
+    }
+
+    lv_obj_t* btn_change = find_widget("btn_change_spool");
+    lv_obj_t* btn_unlink = find_widget("btn_unlink_spool");
+
+    if (working_info_.spoolman_id > 0) {
+        // Linked to Spoolman: show "Change Spool" and "Unlink"
+        if (btn_change) {
+            // Update button text to "Change Spool"
+            lv_obj_t* label = lv_obj_find_by_name(btn_change, "btn_label");
+            if (label) {
+                lv_label_set_text(label, "Change Spool");
+            }
+        }
+        if (btn_unlink) {
+            lv_obj_remove_flag(btn_unlink, LV_OBJ_FLAG_HIDDEN);
+        }
+    } else {
+        // Not linked: show "Link to Spoolman", hide "Unlink"
+        if (btn_change) {
+            lv_obj_t* label = lv_obj_find_by_name(btn_change, "btn_label");
+            if (label) {
+                lv_label_set_text(label, "Link to Spoolman");
+            }
+        }
+        if (btn_unlink) {
+            lv_obj_add_flag(btn_unlink, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
 }
 
 // ============================================================================
@@ -528,6 +789,7 @@ bool AmsEditModal::is_dirty() const {
     return working_info_.color_rgb != original_info_.color_rgb ||
            working_info_.material != original_info_.material ||
            working_info_.brand != original_info_.brand ||
+           working_info_.spoolman_id != original_info_.spoolman_id ||
            std::abs(working_info_.remaining_weight_g - original_info_.remaining_weight_g) > 0.1f;
 }
 
@@ -597,21 +859,27 @@ void AmsEditModal::show_color_picker() {
 }
 
 // ============================================================================
+// Save Orchestration
+// ============================================================================
+
+void AmsEditModal::fire_completion(bool saved) {
+    if (completion_callback_) {
+        EditResult result;
+        result.saved = saved;
+        result.slot_index = slot_index_;
+        result.slot_info = working_info_;
+        completion_callback_(result);
+    }
+    hide();
+}
+
+// ============================================================================
 // Event Handlers
 // ============================================================================
 
 void AmsEditModal::handle_close() {
     spdlog::debug("[AmsEditModal] Close requested");
-
-    // Invoke callback with cancelled result
-    if (completion_callback_) {
-        EditResult result;
-        result.saved = false;
-        result.slot_index = slot_index_;
-        completion_callback_(result);
-    }
-
-    hide();
+    fire_completion(false);
 }
 
 void AmsEditModal::handle_vendor_changed(int index) {
@@ -797,6 +1065,7 @@ void AmsEditModal::handle_reset() {
     // Refresh the UI
     update_ui();
     update_sync_button_state();
+    update_spoolman_button_state();
 
     NOTIFY_INFO("Reset to original values");
 }
@@ -804,16 +1073,27 @@ void AmsEditModal::handle_reset() {
 void AmsEditModal::handle_save() {
     spdlog::info("[AmsEditModal] Saving edits for slot {}", slot_index_);
 
-    // Invoke callback with saved result
-    if (completion_callback_) {
-        EditResult result;
-        result.saved = true;
-        result.slot_index = slot_index_;
-        result.slot_info = working_info_;
-        completion_callback_(result);
+    // If slot is linked to Spoolman and there are changes, use SpoolmanSlotSaver
+    if (working_info_.spoolman_id > 0 && api_) {
+        auto changes = helix::SpoolmanSlotSaver::detect_changes(original_info_, working_info_);
+        if (changes.any()) {
+            std::weak_ptr<bool> guard = callback_guard_;
+            auto saver = std::make_shared<helix::SpoolmanSlotSaver>(api_);
+            saver->save(original_info_, working_info_, [this, guard, saver](bool success) {
+                if (guard.expired()) {
+                    return;
+                }
+                if (!success) {
+                    spdlog::error("[AmsEditModal] Spoolman save failed, saving locally");
+                }
+                fire_completion(true); // Always save locally regardless
+            });
+            return; // Async path - fire_completion called from callback
+        }
     }
 
-    hide();
+    // No Spoolman changes (or no Spoolman) - save locally immediately
+    fire_completion(true);
 }
 
 // ============================================================================
@@ -836,6 +1116,13 @@ void AmsEditModal::register_callbacks() {
     lv_xml_register_event_cb(nullptr, "ams_edit_sync_spoolman_cb", on_sync_spoolman_cb);
     lv_xml_register_event_cb(nullptr, "ams_edit_reset_cb", on_reset_cb);
     lv_xml_register_event_cb(nullptr, "ams_edit_save_cb", on_save_cb);
+    lv_xml_register_event_cb(nullptr, "ams_edit_manual_entry_cb", on_manual_entry_cb);
+    lv_xml_register_event_cb(nullptr, "ams_edit_change_spool_cb", on_change_spool_cb);
+    lv_xml_register_event_cb(nullptr, "ams_edit_unlink_cb", on_unlink_cb);
+    // Register handler for spool_item clicks (shared component uses this callback name).
+    // This overrides AmsSpoolmanPicker's registration for the same name, which is
+    // intentional since the standalone picker is being absorbed (see Task 9).
+    lv_xml_register_event_cb(nullptr, "spoolman_spool_item_clicked_cb", on_spool_item_cb);
 
     callbacks_registered_ = true;
     spdlog::debug("[AmsEditModal] Callbacks registered");
@@ -943,6 +1230,39 @@ void AmsEditModal::on_save_cb(lv_event_t* e) {
     if (self) {
         self->handle_save();
     }
+}
+
+void AmsEditModal::on_manual_entry_cb(lv_event_t* e) {
+    auto* self = get_instance_from_event(e);
+    if (self) {
+        self->handle_manual_entry();
+    }
+}
+
+void AmsEditModal::on_change_spool_cb(lv_event_t* e) {
+    auto* self = get_instance_from_event(e);
+    if (self) {
+        self->handle_change_spool();
+    }
+}
+
+void AmsEditModal::on_unlink_cb(lv_event_t* e) {
+    auto* self = get_instance_from_event(e);
+    if (self) {
+        self->handle_unlink();
+    }
+}
+
+void AmsEditModal::on_spool_item_cb(lv_event_t* e) {
+    auto* self = get_instance_from_event(e);
+    if (!self) {
+        return;
+    }
+
+    // Get spool_id from the clicked item's user_data
+    lv_obj_t* target = static_cast<lv_obj_t*>(lv_event_get_target(e));
+    auto spool_id = static_cast<int>(reinterpret_cast<intptr_t>(lv_obj_get_user_data(target)));
+    self->handle_spool_selected(spool_id);
 }
 
 } // namespace helix::ui
