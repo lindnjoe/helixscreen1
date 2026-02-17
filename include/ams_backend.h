@@ -682,6 +682,18 @@ class AmsBackend {
         (void)tool_names;
     }
 
+    /**
+     * @brief Set filament sensor names from PrinterCapabilities
+     *
+     * Called before start() to provide filament sensor names from printer.objects.list.
+     * AFC backend uses this to detect hardware vs virtual bypass sensor.
+     *
+     * @param sensor_names Sensor names (e.g., "filament_switch_sensor virtual_bypass")
+     */
+    virtual void set_discovered_sensors(const std::vector<std::string>& sensor_names) {
+        (void)sensor_names;
+    }
+
     // ========================================================================
     // Factory Method
     // ========================================================================

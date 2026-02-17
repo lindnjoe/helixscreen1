@@ -30,9 +30,10 @@ AmsBackendHappyHare::AmsBackendHappyHare(MoonrakerAPI* api, MoonrakerClient* cli
     system_info_.total_slots = 0;
     system_info_.supports_endless_spool = true;
     system_info_.supports_tool_mapping = true;
+    // Bypass support is determined at runtime from mmu.has_bypass status field.
+    // Default to true; will be updated when first status arrives.
     system_info_.supports_bypass = true;
-    // Default to virtual bypass - Happy Hare typically uses selector movement to bypass position
-    // TODO: Detect from Happy Hare configuration if hardware bypass sensor is present
+    // Happy Hare bypass is always positional (selector moves to bypass position), never a sensor
     system_info_.has_hardware_bypass_sensor = false;
 
     spdlog::debug("[AMS HappyHare] Backend created");
@@ -359,6 +360,13 @@ void AmsBackendHappyHare::parse_mmu_state(const nlohmann::json& mmu_data) {
                 unit.hub_sensor_triggered = false;
             }
         }
+    }
+
+    // Parse has_bypass: printer.mmu.has_bypass
+    // Not all MMU types support bypass (e.g., ERCF/Tradrack do, BoxTurtle does not)
+    if (mmu_data.contains("has_bypass") && mmu_data["has_bypass"].is_boolean()) {
+        system_info_.supports_bypass = mmu_data["has_bypass"].get<bool>();
+        spdlog::trace("[AMS HappyHare] Bypass supported: {}", system_info_.supports_bypass);
     }
 
     // Parse num_units if available (multi-unit Happy Hare setups)
@@ -1048,14 +1056,14 @@ AmsError AmsBackendHappyHare::execute_device_action(const std::string& action_id
                 return AmsError(AmsResult::WRONG_STATE, "Speed must be 10-300 mm/s",
                                 "Invalid value", "Enter a speed between 10 and 300 mm/s");
             }
-            // Happy Hare uses MMU_TEST_CONFIG to set speeds
+            // Happy Hare uses MMU_TEST_CONFIG to set speeds at runtime
             std::string param;
             if (action_id == "gear_load_speed")
-                param = "gear_from_buffer_speed";
+                param = "GEAR_FROM_BUFFER_SPEED";
             else if (action_id == "gear_unload_speed")
-                param = "gear_from_buffer_speed"; // TODO: map to correct HH param
+                param = "GEAR_UNLOAD_SPEED";
             else
-                param = "selector_move_speed";
+                param = "SELECTOR_MOVE_SPEED";
             return execute_gcode(fmt::format("MMU_TEST_CONFIG {}={:.0f}", param, speed));
         } catch (const std::bad_any_cast&) {
             return AmsError(AmsResult::WRONG_STATE, "Invalid speed type", "Invalid value type",

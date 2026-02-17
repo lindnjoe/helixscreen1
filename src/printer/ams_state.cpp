@@ -367,6 +367,7 @@ void AmsState::init_backends_from_hardware(const helix::PrinterDiscovery& hardwa
 
         backend->set_discovered_lanes(hardware.afc_lane_names(), hardware.afc_hub_names());
         backend->set_discovered_tools(hardware.tool_names());
+        backend->set_discovered_sensors(hardware.filament_sensor_names());
 
         int index = add_backend(std::move(backend));
 

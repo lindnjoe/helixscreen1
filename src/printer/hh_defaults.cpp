@@ -94,7 +94,7 @@ std::vector<DeviceAction> hh_default_actions() {
         a.label = "Gear Unload Speed";
         a.section = "speed";
         a.type = ActionType::SLIDER;
-        a.current_value = 150.0;
+        a.current_value = 80.0;
         a.min_value = 10.0;
         a.max_value = 300.0;
         a.unit = "mm/s";

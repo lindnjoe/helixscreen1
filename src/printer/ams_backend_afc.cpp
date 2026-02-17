@@ -41,8 +41,8 @@ AmsBackendAfc::AmsBackendAfc(MoonrakerAPI* api, MoonrakerClient* client)
     system_info_.supports_bypass = caps.supports_bypass;
     system_info_.supports_purge = caps.supports_purge;
     system_info_.tip_method = caps.tip_method;
-    // Default to hardware sensor - AFC BoxTurtle typically has physical bypass sensor
-    // TODO: Detect from AFC configuration whether bypass sensor is virtual or hardware
+    // Default to hardware sensor. Actual detection happens in set_discovered_sensors()
+    // which checks for "filament_switch_sensor virtual_bypass" in the Klipper objects list.
     system_info_.has_hardware_bypass_sensor = true;
 
     spdlog::debug("[AMS AFC] Backend created");
@@ -141,6 +141,32 @@ void AmsBackendAfc::set_discovered_lanes(const std::vector<std::string>& lane_na
         hub_names_ = hub_names;
         spdlog::debug("[AMS AFC] Set {} discovered hubs", hub_names_.size());
     }
+}
+
+void AmsBackendAfc::set_discovered_sensors(const std::vector<std::string>& sensor_names) {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
+
+    // Detect hardware vs virtual bypass from Klipper object names.
+    // AFC creates "filament_switch_sensor virtual_bypass" when no hardware sensor is configured,
+    // or uses the existing "filament_switch_sensor bypass" when hardware is present.
+    bool has_virtual = false;
+    bool has_hardware = false;
+    for (const auto& name : sensor_names) {
+        if (name == "filament_switch_sensor virtual_bypass") {
+            has_virtual = true;
+        } else if (name == "filament_switch_sensor bypass") {
+            has_hardware = true;
+        }
+    }
+
+    if (has_virtual) {
+        system_info_.has_hardware_bypass_sensor = false;
+        spdlog::info("[AMS AFC] Virtual bypass sensor detected");
+    } else if (has_hardware) {
+        system_info_.has_hardware_bypass_sensor = true;
+        spdlog::info("[AMS AFC] Hardware bypass sensor detected");
+    }
+    // If neither found, keep the default (true — assumes hardware)
 }
 
 void AmsBackendAfc::stop() {

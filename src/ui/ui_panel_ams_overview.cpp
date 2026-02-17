@@ -47,9 +47,7 @@ static constexpr int32_t MINI_BAR_MIN_WIDTH_PX = 6;
 /// Maximum bar width for mini slot bars
 static constexpr int32_t MINI_BAR_MAX_WIDTH_PX = 14;
 
-/// Height of each mini slot bar
-/// TODO: Replace with theme_manager_get_spacing("ams_bars_height") to use
-/// the responsive value from globals.xml instead of this compile-time constant.
+/// Height of each mini slot bar (decorative, no need for responsive scaling)
 static constexpr int32_t MINI_BAR_HEIGHT_PX = 40;
 
 /// Border radius for bar corners
@@ -280,8 +278,8 @@ void AmsOverviewPanel::refresh_units() {
         return;
     }
 
-    // TODO: Iterate all backends (0..backend_count) to aggregate units across
-    // multiple simultaneous AMS systems. Currently only queries backend 0.
+    // Overview shows units from the active backend. Multi-unit support handles
+    // backends with multiple physical units (e.g., 2x Box Turtle on one AFC system).
     auto* backend = AmsState::instance().get_backend();
     if (!backend) {
         spdlog::debug("[{}] No backend available", get_name());

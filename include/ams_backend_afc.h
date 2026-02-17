@@ -223,6 +223,8 @@ class AmsBackendAfc : public AmsBackend {
     void set_discovered_lanes(const std::vector<std::string>& lane_names,
                               const std::vector<std::string>& hub_names) override;
 
+    void set_discovered_sensors(const std::vector<std::string>& sensor_names) override;
+
     // Device-Specific Actions
     /**
      * @brief Get available device sections for AFC backend
