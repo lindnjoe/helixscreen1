@@ -41,33 +41,31 @@ static SwitchSizePreset SIZE_LARGE;
  * Called once at startup from ui_switch_register()
  */
 static void ui_switch_init_size_presets() {
-    // Use custom breakpoints optimized for our hardware: max(hor_res, ver_res)
+    // Use custom breakpoints optimized for our hardware
     lv_display_t* display = lv_display_get_default();
-    int32_t hor_res = lv_display_get_horizontal_resolution(display);
     int32_t ver_res = lv_display_get_vertical_resolution(display);
-    int32_t greater_res = LV_MAX(hor_res, ver_res);
 
     // Margin calculation: knob extends ~25% beyond track on each side
     // vert_margin = height * 0.25 (rounded up)
     // horiz_margin = similar, but knob extends horizontally too
-    if (greater_res <= UI_BREAKPOINT_SMALL_MAX) { // ≤480: 480x320
+    if (ver_res <= UI_BREAKPOINT_SMALL_MAX) { // ≤480: 480x320
         SIZE_TINY = {32, 16, 1, 4, 4};
         SIZE_SMALL = {40, 20, 1, 5, 5};
         SIZE_MEDIUM = {48, 24, 2, 6, 6};
         SIZE_LARGE = {56, 28, 2, 7, 7};
-        spdlog::trace("[Switch] Initialized SMALL screen presets (greater_res={}px)", greater_res);
-    } else if (greater_res <= UI_BREAKPOINT_MEDIUM_MAX) { // 481-800: 800x480
+        spdlog::trace("[Switch] Initialized SMALL screen presets (ver_res={}px)", ver_res);
+    } else if (ver_res <= UI_BREAKPOINT_MEDIUM_MAX) { // 481-800: 800x480
         SIZE_TINY = {48, 24, 2, 6, 6};
         SIZE_SMALL = {64, 32, 2, 8, 8};
         SIZE_MEDIUM = {80, 40, 3, 10, 10};
         SIZE_LARGE = {88, 44, 3, 11, 11};
-        spdlog::trace("[Switch] Initialized MEDIUM screen presets (greater_res={}px)", greater_res);
+        spdlog::trace("[Switch] Initialized MEDIUM screen presets (ver_res={}px)", ver_res);
     } else { // >800: 1024x600+
         SIZE_TINY = {64, 32, 2, 8, 8};
         SIZE_SMALL = {88, 40, 3, 10, 10};
         SIZE_MEDIUM = {112, 48, 4, 12, 12};
         SIZE_LARGE = {128, 56, 4, 14, 14};
-        spdlog::trace("[Switch] Initialized LARGE screen presets (greater_res={}px)", greater_res);
+        spdlog::trace("[Switch] Initialized LARGE screen presets (ver_res={}px)", ver_res);
     }
 }
 
