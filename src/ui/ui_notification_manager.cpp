@@ -13,6 +13,8 @@
 
 #include <cstring>
 
+using namespace helix;
+
 // Forward declaration for class-based API
 NotificationHistoryPanel& get_global_notification_history_panel();
 

@@ -41,6 +41,8 @@
 
 #include <cstdio>
 
+using namespace helix;
+
 // Subject declarations (static/global scope required)
 static lv_subject_t current_step;
 static lv_subject_t total_steps;

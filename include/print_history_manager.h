@@ -15,7 +15,6 @@ class MoonrakerAPI;
 namespace helix {
 class MoonrakerClient;
 }
-using helix::MoonrakerClient;
 
 /**
  * @brief Per-filename aggregated print history stats
@@ -38,7 +37,6 @@ namespace helix {
 /// Observer callback when history data changes
 using HistoryChangedCallback = std::function<void()>;
 } // namespace helix
-using helix::HistoryChangedCallback;
 
 /**
  * @brief Centralized print history cache with observer notification
@@ -83,9 +81,9 @@ class PrintHistoryManager {
      * @brief Construct PrintHistoryManager with API and client references
      *
      * @param api MoonrakerAPI for fetching history
-     * @param client MoonrakerClient for notification subscription
+     * @param client helix::MoonrakerClient for notification subscription
      */
-    PrintHistoryManager(MoonrakerAPI* api, MoonrakerClient* client);
+    PrintHistoryManager(MoonrakerAPI* api, helix::MoonrakerClient* client);
 
     ~PrintHistoryManager();
 
@@ -173,7 +171,7 @@ class PrintHistoryManager {
      *
      * @param cb Pointer to callback function (stored, not copied)
      */
-    void add_observer(HistoryChangedCallback* cb);
+    void add_observer(helix::HistoryChangedCallback* cb);
 
     /**
      * @brief Remove observer callback by pointer
@@ -183,7 +181,7 @@ class PrintHistoryManager {
      *
      * @param cb Pointer to callback to remove
      */
-    void remove_observer(HistoryChangedCallback* cb);
+    void remove_observer(helix::HistoryChangedCallback* cb);
 
   private:
     /**
@@ -214,14 +212,14 @@ class PrintHistoryManager {
 
     // Dependencies
     MoonrakerAPI* api_;
-    MoonrakerClient* client_;
+    helix::MoonrakerClient* client_;
 
     // Cached data
     std::vector<PrintHistoryJob> cached_jobs_;
     std::unordered_map<std::string, PrintHistoryStats> filename_stats_;
 
     // Observers (stored as pointers for reliable removal)
-    std::vector<HistoryChangedCallback*> observers_;
+    std::vector<helix::HistoryChangedCallback*> observers_;
 
     // State
     bool is_loaded_ = false;

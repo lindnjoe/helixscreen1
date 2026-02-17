@@ -15,7 +15,6 @@ class MoonrakerAPI;
 namespace helix {
 class MoonrakerClient;
 }
-using helix::MoonrakerClient;
 
 namespace helix {
 class PrinterDiscovery;

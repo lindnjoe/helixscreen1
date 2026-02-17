@@ -35,6 +35,7 @@
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;
+using namespace helix;
 
 // =============================================================================
 // SHA-256 implementation

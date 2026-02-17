@@ -13,6 +13,8 @@
 
 #include <memory>
 
+using namespace helix;
+
 // Step definitions for vertical progress (retract wizard)
 static const ui_step_t VERTICAL_STEPS[] = {{"Nozzle heating", StepState::Completed},
                                            {"Prepare to retract", StepState::Active},

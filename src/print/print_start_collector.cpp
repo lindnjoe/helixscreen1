@@ -13,6 +13,8 @@
 #include <atomic>
 #include <ctime>
 
+using namespace helix;
+
 using json = nlohmann::json;
 
 // Config path for pre-print prediction history

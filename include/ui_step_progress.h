@@ -11,14 +11,13 @@
 namespace helix {
 enum class StepState { Pending = 0, Active = 1, Completed = 2 };
 } // namespace helix
-using helix::StepState;
 
 /**
  * Step definition structure
  */
 typedef struct {
-    const char* label; // Step text (e.g., "Nozzle heating")
-    StepState state;   // Current state
+    const char* label;      // Step text (e.g., "Nozzle heating")
+    helix::StepState state; // Current state
 } ui_step_t;
 
 /**

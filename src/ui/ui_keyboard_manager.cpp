@@ -17,6 +17,8 @@
 
 #include <cstring>
 
+using namespace helix;
+
 // Macro for keyboard button control flags
 #define LV_KB_BTN(width) static_cast<lv_buttonmatrix_ctrl_t>(LV_BUTTONMATRIX_CTRL_POPOVER | (width))
 

@@ -202,11 +202,3 @@ using VendorCreateCallback = std::function<void(const VendorInfo&)>;
 /// Single filament creation callback (returns the created filament)
 using FilamentCreateCallback = std::function<void(const FilamentInfo&)>;
 } // namespace helix
-using helix::FilamentCreateCallback;
-using helix::FilamentListCallback;
-using helix::FilamentUsageCallback;
-using helix::SpoolCallback;
-using helix::SpoolCreateCallback;
-using helix::SpoolListCallback;
-using helix::VendorCreateCallback;
-using helix::VendorListCallback;

@@ -28,6 +28,8 @@
 #include <cstring>
 #include <memory>
 
+using namespace helix;
+
 // Forward declaration for unified Z-axis XML event callback
 static void on_motion_z_button(lv_event_t* e);
 

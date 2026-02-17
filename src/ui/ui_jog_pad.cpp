@@ -14,6 +14,8 @@
 #include <cmath>
 #include <cstring>
 
+using namespace helix;
+
 // Distance values in mm (indexed by JogDistance enum)
 static const float distance_values[] = {0.1f, 1.0f, 10.0f, 100.0f};
 

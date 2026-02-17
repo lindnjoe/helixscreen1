@@ -12,13 +12,11 @@
 namespace helix {
 class MoonrakerClient;
 }
-using helix::MoonrakerClient;
 class MoonrakerAPI;
 class MoonrakerManager;
 namespace helix {
 class PrinterState;
 }
-using helix::PrinterState;
 class PrintHistoryManager;
 class TemperatureHistoryManager;
 
@@ -26,13 +24,13 @@ class TemperatureHistoryManager;
  * @brief Get global MoonrakerClient instance
  * @return Pointer to global MoonrakerClient (may be nullptr if not initialized)
  */
-MoonrakerClient* get_moonraker_client();
+helix::MoonrakerClient* get_moonraker_client();
 
 /**
  * @brief Set global MoonrakerClient instance (called by main.cpp during init)
  * @param client Pointer to MoonrakerClient instance
  */
-void set_moonraker_client(MoonrakerClient* client);
+void set_moonraker_client(helix::MoonrakerClient* client);
 
 /**
  * @brief Get global MoonrakerAPI instance
@@ -99,7 +97,7 @@ void set_temperature_history_manager(TemperatureHistoryManager* manager);
  *
  * @return Reference to singleton PrinterState (always valid)
  */
-PrinterState& get_printer_state();
+helix::PrinterState& get_printer_state();
 
 /**
  * @brief Get the global notification subject

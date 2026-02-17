@@ -58,6 +58,8 @@
 #include <unordered_set>
 #include <vector>
 
+using namespace helix;
+
 // Forward declaration for class-based API
 PrintStatusPanel& get_global_print_status_panel();
 

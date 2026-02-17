@@ -54,10 +54,10 @@ class PrintStatusPanel : public OverlayBase {
     /**
      * @brief Construct PrintStatusPanel with injected dependencies
      *
-     * @param printer_state Reference to PrinterState
+     * @param printer_state Reference to helix::PrinterState
      * @param api Pointer to MoonrakerAPI (for pause/cancel commands)
      */
-    PrintStatusPanel(PrinterState& printer_state, MoonrakerAPI* api);
+    PrintStatusPanel(helix::PrinterState& printer_state, MoonrakerAPI* api);
 
     ~PrintStatusPanel() override;
 
@@ -255,13 +255,13 @@ class PrintStatusPanel : public OverlayBase {
     // === Injected Dependencies ===
     //
 
-    PrinterState& printer_state_;
+    helix::PrinterState& printer_state_;
     MoonrakerAPI* api_;
     lv_obj_t* parent_screen_ = nullptr;
 
     //
     // === Subjects (owned by this panel) ===
-    // Note: Display filename uses shared print_display_filename from PrinterState
+    // Note: Display filename uses shared print_display_filename from helix::PrinterState
     //       (populated by ActivePrintMediaManager)
     //
 
@@ -456,7 +456,7 @@ class PrintStatusPanel : public OverlayBase {
 
     void on_temperature_changed();
     void on_print_progress_changed(int progress);
-    void on_print_state_changed(PrintJobState state);
+    void on_print_state_changed(helix::PrintJobState state);
     void on_print_filename_changed(const char* filename);
     void on_speed_factor_changed(int speed);
     void on_flow_factor_changed(int flow);
@@ -471,7 +471,7 @@ class PrintStatusPanel : public OverlayBase {
     void on_preprint_remaining_changed(int seconds);
     void on_preprint_elapsed_changed(int seconds);
 
-    // PrinterState observers (ObserverGuard handles cleanup)
+    // helix::PrinterState observers (ObserverGuard handles cleanup)
     /// @brief Temperature observer bundle (nozzle + bed temps)
     helix::ui::TemperatureObserverBundle<PrintStatusPanel> temp_observers_;
     ObserverGuard print_progress_observer_;

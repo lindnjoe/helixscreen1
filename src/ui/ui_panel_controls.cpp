@@ -50,6 +50,7 @@
 #include <cstring>
 #include <memory>
 
+using namespace helix;
 using helix::ui::observe_int_sync;
 using helix::ui::observe_string;
 

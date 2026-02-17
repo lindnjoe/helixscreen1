@@ -33,7 +33,6 @@
 namespace helix {
 class PrinterState;
 }
-using helix::PrinterState;
 
 namespace helix::settings {
 

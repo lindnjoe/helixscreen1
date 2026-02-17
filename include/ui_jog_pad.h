@@ -8,7 +8,7 @@
 #include <lvgl.h>
 
 // Jog pad event callbacks
-typedef void (*jog_pad_jog_cb_t)(JogDirection direction, float distance_mm, void* user_data);
+typedef void (*jog_pad_jog_cb_t)(helix::JogDirection direction, float distance_mm, void* user_data);
 typedef void (*jog_pad_home_cb_t)(void* user_data);
 
 /**
@@ -58,7 +58,7 @@ void ui_jog_pad_set_home_callback(lv_obj_t* obj, jog_pad_home_cb_t cb, void* use
  * @param obj Jog pad object
  * @param distance Distance mode
  */
-void ui_jog_pad_set_distance(lv_obj_t* obj, JogDistance distance);
+void ui_jog_pad_set_distance(lv_obj_t* obj, helix::JogDistance distance);
 
 /**
  * Get current jog distance mode
@@ -66,7 +66,7 @@ void ui_jog_pad_set_distance(lv_obj_t* obj, JogDistance distance);
  * @param obj Jog pad object
  * @return Current distance mode
  */
-JogDistance ui_jog_pad_get_distance(lv_obj_t* obj);
+helix::JogDistance ui_jog_pad_get_distance(lv_obj_t* obj);
 
 /**
  * Refresh colors from theme (call when theme changes)

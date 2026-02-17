@@ -24,6 +24,7 @@
 #include <cstdlib>
 #include <memory>
 
+using namespace helix;
 using helix::ui::observe_int_sync;
 
 // ============================================================================

@@ -58,8 +58,7 @@ uint32_t ui_hsv_picker_get_color_rgb(lv_obj_t* obj);
 namespace helix {
 using HsvPickerCallback = std::function<void(uint32_t rgb, void* user_data)>;
 } // namespace helix
-using helix::HsvPickerCallback;
-void ui_hsv_picker_set_callback(lv_obj_t* obj, HsvPickerCallback callback, void* user_data);
+void ui_hsv_picker_set_callback(lv_obj_t* obj, helix::HsvPickerCallback callback, void* user_data);
 
 /**
  * @brief Set HSV values directly

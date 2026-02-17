@@ -29,6 +29,8 @@
 #include <lvgl.h>
 #include <map>
 
+using namespace helix;
+
 // MDI chevron-down symbol for dropdown arrows (replaces FontAwesome LV_SYMBOL_DOWN)
 static const char* MDI_CHEVRON_DOWN = "\xF3\xB0\x85\x80"; // F0140
 

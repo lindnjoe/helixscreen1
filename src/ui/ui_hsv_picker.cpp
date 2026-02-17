@@ -19,6 +19,8 @@
 #include <cstring>
 #include <memory>
 
+using namespace helix;
+
 namespace {
 
 // Default sizes

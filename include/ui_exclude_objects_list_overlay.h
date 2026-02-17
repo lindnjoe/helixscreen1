@@ -15,7 +15,6 @@ class MoonrakerAPI;
 namespace helix {
 class PrinterState;
 }
-using helix::PrinterState;
 
 namespace helix::gcode {
 class GCodeObjectThumbnailRenderer;

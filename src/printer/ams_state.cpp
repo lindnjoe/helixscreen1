@@ -34,6 +34,8 @@
 #include <cstring>
 #include <unordered_map>
 
+using namespace helix;
+
 // Async callback data for thread-safe LVGL updates
 namespace {
 

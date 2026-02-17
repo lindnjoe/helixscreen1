@@ -93,6 +93,8 @@ const char* print_job_state_to_string(PrintJobState state) {
 
 } // namespace helix
 
+using namespace helix;
+
 // ============================================================================
 // PrinterState Implementation
 // ============================================================================

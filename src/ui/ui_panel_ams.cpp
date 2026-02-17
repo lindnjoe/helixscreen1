@@ -49,6 +49,8 @@
 #include <sstream>
 #include <unordered_map>
 
+using namespace helix;
+
 // Global instance pointer for XML callback access (atomic for safety during destruction)
 static std::atomic<AmsPanel*> g_ams_panel_instance{nullptr};
 

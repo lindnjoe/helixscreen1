@@ -31,6 +31,7 @@
 #include <ctime>
 #include <memory>
 
+using namespace helix;
 using helix::ui::observe_int_sync;
 using helix::ui::temperature::centi_to_degrees_f;
 

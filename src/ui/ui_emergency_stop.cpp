@@ -17,6 +17,8 @@
 
 #include <spdlog/spdlog.h>
 
+using namespace helix;
+
 namespace {
 // Recovery dialog content per reason
 struct RecoveryContent {

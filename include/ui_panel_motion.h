@@ -32,8 +32,6 @@ enum class JogDirection {
     SW  // -X-Y
 };
 } // namespace helix
-using helix::JogDirection;
-using helix::JogDistance;
 
 class MotionPanel : public OverlayBase {
   public:
@@ -58,10 +56,10 @@ class MotionPanel : public OverlayBase {
         return overlay_root_;
     }
     void set_position(float x, float y, float z);
-    JogDistance get_distance() const {
+    helix::JogDistance get_distance() const {
         return current_distance_;
     }
-    void jog(JogDirection direction, float distance_mm);
+    void jog(helix::JogDirection direction, float distance_mm);
     void home(char axis);
     void handle_z_button(const char* name);
 
@@ -83,7 +81,7 @@ class MotionPanel : public OverlayBase {
     char z_down_icon_buf_[24];
     bool bed_moves_ = false; // If true, invert Z direction (arrows match bed movement)
 
-    JogDistance current_distance_ = JogDistance::Dist1mm;
+    helix::JogDistance current_distance_ = helix::JogDistance::Dist1mm;
     float current_x_ = 0.0f;
     float current_y_ = 0.0f;
     float current_z_ = 0.0f; // Gcode (commanded) Z position
@@ -111,7 +109,7 @@ class MotionPanel : public OverlayBase {
     void setup_jog_pad();
     void register_position_observers();
 
-    static void jog_pad_jog_cb(JogDirection direction, float distance_mm, void* user_data);
+    static void jog_pad_jog_cb(helix::JogDirection direction, float distance_mm, void* user_data);
     static void jog_pad_home_cb(void* user_data);
     // Position observers use lambda-based observer factory (no static callbacks needed)
 

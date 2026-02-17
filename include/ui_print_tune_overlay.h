@@ -14,7 +14,6 @@ class MoonrakerAPI;
 namespace helix {
 class PrinterState;
 }
-using helix::PrinterState;
 
 /**
  * @file ui_print_tune_overlay.h
@@ -52,9 +51,9 @@ class PrintTuneOverlay : public OverlayBase {
      *
      * @param parent_screen The parent screen for the overlay
      * @param api MoonrakerAPI for sending G-code commands
-     * @param printer_state Reference to PrinterState for kinematics/values
+     * @param printer_state Reference to helix::PrinterState for kinematics/values
      */
-    void show(lv_obj_t* parent_screen, MoonrakerAPI* api, PrinterState& printer_state);
+    void show(lv_obj_t* parent_screen, MoonrakerAPI* api, helix::PrinterState& printer_state);
 
     /**
      * @brief Update speed display while dragging (no G-code)
@@ -121,7 +120,7 @@ class PrintTuneOverlay : public OverlayBase {
     /**
      * @brief Update display from current speed/flow values
      *
-     * Called by PrintStatusPanel when PrinterState values change.
+     * Called by PrintStatusPanel when helix::PrinterState values change.
      *
      * @param speed_percent Current speed percentage
      * @param flow_percent Current flow percentage
@@ -129,8 +128,8 @@ class PrintTuneOverlay : public OverlayBase {
     void update_speed_flow_display(int speed_percent, int flow_percent);
 
     /**
-     * @brief Update Z-offset display from PrinterState
-     * @param microns Z-offset in microns from PrinterState
+     * @brief Update Z-offset display from helix::PrinterState
+     * @param microns Z-offset in microns from helix::PrinterState
      */
     void update_z_offset_display(int microns);
 
@@ -200,7 +199,7 @@ class PrintTuneOverlay : public OverlayBase {
     //
 
     MoonrakerAPI* api_ = nullptr;
-    PrinterState* printer_state_ = nullptr;
+    helix::PrinterState* printer_state_ = nullptr;
     lv_obj_t* tune_panel_ = nullptr;
 
     //

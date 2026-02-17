@@ -25,6 +25,8 @@
 #include <cstdio>
 #include <random>
 
+using namespace helix;
+
 // Shaper overlay colors (distinct, visible on dark bg) — shared by chart and legend
 static constexpr uint32_t SHAPER_OVERLAY_COLORS[] = {
     0x4FC3F7, // ZV - light blue

@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <cstdio>
 
+using namespace helix;
 using namespace helix::led;
 
 // ============================================================================

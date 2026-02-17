@@ -78,10 +78,6 @@ using RequestId = uint64_t;
 /** @brief Invalid request ID constant */
 constexpr RequestId INVALID_REQUEST_ID = 0;
 } // namespace helix
-using helix::INVALID_REQUEST_ID;
-using helix::INVALID_SUBSCRIPTION_ID;
-using helix::RequestId;
-using helix::SubscriptionId;
 
 namespace helix {
 using ::json; // Make global json alias visible in this namespace
@@ -701,5 +697,3 @@ class MoonrakerClient : public hv::WebSocketClient {
 };
 
 } // namespace helix
-using helix::ConnectionState;
-using helix::MoonrakerClient;

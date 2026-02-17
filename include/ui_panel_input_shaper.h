@@ -21,7 +21,6 @@
 namespace helix {
 class MoonrakerClient;
 }
-using helix::MoonrakerClient;
 class MoonrakerAPI;
 
 /**
@@ -131,10 +130,10 @@ class InputShaperPanel : public OverlayBase {
      *
      * Creates InputShaperCalibrator instance with the API.
      *
-     * @param client MoonrakerClient (kept for potential future use)
+     * @param client helix::MoonrakerClient (kept for potential future use)
      * @param api MoonrakerAPI for G-code execution
      */
-    void set_api(MoonrakerClient* client, MoonrakerAPI* api);
+    void set_api(helix::MoonrakerClient* client, MoonrakerAPI* api);
 
     /**
      * @brief Get current panel state
@@ -203,7 +202,7 @@ class InputShaperPanel : public OverlayBase {
 
     // Widget/client references (overlay_root_ inherited from OverlayBase)
     lv_obj_t* parent_screen_ = nullptr;
-    MoonrakerClient* client_ = nullptr;
+    helix::MoonrakerClient* client_ = nullptr;
     MoonrakerAPI* api_ = nullptr;
 
     // Private setup helper (called by create())

@@ -11,6 +11,8 @@
 
 #include <lvgl.h>
 
+using namespace helix;
+
 namespace mock_internal {
 
 void register_print_handlers(std::unordered_map<std::string, MethodHandler>& registry) {

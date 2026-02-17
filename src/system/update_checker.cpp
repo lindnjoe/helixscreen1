@@ -47,6 +47,8 @@
 #define INSTALLER_FILENAME "install.sh"
 #endif
 
+using namespace helix;
+
 using json = nlohmann::json;
 
 namespace {

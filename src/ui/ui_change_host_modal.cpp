@@ -17,6 +17,8 @@
 
 #include <string>
 
+using namespace helix;
+
 // Static member initialization
 bool ChangeHostModal::callbacks_registered_ = false;
 ChangeHostModal* ChangeHostModal::active_instance_ = nullptr;

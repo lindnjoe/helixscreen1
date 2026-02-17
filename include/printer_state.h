@@ -1684,13 +1684,3 @@ class PrinterState {
 };
 
 } // namespace helix
-using helix::KlippyState;
-using helix::NetworkStatus;
-using helix::parse_print_job_state;
-using helix::print_job_state_to_string;
-using helix::PrinterState;
-using helix::PrinterStatus;
-using helix::PrintJobState;
-using helix::PrintOutcome;
-using helix::PrintStartPhase;
-using helix::ZOffsetCalibrationStrategy;

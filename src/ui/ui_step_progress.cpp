@@ -13,6 +13,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+using namespace helix;
+
 // Internal widget data stored in user_data
 typedef struct {
     char** label_buffers; // String storage for labels

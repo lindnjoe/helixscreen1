@@ -40,6 +40,3 @@ using AdvancedErrorCallback = std::function<void(const std::string& error)>;
 /// Progress callback (0-100 percent)
 using AdvancedProgressCallback = std::function<void(int percent)>;
 } // namespace helix
-using helix::AdvancedErrorCallback;
-using helix::AdvancedProgressCallback;
-using helix::AdvancedSuccessCallback;

@@ -24,7 +24,6 @@ class TempControlPanel;
 namespace helix {
 enum class PrintJobState;
 }
-using helix::PrintJobState;
 
 /**
  * @brief Home panel - Main dashboard showing printer status and quick actions
@@ -39,16 +38,15 @@ using helix::PrintJobState;
 namespace helix {
 enum class NetworkType { Wifi, Ethernet, Disconnected };
 } // namespace helix
-using helix::NetworkType;
 
 class HomePanel : public PanelBase {
   public:
     /**
      * @brief Construct HomePanel with injected dependencies
-     * @param printer_state Reference to PrinterState
+     * @param printer_state Reference to helix::PrinterState
      * @param api Pointer to MoonrakerAPI (for light control)
      */
-    HomePanel(PrinterState& printer_state, MoonrakerAPI* api);
+    HomePanel(helix::PrinterState& printer_state, MoonrakerAPI* api);
     ~HomePanel() override;
 
     void init_subjects() override;
@@ -71,7 +69,7 @@ class HomePanel : public PanelBase {
     void update(const char* status_text, int temp);
 
     /** @brief Set network status display */
-    void set_network(NetworkType type);
+    void set_network(helix::NetworkType type);
 
     /** @brief Set light state (on=gold, off=grey) */
     void set_light(bool is_on);
@@ -126,7 +124,7 @@ class HomePanel : public PanelBase {
 
     bool light_on_ = false;
     bool light_long_pressed_ = false; // Suppress click after long-press
-    NetworkType current_network_ = NetworkType::Wifi;
+    helix::NetworkType current_network_ = helix::NetworkType::Wifi;
     helix::PrintingTip current_tip_;
     helix::PrintingTip pending_tip_; // Tip waiting to be displayed after fade-out
     // configured_leds_ removed - read LedController::selected_strips() lazily
@@ -225,7 +223,7 @@ class HomePanel : public PanelBase {
     void update_filament_status_visibility();
 
     // Print card update methods
-    void on_print_state_changed(PrintJobState state);
+    void on_print_state_changed(helix::PrintJobState state);
     void on_print_progress_or_time_changed();
     void on_print_thumbnail_path_changed(const char* path);
     void update_print_card_from_state();

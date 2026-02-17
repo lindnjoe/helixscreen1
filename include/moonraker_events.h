@@ -41,4 +41,3 @@ namespace helix {
  */
 using MoonrakerEventCallback = std::function<void(const MoonrakerEvent&)>;
 } // namespace helix
-using helix::MoonrakerEventCallback;

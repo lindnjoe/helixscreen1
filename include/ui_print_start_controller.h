@@ -13,7 +13,6 @@
 namespace helix {
 class PrinterState;
 }
-using helix::PrinterState;
 class MoonrakerAPI;
 struct PrintFileData;
 

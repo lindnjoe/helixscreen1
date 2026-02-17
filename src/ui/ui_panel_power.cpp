@@ -22,6 +22,8 @@
 #include <cstring>
 #include <memory>
 
+using namespace helix;
+
 PowerPanel::PowerPanel(PrinterState& printer_state, MoonrakerAPI* api)
     : PanelBase(printer_state, api) {
     std::snprintf(status_buf_, sizeof(status_buf_), "Loading devices...");

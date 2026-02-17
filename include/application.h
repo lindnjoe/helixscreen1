@@ -16,7 +16,6 @@
 namespace helix {
 class Config;
 }
-using helix::Config;
 namespace helix::plugin {
 class PluginManager;
 }
@@ -123,7 +122,7 @@ class Application {
     std::unique_ptr<helix::ui::ActionPromptModal> m_action_prompt_modal;
 
     // Configuration
-    Config* m_config = nullptr; // Singleton, not owned
+    helix::Config* m_config = nullptr; // Singleton, not owned
     helix::CliArgs m_args;
 
     // Screen dimensions (0 = auto-detect from display hardware)

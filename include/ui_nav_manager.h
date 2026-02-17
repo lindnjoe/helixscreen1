@@ -22,7 +22,6 @@ namespace helix {
 /// Callback type for overlay close notifications
 using OverlayCloseCallback = std::function<void()>;
 } // namespace helix
-using helix::OverlayCloseCallback;
 
 /**
  * @brief Navigation panel identifiers
@@ -40,10 +39,9 @@ enum class PanelId {
     Count        ///< Total number of panels
 };
 } // namespace helix
-using helix::PanelId;
 
 // Legacy aliases for backward compatibility
-constexpr int UI_PANEL_COUNT = static_cast<int>(PanelId::Count);
+constexpr int UI_PANEL_COUNT = static_cast<int>(helix::PanelId::Count);
 
 /**
  * @brief Singleton manager for navigation and panel management
@@ -145,7 +143,7 @@ class NavigationManager {
      *
      * @param panel_id Panel identifier to activate
      */
-    void set_active(PanelId panel_id);
+    void set_active(helix::PanelId panel_id);
 
     /**
      * @brief Register C++ panel instance for lifecycle callbacks
@@ -157,7 +155,7 @@ class NavigationManager {
      * @param id Panel identifier
      * @param panel Pointer to PanelBase-derived instance (may be nullptr)
      */
-    void register_panel_instance(PanelId id, PanelBase* panel);
+    void register_panel_instance(helix::PanelId id, PanelBase* panel);
 
     /**
      * @brief Activate the initial panel after all panels are registered
@@ -197,7 +195,7 @@ class NavigationManager {
      * @brief Get current active panel
      * @return Currently active panel identifier
      */
-    PanelId get_active() const;
+    helix::PanelId get_active() const;
 
     /**
      * @brief Register panel widgets for show/hide management
@@ -237,7 +235,8 @@ class NavigationManager {
      * @param overlay_panel The overlay panel to monitor
      * @param callback Function to call when the overlay closes
      */
-    void register_overlay_close_callback(lv_obj_t* overlay_panel, OverlayCloseCallback callback);
+    void register_overlay_close_callback(lv_obj_t* overlay_panel,
+                                         helix::OverlayCloseCallback callback);
 
     /**
      * @brief Remove a registered close callback for an overlay
@@ -301,10 +300,10 @@ class NavigationManager {
     ~NavigationManager(); // Defined in .cpp - sets g_nav_manager_destroyed flag
 
     // Panel ID to name mapping for E-Stop visibility
-    static const char* panel_id_to_name(PanelId id);
+    static const char* panel_id_to_name(helix::PanelId id);
 
     // Check if panel requires Moonraker connection
-    static bool panel_requires_connection(PanelId panel);
+    static bool panel_requires_connection(helix::PanelId panel);
 
     // Check if printer is connected
     bool is_printer_connected() const;
@@ -338,7 +337,7 @@ class NavigationManager {
 
     // Active panel tracking
     lv_subject_t active_panel_subject_{};
-    PanelId active_panel_ = PanelId::Home;
+    helix::PanelId active_panel_ = helix::PanelId::Home;
 
     // Panel widget tracking for show/hide
     lv_obj_t* panel_widgets_[UI_PANEL_COUNT] = {nullptr};
@@ -356,7 +355,7 @@ class NavigationManager {
     std::vector<lv_obj_t*> panel_stack_;
 
     // Overlay close callbacks (called when overlay is popped from stack)
-    std::unordered_map<lv_obj_t*, OverlayCloseCallback> overlay_close_callbacks_;
+    std::unordered_map<lv_obj_t*, helix::OverlayCloseCallback> overlay_close_callbacks_;
 
     // Shared overlay backdrop widget (for first overlay)
     lv_obj_t* overlay_backdrop_ = nullptr;
@@ -433,13 +432,13 @@ void ui_nav_wire_status_icons(lv_obj_t* navbar);
  * @brief Set active panel
  * @deprecated Use NavigationManager::instance().set_active() instead
  */
-void ui_nav_set_active(PanelId panel_id);
+void ui_nav_set_active(helix::PanelId panel_id);
 
 /**
  * @brief Get active panel
  * @deprecated Use NavigationManager::instance().get_active() instead
  */
-PanelId ui_nav_get_active();
+helix::PanelId ui_nav_get_active();
 
 /**
  * @brief Register panel widgets

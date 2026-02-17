@@ -35,6 +35,8 @@
 // Platform-specific includes for process restart
 #if defined(__unix__) || defined(__APPLE__)
 #include <unistd.h> // fork, execv, usleep
+using namespace helix;
+
 #endif
 
 // Global singleton instances (extern declarations in header, definitions here)

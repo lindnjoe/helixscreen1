@@ -35,7 +35,6 @@
 namespace helix {
 class Config;
 }
-using helix::Config;
 class MoonrakerAPI;
 namespace helix::ui {
 class MacroEnhanceWizard;

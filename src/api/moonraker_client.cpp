@@ -24,6 +24,8 @@
 #include <algorithm> // For std::sort in MCU query handling
 #include <sstream>   // For annotate_gcode()
 
+using namespace helix;
+
 using namespace hv;
 
 // Anonymous namespace for file-scoped state

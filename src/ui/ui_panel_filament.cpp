@@ -36,6 +36,8 @@
 #include <cstring>
 #include <memory>
 
+using namespace helix;
+
 // Preset material names (indexed by material ID: 0=PLA, 1=PETG, 2=ABS, 3=TPU)
 // Temperatures are now looked up from filament_database.h
 static constexpr const char* PRESET_MATERIAL_NAMES[] = {"PLA", "PETG", "ABS", "TPU"};

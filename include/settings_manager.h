@@ -829,7 +829,3 @@ class SettingsManager {
 };
 
 } // namespace helix
-using helix::CompletionAlertMode;
-using helix::SettingsManager;
-using helix::TimeFormat;
-using helix::ZMovementStyle;

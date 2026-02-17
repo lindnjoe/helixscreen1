@@ -265,6 +265,3 @@ class Config {
 };
 
 } // namespace helix
-using helix::Config;
-using helix::CURRENT_CONFIG_VERSION;
-using helix::MacroConfig;

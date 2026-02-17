@@ -19,7 +19,6 @@ class MoonrakerAPI;
 namespace helix {
 class MoonrakerClient;
 }
-using helix::MoonrakerClient;
 
 namespace helix {
 class PrinterDiscovery;
@@ -113,10 +112,10 @@ class AmsState {
      *
      * @param hardware Discovered printer hardware
      * @param api MoonrakerAPI instance for making API calls
-     * @param client MoonrakerClient instance for WebSocket communication
+     * @param client helix::MoonrakerClient instance for WebSocket communication
      */
     void init_backend_from_hardware(const helix::PrinterDiscovery& hardware, MoonrakerAPI* api,
-                                    MoonrakerClient* client);
+                                    helix::MoonrakerClient* client);
 
     /**
      * @brief Initialize backends from all detected AMS/filament systems
@@ -127,10 +126,10 @@ class AmsState {
      *
      * @param hardware Discovered printer hardware
      * @param api MoonrakerAPI instance for making API calls
-     * @param client MoonrakerClient instance for WebSocket communication
+     * @param client helix::MoonrakerClient instance for WebSocket communication
      */
     void init_backends_from_hardware(const helix::PrinterDiscovery& hardware, MoonrakerAPI* api,
-                                     MoonrakerClient* client);
+                                     helix::MoonrakerClient* client);
 
     /**
      * @brief Set the AMS backend
@@ -748,9 +747,9 @@ class AmsState {
      * creates ValgACE backend via lv_async_call to maintain thread safety.
      *
      * @param api MoonrakerAPI instance for REST calls
-     * @param client MoonrakerClient instance for the backend
+     * @param client helix::MoonrakerClient instance for the backend
      */
-    void probe_valgace(MoonrakerAPI* api, MoonrakerClient* client);
+    void probe_valgace(MoonrakerAPI* api, helix::MoonrakerClient* client);
 
     /**
      * @brief Create and start ValgACE backend
@@ -759,9 +758,9 @@ class AmsState {
      * Must be called from LVGL thread context.
      *
      * @param api MoonrakerAPI instance
-     * @param client MoonrakerClient instance
+     * @param client helix::MoonrakerClient instance
      */
-    void create_valgace_backend(MoonrakerAPI* api, MoonrakerClient* client);
+    void create_valgace_backend(MoonrakerAPI* api, helix::MoonrakerClient* client);
 
     /// Per-backend slot subject storage for secondary backends (index > 0)
     struct BackendSlotSubjects {
