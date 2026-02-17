@@ -5,6 +5,42 @@ All notable changes to HelixScreen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.3] - 2026-02-17
+
+Big AMS release — unified slot editor with Spoolman integration, mixed-topology AFC support, error state visualization, and a major DRY refactor of shared drawing utilities across all AMS panels. Also adds 34 new translations and fixes several installer issues.
+
+### Added
+- **Unified Slot Editor**: New AMS slot edit modal with inline Spoolman picker, side-by-side vendor/material dropdowns, cancel/save flow, and in-use spool disabling
+- **Spoolman Slot Saver**: Change detection and automatic save flow for slot-to-spool assignments with filament persistence
+- **Mixed AFC Topology**: Box Turtle PARALLEL + OpenAMS HUB coexisting in a single AFC system
+- **AMS Error Visualization**: Slot error dots, hub tinting, pulsing animations, severity colors, and aligned error detection across mini status and slot views
+- **Shared Drawing Utilities**: Consolidated color, contrast, severity, fill, bar-width, display-name, logo fallback, pulse, error badge, slot bar, and container helpers
+- Canonical `SlotInfo::is_present()` presence check for consistent slot detection
+- Picker sub-view XML and header declarations for the unified edit modal
+- 34 new translations across all 8 target languages with missing `translation_tag` attributes added
+- Debug bundle fetch/display helper script
+- ARM unwind tables and /proc/self/maps in crash reports
+
+### Fixed
+- Non-translatable strings (product names, URLs, OK) incorrectly wrapped in lv_tr()
+- AMS edit modal Spoolman callbacks not marshalled to main thread
+- AMS bypass detection, Happy Hare speed params, and other deferred TODOs resolved
+- AMS bypass, dryer, reset, and settings hidden for tool changers
+- Brand/spoolman_id missing from AFC and multi-AMS mock slots
+- Load button enabled when slot already loaded
+- Change Spool button label not updating correctly (ui_button_set_text)
+- Static instance pointer for edit modal callbacks
+- Updater diagnostic logs too noisy (downgraded to debug), added 2-min install timeout
+- zlib updated from 1.3.1 to 1.3.2; Ubuntu CI build timeout bumped to 45min
+- Installer stale .old directory blocking repeated updates (PR #102, thanks @bassco)
+- Installer false-fail when cleanup_old_install hits root-owned hooks.sh
+
+### Changed
+- AMS panels refactored to use shared drawing utilities (DRY across 5 UI files: slot, mini status, overview, spool canvas, panel)
+- Assign Spool removed from AMS context menu, replaced by unified slot editor
+- Deprecated C-style wrapper APIs and legacy compatibility code removed
+- Bundled installer regenerated with latest module changes
+
 ## [0.10.2] - 2026-02-17
 
 This release significantly improves multi-tool printer support with per-tool spool persistence and an extruder selector for filament management, decouples Spoolman from AMS backends for cleaner architecture, and fixes several crash bugs and installer issues.
@@ -638,6 +674,7 @@ Initial tagged release. Foundation for all subsequent development.
 - Automated GitHub Actions release pipeline
 - One-liner installation script with platform auto-detection
 
+[0.10.3]: https://github.com/prestonbrown/helixscreen/compare/v0.10.2...v0.10.3
 [0.10.2]: https://github.com/prestonbrown/helixscreen/compare/v0.10.1...v0.10.2
 [0.10.1]: https://github.com/prestonbrown/helixscreen/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/prestonbrown/helixscreen/compare/v0.9.24...v0.10.0
