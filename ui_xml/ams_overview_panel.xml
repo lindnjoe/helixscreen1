@@ -92,12 +92,15 @@
           </ui_switch>
         </lv_obj>
         <!-- Action Buttons -->
+        <!-- Unload/Reset hidden for tool changers (ams_type=4) -->
         <ui_button name="btn_unload"
                    width="100%" variant="secondary" icon="tray_arrow_up" text="Unload" translation_tag="Unload">
+          <bind_flag_if_eq subject="ams_type" flag="hidden" ref_value="4"/>
           <bind_state_if_eq subject="ams_filament_loaded" state="disabled" ref_value="0"/>
           <event_cb trigger="clicked" callback="on_ams_overview_unload_clicked"/>
         </ui_button>
         <ui_button name="btn_reset" width="100%" variant="secondary" icon="refresh" text="Reset" translation_tag="Reset">
+          <bind_flag_if_eq subject="ams_type" flag="hidden" ref_value="4"/>
           <event_cb trigger="clicked" callback="on_ams_overview_reset_clicked"/>
         </ui_button>
         <ui_button name="btn_settings" width="100%" icon="settings" text="Settings" translation_tag="Settings">

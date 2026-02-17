@@ -141,8 +141,9 @@
             <bind_state_if_eq subject="ams_filament_loaded" state="disabled" ref_value="0"/>
             <event_cb trigger="clicked" callback="ams_unload_clicked_cb"/>
           </ui_button>
-          <!-- Reset Button (full width) -->
+          <!-- Reset Button (full width) - hidden for tool changers -->
           <ui_button name="btn_reset" width="100%" variant="secondary" icon="refresh" text="Reset" translation_tag="Reset">
+            <bind_flag_if_eq subject="ams_type" flag="hidden" ref_value="4"/>
             <event_cb trigger="clicked" callback="ams_reset_clicked_cb"/>
           </ui_button>
           <!-- Settings Button (full width, primary variant by default) -->

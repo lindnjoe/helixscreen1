@@ -995,6 +995,10 @@ void AmsBackendMock::set_tool_changer_mode(bool enabled) {
             // Slots retain their filament data - represents what's loaded in each toolhead
         }
 
+        // Tool changers have no AMS-style device settings
+        mock_device_sections_.clear();
+        mock_device_actions_.clear();
+
         spdlog::info("[AmsBackendMock] Tool changer mode enabled ({} tools)",
                      system_info_.total_slots);
     } else {
@@ -1007,6 +1011,10 @@ void AmsBackendMock::set_tool_changer_mode(bool enabled) {
         if (!system_info_.units.empty()) {
             system_info_.units[0].name = "Mock MMU";
         }
+
+        // Restore Happy Hare device sections and actions
+        mock_device_sections_ = helix::printer::hh_default_sections();
+        mock_device_actions_ = helix::printer::hh_default_actions();
 
         spdlog::info("[AmsBackendMock] Tool changer mode disabled, reverting to filament system");
     }

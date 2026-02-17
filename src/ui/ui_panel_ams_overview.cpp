@@ -232,6 +232,18 @@ void AmsOverviewPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     // Store global instance for callback access
     g_overview_panel_instance.store(this);
 
+    // Hide settings button when backend has no device sections (e.g. tool changers)
+    auto* backend = AmsState::instance().get_backend(0);
+    lv_obj_t* btn_settings = lv_obj_find_by_name(panel_, "btn_settings");
+    if (btn_settings && backend) {
+        auto sections = backend->get_device_sections();
+        if (sections.empty()) {
+            lv_obj_add_flag(btn_settings, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_remove_flag(btn_settings, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+
     // Initial population from backend state
     refresh_units();
 

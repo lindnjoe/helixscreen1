@@ -366,6 +366,7 @@ void AmsPanel::on_activate() {
         lv_obj_t* bypass_row = lv_obj_find_by_name(panel_, "bypass_row");
         if (bypass_row)
             lv_obj_add_flag(bypass_row, LV_OBJ_FLAG_HIDDEN);
+        // In scoped view, force-hide dryer (system-level feature, not per-unit)
         lv_obj_t* dryer_card = lv_obj_find_by_name(panel_, "dryer_card");
         if (dryer_card)
             lv_obj_add_flag(dryer_card, LV_OBJ_FLAG_HIDDEN);
@@ -381,12 +382,8 @@ void AmsPanel::on_activate() {
         lv_obj_t* path_container = lv_obj_find_by_name(panel_, "path_container");
         if (path_container)
             lv_obj_remove_flag(path_container, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_t* bypass_row = lv_obj_find_by_name(panel_, "bypass_row");
-        if (bypass_row)
-            lv_obj_remove_flag(bypass_row, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_t* dryer_card = lv_obj_find_by_name(panel_, "dryer_card");
-        if (dryer_card)
-            lv_obj_remove_flag(dryer_card, LV_OBJ_FLAG_HIDDEN);
+        // bypass_row visibility managed by bind_flag_if_eq on ams_supports_bypass subject
+        // dryer_card visibility managed by bind_flag_if_eq on dryer_supported subject
     }
 
     refresh_slots();
@@ -719,6 +716,18 @@ void AmsPanel::setup_action_buttons() {
     // Store panel pointer for static callbacks to access
     // (Callbacks are registered earlier in ensure_ams_widgets_registered())
     g_ams_panel_instance.store(this);
+
+    // Hide settings button when backend has no device sections (e.g. tool changers)
+    auto* backend = AmsState::instance().get_backend(0);
+    lv_obj_t* btn_settings = lv_obj_find_by_name(panel_, "btn_settings");
+    if (btn_settings && backend) {
+        auto sections = backend->get_device_sections();
+        if (sections.empty()) {
+            lv_obj_add_flag(btn_settings, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_remove_flag(btn_settings, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
 
     spdlog::debug("[{}] Action buttons ready (callbacks registered during widget init)",
                   get_name());
