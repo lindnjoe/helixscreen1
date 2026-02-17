@@ -251,7 +251,7 @@ bool is_update_available(const std::string& current_version, const std::string& 
 }
 
 /**
- * @brief Resolve the full absolute path of a system tool.
+ * @brief Resolve a system tool to an absolute path, falling back to bare name.
  *
  * Searches well-known absolute locations before falling back to the bare name
  * (which relies on $PATH). This is critical for systemd services: they run
@@ -259,11 +259,11 @@ bool is_update_available(const std::string& current_version, const std::string& 
  * execvp calls for tar/cp/gunzip silently fail with exit code 127.
  *
  * @param name Tool name (e.g., "tar", "cp", "gunzip")
- * @return Full path if found in a standard location, bare name otherwise
+ * @return Full absolute path if found, bare name as fallback (relies on $PATH)
  */
 std::string resolve_tool(const std::string& name) {
-    static const char* const SEARCH_DIRS[] = {
-        "/usr/bin", "/bin", "/usr/sbin", "/sbin", "/usr/local/bin", nullptr};
+    static const char* const SEARCH_DIRS[] = {"/usr/bin", "/bin",           "/usr/sbin",
+                                              "/sbin",    "/usr/local/bin", nullptr};
     for (int i = 0; SEARCH_DIRS[i]; ++i) {
         std::string path = std::string(SEARCH_DIRS[i]) + "/" + name;
         if (access(path.c_str(), X_OK) == 0) {
@@ -372,6 +372,48 @@ int safe_exec(const std::vector<std::string>& args, bool capture_stderr = false)
     }
 
     return exit_code;
+}
+
+/**
+ * @brief Extract a single member from a .tar.gz tarball.
+ *
+ * Tries GNU tar xzf first; falls back to cp+gunzip+tar for BusyBox compat.
+ * The fallback avoids gunzip -k (keep-original) which is absent on older BusyBox.
+ *
+ * @param tarball_path  Path to the .tar.gz file
+ * @param extract_dir   Directory to extract into
+ * @param tar_member    Archive member path (e.g., "helixscreen/install.sh")
+ * @return 0 on success, non-zero on failure
+ */
+int extract_tar_member(const std::string& tarball_path, const std::string& extract_dir,
+                       const std::string& tar_member) {
+    const std::string tar_bin = resolve_tool("tar");
+
+    // Try GNU tar first (handles -z natively on most systems)
+    auto ret = safe_exec({tar_bin, "xzf", tarball_path, "-C", extract_dir, tar_member});
+    if (ret == 0) {
+        return 0;
+    }
+
+    // BusyBox tar may not support the -z flag for gzip decompression.
+    // Fallback: copy the tarball and decompress the copy with gunzip -f.
+    // We deliberately avoid gunzip -k (keep-original) because that flag is
+    // absent from older BusyBox gunzip builds (pre-1.30 era), which is exactly
+    // the environment where we need this fallback to succeed.
+    const std::string cp_bin = resolve_tool("cp");
+    const std::string gunzip_bin = resolve_tool("gunzip");
+
+    std::string tmp_copy = extract_dir + "/tmp_copy.tar.gz";
+    if (safe_exec({cp_bin, tarball_path, tmp_copy}) == 0) {
+        if (safe_exec({gunzip_bin, "-f", tmp_copy}) == 0) {
+            std::string tmp_tar = extract_dir + "/tmp_copy.tar";
+            ret = safe_exec({tar_bin, "xf", tmp_tar, "-C", extract_dir, tar_member});
+            std::remove(tmp_tar.c_str());
+        } else {
+            std::remove(tmp_copy.c_str());
+        }
+    }
+    return ret;
 }
 
 } // anonymous namespace
@@ -855,34 +897,14 @@ bool UpdateChecker::validate_elf_architecture(const std::string& tarball_path) {
     std::string temp_dir = tarball_path + ".validate";
     mkdir(temp_dir.c_str(), 0750);
 
-    // Resolve absolute paths (systemd services may have a minimal PATH)
-    const std::string tar_bin = resolve_tool("tar");
-    const std::string cp_bin = resolve_tool("cp");
-    const std::string gunzip_bin = resolve_tool("gunzip");
     const std::string rm_bin = resolve_tool("rm");
 
-    // Extract binary from tarball for inspection (safe_exec avoids shell injection)
-    auto ret =
-        safe_exec({tar_bin, "xzf", tarball_path, "-C", temp_dir, "helixscreen/bin/helix-screen"});
+    // Extract binary from tarball for inspection
+    auto ret = extract_tar_member(tarball_path, temp_dir, "helixscreen/bin/helix-screen");
     if (ret != 0) {
-        // BusyBox tar may not support -z; copy + gunzip -f + tar (no -k needed)
-        // gunzip -k (keep-original) is absent on older BusyBox — use cp instead.
-        std::string tmp_copy = temp_dir + "/tmp_copy.tar.gz";
-        if (safe_exec({cp_bin, tarball_path, tmp_copy}) == 0) {
-            if (safe_exec({gunzip_bin, "-f", tmp_copy}) == 0) {
-                std::string tmp_tar = temp_dir + "/tmp_copy.tar";
-                ret = safe_exec(
-                    {tar_bin, "xf", tmp_tar, "-C", temp_dir, "helixscreen/bin/helix-screen"});
-                std::remove(tmp_tar.c_str());
-            } else {
-                std::remove(tmp_copy.c_str());
-            }
-        }
-        if (ret != 0) {
-            spdlog::warn("[UpdateChecker] Could not extract binary for validation, skipping");
-            safe_exec({rm_bin, "-rf", temp_dir});
-            return true;
-        }
+        spdlog::warn("[UpdateChecker] Could not extract binary for validation, skipping");
+        safe_exec({rm_bin, "-rf", temp_dir});
+        return true;
     }
 
     std::string binary_path = temp_dir + "/helixscreen/bin/helix-screen";
@@ -1014,34 +1036,7 @@ std::string UpdateChecker::extract_installer_from_tarball(const std::string& tar
                                                           const std::string& extract_dir) {
     std::string tar_member = std::string("helixscreen/") + INSTALLER_FILENAME;
 
-    // Resolve absolute paths for system tools upfront.
-    // Systemd services run with a minimal PATH that may not include /usr/bin or /bin,
-    // causing bare-name execvp calls to fail silently with exit code 127.
-    const std::string tar_bin = resolve_tool("tar");
-    const std::string cp_bin = resolve_tool("cp");
-    const std::string gunzip_bin = resolve_tool("gunzip");
-
-    // Try GNU tar first (handles -z natively on most systems)
-    auto ext_ret = safe_exec({tar_bin, "xzf", tarball_path, "-C", extract_dir, tar_member});
-
-    if (ext_ret != 0) {
-        // BusyBox tar may not support the -z flag for gzip decompression.
-        // Fallback: copy the tarball and decompress the copy with gunzip -f.
-        // We deliberately avoid gunzip -k (keep-original) because that flag is
-        // absent from older BusyBox gunzip builds (pre-1.30 era), which is exactly
-        // the environment where we need this fallback to succeed.
-        std::string tmp_copy = extract_dir + "/tmp_copy.tar.gz";
-        if (safe_exec({cp_bin, tarball_path, tmp_copy}) == 0) {
-            // gunzip -f: decompress in-place, strips .gz suffix, no -k needed
-            if (safe_exec({gunzip_bin, "-f", tmp_copy}) == 0) {
-                std::string tmp_tar = extract_dir + "/tmp_copy.tar";
-                ext_ret = safe_exec({tar_bin, "xf", tmp_tar, "-C", extract_dir, tar_member});
-                std::remove(tmp_tar.c_str());
-            } else {
-                std::remove(tmp_copy.c_str()); // clean up if decompression failed
-            }
-        }
-    }
+    auto ext_ret = extract_tar_member(tarball_path, extract_dir, tar_member);
 
     std::string installer = extract_dir + "/helixscreen/" + INSTALLER_FILENAME;
     if (ext_ret == 0 && access(installer.c_str(), R_OK) == 0) {
