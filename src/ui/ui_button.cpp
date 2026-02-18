@@ -36,11 +36,32 @@ struct UiButtonData {
 };
 
 /**
- * @brief Get icon font for button icons (24px MDI)
- * @return Pointer to the MDI 24px icon font
+ * @brief Get icon font for button icons (responsive via icon_font_sm)
+ * @return Pointer to the icon font (adapts to breakpoint)
  */
 static const lv_font_t* get_button_icon_font() {
-    return &mdi_icons_24;
+    const char* font_name = lv_xml_get_const(nullptr, "icon_font_sm");
+    if (!font_name) {
+        spdlog::critical("[ui_button] FATAL: Icon font constant 'icon_font_sm' not found in "
+                         "globals.xml");
+        spdlog::critical("[ui_button] Check that globals.xml defines this constant");
+        std::exit(EXIT_FAILURE);
+    }
+
+    // Get the actual font (FAIL FAST if not compiled)
+    const lv_font_t* font = lv_xml_get_font(nullptr, font_name);
+    if (!font) {
+        spdlog::critical(
+            "[ui_button] FATAL: Icon font '{}' (from constant 'icon_font_sm') is not compiled!",
+            font_name);
+        spdlog::critical("[ui_button] FIX: Enable the icon font in lv_conf.h or regenerate fonts");
+        std::exit(EXIT_FAILURE);
+    }
+
+    spdlog::trace("[ui_button] Using icon font '{}' (from 'icon_font_sm') - line_height={}px",
+                  font_name, lv_font_get_line_height(font));
+
+    return font;
 }
 
 /**
