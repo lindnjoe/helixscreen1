@@ -180,6 +180,16 @@ class PrinterPrintState {
         return &preprint_elapsed_;
     }
 
+    /// Klipper display message (from M117 / display_status.message)
+    lv_subject_t* get_display_message_subject() {
+        return &display_message_;
+    }
+
+    /// 1 when display_message is non-empty, 0 when empty (for XML visibility binding)
+    lv_subject_t* get_display_message_visible_subject() {
+        return &display_message_visible_;
+    }
+
     // ========================================================================
     // Setters
     // ========================================================================
@@ -386,6 +396,11 @@ class PrinterPrintState {
     // When active, preferred over virtual_sdcard file-position progress
     double slicer_progress_ = 0.0;        // Raw 0.0-1.0 from display_status
     bool slicer_progress_active_ = false; // True once non-zero value seen during print
+
+    // Display message from Klipper (M117 gcode / display_status.message)
+    lv_subject_t display_message_{};         // String subject for UI binding
+    lv_subject_t display_message_visible_{}; // Integer: 1 when non-empty, 0 when empty
+    char display_message_buf_[128]{};        // Buffer for message storage
 
     // String buffers for subject storage
     char print_filename_buf_[256]{};

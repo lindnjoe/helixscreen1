@@ -3288,8 +3288,19 @@ void MoonrakerClientMock::temperature_simulation_loop() {
               {"progress", progress},
               {"is_active",
                phase == MockPrintPhase::PRINTING || phase == MockPrintPhase::PREHEAT}}},
-            // display_status: M73 slicer progress (simulated as matching virtual_sdcard)
-            {"display_status", {{"progress", progress}, {"message", nullptr}}},
+            // display_status: M73 slicer progress + M117 display message
+            {"display_status",
+             {{"progress", progress},
+              {"message",
+               [&]() -> json {
+                   if (phase == MockPrintPhase::PREHEAT)
+                       return "Heating...";
+                   if (phase == MockPrintPhase::PRINTING && progress < 0.02)
+                       return "Purging nozzle";
+                   if (phase == MockPrintPhase::PRINTING)
+                       return nullptr; // Most of print has no active message
+                   return nullptr;
+               }()}}},
             // stepper_enable tracks actual motor driver state (immediate response to M84)
             {"stepper_enable",
              {{"steppers",

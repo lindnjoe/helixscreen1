@@ -646,6 +646,16 @@ class PrinterState {
         print_domain_.set_preprint_elapsed_seconds(seconds);
     }
 
+    /// Klipper display message from M117 / display_status.message
+    lv_subject_t* get_display_message_subject() {
+        return print_domain_.get_display_message_subject();
+    }
+
+    /// 1 when display_message is non-empty, 0 when empty
+    lv_subject_t* get_display_message_visible_subject() {
+        return print_domain_.get_display_message_visible_subject();
+    }
+
     /**
      * @brief Check if currently in print start phase
      *

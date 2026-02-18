@@ -30,6 +30,7 @@ PrinterPrintState::PrinterPrintState() {
     std::memset(print_state_buf_, 0, sizeof(print_state_buf_));
     std::memset(print_start_message_buf_, 0, sizeof(print_start_message_buf_));
     std::memset(print_start_time_left_buf_, 0, sizeof(print_start_time_left_buf_));
+    std::memset(display_message_buf_, 0, sizeof(display_message_buf_));
 
     // Set default values
     std::strcpy(print_state_buf_, "standby");
@@ -80,6 +81,10 @@ void PrinterPrintState::init_subjects(bool register_xml) {
     INIT_SUBJECT_INT(preprint_remaining, 0, subjects_, register_xml);
     INIT_SUBJECT_INT(preprint_elapsed, 0, subjects_, register_xml);
 
+    // Klipper display message (M117 / display_status.message)
+    INIT_SUBJECT_STRING(display_message, "", subjects_, register_xml);
+    INIT_SUBJECT_INT(display_message_visible, 0, subjects_, register_xml);
+
     subjects_initialized_ = true;
     spdlog::trace("[PrinterPrintState] Subjects initialized successfully");
 }
@@ -105,6 +110,8 @@ void PrinterPrintState::reset_for_new_print() {
     has_real_layer_data_ = false;
     slicer_progress_ = 0.0;
     slicer_progress_active_ = false;
+    lv_subject_copy_string(&display_message_, "");
+    lv_subject_set_int(&display_message_visible_, 0);
     lv_subject_set_int(&print_duration_, 0);
     lv_subject_set_int(&print_elapsed_, 0);
     lv_subject_set_int(&print_filament_used_, 0);
@@ -157,10 +164,11 @@ void PrinterPrintState::update_from_status(const nlohmann::json& status) {
                         spdlog::info("[PrinterPrintState] New print starting - clearing outcome");
                         lv_subject_set_int(&print_outcome_, static_cast<int>(PrintOutcome::NONE));
                     }
-                    // Reset slicer progress for the new print — each print must
-                    // independently activate slicer tracking via M73
+                    // Reset slicer progress and display message for the new print
                     slicer_progress_ = 0.0;
                     slicer_progress_active_ = false;
+                    lv_subject_copy_string(&display_message_, "");
+                    lv_subject_set_int(&display_message_visible_, 0);
                 }
             }
 
@@ -302,7 +310,7 @@ void PrinterPrintState::update_from_status(const nlohmann::json& status) {
         }
     }
 
-    // Parse slicer progress from display_status (M73 gcode command)
+    // Parse display_status (M73 progress + M117 message)
     if (status.contains("display_status")) {
         const auto& display = status["display_status"];
         if (display.contains("progress") && display["progress"].is_number()) {
@@ -311,6 +319,21 @@ void PrinterPrintState::update_from_status(const nlohmann::json& status) {
             if (raw > 0.0 && !slicer_progress_active_) {
                 slicer_progress_active_ = true;
                 spdlog::info("[PrinterPrintState] Slicer progress active (M73 detected)");
+            }
+        }
+        if (display.contains("message")) {
+            bool has_message = false;
+            if (display["message"].is_string()) {
+                const auto& msg = display["message"].get_ref<const std::string&>();
+                lv_subject_copy_string(&display_message_, msg.c_str());
+                has_message = !msg.empty();
+            } else {
+                // null or non-string — clear the message
+                lv_subject_copy_string(&display_message_, "");
+            }
+            int visible = has_message ? 1 : 0;
+            if (lv_subject_get_int(&display_message_visible_) != visible) {
+                lv_subject_set_int(&display_message_visible_, visible);
             }
         }
     }
