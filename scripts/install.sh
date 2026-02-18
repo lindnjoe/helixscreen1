@@ -3055,17 +3055,18 @@ main() {
 
     # Start (or restart) service.
     # In update mode on systemd: do all cleanup first (last chance before the
-    # cgroup is torn down), then issue 'systemctl restart'. The restart is an
-    # atomic systemd operation — once the D-Bus message is sent, systemd will
-    # stop the old instance (which may kill this script via cgroup cleanup) and
-    # then start the new binary regardless of whether we survive the stop phase.
+    # cgroup is torn down), then issue 'systemctl restart --no-block'.
+    # --no-block returns immediately once systemd enqueues the restart job,
+    # eliminating the race window where install.sh could be killed before the
+    # D-Bus message is processed. systemd will stop the old instance (killing
+    # this script via cgroup cleanup) and then start the new binary.
     cleanup_old_install
     cleanup_on_success
     if [ "$update_mode" = true ] && [ "$INIT_SYSTEM" = "systemd" ]; then
         log_info "Restarting HelixScreen service with new version..."
-        $SUDO systemctl restart "$SERVICE_NAME" || true
-        # We may be killed here when systemd tears down the old cgroup.
-        # That is expected — systemd still completes the start of the new binary.
+        $SUDO systemctl restart --no-block "$SERVICE_NAME" || true
+        # install.sh will be killed when systemd tears down the old cgroup.
+        # That is expected — the restart job is already enqueued.
     else
         # Fresh install, or update on non-systemd (SysV): stop before start.
         # On SysV there is no cgroup kill so stop_service is safe here.

@@ -833,16 +833,42 @@ static void filament_path_draw_cb(lv_event_t* e) {
                             prep_active, sensor_r);
         }
 
-        // Line from prep to merge: gray for non-active slots (don't imply extent past sensor)
-        lv_color_t merge_line_color = is_non_active_with_filament ? idle_color : lane_color;
-        int32_t merge_line_width = is_non_active_with_filament ? line_idle : lane_width;
-        // For slots with no filament, use idle color
+        // Line from prep sensor to hub/merge target
+        // For HUB topology: each lane targets its own hub sensor dot on top of the hub box
+        // For other topologies: all lanes converge to the center merge point
+        bool slot_past_prep = (slot_segment >= PathSegment::LANE);
+        bool slot_at_hub = (slot_segment >= PathSegment::HUB);
+        lv_color_t merge_line_color =
+            (is_non_active_with_filament && !slot_past_prep) ? idle_color : lane_color;
+        int32_t merge_line_width =
+            (is_non_active_with_filament && !slot_past_prep) ? line_idle : lane_width;
         if (!has_filament) {
             merge_line_color = idle_color;
             merge_line_width = line_idle;
         }
-        draw_line(layer, slot_x, prep_y + sensor_r, center_x, merge_y, merge_line_color,
-                  merge_line_width);
+
+        if (data->topology == 1) { // HUB topology - each lane targets its own hub sensor
+            int32_t hub_top = hub_y - hub_h / 2;
+            // Space hub sensor dots evenly across the hub box width
+            int32_t hub_dot_spacing = (data->slot_count > 1)
+                                          ? (data->hub_width - 2 * sensor_r) / (data->slot_count - 1)
+                                          : 0;
+            int32_t hub_dot_x = center_x - (data->hub_width - 2 * sensor_r) / 2 + i * hub_dot_spacing;
+            if (data->slot_count == 1) hub_dot_x = center_x;
+
+            // Draw line from prep to hub sensor dot
+            draw_line(layer, slot_x, prep_y + sensor_r, hub_dot_x, hub_top - sensor_r,
+                      merge_line_color, merge_line_width);
+
+            // Draw hub sensor dot - colored with filament color if loaded to hub
+            bool dot_active = has_filament && slot_at_hub;
+            lv_color_t dot_color = dot_active ? lane_color : idle_color;
+            draw_sensor_dot(layer, hub_dot_x, hub_top, dot_color, dot_active, sensor_r);
+        } else {
+            // Non-hub topologies: converge to center merge point
+            draw_line(layer, slot_x, prep_y + sensor_r, center_x, merge_y, merge_line_color,
+                      merge_line_width);
+        }
     }
 
     // ========================================================================
@@ -895,22 +921,38 @@ static void filament_path_draw_cb(lv_event_t* e) {
     // Draw hub/selector section
     // ========================================================================
     {
-        // Line from merge point to hub
-        lv_color_t hub_line_color = idle_color;
-        int32_t hub_line_width = line_idle;
         bool hub_has_filament = false;
 
-        if (data->active_slot >= 0 && is_segment_active(PathSegment::HUB, fil_seg)) {
-            hub_line_color = active_color;
-            hub_line_width = line_active;
-            hub_has_filament = true;
-            if (has_error && error_seg == PathSegment::HUB) {
-                hub_line_color = error_color;
+        if (data->topology != 1) {
+            // Non-hub topologies: draw single merge→hub line
+            lv_color_t hub_line_color = idle_color;
+            int32_t hub_line_width = line_idle;
+
+            if (data->active_slot >= 0 && is_segment_active(PathSegment::HUB, fil_seg)) {
+                hub_line_color = active_color;
+                hub_line_width = line_active;
+                hub_has_filament = true;
+                if (has_error && error_seg == PathSegment::HUB) {
+                    hub_line_color = error_color;
+                }
+            }
+
+            draw_vertical_line(layer, center_x, merge_y, hub_y - hub_h / 2, hub_line_color,
+                               hub_line_width);
+        } else {
+            // HUB topology: lane lines go directly to hub sensor dots (drawn in lane loop above)
+            // Check if any slot has filament at hub for tinting
+            if (data->active_slot >= 0 && is_segment_active(PathSegment::HUB, fil_seg)) {
+                hub_has_filament = true;
+            } else {
+                for (int i = 0; i < data->slot_count && i < FilamentPathData::MAX_SLOTS; i++) {
+                    if (data->slot_filament_states[i].segment >= PathSegment::HUB) {
+                        hub_has_filament = true;
+                        break;
+                    }
+                }
             }
         }
-
-        draw_vertical_line(layer, center_x, merge_y, hub_y - hub_h / 2, hub_line_color,
-                           hub_line_width);
 
         // Hub box - tint based on buffer fault state or filament color
         lv_color_t hub_bg_tinted = hub_bg;
@@ -925,8 +967,18 @@ static void filament_path_draw_cb(lv_event_t* e) {
             hub_bg_tinted = ph_blend(hub_bg, warning, 0.40f);
             hub_border_final = warning;
         } else if (hub_has_filament) {
-            // Healthy — subtle filament color tint
-            hub_bg_tinted = ph_blend(hub_bg, active_color, 0.33f);
+            // Healthy — subtle filament color tint (use first loaded slot's color)
+            lv_color_t tint_color = active_color;
+            if (data->active_slot < 0) {
+                // No active slot — find first slot loaded to hub for tint
+                for (int i = 0; i < data->slot_count && i < FilamentPathData::MAX_SLOTS; i++) {
+                    if (data->slot_filament_states[i].segment >= PathSegment::HUB) {
+                        tint_color = lv_color_hex(data->slot_filament_states[i].color);
+                        break;
+                    }
+                }
+            }
+            hub_bg_tinted = ph_blend(hub_bg, tint_color, 0.33f);
         }
 
         const char* hub_label = (data->topology == 0) ? "SELECTOR" : "HUB";
