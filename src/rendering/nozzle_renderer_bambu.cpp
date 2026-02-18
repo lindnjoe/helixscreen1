@@ -237,11 +237,12 @@ void draw_nozzle_bambu(lv_layer_t* layer, int32_t cx, int32_t cy, lv_color_t fil
         lv_color_t tip_right = nr_darken(metal_base, 20);
 
         // If filament loaded, tint the nozzle tip
-        lv_color_t nozzle_dark = theme_manager_get_color("filament_nozzle_dark");
-        lv_color_t nozzle_light = theme_manager_get_color("filament_nozzle_light");
+        // Detect "unloaded" by checking for known idle/nozzle colors
+        static constexpr uint32_t NOZZLE_UNLOADED = 0x3A3A3A;
         if (!lv_color_eq(filament_color, nr_darken(metal_base, 10)) &&
-            !lv_color_eq(filament_color, nozzle_dark) &&
-            !lv_color_eq(filament_color, nozzle_light)) {
+            !lv_color_eq(filament_color, lv_color_hex(NOZZLE_UNLOADED)) &&
+            !lv_color_eq(filament_color, lv_color_hex(0x808080)) &&
+            !lv_color_eq(filament_color, lv_color_black())) {
             tip_left = nr_blend(tip_left, filament_color, 0.4f);
             tip_right = nr_blend(tip_right, filament_color, 0.4f);
         }

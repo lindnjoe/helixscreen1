@@ -231,11 +231,9 @@ PathSegment AmsBackendToolChanger::get_slot_filament_segment(int slot_index) con
         return PathSegment::NONE;
     }
 
-    // For tool changers, each slot represents a complete tool
-    if (tool_mounted_[slot_index]) {
-        return PathSegment::NOZZLE; // This tool is mounted
-    }
-    return PathSegment::SPOOL; // Tool is docked (has spool attached)
+    // For tool changers, each slot is a complete tool with filament loaded
+    // through the nozzle — both mounted and docked tools have filament at nozzle
+    return PathSegment::NOZZLE;
 }
 
 PathSegment AmsBackendToolChanger::infer_error_segment() const {

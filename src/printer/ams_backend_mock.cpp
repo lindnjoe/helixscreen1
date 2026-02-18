@@ -366,13 +366,20 @@ PathSegment AmsBackendMock::get_slot_filament_segment(int slot_index) const {
     }
 
     // For non-active slots, check if filament is installed at the slot
-    // and return PREP segment (filament sitting at prep sensor)
     const SlotInfo* slot = system_info_.get_slot_global(slot_index);
     if (!slot) {
         return PathSegment::NONE;
     }
 
-    // Slots with available filament show filament up to prep sensor
+    // Tool changers: each tool has filament loaded all the way to the nozzle
+    if (tool_changer_mode_) {
+        if (slot->status == SlotStatus::AVAILABLE || slot->status == SlotStatus::FROM_BUFFER) {
+            return PathSegment::NOZZLE;
+        }
+        return PathSegment::NONE;
+    }
+
+    // Hub/linear: non-active slots have filament sitting at prep sensor
     if (slot->status == SlotStatus::AVAILABLE || slot->status == SlotStatus::FROM_BUFFER) {
         return PathSegment::PREP;
     }
