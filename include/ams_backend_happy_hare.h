@@ -87,6 +87,14 @@ class AmsBackendHappyHare : public AmsBackend {
     // Recovery
     AmsError recover() override;
     AmsError reset() override;
+    AmsError reset_lane(int slot_index) override;
+    [[nodiscard]] bool supports_lane_reset() const override {
+        return true;
+    }
+    AmsError eject_lane(int slot_index) override;
+    [[nodiscard]] bool supports_lane_eject() const override {
+        return true;
+    }
     AmsError cancel() override;
 
     // Configuration

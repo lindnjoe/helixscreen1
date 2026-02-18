@@ -44,11 +44,13 @@ namespace helix::ui {
 class AmsContextMenu : public ContextMenu {
   public:
     enum class MenuAction {
-        CANCELLED, ///< User dismissed menu without action
-        LOAD,      ///< Load filament from this slot
-        UNLOAD,    ///< Unload filament
-        EDIT,      ///< Edit slot properties
-        SPOOLMAN   ///< Assign Spoolman spool
+        CANCELLED,  ///< User dismissed menu without action
+        LOAD,       ///< Load filament from this slot
+        UNLOAD,     ///< Unload filament from toolhead
+        EJECT,      ///< Eject filament from lane (release spool)
+        RESET_LANE, ///< Reset lane to known-good state
+        EDIT,       ///< Edit slot properties
+        SPOOLMAN    ///< Assign Spoolman spool
     };
 
     using ActionCallback = std::function<void(MenuAction action, int slot_index)>;
@@ -118,11 +120,13 @@ class AmsContextMenu : public ContextMenu {
 
     // === Pending state for on_created ===
     bool pending_is_loaded_ = false;
+    bool eject_mode_ = false; ///< True when showing "Eject" instead of "Unload"
 
     // === Event Handlers ===
     void handle_backdrop_clicked();
     void handle_load();
     void handle_unload();
+    void handle_reset_lane();
     void handle_edit();
     void handle_tool_changed();
     void handle_backup_changed();
@@ -146,6 +150,7 @@ class AmsContextMenu : public ContextMenu {
     static void on_backdrop_cb(lv_event_t* e);
     static void on_load_cb(lv_event_t* e);
     static void on_unload_cb(lv_event_t* e);
+    static void on_reset_lane_cb(lv_event_t* e);
     static void on_edit_cb(lv_event_t* e);
     static void on_tool_changed_cb(lv_event_t* e);
     static void on_backup_changed_cb(lv_event_t* e);

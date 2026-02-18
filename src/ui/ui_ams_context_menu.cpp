@@ -3,8 +3,8 @@
 
 #include "ui_ams_context_menu.h"
 
+#include "ui_button.h"
 #include "ui_toast_manager.h"
-#include "ui_utils.h"
 
 #include "ams_backend.h"
 #include "ams_types.h"
@@ -162,19 +162,54 @@ void AmsContextMenu::on_created(lv_obj_t* menu_obj) {
         }
     }
 
-    // Update subject for Unload button state (1=enabled, 0=disabled)
-    lv_subject_set_int(&slot_is_loaded_subject_, (!system_busy && pending_is_loaded_) ? 1 : 0);
+    // Get slot info for filament presence check
+    bool slot_has_filament = false;
+    if (backend_) {
+        SlotInfo slot_info = backend_->get_slot_info(slot_index);
+        slot_has_filament = slot_info.is_present();
+    }
+
+    // Determine eject mode: not loaded to toolhead, but filament is in the lane,
+    // and backend supports per-lane eject (AFC only)
+    bool supports_eject = backend_ && backend_->supports_lane_eject();
+    eject_mode_ = supports_eject && !pending_is_loaded_ && slot_has_filament;
+
+    // Update the unload/eject button label and state
+    bool unload_eject_enabled = false;
+    if (pending_is_loaded_) {
+        // Loaded to toolhead → "Unload" enabled
+        unload_eject_enabled = !system_busy;
+    } else if (eject_mode_) {
+        // Filament in lane but not loaded, eject supported → "Eject" enabled
+        unload_eject_enabled = !system_busy;
+    }
+    // else: no filament or eject not supported → disabled
+
+    lv_subject_set_int(&slot_is_loaded_subject_, unload_eject_enabled ? 1 : 0);
+
+    // Swap button label to "Eject" when in eject mode
+    if (eject_mode_) {
+        lv_obj_t* btn_unload = lv_obj_find_by_name(menu_obj, "btn_unload");
+        if (btn_unload) {
+            ui_button_set_text(btn_unload, lv_tr("Eject"));
+        }
+    }
 
     // Determine if slot has filament for Load button state
     // Disable Load if: system busy, slot empty, OR slot is already loaded to extruder
-    bool can_load = !system_busy && !pending_is_loaded_;
-    if (can_load && backend_) {
-        SlotInfo slot_info = backend_->get_slot_info(slot_index);
-        can_load =
-            (slot_info.status == SlotStatus::AVAILABLE || slot_info.status == SlotStatus::LOADED ||
-             slot_info.status == SlotStatus::FROM_BUFFER);
-    }
+    bool can_load = !system_busy && !pending_is_loaded_ && slot_has_filament;
     lv_subject_set_int(&slot_can_load_subject_, can_load ? 1 : 0);
+
+    // Show Reset Lane button if backend supports it
+    if (backend_ && backend_->supports_lane_reset()) {
+        lv_obj_t* btn_reset = lv_obj_find_by_name(menu_obj, "btn_reset_lane");
+        if (btn_reset) {
+            lv_obj_remove_flag(btn_reset, LV_OBJ_FLAG_HIDDEN);
+            if (system_busy) {
+                lv_obj_add_state(btn_reset, LV_STATE_DISABLED);
+            }
+        }
+    }
 
     // Update the slot header text (1-based for user display)
     lv_obj_t* slot_header = lv_obj_find_by_name(menu_obj, "slot_header");
@@ -217,8 +252,18 @@ void AmsContextMenu::handle_load() {
 }
 
 void AmsContextMenu::handle_unload() {
-    spdlog::info("[AmsContextMenu] Unload requested for slot {}", get_item_index());
-    dispatch_ams_action(MenuAction::UNLOAD);
+    if (eject_mode_) {
+        spdlog::info("[AmsContextMenu] Eject requested for slot {}", get_item_index());
+        dispatch_ams_action(MenuAction::EJECT);
+    } else {
+        spdlog::info("[AmsContextMenu] Unload requested for slot {}", get_item_index());
+        dispatch_ams_action(MenuAction::UNLOAD);
+    }
+}
+
+void AmsContextMenu::handle_reset_lane() {
+    spdlog::info("[AmsContextMenu] Reset lane requested for slot {}", get_item_index());
+    dispatch_ams_action(MenuAction::RESET_LANE);
 }
 
 void AmsContextMenu::handle_edit() {
@@ -238,6 +283,7 @@ void AmsContextMenu::register_callbacks() {
     lv_xml_register_event_cb(nullptr, "ams_context_backdrop_cb", on_backdrop_cb);
     lv_xml_register_event_cb(nullptr, "ams_context_load_cb", on_load_cb);
     lv_xml_register_event_cb(nullptr, "ams_context_unload_cb", on_unload_cb);
+    lv_xml_register_event_cb(nullptr, "ams_context_reset_lane_cb", on_reset_lane_cb);
     lv_xml_register_event_cb(nullptr, "ams_context_edit_cb", on_edit_cb);
     lv_xml_register_event_cb(nullptr, "ams_context_tool_changed_cb", on_tool_changed_cb);
     lv_xml_register_event_cb(nullptr, "ams_context_backup_changed_cb", on_backup_changed_cb);
@@ -275,6 +321,13 @@ void AmsContextMenu::on_unload_cb(lv_event_t* /*e*/) {
     auto* self = get_active_instance();
     if (self) {
         self->handle_unload();
+    }
+}
+
+void AmsContextMenu::on_reset_lane_cb(lv_event_t* /*e*/) {
+    auto* self = get_active_instance();
+    if (self) {
+        self->handle_reset_lane();
     }
 }
 

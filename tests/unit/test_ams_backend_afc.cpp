@@ -2117,3 +2117,89 @@ TEST_CASE("AFC standard single-unit system unchanged by mixed topology code",
     REQUIRE(helper.get_unit_topology(0) == PathTopology::HUB);
     REQUIRE(helper.get_action() == AmsAction::IDLE);
 }
+
+// ============================================================================
+// eject_lane() Tests
+// ============================================================================
+
+TEST_CASE("AFC eject_lane sends LANE_UNLOAD command", "[ams][afc][eject]") {
+    AmsBackendAfcTestHelper helper;
+    helper.initialize_test_lanes_with_slots(4);
+    helper.set_running(true);
+
+    auto result = helper.eject_lane(0);
+
+    REQUIRE(result.success());
+    REQUIRE(helper.has_gcode("LANE_UNLOAD LANE=lane1"));
+}
+
+TEST_CASE("AFC eject_lane targets correct lane", "[ams][afc][eject]") {
+    AmsBackendAfcTestHelper helper;
+    helper.initialize_test_lanes_with_slots(4);
+    helper.set_running(true);
+
+    auto result = helper.eject_lane(2);
+
+    REQUIRE(result.success());
+    REQUIRE(helper.has_gcode("LANE_UNLOAD LANE=lane3"));
+}
+
+TEST_CASE("AFC eject_lane fails when lane is loaded in toolhead", "[ams][afc][eject]") {
+    AmsBackendAfcTestHelper helper;
+    helper.initialize_test_lanes_with_slots(4);
+    helper.set_running(true);
+    helper.set_filament_loaded(true);
+    helper.set_current_slot(1);
+
+    auto result = helper.eject_lane(1);
+
+    REQUIRE_FALSE(result.success());
+    REQUIRE(result.result == AmsResult::WRONG_STATE);
+    REQUIRE(helper.captured_gcodes.empty());
+}
+
+TEST_CASE("AFC eject_lane allows eject of non-current slot even when filament loaded",
+          "[ams][afc][eject]") {
+    AmsBackendAfcTestHelper helper;
+    helper.initialize_test_lanes_with_slots(4);
+    helper.set_running(true);
+    helper.set_filament_loaded(true);
+    helper.set_current_slot(0);
+
+    // Eject slot 2 while slot 0 is loaded — should work
+    auto result = helper.eject_lane(2);
+
+    REQUIRE(result.success());
+    REQUIRE(helper.has_gcode("LANE_UNLOAD LANE=lane3"));
+}
+
+TEST_CASE("AFC eject_lane validates slot index", "[ams][afc][eject]") {
+    AmsBackendAfcTestHelper helper;
+    helper.initialize_test_lanes_with_slots(4);
+    helper.set_running(true);
+
+    auto result = helper.eject_lane(99);
+
+    REQUIRE_FALSE(result.success());
+    REQUIRE(result.result == AmsResult::INVALID_SLOT);
+}
+
+TEST_CASE("AFC eject_lane fails when not running", "[ams][afc][eject]") {
+    AmsBackendAfcTestHelper helper;
+    helper.initialize_test_lanes_with_slots(4);
+
+    auto result = helper.eject_lane(0);
+
+    REQUIRE_FALSE(result.success());
+    REQUIRE(result.result == AmsResult::NOT_CONNECTED);
+}
+
+TEST_CASE("AFC supports_lane_eject returns true", "[ams][afc][capability]") {
+    AmsBackendAfcTestHelper helper;
+    REQUIRE(helper.supports_lane_eject());
+}
+
+TEST_CASE("AFC supports_lane_reset returns true", "[ams][afc][capability]") {
+    AmsBackendAfcTestHelper helper;
+    REQUIRE(helper.supports_lane_reset());
+}

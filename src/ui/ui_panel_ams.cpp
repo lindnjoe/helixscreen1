@@ -1720,6 +1720,32 @@ void AmsPanel::show_context_menu(int slot_index, lv_obj_t* near_widget, lv_point
                 }
                 break;
 
+            case helix::ui::AmsContextMenu::MenuAction::EJECT:
+                if (!backend) {
+                    NOTIFY_WARNING("AMS not available");
+                    return;
+                }
+                {
+                    AmsError error = backend->eject_lane(slot);
+                    if (error.result != AmsResult::SUCCESS) {
+                        NOTIFY_ERROR("Eject failed: {}", error.user_msg);
+                    }
+                }
+                break;
+
+            case helix::ui::AmsContextMenu::MenuAction::RESET_LANE:
+                if (!backend) {
+                    NOTIFY_WARNING("AMS not available");
+                    return;
+                }
+                {
+                    AmsError error = backend->reset_lane(slot);
+                    if (error.result != AmsResult::SUCCESS) {
+                        NOTIFY_ERROR("Reset failed: {}", error.user_msg);
+                    }
+                }
+                break;
+
             case helix::ui::AmsContextMenu::MenuAction::EDIT:
                 show_edit_modal(slot);
                 break;

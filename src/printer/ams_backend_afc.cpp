@@ -1903,6 +1903,33 @@ AmsError AmsBackendAfc::reset_lane(int slot_index) {
     return execute_gcode("AFC_LANE_RESET LANE=" + lane_name);
 }
 
+AmsError AmsBackendAfc::eject_lane(int slot_index) {
+    std::string lane_name;
+    {
+        std::lock_guard<std::recursive_mutex> lock(mutex_);
+
+        AmsError precondition = check_preconditions();
+        if (!precondition) {
+            return precondition;
+        }
+
+        AmsError slot_err = validate_slot_index(slot_index);
+        if (!slot_err) {
+            return slot_err;
+        }
+
+        if (system_info_.filament_loaded && system_info_.current_slot == slot_index) {
+            return AmsError(AmsResult::WRONG_STATE, "Lane is loaded in toolhead",
+                            "Unload from toolhead first", "Use Unload before Eject");
+        }
+
+        lane_name = lane_names_[slot_index];
+    }
+
+    spdlog::info("[AMS AFC] Ejecting lane {}", lane_name);
+    return execute_gcode("LANE_UNLOAD LANE=" + lane_name);
+}
+
 AmsError AmsBackendAfc::cancel() {
     {
         std::lock_guard<std::recursive_mutex> lock(mutex_);

@@ -343,6 +343,40 @@ class AmsBackend {
     }
 
     /**
+     * @brief Check if per-lane reset is supported
+     * @return true if reset_lane() is implemented
+     */
+    [[nodiscard]] virtual bool supports_lane_reset() const {
+        return false;
+    }
+
+    /**
+     * @brief Eject filament from a specific lane (async)
+     *
+     * Reverses the lane's extruder motor to release filament so the spool
+     * can be physically removed. Different from unload_filament() which
+     * retracts filament from the toolhead back through the hub.
+     *
+     * For AFC: sends LANE_UNLOAD LANE={name}
+     * Default implementation returns NOT_SUPPORTED.
+     *
+     * @param slot_index Lane to eject from (0-based)
+     * @return AmsError indicating if operation was started
+     */
+    virtual AmsError eject_lane(int slot_index) {
+        (void)slot_index;
+        return AmsErrorHelper::not_supported("Lane eject not supported");
+    }
+
+    /**
+     * @brief Check if per-lane eject is supported
+     * @return true if eject_lane() is implemented
+     */
+    [[nodiscard]] virtual bool supports_lane_eject() const {
+        return false;
+    }
+
+    /**
      * @brief Cancel current operation
      *
      * Attempts to safely abort the current operation.

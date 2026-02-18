@@ -702,6 +702,46 @@ AmsError AmsBackendHappyHare::reset() {
     return execute_gcode("MMU_HOME");
 }
 
+AmsError AmsBackendHappyHare::reset_lane(int slot_index) {
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        if (!running_) {
+            return AmsErrorHelper::not_connected("Happy Hare backend not started");
+        }
+
+        AmsError slot_err = validate_slot_index(slot_index);
+        if (!slot_err) {
+            return slot_err;
+        }
+    }
+
+    // MMU_RECOVER with GATE parameter recovers a specific gate's state
+    spdlog::info("[AMS HappyHare] Recovering gate {}", slot_index);
+    return execute_gcode("MMU_RECOVER GATE=" + std::to_string(slot_index));
+}
+
+AmsError AmsBackendHappyHare::eject_lane(int slot_index) {
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        AmsError precondition = check_preconditions();
+        if (!precondition) {
+            return precondition;
+        }
+
+        AmsError slot_err = validate_slot_index(slot_index);
+        if (!slot_err) {
+            return slot_err;
+        }
+    }
+
+    // MMU_EJECT fully ejects filament from the gate so the spool can be removed.
+    // If filament is loaded it acts like MMU_UNLOAD first, then ejects from gate.
+    spdlog::info("[AMS HappyHare] Ejecting gate {}", slot_index);
+    return execute_gcode("MMU_EJECT GATE=" + std::to_string(slot_index));
+}
+
 AmsError AmsBackendHappyHare::cancel() {
     {
         std::lock_guard<std::mutex> lock(mutex_);

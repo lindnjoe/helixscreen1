@@ -34,6 +34,12 @@
         <bind_state_if_eq subject="ams_slot_is_loaded" state="disabled" ref_value="0"/>
         <event_cb trigger="clicked" callback="ams_context_unload_cb"/>
       </ui_button>
+      <!-- Reset Lane Button (hidden unless backend supports it) -->
+      <ui_button name="btn_reset_lane"
+                 width="100%" height="#button_height_sm" icon="refresh" text="Reset" translation_tag="Reset" variant="ghost" clickable="true"
+                 style_flex_main_place="start" hidden="true">
+        <event_cb trigger="clicked" callback="ams_context_reset_lane_cb"/>
+      </ui_button>
       <!-- Edit Button -->
       <ui_button name="btn_edit"
                  width="100%" height="#button_height_sm" icon="tune" text="Edit" translation_tag="Edit" variant="ghost" clickable="true"
