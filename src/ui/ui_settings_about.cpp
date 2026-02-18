@@ -184,16 +184,8 @@ void AboutOverlay::bind_version_subjects() {
         }
     }
 
-    // === Check for Updates (reactive description) ===
-    lv_obj_t* check_updates_row = lv_obj_find_by_name(overlay_root_, "row_check_updates");
-    if (check_updates_row) {
-        lv_obj_t* description = lv_obj_find_by_name(check_updates_row, "description");
-        lv_subject_t* version_text = lv_xml_get_subject(nullptr, "update_version_text");
-        if (description && version_text) {
-            lv_label_bind_text(description, version_text, "%s");
-            spdlog::trace("[{}]   Check for Updates description bound", get_name());
-        }
-    }
+    // Check for Updates description is now bound declaratively via
+    // bind_description="update_version_text" in about_overlay.xml
 }
 
 void AboutOverlay::populate_mcu_rows() {

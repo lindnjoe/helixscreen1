@@ -1654,7 +1654,7 @@ bool UpdateChecker::fetch_r2_manifest(const std::string& channel, ReleaseInfo& i
         return false;
 
     if (!resp) {
-        error = "R2 network request failed";
+        error = "Connection failed (" + manifest_url + ")";
         return false;
     }
 
@@ -1712,7 +1712,8 @@ bool UpdateChecker::fetch_stable_release(ReleaseInfo& info, std::string& error) 
         }
         return true;
     }
-    spdlog::debug("[UpdateChecker] R2 stable fetch failed ({}), falling back to GitHub", error);
+    std::string r2_error = error;
+    spdlog::debug("[UpdateChecker] R2 stable fetch failed ({}), falling back to GitHub", r2_error);
     error.clear();
 
     auto req = std::make_shared<HttpRequest>();
@@ -1729,7 +1730,7 @@ bool UpdateChecker::fetch_stable_release(ReleaseInfo& info, std::string& error) 
         return false;
 
     if (!resp) {
-        error = "Network request failed";
+        error = "Connection failed (R2 + GitHub)";
         return false;
     }
 
@@ -1756,7 +1757,8 @@ bool UpdateChecker::fetch_beta_release(ReleaseInfo& info, std::string& error) {
         }
         return true;
     }
-    spdlog::debug("[UpdateChecker] R2 beta fetch failed ({}), falling back to GitHub", error);
+    std::string r2_error = error;
+    spdlog::debug("[UpdateChecker] R2 beta fetch failed ({}), falling back to GitHub", r2_error);
     error.clear();
 
     auto req = std::make_shared<HttpRequest>();
@@ -1773,7 +1775,7 @@ bool UpdateChecker::fetch_beta_release(ReleaseInfo& info, std::string& error) {
         return false;
 
     if (!resp) {
-        error = "Network request failed";
+        error = "Connection failed (R2 + GitHub)";
         return false;
     }
 
@@ -1858,12 +1860,12 @@ bool UpdateChecker::fetch_dev_release(ReleaseInfo& info, std::string& error) {
             return false;
 
         if (!resp) {
-            error = "Network request failed";
+            error = "Connection failed (" + manifest_url + ")";
             return false;
         }
 
         if (resp->status_code != 200) {
-            error = "HTTP " + std::to_string(resp->status_code);
+            error = "HTTP " + std::to_string(resp->status_code) + " (" + manifest_url + ")";
             return false;
         }
 
