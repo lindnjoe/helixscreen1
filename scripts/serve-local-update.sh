@@ -6,14 +6,15 @@
 #
 # OVERVIEW
 # --------
-# Builds a Pi package, generates a manifest.json with a bumped version
-# (patch +1 over VERSION.txt), and serves both over HTTP. The running
-# helix-screen binary sees the manifest version as newer than itself and
-# triggers the full self-update path without touching VERSION.txt.
+# Builds a Pi package, generates a manifest.json with a fixed high test
+# version (99.0.0) guaranteed to be newer than any real install, and serves
+# both over HTTP. The running helix-screen binary sees the manifest version
+# as newer than itself and triggers the full self-update path without
+# touching VERSION.txt.
 #
-# By default the patch version is bumped on every run so helix-screen
-# always treats it as a new release. Use --no-bump to serve the exact
-# VERSION.txt version instead.
+# The test version is always 99.0.0 so the manifest is always seen as newer
+# regardless of what version is currently installed on the Pi. Use --no-bump
+# to serve the exact VERSION.txt version instead.
 #
 # QUICK START
 # -----------
@@ -42,7 +43,7 @@
 #                    (or after a factory reset). Requires passwordless SSH
 #                    or an SSH agent with the Pi's key loaded.
 #   --no-bump        Serve the exact version from VERSION.txt instead of
-#                    patch+1. Useful if you manually set a higher version.
+#                    99.0.0. Useful if you manually set a higher version.
 #   --no-build       Skip package.sh and use the existing dist/ tarball.
 #                    Must be paired with the same version the tarball was
 #                    built with (default: bumped version).
@@ -59,8 +60,8 @@
 # -----
 #   - The bumped version is only used for the tarball filename and manifest.
 #     VERSION.txt is never modified.
-#   - After install the Pi binary still reports VERSION.txt's version, so
-#     the next run will again offer an update — intentional for iteration.
+#   - After install the Pi binary still reports VERSION.txt's version (< 99.0.0),
+#     so the next run will again offer an update — intentional for iteration.
 #   - To reset the Pi back to the stable channel, re-run --configure-pi
 #     after removing the dev_url key, or delete settings.json on the Pi.
 
@@ -95,15 +96,10 @@ done
 # ── Version ───────────────────────────────────────────────────────────────────
 BASE_VERSION="$(tr -d '[:space:]' < "$PROJECT_DIR/VERSION.txt")"  # e.g. 0.10.4
 
-bump_patch() {
-    local ver=$1
-    local major minor patch
-    IFS='.' read -r major minor patch <<< "$ver"
-    echo "${major}.${minor}.$((patch + 1))"
-}
-
+# Use a fixed high test version so the manifest is always newer than any real
+# install, regardless of which branch or version is currently on the Pi.
 if [[ $BUMP -eq 1 ]]; then
-    TEST_VERSION="$(bump_patch "$BASE_VERSION")"
+    TEST_VERSION="99.0.0"
 else
     TEST_VERSION="$BASE_VERSION"
 fi
@@ -122,7 +118,7 @@ echo ""
 echo "  serve-local-update"
 echo "  ══════════════════"
 echo "  Base version : $BASE_VERSION  (VERSION.txt — unchanged)"
-echo "  Test version : $TEST_VERSION  $([ $BUMP -eq 1 ] && echo "(patch bumped)" || echo "(no bump)")"
+echo "  Test version : $TEST_VERSION  $([ $BUMP -eq 1 ] && echo "(fixed high — always newer than installed)" || echo "(no bump)")"
 echo "  Tarball      : $TARBALL_NAME"
 echo "  Serving at   : $BASE_URL"
 echo "  Pi target    : ${PI_USER}@${PI_HOST}"
@@ -150,13 +146,12 @@ cat > "$MANIFEST_PATH" <<EOF
 {
   "version": "${VERSION}",
   "channel": "dev",
-  "assets": [
-    {
-      "platform": "pi",
+  "assets": {
+    "pi": {
       "filename": "${TARBALL_NAME}",
       "url": "${BASE_URL}/${TARBALL_NAME}"
     }
-  ]
+  }
 }
 EOF
 echo "[serve-local-update] Manifest → $MANIFEST_PATH"
