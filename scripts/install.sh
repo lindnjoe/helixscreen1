@@ -2286,12 +2286,17 @@ deploy_platform_hooks() {
 
 # Fix ownership of config directory for non-root Klipper users
 # Binaries stay root-owned for security; only config needs user write access
+# Note: when running from within helix-screen (NoNewPrivileges=true), sudo is
+# blocked. Files are already owned by the service user so the chown is a no-op
+# in that case — failure is non-fatal.
 fix_install_ownership() {
     local user="${KLIPPER_USER:-}"
     if [ -n "$user" ] && [ "$user" != "root" ] && [ -d "$INSTALL_DIR" ]; then
         log_info "Setting ownership to ${user}..."
         if [ -d "${INSTALL_DIR}/config" ]; then
-            $SUDO chown -R "${user}:${user}" "${INSTALL_DIR}/config"
+            if ! $SUDO chown -R "${user}:${user}" "${INSTALL_DIR}/config" 2>/dev/null; then
+                log_warn "Could not set ownership (sudo blocked by NoNewPrivileges — files already owned by service user)"
+            fi
         fi
     fi
 }
