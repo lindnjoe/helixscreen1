@@ -118,6 +118,7 @@ while [[ $# -gt 0 ]]; do
             sed -n '2,/^set -/p' "$0" | grep '^#' | sed 's/^# \?//'
             exit 0
             ;;
+        pi|pi32|ad5m|cc1|k1|k1-dynamic|k2|snapmaker-u1) PLATFORM=$1; shift ;;
         *) echo "Unknown option: $1"; exit 1 ;;
     esac
 done
