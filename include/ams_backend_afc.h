@@ -44,10 +44,10 @@ class MoonrakerAPI;
  * }
  *
  * G-code Commands:
- * - AFC_LOAD LANE={name}   - Load filament from specified lane
- * - AFC_UNLOAD             - Unload current filament
- * - AFC_CUT LANE={name}    - Cut filament (if cutter supported)
- * - AFC_HOME               - Home the AFC system
+ * - CHANGE_TOOL LANE={name} - Load/change filament from specified lane
+ * - TOOL_UNLOAD             - Unload current filament
+ * - SET_MAP LANE={name} MAP=T{n} - Map lane to tool number
+ * - AFC_RESET               - Reset/re-prep all lanes
  * - T{n}                   - Tool change (unload + load)
  */
 /**
