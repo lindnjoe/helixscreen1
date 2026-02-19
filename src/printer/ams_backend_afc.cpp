@@ -2004,7 +2004,7 @@ AmsError AmsBackendAfc::cancel() {
 // Configuration Operations
 // ============================================================================
 
-AmsError AmsBackendAfc::set_slot_info(int slot_index, const SlotInfo& info) {
+AmsError AmsBackendAfc::set_slot_info(int slot_index, const SlotInfo& info, bool persist) {
     {
         std::lock_guard<std::recursive_mutex> lock(mutex_);
 
@@ -2048,8 +2048,15 @@ AmsError AmsBackendAfc::set_slot_info(int slot_index, const SlotInfo& info) {
                          info.color_name);
         }
 
-        // Persist via G-code commands if AFC version supports it (v1.0.20+)
-        if (version_at_least("1.0.20")) {
+        // Persist via G-code commands if AFC version supports it (v1.0.20+).
+        // Skip persistence when persist=false — this is used by Spoolman weight
+        // polling (refresh_spoolman_weights) to update in-memory state without
+        // sending G-code back to AFC firmware. Without this guard, each weight
+        // update would fire SET_COLOR/SET_MATERIAL/SET_WEIGHT/SET_SPOOL_ID G-codes,
+        // which trigger AFC status_update WebSocket events, which call
+        // sync_from_backend → refresh_spoolman_weights → set_slot_info again,
+        // creating an infinite feedback loop that saturates the CPU.
+        if (persist && version_at_least("1.0.20")) {
             std::string lane_name = get_lane_name(slot_index);
             if (!lane_name.empty()) {
                 // Color (only if changed and valid - not 0 or default grey)
@@ -2083,7 +2090,7 @@ AmsError AmsBackendAfc::set_slot_info(int slot_index, const SlotInfo& info) {
                     execute_gcode(fmt::format("SET_SPOOL_ID LANE={} SPOOL_ID=", lane_name));
                 }
             }
-        } else if (afc_version_ != "unknown" && !afc_version_.empty()) {
+        } else if (persist && afc_version_ != "unknown" && !afc_version_.empty()) {
             spdlog::info("[AMS AFC] Version {} - slot changes stored locally only (upgrade to "
                          "1.0.20+ for persistence)",
                          afc_version_);

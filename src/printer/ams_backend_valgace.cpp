@@ -305,7 +305,7 @@ AmsError AmsBackendValgACE::cancel() {
 // Configuration
 // ============================================================================
 
-AmsError AmsBackendValgACE::set_slot_info(int slot_index, const SlotInfo& info) {
+AmsError AmsBackendValgACE::set_slot_info(int slot_index, const SlotInfo& info, bool /*persist*/) {
     // ValgACE may support slot configuration via Spoolman integration
     // For now, this is not supported
     (void)slot_index;

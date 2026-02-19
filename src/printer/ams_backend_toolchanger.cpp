@@ -569,7 +569,8 @@ AmsError AmsBackendToolChanger::cancel() {
 // Configuration Operations
 // ============================================================================
 
-AmsError AmsBackendToolChanger::set_slot_info(int slot_index, const SlotInfo& info) {
+AmsError AmsBackendToolChanger::set_slot_info(int slot_index, const SlotInfo& info,
+                                              bool /*persist*/) {
     std::lock_guard<std::mutex> lock(mutex_);
 
     AmsError slot_valid = validate_slot_index(slot_index);

@@ -1157,10 +1157,19 @@ void AmsState::refresh_spoolman_weights() {
                             return;
                         }
 
-                        // Update weights and set back
+                        // Update weights and set back.
+                        // CRITICAL: persist=false prevents an infinite feedback loop.
+                        // With persist=true, set_slot_info sends G-code to firmware
+                        // (e.g., SET_WEIGHT for AFC, MMU_GATE_MAP for Happy Hare).
+                        // Firmware then emits a status_update WebSocket event, which
+                        // triggers sync_from_backend → refresh_spoolman_weights →
+                        // set_slot_info again, ad infinitum. With 4 AFC lanes this
+                        // fires 16+ G-code commands per cycle and saturates the CPU.
+                        // Since these weights come FROM Spoolman (an external source),
+                        // there's no need to write them back to firmware.
                         slot.remaining_weight_g = d->remaining_weight_g;
                         slot.total_weight_g = d->total_weight_g;
-                        primary->set_slot_info(d->slot_index, slot);
+                        primary->set_slot_info(d->slot_index, slot, /*persist=*/false);
                         state.bump_slots_version();
 
                         spdlog::trace("[AmsState] Updated slot {} weights: {:.0f}g / {:.0f}g",

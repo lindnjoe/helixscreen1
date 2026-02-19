@@ -764,7 +764,7 @@ AmsError AmsBackendHappyHare::cancel() {
 // Configuration Operations
 // ============================================================================
 
-AmsError AmsBackendHappyHare::set_slot_info(int slot_index, const SlotInfo& info) {
+AmsError AmsBackendHappyHare::set_slot_info(int slot_index, const SlotInfo& info, bool persist) {
     int old_spoolman_id = 0;
     {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -810,37 +810,45 @@ AmsError AmsBackendHappyHare::set_slot_info(int slot_index, const SlotInfo& info
         }
     }
 
-    // Persist via MMU_GATE_MAP command (Happy Hare stores in mmu_vars.cfg automatically)
-    bool has_changes = false;
-    std::string cmd = fmt::format("MMU_GATE_MAP GATE={}", slot_index);
+    // Persist via MMU_GATE_MAP command (Happy Hare stores in mmu_vars.cfg automatically).
+    // Skip persistence when persist=false — used by Spoolman weight polling to update
+    // in-memory state without sending G-code back to firmware. Without this guard,
+    // weight updates would trigger MMU_GATE_MAP → firmware status_update WebSocket
+    // event → sync_from_backend → refresh_spoolman_weights → set_slot_info again,
+    // creating an infinite feedback loop.
+    if (persist) {
+        bool has_changes = false;
+        std::string cmd = fmt::format("MMU_GATE_MAP GATE={}", slot_index);
 
-    // Color (hex format, no # prefix)
-    if (info.color_rgb != 0 && info.color_rgb != AMS_DEFAULT_SLOT_COLOR) {
-        cmd += fmt::format(" COLOR={:06X}", info.color_rgb & 0xFFFFFF);
-        has_changes = true;
-    }
+        // Color (hex format, no # prefix)
+        if (info.color_rgb != 0 && info.color_rgb != AMS_DEFAULT_SLOT_COLOR) {
+            cmd += fmt::format(" COLOR={:06X}", info.color_rgb & 0xFFFFFF);
+            has_changes = true;
+        }
 
-    // Material (validate to prevent command injection)
-    if (!info.material.empty() && MoonrakerAPI::is_safe_gcode_param(info.material)) {
-        cmd += fmt::format(" MATERIAL={}", info.material);
-        has_changes = true;
-    } else if (!info.material.empty()) {
-        spdlog::warn("[AMS HappyHare] Skipping MATERIAL - unsafe characters in: {}", info.material);
-    }
+        // Material (validate to prevent command injection)
+        if (!info.material.empty() && MoonrakerAPI::is_safe_gcode_param(info.material)) {
+            cmd += fmt::format(" MATERIAL={}", info.material);
+            has_changes = true;
+        } else if (!info.material.empty()) {
+            spdlog::warn("[AMS HappyHare] Skipping MATERIAL - unsafe characters in: {}",
+                         info.material);
+        }
 
-    // Spoolman ID (-1 to clear)
-    if (info.spoolman_id > 0) {
-        cmd += fmt::format(" SPOOLID={}", info.spoolman_id);
-        has_changes = true;
-    } else if (info.spoolman_id == 0 && old_spoolman_id > 0) {
-        cmd += " SPOOLID=-1"; // Clear existing link
-        has_changes = true;
-    }
+        // Spoolman ID (-1 to clear)
+        if (info.spoolman_id > 0) {
+            cmd += fmt::format(" SPOOLID={}", info.spoolman_id);
+            has_changes = true;
+        } else if (info.spoolman_id == 0 && old_spoolman_id > 0) {
+            cmd += " SPOOLID=-1"; // Clear existing link
+            has_changes = true;
+        }
 
-    // Only send command if there are actual changes to persist
-    if (has_changes) {
-        execute_gcode(cmd);
-        spdlog::debug("[AMS HappyHare] Sent: {}", cmd);
+        // Only send command if there are actual changes to persist
+        if (has_changes) {
+            execute_gcode(cmd);
+            spdlog::debug("[AMS HappyHare] Sent: {}", cmd);
+        }
     }
 
     // Emit OUTSIDE the lock to avoid deadlock with callbacks

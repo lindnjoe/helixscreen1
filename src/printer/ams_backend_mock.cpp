@@ -592,7 +592,7 @@ AmsError AmsBackendMock::cancel() {
     return AmsErrorHelper::success();
 }
 
-AmsError AmsBackendMock::set_slot_info(int slot_index, const SlotInfo& info) {
+AmsError AmsBackendMock::set_slot_info(int slot_index, const SlotInfo& info, bool /*persist*/) {
     {
         std::lock_guard<std::mutex> lock(mutex_);
 

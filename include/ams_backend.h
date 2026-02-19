@@ -394,13 +394,26 @@ class AmsBackend {
      * @brief Update slot filament information
      *
      * Sets the color, material, and other filament info for a slot.
-     * Changes are persisted via Moonraker/Spoolman as appropriate.
+     *
+     * When persist=true (default), changes are written to firmware via G-code
+     * commands (e.g., SET_COLOR, SET_MATERIAL, SET_SPOOL_ID for AFC) so they
+     * survive reboots. Use this for user-initiated edits.
+     *
+     * When persist=false, only in-memory state is updated and EVENT_SLOT_CHANGED
+     * is emitted for UI refresh. This MUST be used when updating slots from
+     * external data sources (e.g., Spoolman weight polling) to prevent a feedback
+     * loop: set_slot_info(persist=true) → G-code → firmware status update →
+     * sync_from_backend → refresh_spoolman_weights → set_slot_info again → ∞.
+     * On AFC with 4 lanes this loop fires 16+ G-code commands per cycle and
+     * saturates the CPU.
      *
      * @param slot_index Slot to update (0-based)
      * @param info New slot information (only filament fields used)
+     * @param persist If true, persist changes to firmware. If false, update
+     *               in-memory state only (for external data sync).
      * @return AmsError indicating if update succeeded
      */
-    virtual AmsError set_slot_info(int slot_index, const SlotInfo& info) = 0;
+    virtual AmsError set_slot_info(int slot_index, const SlotInfo& info, bool persist = true) = 0;
 
     /**
      * @brief Set tool-to-slot mapping
