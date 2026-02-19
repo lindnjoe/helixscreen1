@@ -191,3 +191,59 @@ TEST_CASE("DebugBundleCollector: moonraker log tail stub returns empty", "[debug
     std::string log = helix::DebugBundleCollector::collect_moonraker_log_tail();
     REQUIRE(log.empty());
 }
+
+// ============================================================================
+// sanitize_value() tests [debug-bundle][sanitize]
+// ============================================================================
+
+TEST_CASE("DebugBundleCollector: sanitize_value redacts email addresses",
+          "[debug-bundle][sanitize]") {
+    auto result = helix::DebugBundleCollector::sanitize_value("notify user@example.com on error");
+    REQUIRE(result.find("user@example.com") == std::string::npos);
+    REQUIRE(result.find("[REDACTED_EMAIL]") != std::string::npos);
+}
+
+TEST_CASE("DebugBundleCollector: sanitize_value redacts URLs with credentials",
+          "[debug-bundle][sanitize]") {
+    auto result =
+        helix::DebugBundleCollector::sanitize_value("http://admin:s3cret@192.168.1.100:8080/api");
+    REQUIRE(result.find("admin") == std::string::npos);
+    REQUIRE(result.find("s3cret") == std::string::npos);
+    REQUIRE(result.find("[REDACTED_CREDENTIALS]") != std::string::npos);
+}
+
+TEST_CASE("DebugBundleCollector: sanitize_value redacts Discord webhooks",
+          "[debug-bundle][sanitize]") {
+    auto result = helix::DebugBundleCollector::sanitize_value(
+        "https://discord.com/api/webhooks/123456/abcdef-token");
+    REQUIRE(result == "[REDACTED_WEBHOOK]");
+}
+
+TEST_CASE("DebugBundleCollector: sanitize_value redacts Telegram bot tokens",
+          "[debug-bundle][sanitize]") {
+    auto result = helix::DebugBundleCollector::sanitize_value(
+        "https://api.telegram.org/bot123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11/sendMessage");
+    REQUIRE(result == "[REDACTED_WEBHOOK]");
+}
+
+TEST_CASE("DebugBundleCollector: sanitize_value redacts long hex tokens",
+          "[debug-bundle][sanitize]") {
+    std::string long_hex = "ghp_" + std::string(36, 'a'); // 40 chars total
+    auto result = helix::DebugBundleCollector::sanitize_value(long_hex);
+    REQUIRE(result == "[REDACTED_TOKEN]");
+}
+
+TEST_CASE("DebugBundleCollector: sanitize_value preserves normal strings",
+          "[debug-bundle][sanitize]") {
+    REQUIRE(helix::DebugBundleCollector::sanitize_value("hello world") == "hello world");
+    REQUIRE(helix::DebugBundleCollector::sanitize_value("/tmp/printer_data") ==
+            "/tmp/printer_data");
+    REQUIRE(helix::DebugBundleCollector::sanitize_value("192.168.1.100") == "192.168.1.100");
+}
+
+TEST_CASE("DebugBundleCollector: sanitize_value redacts MAC addresses",
+          "[debug-bundle][sanitize]") {
+    auto result = helix::DebugBundleCollector::sanitize_value("aa:bb:cc:dd:ee:ff");
+    REQUIRE(result.find("aa:bb:cc:dd:ee:ff") == std::string::npos);
+    REQUIRE(result.find("[REDACTED_MAC]") != std::string::npos);
+}

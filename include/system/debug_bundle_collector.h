@@ -40,6 +40,9 @@ class DebugBundleCollector {
     static std::string collect_klipper_log_tail(int num_lines = 500);
     static std::string collect_moonraker_log_tail(int num_lines = 200);
 
+    /// Sanitize a string value for PII patterns (emails, credentials, webhooks, tokens, MACs)
+    static std::string sanitize_value(const std::string& value);
+
     /// Gzip compression using zlib
     static std::vector<uint8_t> gzip_compress(const std::string& data);
 

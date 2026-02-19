@@ -17,6 +17,7 @@
 #include <chrono>
 #include <deque>
 #include <fstream>
+#include <regex>
 #include <sstream>
 #include <thread>
 #include <zlib.h>
@@ -242,8 +243,8 @@ bool DebugBundleCollector::is_sensitive_key(const std::string& key) {
     std::transform(lower_key.begin(), lower_key.end(), lower_key.begin(),
                    [](unsigned char c) { return std::tolower(c); });
 
-    static const std::vector<std::string> sensitive_patterns = {"token", "password", "secret",
-                                                                "key"};
+    static const std::vector<std::string> sensitive_patterns = {
+        "token", "password", "secret", "key", "webhook", "credential", "auth", "bearer"};
 
     for (const auto& pattern : sensitive_patterns) {
         if (lower_key.find(pattern) != std::string::npos) {
@@ -251,6 +252,40 @@ bool DebugBundleCollector::is_sensitive_key(const std::string& key) {
         }
     }
     return false;
+}
+
+std::string DebugBundleCollector::sanitize_value(const std::string& value) {
+    if (value.empty())
+        return value;
+
+    // Check webhook URLs first (full replacement)
+    if (value.find("discord.com/api/webhooks") != std::string::npos ||
+        value.find("hooks.slack.com") != std::string::npos ||
+        value.find("api.telegram.org/bot") != std::string::npos) {
+        return "[REDACTED_WEBHOOK]";
+    }
+
+    // Check for long token-like strings (40+ chars of hex/base64/alphanum with prefix)
+    static const std::regex token_re(R"(^(?:ghp_|gho_|glpat-|xoxb-|xoxp-)?[A-Za-z0-9+/=_-]{36,}$)");
+    if (std::regex_match(value, token_re)) {
+        return "[REDACTED_TOKEN]";
+    }
+
+    std::string result = value;
+
+    // Redact URL credentials: ://user:pass@ -> ://[REDACTED_CREDENTIALS]@
+    static const std::regex cred_url_re(R"(://[^@/\s]+:[^@/\s]+@)");
+    result = std::regex_replace(result, cred_url_re, "://[REDACTED_CREDENTIALS]@");
+
+    // Redact email addresses
+    static const std::regex email_re(R"(\b[\w.+-]+@[\w-]+\.[\w.]+\b)");
+    result = std::regex_replace(result, email_re, "[REDACTED_EMAIL]");
+
+    // Redact MAC addresses (aa:bb:cc:dd:ee:ff or AA-BB-CC-DD-EE-FF)
+    static const std::regex mac_re(R"(\b([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}\b)");
+    result = std::regex_replace(result, mac_re, "[REDACTED_MAC]");
+
+    return result;
 }
 
 json DebugBundleCollector::sanitize_json(const json& input) {
@@ -274,7 +309,12 @@ json DebugBundleCollector::sanitize_json(const json& input) {
         return result;
     }
 
-    // Primitives pass through unchanged
+    // Sanitize string values for PII patterns
+    if (input.is_string()) {
+        return sanitize_value(input.get<std::string>());
+    }
+
+    // Non-string primitives pass through unchanged
     return input;
 }
 
