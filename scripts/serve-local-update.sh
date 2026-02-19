@@ -44,14 +44,14 @@
 #                    reset). Requires passwordless sudo + SSH key access.
 #   --no-bump        Serve the exact version from VERSION.txt instead of
 #                    99.0.0. Useful if you manually set a higher version.
-#   --no-build       Skip package.sh and use the existing dist/ tarball.
-#                    Must be paired with the same version the tarball was
-#                    built with (default: bumped version).
+#   --no-build       Skip compile + package and use the existing dist/ tarball.
+#                    Use when source hasn't changed and you just want to
+#                    re-serve the previously built tarball.
 #   --port PORT      HTTP port to listen on (default: 8765).
 #
 # DEPENDENCIES
 # ------------
-#   - make / build toolchain (for package.sh → cross-compiled pi binary)
+#   - Docker (for pi-docker cross-compilation target)
 #   - python3 (for the HTTP server and Pi settings.json patch)
 #   - ssh + ssh-agent or ~/.ssh/config with key for $HELIX_TEST_PI_USER@$HELIX_TEST_PI_HOST
 #   - rsync (used by package.sh)
@@ -126,7 +126,10 @@ echo ""
 
 # ── Build ─────────────────────────────────────────────────────────────────────
 if [[ $BUILD -eq 1 ]]; then
-    echo "[serve-local-update] Building pi package..."
+    echo "[serve-local-update] Compiling pi binary (docker)..."
+    make -C "$PROJECT_DIR" pi-docker
+    echo ""
+    echo "[serve-local-update] Packaging..."
     "$SCRIPT_DIR/package.sh" pi --version "$VERSION"
     echo ""
 fi
