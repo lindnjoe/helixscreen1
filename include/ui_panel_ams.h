@@ -8,7 +8,6 @@
 #include "ui_ams_dryer_card.h"
 #include "ui_ams_edit_modal.h"
 #include "ui_ams_loading_error_modal.h"
-#include "ui_ams_slot_edit_popup.h"
 #include "ui_color_picker.h"
 #include "ui_observer_guard.h"
 #include "ui_panel_base.h"
@@ -126,7 +125,6 @@ class AmsPanel : public PanelBase {
     // === Extracted UI Modules ===
 
     std::unique_ptr<helix::ui::AmsContextMenu> context_menu_;      ///< Slot context menu
-    std::unique_ptr<helix::ui::AmsSlotEditPopup> slot_edit_popup_; ///< Slot edit popup
     std::unique_ptr<helix::ui::AmsEditModal> edit_modal_;          ///< Edit filament modal
     std::unique_ptr<helix::ui::AmsDryerCard> dryer_card_;          ///< Dryer card and modal
     std::unique_ptr<helix::ui::AmsLoadingErrorModal> error_modal_; ///< Loading error modal
@@ -326,7 +324,6 @@ class AmsPanel : public PanelBase {
     // === UI Module Helpers (internal, show modals with callbacks) ===
 
     void show_context_menu(int slot_index, lv_obj_t* near_widget, lv_point_t click_pt);
-    void show_slot_edit_popup(int slot_index, lv_obj_t* near_widget);
     void show_edit_modal(int slot_index);
     void show_loading_error_modal();
 
