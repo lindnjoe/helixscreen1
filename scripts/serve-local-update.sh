@@ -182,18 +182,30 @@ print('  update/dev_url =', data['update']['dev_url'])
 
 # Enable HELIX_DEBUG=1 in helixscreen.env (enables -vv debug logging via launcher).
 # Launcher checks INSTALL_DIR/config/ first, then /etc/helixscreen/.
+DEFAULTS = '''# HelixScreen environment configuration
+# See config/helixscreen.env in the repo for full documentation.
+MOONRAKER_HOST=localhost
+MOONRAKER_PORT=7125
+HELIX_LOG_LEVEL=info
+'''
 env_candidates = [
     os.path.expanduser('~/helixscreen/config/helixscreen.env'),
     '/etc/helixscreen/helixscreen.env',
 ]
 env_path = next((p for p in env_candidates if os.path.exists(p)), None)
 if env_path is None:
-    # Neither exists — create at the install dir location
     env_path = env_candidates[0]
     os.makedirs(os.path.dirname(env_path), exist_ok=True)
-    open(env_path, 'w').write('')
-    print('  Created', env_path)
-content = open(env_path).read()
+    content = DEFAULTS
+    print('  Created', env_path, 'with defaults')
+else:
+    content = open(env_path).read()
+    # If the file is missing essential defaults (was corrupted by a previous run),
+    # restore them before appending HELIX_DEBUG.
+    if 'MOONRAKER_HOST' not in content:
+        content = DEFAULTS + content
+        print('  Restored missing defaults in', env_path)
+# Remove any existing HELIX_DEBUG line then append it enabled
 content = re.sub(r'^#?\s*HELIX_DEBUG=.*\n?', '', content, flags=re.MULTILINE)
 content = content.rstrip('\n') + '\nHELIX_DEBUG=1\n'
 open(env_path, 'w').write(content)
