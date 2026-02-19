@@ -1,6 +1,6 @@
 # HelixScreen Development Roadmap
 
-**Last Updated:** 2026-02-16 | **Status:** Beta - Seeking Testers
+**Last Updated:** 2026-02-18 | **Status:** Beta - Seeking Testers
 
 ---
 
@@ -27,6 +27,13 @@
 ---
 
 ## Recently Completed
+
+### Power Panel Integration ✅
+**Completed:** 2026-02-18
+
+Home panel quick-toggle button for power devices (tap to toggle, long-press for full panel), Advanced panel entry with conditional visibility via `power_device_count` capability subject, device selection chips for choosing which devices the home button controls, and auto-discovery of Moonraker power devices on connect.
+
+**Files:** `ui_panel_power.cpp`, `ui_panel_home.cpp`, `printer_capabilities_state.cpp`
 
 ### Multi-Unit AMS ✅
 **Completed:** 2026-02-17
