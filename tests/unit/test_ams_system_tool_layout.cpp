@@ -61,7 +61,6 @@ TEST_CASE("SystemToolLayout: 3 HUB units with unique mapped_tools", "[ams][tool_
 
 TEST_CASE("SystemToolLayout: user's exact mixed setup", "[ams][tool_layout]") {
     // HUB(mapped 0-3) + HUB(mapped 4-7) + PARALLEL(mapped 8-11)
-    // Wait — the real setup is PARALLEL(0-3) + HUB(4-7) + HUB(8-11)
     AmsBackendMock backend(4);
     backend.set_mixed_topology_mode(true);
 
@@ -79,21 +78,21 @@ TEST_CASE("SystemToolLayout: user's exact mixed setup", "[ams][tool_layout]") {
     CHECK(layout.total_physical_tools == 6);
     REQUIRE(layout.units.size() == 3);
 
-    // Unit 0: Box Turtle (PARALLEL) → 4 nozzles
+    // Unit 0: Box Turtle (HUB) → 1 nozzle
     CHECK(layout.units[0].first_physical_tool == 0);
-    CHECK(layout.units[0].tool_count == 4);
+    CHECK(layout.units[0].tool_count == 1);
 
     // Unit 1: OpenAMS_1 (HUB) → 1 nozzle
-    CHECK(layout.units[1].first_physical_tool == 4);
+    CHECK(layout.units[1].first_physical_tool == 1);
     CHECK(layout.units[1].tool_count == 1);
 
-    // Unit 2: OpenAMS_2 (HUB) → 1 nozzle
-    CHECK(layout.units[2].first_physical_tool == 5);
-    CHECK(layout.units[2].tool_count == 1);
+    // Unit 2: OpenAMS_2 (PARALLEL) → 4 nozzles
+    CHECK(layout.units[2].first_physical_tool == 2);
+    CHECK(layout.units[2].tool_count == 4);
 }
 
 // ============================================================================
-// Mock mixed topology (PARALLEL + HUB + HUB)
+// Mock mixed topology (HUB + HUB + PARALLEL)
 // ============================================================================
 
 TEST_CASE("SystemToolLayout: mock mixed topology", "[ams][tool_layout]") {
@@ -108,11 +107,11 @@ TEST_CASE("SystemToolLayout: mock mixed topology", "[ams][tool_layout]") {
     CHECK(layout.total_physical_tools == 6);
     REQUIRE(layout.units.size() == 3);
 
-    // PARALLEL unit: 4 tools
-    CHECK(layout.units[0].tool_count == 4);
     // HUB units: 1 tool each
+    CHECK(layout.units[0].tool_count == 1);
     CHECK(layout.units[1].tool_count == 1);
-    CHECK(layout.units[2].tool_count == 1);
+    // PARALLEL unit: 4 tools
+    CHECK(layout.units[2].tool_count == 4);
 }
 
 // ============================================================================
@@ -343,24 +342,24 @@ TEST_CASE("SystemToolLayout: mixed setup active tool mapping", "[ams][tool_layou
 
     auto layout = compute_system_tool_layout(info, &backend);
 
-    // BT virtual tools 0-3 → physical 0-3
+    // BT virtual tools 0-3 → physical 0 (single HUB nozzle)
     for (int v = 0; v < 4; ++v) {
         auto it = layout.virtual_to_physical.find(v);
         REQUIRE(it != layout.virtual_to_physical.end());
-        CHECK(it->second == v);
+        CHECK(it->second == 0);
     }
 
-    // AMS_1 virtual tools 4-7 → physical 4 (single HUB nozzle)
+    // AMS_1 virtual tools 4-7 → physical 1 (single HUB nozzle)
     for (int v = 4; v < 8; ++v) {
         auto it = layout.virtual_to_physical.find(v);
         REQUIRE(it != layout.virtual_to_physical.end());
-        CHECK(it->second == 4);
+        CHECK(it->second == 1);
     }
 
-    // AMS_2 virtual tools 8-11 → physical 5 (single HUB nozzle)
+    // AMS_2 virtual tools 8-11 → physical 2-5 (PARALLEL, 4 nozzles)
     for (int v = 8; v < 12; ++v) {
         auto it = layout.virtual_to_physical.find(v);
         REQUIRE(it != layout.virtual_to_physical.end());
-        CHECK(it->second == 5);
+        CHECK(it->second == 2 + (v - 8));
     }
 }

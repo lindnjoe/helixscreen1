@@ -1510,11 +1510,14 @@ void AmsBackendMock::set_mixed_topology_mode(bool enabled) {
         // System-wide topology: HUB for backward compat
         topology_ = PathTopology::HUB;
 
-        // Per-unit topologies
+        // Per-unit topologies (matches real user hardware)
+        // Turtle_1: 4 lanes → 1 hub (merger) → 1 toolhead
+        // AMS_1: 4 lanes → 1 hub → 1 toolhead (per-lane hubs, single extruder)
+        // AMS_2: 4 lanes → 4 per-lane hubs → 4 toolheads (each lane is independent)
         unit_topologies_.clear();
-        unit_topologies_.push_back(PathTopology::PARALLEL); // Unit 0: Box Turtle
-        unit_topologies_.push_back(PathTopology::HUB);      // Unit 1: OpenAMS
-        unit_topologies_.push_back(PathTopology::HUB);      // Unit 2: OpenAMS
+        unit_topologies_.push_back(PathTopology::HUB);      // Unit 0: Box Turtle (hub → 1 toolhead)
+        unit_topologies_.push_back(PathTopology::HUB);      // Unit 1: OpenAMS (hub → 1 toolhead)
+        unit_topologies_.push_back(PathTopology::PARALLEL); // Unit 2: OpenAMS (4 toolheads)
 
         system_info_.units.clear();
 
@@ -1532,8 +1535,8 @@ void AmsBackendMock::set_mixed_topology_mode(bool enabled) {
             unit.has_encoder = false;
             unit.has_toolhead_sensor = true;
             unit.has_slot_sensors = true;
-            unit.has_hub_sensor = false; // No hub hardware — direct_load per lane
-            unit.topology = PathTopology::PARALLEL;
+            unit.has_hub_sensor = true; // Box Turtle has a merger/combiner hub
+            unit.topology = PathTopology::HUB;
 
             // Buffer health (TurtleNeck buffers)
             BufferHealth health;
@@ -1639,9 +1642,10 @@ void AmsBackendMock::set_mixed_topology_mode(bool enabled) {
         }
 
         // ================================================================
-        // Unit 2: "AMS_2" (OpenAMS) — 4 lanes, HUB, unique virtual tools
+        // Unit 2: "AMS_2" (OpenAMS) — 4 lanes, PARALLEL, unique virtual tools
         //
-        // Same as AMS_1: each lane gets T8-T11, all share extruder5.
+        // Each lane has its own per-lane hub and feeds its own toolhead.
+        // Lanes get T8-T11, each with a separate extruder.
         // ================================================================
         {
             AmsUnit unit;
@@ -1654,9 +1658,9 @@ void AmsBackendMock::set_mixed_topology_mode(bool enabled) {
             unit.has_encoder = false;
             unit.has_toolhead_sensor = true;
             unit.has_slot_sensors = true;
-            unit.has_hub_sensor = true;
+            unit.has_hub_sensor = true; // Per-lane hubs with sensors
             unit.hub_sensor_triggered = false;
-            unit.topology = PathTopology::HUB;
+            unit.topology = PathTopology::PARALLEL;
             // No buffer_health — OpenAMS has no buffers
 
             const struct {
