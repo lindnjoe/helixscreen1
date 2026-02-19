@@ -2118,7 +2118,7 @@ cleanup_old_install() {
     # Clean both the standard .old and any timestamped fallback backups
     for _backup in "${INSTALL_DIR}.old" "${INSTALL_DIR}.old."*; do
         if [ -d "$_backup" ]; then
-            rm -rf "$_backup" 2>/dev/null || $SUDO rm -rf "$_backup" || true
+            rm -rf "$_backup" 2>/dev/null || $SUDO rm -rf "$_backup" 2>/dev/null || true
             log_info "Cleaned up previous installation backup: $_backup"
         fi
     done
