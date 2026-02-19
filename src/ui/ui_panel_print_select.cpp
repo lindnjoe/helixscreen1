@@ -954,7 +954,8 @@ void PrintSelectPanel::process_metadata_result(size_t i, const std::string& file
     // This reduces download size while ensuring adequate resolution
     helix::ThumbnailTarget target = helix::ThumbnailProcessor::get_target_for_display();
     const ThumbnailInfo* best_thumb = metadata.get_best_thumbnail(target.width, target.height);
-    std::string thumb_path = best_thumb ? best_thumb->relative_path : "";
+    std::string thumb_path =
+        resolve_thumbnail_path(best_thumb ? best_thumb->relative_path : "", current_path_);
 
     // Include predicted pre-print overhead (heating, homing, bed mesh, etc.)
     // in the total time estimate so users see realistic wall-clock time
