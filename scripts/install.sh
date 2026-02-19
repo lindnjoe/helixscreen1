@@ -76,6 +76,8 @@ file_sudo() {
 CLEANUP_TMP=false
 CLEANUP_SERVICE=false
 BACKUP_CONFIG=""
+BACKUP_SETTINGS=""
+BACKUP_ENV=""
 ORIGINAL_INSTALL_EXISTS=false
 
 # Colors (if terminal supports it)
@@ -143,6 +145,13 @@ error_handler() {
             log_success "Settings restored"
         else
             log_warn "Could not restore settings. Backup saved at: $BACKUP_SETTINGS"
+        fi
+    fi
+    if [ -n "$BACKUP_ENV" ] && [ -f "$BACKUP_ENV" ]; then
+        if $(file_sudo "${INSTALL_DIR}/config") cp "$BACKUP_ENV" "${INSTALL_DIR}/config/helixscreen.env" 2>/dev/null; then
+            log_success "helixscreen.env restored"
+        else
+            log_warn "Could not restore helixscreen.env. Backup saved at: $BACKUP_ENV"
         fi
     fi
 
@@ -2055,13 +2064,23 @@ extract_release() {
             log_info "Backed up existing settings"
         fi
 
-        # Remove stale .old backup from any previous install attempt
+        # Backup helixscreen.env (preserves HELIX_DEBUG and other env customizations)
+        if [ -f "${INSTALL_DIR}/config/helixscreen.env" ]; then
+            BACKUP_ENV="${TMP_DIR}/helixscreen.env.backup"
+            cp "${INSTALL_DIR}/config/helixscreen.env" "$BACKUP_ENV"
+            log_info "Backed up existing helixscreen.env"
+        fi
+
+        # Remove stale .old backup from any previous install attempt.
+        # Try without sudo first (works when running as service user under NoNewPrivileges).
         if [ -d "${INSTALL_DIR}.old" ]; then
             log_info "Removing stale backup from previous install..."
-            if ! $SUDO rm -rf "${INSTALL_DIR}.old"; then
-                log_error "Failed to remove stale backup at ${INSTALL_DIR}.old"
-                rm -rf "$extract_dir"
-                exit 1
+            if ! rm -rf "${INSTALL_DIR}.old" 2>/dev/null; then
+                if ! $SUDO rm -rf "${INSTALL_DIR}.old" 2>/dev/null; then
+                    log_error "Failed to remove stale backup at ${INSTALL_DIR}.old"
+                    rm -rf "$extract_dir"
+                    exit 1
+                fi
             fi
         fi
 
@@ -2103,6 +2122,11 @@ extract_release() {
         $(file_sudo "${INSTALL_DIR}") mkdir -p "${INSTALL_DIR}/config"
         $(file_sudo "${INSTALL_DIR}/config") cp "$BACKUP_SETTINGS" "${INSTALL_DIR}/config/settings.json"
         log_info "Restored existing settings to config/"
+    fi
+    if [ -n "${BACKUP_ENV:-}" ] && [ -f "$BACKUP_ENV" ]; then
+        $(file_sudo "${INSTALL_DIR}") mkdir -p "${INSTALL_DIR}/config"
+        $(file_sudo "${INSTALL_DIR}/config") cp "$BACKUP_ENV" "${INSTALL_DIR}/config/helixscreen.env"
+        log_info "Restored existing helixscreen.env to config/"
     fi
 
     # Cleanup
@@ -2387,6 +2411,7 @@ managed_services: helixscreen
 persistent_files:
     config/helixconfig.json
     config/settings.json
+    config/helixscreen.env
     config/.disabled_services
 EOF
 }
