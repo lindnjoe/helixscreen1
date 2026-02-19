@@ -2701,13 +2701,25 @@ AmsError AmsBackendAfc::execute_device_action(const std::string& action_id, cons
             // Extract tool index from action_id (e.g., "bowden_T0" -> 0)
             int tool_idx = std::stoi(action_id.substr(8));
             if (tool_idx >= 0 && tool_idx < static_cast<int>(extruders_.size())) {
-                // TODO: Multi-extruder bowden length needs hub-to-extruder mapping
-                // SET_BOWDEN_LENGTH only takes HUB= as its identifier param
-                if (!hub_names_.empty()) {
-                    return execute_gcode("SET_BOWDEN_LENGTH HUB=" + hub_names_[0] +
-                                         " LENGTH=" + std::to_string(static_cast<int>(length)));
+                // Find the hub for this extruder by matching unit membership
+                std::string hub_name;
+                const std::string& ext_name = extruders_[tool_idx].name;
+                for (const auto& unit : unit_infos_) {
+                    auto it = std::find(unit.extruders.begin(), unit.extruders.end(), ext_name);
+                    if (it != unit.extruders.end() && !unit.hubs.empty()) {
+                        hub_name = unit.hubs[0];
+                        break;
+                    }
                 }
-                return AmsErrorHelper::not_supported("No AFC hubs configured");
+                // Fall back to first known hub
+                if (hub_name.empty() && !hub_names_.empty()) {
+                    hub_name = hub_names_[0];
+                }
+                if (hub_name.empty()) {
+                    return AmsErrorHelper::not_supported("No AFC hub found for extruder");
+                }
+                return execute_gcode("SET_BOWDEN_LENGTH HUB=" + hub_name +
+                                     " LENGTH=" + std::to_string(static_cast<int>(length)));
             }
             return AmsErrorHelper::not_supported("Invalid extruder index: " +
                                                  std::to_string(tool_idx));
@@ -2726,15 +2738,18 @@ AmsError AmsBackendAfc::execute_device_action(const std::string& action_id, cons
                 return AmsError(AmsResult::WRONG_STATE, "Speed multiplier must be 0.5-2.0x",
                                 "Invalid value", "Enter a multiplier between 0.5 and 2.0");
             }
-            // AFC uses SET_LONG_MOVE_SPEED LANE={lane} with FWD_SPEED (mm/s) and RWD_FACTOR
+            // AFC SET_LONG_MOVE_SPEED is per-lane; apply to all lanes
             std::string param = (action_id == "speed_fwd") ? "FWD_SPEED" : "RWD_FACTOR";
-            // SET_LONG_MOVE_SPEED requires LANE= mux param
-            // TODO: Need to specify which lane to adjust speed for
-            if (!lane_names_.empty()) {
-                return execute_gcode("SET_LONG_MOVE_SPEED LANE=" + lane_names_[0] + " " + param +
-                                     "=" + std::to_string(multiplier));
+            if (lane_names_.empty()) {
+                return AmsErrorHelper::not_supported("No AFC lanes configured");
             }
-            return AmsErrorHelper::not_supported("No AFC lanes configured");
+            for (const auto& lane : lane_names_) {
+                AmsError err = execute_gcode("SET_LONG_MOVE_SPEED LANE=" + lane + " " + param +
+                                             "=" + std::to_string(multiplier));
+                if (!err)
+                    return err; // Return first error
+            }
+            return AmsErrorHelper::success();
         } catch (const std::bad_any_cast&) {
             return AmsError(AmsResult::WRONG_STATE, "Invalid speed multiplier type",
                             "Invalid value type", "Provide a numeric value");
@@ -2748,12 +2763,16 @@ AmsError AmsBackendAfc::execute_device_action(const std::string& action_id, cons
     } else if (action_id == "brush") {
         return execute_gcode("AFC_BRUSH");
     } else if (action_id == "reset_motor") {
-        // AFC_RESET_MOTOR_TIME requires LANE= mux param
-        // TODO: Need UI to specify which lane
-        if (!lane_names_.empty()) {
-            return execute_gcode("AFC_RESET_MOTOR_TIME LANE=" + lane_names_[0]);
+        // AFC_RESET_MOTOR_TIME is per-lane; reset all lanes
+        if (lane_names_.empty()) {
+            return AmsErrorHelper::not_supported("No AFC lanes configured");
         }
-        return AmsErrorHelper::not_supported("No AFC lanes configured");
+        for (const auto& lane : lane_names_) {
+            AmsError err = execute_gcode("AFC_RESET_MOTOR_TIME LANE=" + lane);
+            if (!err)
+                return err;
+        }
+        return AmsErrorHelper::success();
     } else if (action_id == "led_toggle") {
         std::lock_guard<std::recursive_mutex> lock(mutex_);
         return execute_gcode(afc_led_state_ ? "TURN_OFF_AFC_LED" : "TURN_ON_AFC_LED");
