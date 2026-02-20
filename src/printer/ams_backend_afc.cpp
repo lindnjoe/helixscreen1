@@ -2250,13 +2250,17 @@ AmsError AmsBackendAfc::enable_bypass() {
         }
     }
 
-    // AFC enables bypass via filament sensor control
-    // SET_FILAMENT_SENSOR SENSOR=bypass ENABLE=1
-    spdlog::info("[AMS AFC] Enabling bypass mode");
-    return execute_gcode("SET_FILAMENT_SENSOR SENSOR=bypass ENABLE=1");
+    // AFC enables bypass via filament sensor control.
+    // Sensor name depends on hardware vs virtual bypass:
+    //   Hardware: "filament_switch_sensor bypass"
+    //   Virtual:  "filament_switch_sensor virtual_bypass"
+    const char* sensor = system_info_.has_hardware_bypass_sensor ? "bypass" : "virtual_bypass";
+    spdlog::info("[AMS AFC] Enabling bypass mode (sensor={})", sensor);
+    return execute_gcode(fmt::format("SET_FILAMENT_SENSOR SENSOR={} ENABLE=1", sensor));
 }
 
 AmsError AmsBackendAfc::disable_bypass() {
+    const char* sensor = nullptr;
     {
         std::lock_guard<std::recursive_mutex> lock(mutex_);
 
@@ -2268,11 +2272,12 @@ AmsError AmsBackendAfc::disable_bypass() {
             return AmsError(AmsResult::WRONG_STATE, "Bypass not active",
                             "Bypass mode is not currently active", "");
         }
+
+        sensor = system_info_.has_hardware_bypass_sensor ? "bypass" : "virtual_bypass";
     }
 
-    // Disable bypass sensor
-    spdlog::info("[AMS AFC] Disabling bypass mode");
-    return execute_gcode("SET_FILAMENT_SENSOR SENSOR=bypass ENABLE=0");
+    spdlog::info("[AMS AFC] Disabling bypass mode (sensor={})", sensor);
+    return execute_gcode(fmt::format("SET_FILAMENT_SENSOR SENSOR={} ENABLE=0", sensor));
 }
 
 bool AmsBackendAfc::is_bypass_active() const {
