@@ -474,7 +474,13 @@ void AmsOverviewPanel::refresh_system_path(const AmsSystemInfo& info, int curren
 
     // Set bypass path state (bypass is drawn inside the canvas, no card needed)
     bool bypass_active = info.supports_bypass && (current_slot == -2);
-    ui_system_path_canvas_set_bypass(system_path_, info.supports_bypass, bypass_active, 0x888888);
+    uint32_t bypass_color = 0x888888; // Default gray when no external spool assigned
+    auto ext_spool = AmsState::instance().get_external_spool_info();
+    if (ext_spool) {
+        bypass_color = ext_spool->color_rgb;
+    }
+    ui_system_path_canvas_set_bypass(system_path_, info.supports_bypass, bypass_active,
+                                     bypass_color);
 
     // Compute physical tool layout (handles HUB units with unique per-lane mapped_tools)
     auto* backend = AmsState::instance().get_backend();
