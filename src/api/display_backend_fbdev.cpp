@@ -374,14 +374,17 @@ lv_indev_t* DisplayBackendFbdev::create_input_pointer() {
                     abs_x.minimum, abs_x.maximum, abs_y.minimum, abs_y.maximum, screen_width_,
                     screen_height_);
 
-                // DISABLED: ABS mismatch detection causes problems on HDMI devices —
-                // the calibration wizard is more trouble than it's worth here.
+                // Detect capacitive panels reporting a different resolution than the
+                // display (e.g., Goodix 800x480 on a 480x272 screen). Generic HID
+                // ranges (4096, 32767, etc.) are excluded — those are
+                // resolution-independent and LVGL maps them correctly.
                 if (!needs_calibration_ &&
                     helix::has_abs_display_mismatch(abs_x.maximum, abs_y.maximum, screen_width_,
                                                     screen_height_)) {
-                    // needs_calibration_ = true;
-                    spdlog::info("[Fbdev Backend] ABS range mismatch detected — "
-                                 "NOT forcing calibration (disabled)");
+                    needs_calibration_ = true;
+                    spdlog::warn("[Fbdev Backend] ABS range ({},{}) mismatches display "
+                                 "({}x{}) — forcing calibration",
+                                 abs_x.maximum, abs_y.maximum, screen_width_, screen_height_);
                 }
             }
         } else {
