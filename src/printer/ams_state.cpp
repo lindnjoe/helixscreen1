@@ -1281,11 +1281,13 @@ std::optional<SlotInfo> AmsState::get_external_spool_info() const {
 }
 
 void AmsState::set_external_spool_info(const SlotInfo& info) {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     helix::SettingsManager::instance().set_external_spool_info(info);
     lv_subject_set_int(&external_spool_color_, static_cast<int>(info.color_rgb));
 }
 
 void AmsState::clear_external_spool_info() {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     helix::SettingsManager::instance().clear_external_spool_info();
     lv_subject_set_int(&external_spool_color_, 0);
 }

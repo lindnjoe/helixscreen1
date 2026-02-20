@@ -124,6 +124,7 @@ bool AmsContextMenu::show_near_widget(lv_obj_t* parent, int slot_index, lv_obj_t
     // Store AMS-specific state BEFORE base class calls on_created
     backend_ = backend;
     pending_is_loaded_ = is_loaded;
+    external_spool_mode_ = false;
 
     // Get total slots from backend
     if (backend_) {
@@ -145,12 +146,78 @@ bool AmsContextMenu::show_near_widget(lv_obj_t* parent, int slot_index, lv_obj_t
     return result;
 }
 
+bool AmsContextMenu::show_for_external_spool(lv_obj_t* parent, lv_obj_t* anchor_widget) {
+    // Register callbacks once (idempotent)
+    register_callbacks();
+
+    // Configure for external spool mode (no backend operations)
+    backend_ = nullptr;
+    pending_is_loaded_ = false;
+    total_slots_ = 0;
+    external_spool_mode_ = true;
+
+    // Set as active instance for static callbacks
+    s_active_instance_ = this;
+
+    // Base class handles: XML creation, on_created callback, positioning
+    bool result = ContextMenu::show_near_widget(parent, -2, anchor_widget);
+    if (!result) {
+        s_active_instance_ = nullptr;
+        external_spool_mode_ = false;
+    }
+
+    spdlog::debug("[AmsContextMenu] Shown for external spool");
+    return result;
+}
+
 // ============================================================================
 // ContextMenu override
 // ============================================================================
 
 void AmsContextMenu::on_created(lv_obj_t* menu_obj) {
     int slot_index = get_item_index();
+
+    // External spool mode: hide backend-related buttons, show only EDIT/CLEAR
+    if (external_spool_mode_) {
+        // Hide Load, Unload, Reset buttons (not applicable to external spool)
+        lv_obj_t* btn_load = lv_obj_find_by_name(menu_obj, "btn_load");
+        if (btn_load)
+            lv_obj_add_flag(btn_load, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_t* btn_unload = lv_obj_find_by_name(menu_obj, "btn_unload");
+        if (btn_unload)
+            lv_obj_add_flag(btn_unload, LV_OBJ_FLAG_HIDDEN);
+        // btn_reset_lane is already hidden by default in XML
+
+        // Disable subject-driven states so hidden buttons stay hidden
+        lv_subject_set_int(&slot_is_loaded_subject_, 0);
+        lv_subject_set_int(&slot_can_load_subject_, 0);
+
+        // Set header to "External Spool"
+        lv_obj_t* slot_header = lv_obj_find_by_name(menu_obj, "slot_header");
+        if (slot_header) {
+            lv_label_set_text(slot_header, lv_tr("External Spool"));
+        }
+
+        // Check if external spool has an assignment (for Clear Spool mode)
+        clear_spool_mode_ = false;
+        auto ext_info = AmsState::instance().get_external_spool_info();
+        bool has_assignment =
+            ext_info.has_value() && (ext_info->spoolman_id > 0 || !ext_info->material.empty());
+
+        lv_obj_t* btn_edit = lv_obj_find_by_name(menu_obj, "btn_edit");
+        if (has_assignment && btn_edit) {
+            // Show "Clear Spool" as the edit button action
+            clear_spool_mode_ = true;
+            ui_button_set_text(btn_edit, lv_tr("Clear Spool"));
+            ui_button_set_icon(btn_edit, "close");
+        } else if (!has_assignment && btn_edit) {
+            // No spool assigned — keep "Spool Info" label for editing
+            ui_button_set_text(btn_edit, lv_tr("Spool Info"));
+        }
+
+        // No dropdowns for external spool
+        return;
+    }
 
     // Check if system is busy (operation in progress)
     bool system_busy = false;

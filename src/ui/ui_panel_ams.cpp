@@ -1313,8 +1313,46 @@ void AmsPanel::on_bypass_spool_clicked(void* user_data) {
 }
 
 void AmsPanel::handle_bypass_spool_click() {
-    // Open edit modal for the external spool (slot_index -2 = external/bypass)
-    show_edit_modal(-2);
+    if (!parent_screen_ || !path_canvas_) {
+        return;
+    }
+
+    // Capture click point from input device for menu positioning
+    lv_point_t click_pt = {0, 0};
+    lv_indev_t* indev = lv_indev_active();
+    if (indev) {
+        lv_indev_get_point(indev, &click_pt);
+    }
+
+    // Create context menu on first use
+    if (!context_menu_) {
+        context_menu_ = std::make_unique<helix::ui::AmsContextMenu>();
+    }
+
+    // Set callback to handle menu actions for external spool
+    context_menu_->set_action_callback(
+        [this](helix::ui::AmsContextMenu::MenuAction action, int /*slot*/) {
+            switch (action) {
+            case helix::ui::AmsContextMenu::MenuAction::EDIT:
+                show_edit_modal(-2);
+                break;
+
+            case helix::ui::AmsContextMenu::MenuAction::CLEAR_SPOOL:
+                AmsState::instance().clear_external_spool_info();
+                update_path_canvas_from_backend();
+                refresh_slots();
+                NOTIFY_INFO("External spool cleared");
+                break;
+
+            case helix::ui::AmsContextMenu::MenuAction::CANCELLED:
+            default:
+                break;
+            }
+        });
+
+    // Position menu at click point, show for external spool
+    context_menu_->set_click_point(click_pt);
+    context_menu_->show_for_external_spool(parent_screen_, path_canvas_);
 }
 
 void AmsPanel::on_path_slot_clicked(int slot_index, void* user_data) {
