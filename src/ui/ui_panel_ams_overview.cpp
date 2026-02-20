@@ -640,6 +640,17 @@ void AmsOverviewPanel::refresh_detail_if_needed() {
     // Always update path canvas — segment/action changes need to propagate
     // even when slot count hasn't changed (e.g., load/unload animations)
     setup_detail_path_canvas(unit, info);
+
+    // Update loaded swatch color (also done in refresh_system_path for overview mode)
+    if (panel_) {
+        lv_obj_t* swatch = lv_obj_find_by_name(panel_, "loaded_swatch");
+        if (swatch) {
+            lv_color_t color = lv_color_hex(static_cast<uint32_t>(
+                lv_subject_get_int(AmsState::instance().get_current_color_subject())));
+            lv_obj_set_style_bg_color(swatch, color, 0);
+            lv_obj_set_style_border_color(swatch, color, 0);
+        }
+    }
 }
 
 void AmsOverviewPanel::show_unit_detail(int unit_index) {

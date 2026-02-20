@@ -992,22 +992,21 @@ void AmsState::sync_current_loaded_from_backend() {
                          slot_index);
             } else {
                 const char* unit_name = nullptr;
-                int local_slot = slot_index + 1; // 1-based default
+                int display_slot = slot_index + 1; // 1-based global slot number
                 for (const auto& unit : sys.units) {
                     if (slot_index >= unit.first_slot_global_index &&
                         slot_index < unit.first_slot_global_index + unit.slot_count) {
                         unit_name = unit.name.c_str();
-                        local_slot = slot_index - unit.first_slot_global_index + 1;
                         break;
                     }
                 }
                 if (unit_name && sys.units.size() > 1) {
-                    // Multi-unit: break across two lines for readability
+                    // Multi-unit: show unit name + global slot number
                     snprintf(current_slot_text_buf_, sizeof(current_slot_text_buf_),
-                             "Current: %s\nSlot %d", unit_name, local_slot);
+                             "Current: %s\nSlot %d", unit_name, display_slot);
                 } else {
                     snprintf(current_slot_text_buf_, sizeof(current_slot_text_buf_),
-                             "Current: Slot %d", local_slot);
+                             "Current: Slot %d", display_slot);
                 }
             }
             lv_subject_copy_string(&current_slot_text_, current_slot_text_buf_);
