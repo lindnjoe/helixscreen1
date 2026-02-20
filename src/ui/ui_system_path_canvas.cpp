@@ -15,6 +15,7 @@
 
 #include <spdlog/spdlog.h>
 
+#include <cmath>
 #include <cstring>
 #include <memory>
 #include <unordered_map>
@@ -131,7 +132,7 @@ static void load_theme_colors(SystemPathData* data) {
     int32_t space_xs = theme_manager_get_spacing("space_xs");
     int32_t space_md = theme_manager_get_spacing("space_md");
     data->line_width_idle = LV_MAX(2, space_xs / 2);
-    data->line_width_active = LV_MAX(4, space_xs);
+    data->line_width_active = LV_MAX(3, space_xs - 2);
     data->hub_width = LV_MAX(70, space_md * 6);
     data->hub_height = LV_MAX(24, space_md * 2);
     data->border_radius = LV_MAX(4, space_xs);
@@ -147,8 +148,21 @@ static void load_theme_colors(SystemPathData* data) {
 // Drawing Helpers
 // ============================================================================
 
-static void draw_line(lv_layer_t* layer, int32_t x1, int32_t y1, int32_t x2, int32_t y2,
-                      lv_color_t color, int32_t width) {
+// Color manipulation helpers
+static lv_color_t sp_darken(lv_color_t c, uint8_t amt) {
+    return lv_color_make(c.red > amt ? c.red - amt : 0, c.green > amt ? c.green - amt : 0,
+                         c.blue > amt ? c.blue - amt : 0);
+}
+
+static lv_color_t sp_lighten(lv_color_t c, uint8_t amt) {
+    return lv_color_make((c.red + amt > 255) ? 255 : c.red + amt,
+                         (c.green + amt > 255) ? 255 : c.green + amt,
+                         (c.blue + amt > 255) ? 255 : c.blue + amt);
+}
+
+static void draw_flat_line(lv_layer_t* layer, int32_t x1, int32_t y1, int32_t x2, int32_t y2,
+                           lv_color_t color, int32_t width, bool cap_start = true,
+                           bool cap_end = true) {
     lv_draw_line_dsc_t line_dsc;
     lv_draw_line_dsc_init(&line_dsc);
     line_dsc.color = color;
@@ -157,45 +171,159 @@ static void draw_line(lv_layer_t* layer, int32_t x1, int32_t y1, int32_t x2, int
     line_dsc.p1.y = y1;
     line_dsc.p2.x = x2;
     line_dsc.p2.y = y2;
-    line_dsc.round_start = true;
-    line_dsc.round_end = true;
+    line_dsc.round_start = cap_start;
+    line_dsc.round_end = cap_end;
     lv_draw_line(layer, &line_dsc);
+}
+
+// 3D tube effect: shadow → body → highlight (same approach as filament_path_canvas)
+static void draw_tube_line(lv_layer_t* layer, int32_t x1, int32_t y1, int32_t x2, int32_t y2,
+                           lv_color_t color, int32_t width) {
+    // Shadow: wider, darker
+    int32_t shadow_extra = LV_MAX(2, width / 2);
+    lv_color_t shadow_color = sp_darken(color, 35);
+    draw_flat_line(layer, x1, y1, x2, y2, shadow_color, width + shadow_extra);
+
+    // Body
+    draw_flat_line(layer, x1, y1, x2, y2, color, width);
+
+    // Highlight: narrower, lighter, offset toward top-left light source
+    int32_t hl_width = LV_MAX(1, width * 2 / 5);
+    lv_color_t hl_color = sp_lighten(color, 44);
+
+    int32_t dx = x2 - x1;
+    int32_t dy = y2 - y1;
+    int32_t offset_x = 0;
+    int32_t offset_y = 0;
+    if (dx == 0) {
+        offset_x = (width / 4 + 1);
+    } else if (dy == 0) {
+        offset_y = -(width / 4 + 1);
+    } else {
+        float len = sqrtf((float)(dx * dx + dy * dy));
+        float px = -(float)dy / len;
+        float py = (float)dx / len;
+        if (px + py > 0) {
+            px = -px;
+            py = -py;
+        }
+        int32_t off_amount = width / 4 + 1;
+        offset_x = (int32_t)(px * off_amount);
+        offset_y = (int32_t)(py * off_amount);
+    }
+
+    draw_flat_line(layer, x1 + offset_x, y1 + offset_y, x2 + offset_x, y2 + offset_y, hl_color,
+                   hl_width);
 }
 
 static void draw_vertical_line(lv_layer_t* layer, int32_t x, int32_t y1, int32_t y2,
                                lv_color_t color, int32_t width) {
-    lv_draw_line_dsc_t line_dsc;
-    lv_draw_line_dsc_init(&line_dsc);
-    line_dsc.color = color;
-    line_dsc.width = width;
-    line_dsc.p1.x = x;
-    line_dsc.p1.y = y1;
-    line_dsc.p2.x = x;
-    line_dsc.p2.y = y2;
-    line_dsc.round_start = true;
-    line_dsc.round_end = true;
-    lv_draw_line(layer, &line_dsc);
+    draw_tube_line(layer, x, y1, x, y2, color, width);
 }
 
+static void draw_line(lv_layer_t* layer, int32_t x1, int32_t y1, int32_t x2, int32_t y2,
+                      lv_color_t color, int32_t width) {
+    draw_tube_line(layer, x1, y1, x2, y2, color, width);
+}
+
+// Curved tube drawing (bezier approximation) — same approach as filament_path_canvas
+static constexpr int CURVE_SEGMENTS = 10;
+
+// Layer-by-layer curved tube for smooth joints (no visible segment boundaries)
+static void draw_curved_tube(lv_layer_t* layer, int32_t x0, int32_t y0, int32_t cx, int32_t cy,
+                             int32_t x1, int32_t y1, lv_color_t color, int32_t width) {
+    struct Pt {
+        int32_t x, y;
+    };
+    Pt pts[CURVE_SEGMENTS + 1];
+    pts[0] = {x0, y0};
+    for (int i = 1; i <= CURVE_SEGMENTS; i++) {
+        float t = (float)i / CURVE_SEGMENTS;
+        float inv = 1.0f - t;
+        pts[i] = {(int32_t)(inv * inv * x0 + 2 * inv * t * cx + t * t * x1),
+                  (int32_t)(inv * inv * y0 + 2 * inv * t * cy + t * t * y1)};
+    }
+
+    // All passes use round caps — opaque overdraw at joints is invisible
+    // Pass 1: Shadow
+    int32_t shadow_extra = LV_MAX(2, width / 2);
+    lv_color_t shadow_color = sp_darken(color, 35);
+    for (int i = 0; i < CURVE_SEGMENTS; i++) {
+        draw_flat_line(layer, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, shadow_color,
+                       width + shadow_extra);
+    }
+
+    // Pass 2: Body
+    for (int i = 0; i < CURVE_SEGMENTS; i++) {
+        draw_flat_line(layer, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, color, width);
+    }
+
+    // Pass 3: Highlight
+    int32_t hl_width = LV_MAX(1, width * 2 / 5);
+    lv_color_t hl_color = sp_lighten(color, 44);
+    int32_t dx = x1 - x0;
+    int32_t dy = y1 - y0;
+    int32_t offset_x = 0;
+    int32_t offset_y = 0;
+    if (dx == 0) {
+        offset_x = (width / 4 + 1);
+    } else if (dy == 0) {
+        offset_y = -(width / 4 + 1);
+    } else {
+        float len = sqrtf((float)(dx * dx + dy * dy));
+        float px = -(float)dy / len;
+        float py = (float)dx / len;
+        if (px + py > 0) {
+            px = -px;
+            py = -py;
+        }
+        int32_t off_amount = width / 4 + 1;
+        offset_x = (int32_t)(px * off_amount);
+        offset_y = (int32_t)(py * off_amount);
+    }
+    for (int i = 0; i < CURVE_SEGMENTS; i++) {
+        draw_flat_line(layer, pts[i].x + offset_x, pts[i].y + offset_y, pts[i + 1].x + offset_x,
+                       pts[i + 1].y + offset_y, hl_color, hl_width);
+    }
+}
+
+// Push-to-connect fitting: shadow/highlight matching tube language
 static void draw_sensor_dot(lv_layer_t* layer, int32_t cx, int32_t cy, lv_color_t color,
                             bool filled, int32_t radius) {
     lv_draw_arc_dsc_t arc_dsc;
     lv_draw_arc_dsc_init(&arc_dsc);
     arc_dsc.center.x = cx;
     arc_dsc.center.y = cy;
-    arc_dsc.radius = static_cast<uint16_t>(radius);
     arc_dsc.start_angle = 0;
     arc_dsc.end_angle = 360;
 
+    // Shadow at full radius
+    arc_dsc.radius = static_cast<uint16_t>(radius);
+    arc_dsc.width = static_cast<uint16_t>(radius * 2);
+    arc_dsc.color = sp_darken(color, 35);
+    lv_draw_arc(layer, &arc_dsc);
+
     if (filled) {
-        arc_dsc.width = static_cast<uint16_t>(radius * 2);
+        int32_t body_r = LV_MAX(1, radius - 1);
+        arc_dsc.radius = static_cast<uint16_t>(body_r);
+        arc_dsc.width = static_cast<uint16_t>(body_r * 2);
         arc_dsc.color = color;
+        lv_draw_arc(layer, &arc_dsc);
+
+        int32_t hl_r = LV_MAX(1, radius / 3);
+        int32_t hl_off = LV_MAX(1, radius / 3);
+        arc_dsc.center.x = cx + hl_off;
+        arc_dsc.center.y = cy - hl_off;
+        arc_dsc.radius = static_cast<uint16_t>(hl_r);
+        arc_dsc.width = static_cast<uint16_t>(hl_r * 2);
+        arc_dsc.color = sp_lighten(color, 44);
+        lv_draw_arc(layer, &arc_dsc);
     } else {
+        arc_dsc.radius = static_cast<uint16_t>(radius - 1);
         arc_dsc.width = 2;
         arc_dsc.color = color;
+        lv_draw_arc(layer, &arc_dsc);
     }
-
-    lv_draw_arc(layer, &arc_dsc);
 }
 
 static void draw_hub_box(lv_layer_t* layer, int32_t cx, int32_t cy, int32_t width, int32_t height,
@@ -408,7 +536,12 @@ static void system_path_draw_cb(lv_event_t* e) {
                     lv_color_t fan_color = tool_active ? active_color_lv : idle_color;
                     int32_t fan_w = tool_active ? line_active : line_idle;
 
-                    draw_line(layer, unit_x, merge_y, tool_x, tools_y, fan_color, fan_w);
+                    {
+                        int32_t ctrl_x = unit_x;
+                        int32_t ctrl_y = merge_y + (tools_y - merge_y) * 7 / 10;
+                        draw_curved_tube(layer, unit_x, merge_y, ctrl_x, ctrl_y, tool_x, tools_y,
+                                         fan_color, fan_w);
+                    }
                 }
             } else {
                 // HUB topology (OpenAMS/default): all lanes converge to hub, then to one tool
@@ -440,9 +573,14 @@ static void system_path_draw_cb(lv_event_t* e) {
                         mini_hub_bg = sp_blend(hub_bg, active_color_lv, 0.33f);
                     }
 
-                    // Line from unit to mini hub
-                    draw_line(layer, unit_x, merge_y, tool_x, mini_hub_y - mini_hub_h / 2,
-                              line_color, line_w);
+                    // Curved tube from unit to mini hub
+                    {
+                        int32_t end_y_mh = mini_hub_y - mini_hub_h / 2;
+                        int32_t ctrl_x = unit_x;
+                        int32_t ctrl_y = merge_y + (end_y_mh - merge_y) * 7 / 10;
+                        draw_curved_tube(layer, unit_x, merge_y, ctrl_x, ctrl_y, tool_x, end_y_mh,
+                                         line_color, line_w);
+                    }
 
                     draw_hub_box(layer, tool_x, mini_hub_y, mini_hub_w, mini_hub_h, mini_hub_bg,
                                  hub_border, data->color_text, data->label_font,
@@ -520,8 +658,14 @@ static void system_path_draw_cb(lv_event_t* e) {
                 draw_vertical_line(layer, unit_x, entry_y, merge_y, line_color, line_w);
             }
 
-            // Angled segment from unit position at merge_y to hub top
-            draw_line(layer, unit_x, merge_y, center_x, hub_y - hub_h / 2, line_color, line_w);
+            // Curved tube from unit position at merge_y to hub top
+            {
+                int32_t end_y_hub = hub_y - hub_h / 2;
+                int32_t ctrl_x = unit_x;
+                int32_t ctrl_y = merge_y + (end_y_hub - merge_y) * 7 / 10;
+                draw_curved_tube(layer, unit_x, merge_y, ctrl_x, ctrl_y, center_x, end_y_hub,
+                                 line_color, line_w);
+            }
         }
 
         // Draw bypass path (if supported)
