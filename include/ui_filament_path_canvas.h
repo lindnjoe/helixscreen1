@@ -317,6 +317,20 @@ void ui_filament_path_canvas_set_heat_active(lv_obj_t* obj, bool active);
  */
 void ui_filament_path_canvas_set_buffer_fault_state(lv_obj_t* obj, int state);
 
+/**
+ * @brief Set bypass entry filament color
+ * @param obj The filament_path_canvas widget
+ * @param color RGB color (0xRRGGBB) for bypass filament
+ */
+void ui_filament_path_canvas_set_bypass_color(lv_obj_t* obj, uint32_t color);
+
+/**
+ * @brief Set whether an external spool is assigned to bypass
+ * @param obj The filament_path_canvas widget
+ * @param has_spool true if spool assigned (shows filled box), false (shows empty indicator)
+ */
+void ui_filament_path_canvas_set_bypass_has_spool(lv_obj_t* obj, bool has_spool);
+
 #ifdef __cplusplus
 }
 #endif

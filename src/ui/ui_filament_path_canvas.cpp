@@ -125,6 +125,7 @@ struct FilamentPathData {
     // Bypass mode state
     bool bypass_active = false;       // External spool bypass mode
     uint32_t bypass_color = 0x888888; // Default gray for bypass filament
+    bool bypass_has_spool = false;    // true when external spool is assigned
 
     // Rendering mode
     bool hub_only = false;             // true = stop rendering at hub (skip downstream)
@@ -738,6 +739,83 @@ static void draw_sensor_dot(lv_layer_t* layer, int32_t cx, int32_t cy, lv_color_
         arc_dsc.width = 2;
         arc_dsc.color = color;
         lv_draw_arc(layer, &arc_dsc);
+    }
+}
+
+// Draw a small spool box at the bypass entry point.
+// With spool: filled rounded rect in filament color with 3D effect.
+// Without spool: hollow dashed outline with "+" indicator.
+static void draw_bypass_spool_box(lv_layer_t* layer, int32_t cx, int32_t cy, lv_color_t color,
+                                  bool has_spool, int32_t sensor_r) {
+    int32_t box_w = sensor_r * 3;
+    int32_t box_h = sensor_r * 4;
+    int32_t radius = LV_MAX(2, sensor_r / 2);
+
+    lv_area_t box_area = {cx - box_w / 2, cy - box_h / 2, cx + box_w / 2, cy + box_h / 2};
+
+    if (has_spool) {
+        // Shadow (darker, slightly offset)
+        lv_draw_rect_dsc_t shadow_dsc;
+        lv_draw_rect_dsc_init(&shadow_dsc);
+        shadow_dsc.radius = radius;
+        shadow_dsc.bg_color = ph_darken(color, 40);
+        shadow_dsc.bg_opa = LV_OPA_COVER;
+        lv_area_t shadow_area = box_area;
+        shadow_area.x1 += 1;
+        shadow_area.y1 += 1;
+        shadow_area.x2 += 1;
+        shadow_area.y2 += 1;
+        lv_draw_rect(layer, &shadow_dsc, &shadow_area);
+
+        // Main body in filament color
+        lv_draw_rect_dsc_t body_dsc;
+        lv_draw_rect_dsc_init(&body_dsc);
+        body_dsc.radius = radius;
+        body_dsc.bg_color = color;
+        body_dsc.bg_opa = LV_OPA_COVER;
+        lv_draw_rect(layer, &body_dsc, &box_area);
+
+        // Highlight border (top + left edges)
+        lv_draw_rect_dsc_t hl_dsc;
+        lv_draw_rect_dsc_init(&hl_dsc);
+        hl_dsc.radius = radius;
+        hl_dsc.bg_opa = LV_OPA_TRANSP;
+        hl_dsc.border_color = ph_lighten(color, 40);
+        hl_dsc.border_opa = LV_OPA_50;
+        hl_dsc.border_width = 1;
+        hl_dsc.border_side =
+            static_cast<lv_border_side_t>(LV_BORDER_SIDE_TOP | LV_BORDER_SIDE_LEFT);
+        lv_draw_rect(layer, &hl_dsc, &box_area);
+    } else {
+        // Empty box: hollow outline
+        lv_draw_rect_dsc_t outline_dsc;
+        lv_draw_rect_dsc_init(&outline_dsc);
+        outline_dsc.radius = radius;
+        outline_dsc.bg_opa = LV_OPA_TRANSP;
+        outline_dsc.border_color = color;
+        outline_dsc.border_opa = LV_OPA_40;
+        outline_dsc.border_width = 1;
+        lv_draw_rect(layer, &outline_dsc, &box_area);
+
+        // Draw "+" indicator in center
+        int32_t plus_size = LV_MAX(3, sensor_r);
+        lv_draw_line_dsc_t line_dsc;
+        lv_draw_line_dsc_init(&line_dsc);
+        line_dsc.color = color;
+        line_dsc.opa = LV_OPA_40;
+        line_dsc.width = 1;
+        // Horizontal bar
+        line_dsc.p1.x = cx - plus_size / 2;
+        line_dsc.p1.y = cy;
+        line_dsc.p2.x = cx + plus_size / 2;
+        line_dsc.p2.y = cy;
+        lv_draw_line(layer, &line_dsc);
+        // Vertical bar
+        line_dsc.p1.x = cx;
+        line_dsc.p1.y = cy - plus_size / 2;
+        line_dsc.p2.x = cx;
+        line_dsc.p2.y = cy + plus_size / 2;
+        lv_draw_line(layer, &line_dsc);
     }
 }
 
@@ -1478,8 +1556,11 @@ static void filament_path_draw_cb(lv_event_t* e) {
         }
 
         // Draw bypass entry point (below spool area)
-        draw_sensor_dot(layer, bypass_x, bypass_entry_y, bypass_line_color, data->bypass_active,
-                        sensor_r + 2);
+        // Draw spool box instead of sensor dot at bypass entry
+        lv_color_t spool_box_color =
+            data->bypass_has_spool ? lv_color_hex(data->bypass_color) : idle_color;
+        draw_bypass_spool_box(layer, bypass_x, bypass_entry_y, spool_box_color,
+                              data->bypass_has_spool, sensor_r);
 
         // Draw vertical line from bypass entry down to merge level
         if (data->bypass_active) {
@@ -1940,22 +2021,27 @@ static void filament_path_click_cb(lv_event_t* e) {
         }
     }
 
+    // Check if bypass spool box was clicked (right side) — check before entry area
+    // Y-range guard because the spool box may be outside the slot entry area
+    if (data->bypass_callback) {
+        int32_t bypass_x = x_off + (int32_t)(width * BYPASS_X_RATIO);
+        int32_t bypass_entry_y = y_off + (int32_t)(height * BYPASS_ENTRY_Y_RATIO);
+        int32_t sensor_r = data->sensor_radius;
+        int32_t box_w = sensor_r * 3;
+        int32_t box_h = sensor_r * 4;
+        if (abs(point.x - bypass_x) < box_w && abs(point.y - bypass_entry_y) < box_h) {
+            spdlog::debug("[FilamentPath] Bypass spool box clicked");
+            data->bypass_callback(data->bypass_user_data);
+            return;
+        }
+    }
+
     // Check if click is in the entry area (top portion)
     int32_t entry_y = y_off + (int32_t)(height * ENTRY_Y_RATIO);
     int32_t prep_y = y_off + (int32_t)(height * PREP_Y_RATIO);
 
     if (point.y < entry_y - 10 || point.y > prep_y + 20)
         return; // Click not in entry area
-
-    // Check if bypass entry was clicked (right side)
-    if (data->bypass_callback) {
-        int32_t bypass_x = x_off + (int32_t)(width * BYPASS_X_RATIO);
-        if (abs(point.x - bypass_x) < 25) {
-            spdlog::debug("[FilamentPath] Bypass entry clicked");
-            data->bypass_callback(data->bypass_user_data);
-            return;
-        }
-    }
 
     // Find which slot was clicked
     if (data->slot_callback) {
@@ -2430,6 +2516,22 @@ void ui_filament_path_canvas_set_buffer_fault_state(lv_obj_t* obj, int state) {
     if (data->buffer_fault_state != state) {
         data->buffer_fault_state = state;
         spdlog::debug("[FilamentPath] Buffer fault state: {}", state);
+        lv_obj_invalidate(obj);
+    }
+}
+
+void ui_filament_path_canvas_set_bypass_color(lv_obj_t* obj, uint32_t color) {
+    auto* data = get_data(obj);
+    if (data) {
+        data->bypass_color = color;
+        lv_obj_invalidate(obj);
+    }
+}
+
+void ui_filament_path_canvas_set_bypass_has_spool(lv_obj_t* obj, bool has_spool) {
+    auto* data = get_data(obj);
+    if (data) {
+        data->bypass_has_spool = has_spool;
         lv_obj_invalidate(obj);
     }
 }

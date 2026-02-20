@@ -80,6 +80,18 @@ class AmsContextMenu : public ContextMenu {
                           bool is_loaded = false, AmsBackend* backend = nullptr);
 
     /**
+     * @brief Show context menu for external spool (bypass/direct feed)
+     *
+     * Shows a reduced menu with only EDIT and CLEAR_SPOOL actions
+     * (no LOAD/UNLOAD/EJECT since external spool is not managed by backend).
+     *
+     * @param parent Parent screen for the menu
+     * @param anchor_widget Widget to position menu near (for click point)
+     * @return true if menu was shown successfully
+     */
+    bool show_for_external_spool(lv_obj_t* parent, lv_obj_t* anchor_widget);
+
+    /**
      * @brief Get slot index the menu is currently shown for
      */
     [[nodiscard]] int get_slot_index() const {
@@ -121,8 +133,9 @@ class AmsContextMenu : public ContextMenu {
 
     // === Pending state for on_created ===
     bool pending_is_loaded_ = false;
-    bool eject_mode_ = false;       ///< True when showing "Eject" instead of "Unload"
-    bool clear_spool_mode_ = false; ///< True when showing "Clear Spool" instead of "Spool Info"
+    bool eject_mode_ = false;          ///< True when showing "Eject" instead of "Unload"
+    bool clear_spool_mode_ = false;    ///< True when showing "Clear Spool" instead of "Spool Info"
+    bool external_spool_mode_ = false; ///< True when showing menu for external spool (bypass)
 
     // === Event Handlers ===
     void handle_backdrop_clicked();
