@@ -174,3 +174,85 @@ TEST_CASE_METHOD(LVGLTestFixture, "ui_carousel_add_item ignores non-carousel obj
     ui_carousel_add_item(plain, item);
     REQUIRE(ui_carousel_get_page_count(plain) == 0);
 }
+
+// ============================================================================
+// Task 4: Page navigation tests
+// ============================================================================
+
+TEST_CASE_METHOD(LVGLTestFixture, "Carousel page navigation", "[carousel]") {
+    lv_obj_t* container = lv_obj_create(test_screen());
+    lv_obj_set_size(container, 400, 300);
+    CarouselState* cs = new CarouselState();
+    cs->wrap = false;
+    cs->scroll_container = lv_obj_create(container);
+    lv_obj_set_size(cs->scroll_container, 400, 280);
+    lv_obj_set_user_data(container, cs);
+
+    for (int i = 0; i < 3; i++) {
+        ui_carousel_add_item(container, lv_obj_create(test_screen()));
+    }
+
+    SECTION("goto_page sets current page") {
+        ui_carousel_goto_page(container, 1, false);
+        REQUIRE(ui_carousel_get_current_page(container) == 1);
+        ui_carousel_goto_page(container, 2, false);
+        REQUIRE(ui_carousel_get_current_page(container) == 2);
+    }
+
+    SECTION("goto_page clamps when wrap=false") {
+        ui_carousel_goto_page(container, -1, false);
+        REQUIRE(ui_carousel_get_current_page(container) == 0);
+        ui_carousel_goto_page(container, 99, false);
+        REQUIRE(ui_carousel_get_current_page(container) == 2);
+    }
+
+    SECTION("goto_page wraps when wrap=true") {
+        cs->wrap = true;
+        ui_carousel_goto_page(container, 3, false);
+        REQUIRE(ui_carousel_get_current_page(container) == 0);
+        ui_carousel_goto_page(container, -1, false);
+        REQUIRE(ui_carousel_get_current_page(container) == 2);
+    }
+
+    delete cs;
+    lv_obj_set_user_data(container, nullptr);
+}
+
+// ============================================================================
+// Task 5: Indicator dot tests
+// ============================================================================
+
+TEST_CASE_METHOD(LVGLTestFixture, "Carousel indicator dots", "[carousel]") {
+    lv_obj_t* container = lv_obj_create(test_screen());
+    lv_obj_set_size(container, 400, 300);
+    CarouselState* cs = new CarouselState();
+    cs->wrap = false;
+    cs->scroll_container = lv_obj_create(container);
+    cs->indicator_row = lv_obj_create(container);
+    lv_obj_set_flex_flow(cs->indicator_row, LV_FLEX_FLOW_ROW);
+    lv_obj_set_user_data(container, cs);
+
+    for (int i = 0; i < 3; i++) {
+        ui_carousel_add_item(container, lv_obj_create(test_screen()));
+    }
+
+    SECTION("indicator row has correct number of dots") {
+        REQUIRE(lv_obj_get_child_count(cs->indicator_row) == 3);
+    }
+
+    SECTION("first dot is active by default") {
+        lv_obj_t* first_dot = lv_obj_get_child(cs->indicator_row, 0);
+        REQUIRE(lv_obj_get_style_bg_opa(first_dot, LV_PART_MAIN) == LV_OPA_COVER);
+    }
+
+    SECTION("navigating updates active dot") {
+        ui_carousel_goto_page(container, 1, false);
+        lv_obj_t* dot0 = lv_obj_get_child(cs->indicator_row, 0);
+        lv_obj_t* dot1 = lv_obj_get_child(cs->indicator_row, 1);
+        REQUIRE(lv_obj_get_style_bg_opa(dot0, LV_PART_MAIN) < LV_OPA_COVER);
+        REQUIRE(lv_obj_get_style_bg_opa(dot1, LV_PART_MAIN) == LV_OPA_COVER);
+    }
+
+    delete cs;
+    lv_obj_set_user_data(container, nullptr);
+}

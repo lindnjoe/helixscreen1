@@ -8,12 +8,91 @@
 #include "lvgl/src/xml/lv_xml_utils.h"
 #include "lvgl/src/xml/lv_xml_widget.h"
 #include "lvgl/src/xml/parsers/lv_xml_obj_parser.h"
+#include "theme_manager.h"
 
 #include <spdlog/spdlog.h>
 
 #include <cstring>
 
 namespace {
+
+/**
+ * @brief Update indicator dot styles without recreating them
+ *
+ * Sets the active dot to accent color with full opacity and
+ * inactive dots to text_secondary with reduced opacity.
+ */
+void update_indicators(CarouselState* state) {
+    if (!state || !state->indicator_row) {
+        return;
+    }
+
+    uint32_t dot_count = lv_obj_get_child_count(state->indicator_row);
+    for (uint32_t i = 0; i < dot_count; i++) {
+        lv_obj_t* dot = lv_obj_get_child(state->indicator_row, static_cast<int32_t>(i));
+        if (!dot) {
+            continue;
+        }
+
+        if (static_cast<int>(i) == state->current_page) {
+            lv_obj_set_style_bg_color(dot, theme_manager_get_color("accent"), LV_PART_MAIN);
+            lv_obj_set_style_bg_opa(dot, LV_OPA_COVER, LV_PART_MAIN);
+        } else {
+            lv_obj_set_style_bg_color(dot, theme_manager_get_color("text_secondary"), LV_PART_MAIN);
+            lv_obj_set_style_bg_opa(dot, LV_OPA_40, LV_PART_MAIN);
+        }
+    }
+}
+
+/**
+ * @brief SCROLL_END event handler — detects page changes from swipe gestures
+ *
+ * Calculates the current page from the scroll offset and updates state.
+ */
+void carousel_scroll_end_cb(lv_event_t* e) {
+    lv_obj_t* scroll = lv_event_get_target_obj(e);
+    if (!scroll) {
+        return;
+    }
+
+    // The carousel container is the parent of the scroll container
+    lv_obj_t* container = lv_obj_get_parent(scroll);
+    if (!container) {
+        return;
+    }
+
+    CarouselState* state = static_cast<CarouselState*>(lv_obj_get_user_data(container));
+    if (!state || state->magic != CarouselState::MAGIC) {
+        return;
+    }
+
+    int32_t container_w = lv_obj_get_content_width(scroll);
+    if (container_w <= 0) {
+        return;
+    }
+
+    int32_t scroll_x = lv_obj_get_scroll_x(scroll);
+    int page = static_cast<int>(scroll_x / container_w);
+
+    int count = static_cast<int>(state->real_tiles.size());
+    if (count > 0) {
+        if (page < 0) {
+            page = 0;
+        }
+        if (page >= count) {
+            page = count - 1;
+        }
+    }
+
+    if (page != state->current_page) {
+        state->current_page = page;
+        if (state->page_subject) {
+            lv_subject_set_int(state->page_subject, page);
+        }
+        update_indicators(state);
+        spdlog::trace("[ui_carousel] Scroll ended on page {}/{}", page, count);
+    }
+}
 
 /**
  * @brief DELETE event handler — cleans up CarouselState and auto-scroll timer
@@ -94,6 +173,9 @@ void* ui_carousel_create(lv_xml_parser_state_t* state, const char** /*attrs*/) {
 
     // Register delete handler for cleanup
     lv_obj_add_event_cb(container, carousel_delete_cb, LV_EVENT_DELETE, nullptr);
+
+    // Register scroll-end handler for page tracking from swipe gestures
+    lv_obj_add_event_cb(scroll, carousel_scroll_end_cb, LV_EVENT_SCROLL_END, nullptr);
 
     spdlog::trace("[ui_carousel] Created carousel widget");
     return container;
@@ -183,8 +265,20 @@ void ui_carousel_goto_page(lv_obj_t* carousel, int page, bool animate) {
     }
 
     int count = static_cast<int>(state->real_tiles.size());
-    if (count == 0 || page < 0 || page >= count) {
+    if (count == 0) {
         return;
+    }
+
+    // Handle out-of-range pages: wrap or clamp
+    if (state->wrap) {
+        page = ((page % count) + count) % count;
+    } else {
+        if (page < 0) {
+            page = 0;
+        }
+        if (page >= count) {
+            page = count - 1;
+        }
     }
 
     // Calculate scroll position based on page width
@@ -198,6 +292,9 @@ void ui_carousel_goto_page(lv_obj_t* carousel, int page, bool animate) {
     if (state->page_subject) {
         lv_subject_set_int(state->page_subject, page);
     }
+
+    // Update indicator dot styles
+    update_indicators(state);
 
     spdlog::trace("[ui_carousel] Navigated to page {}/{}", page, count);
 }
@@ -239,6 +336,9 @@ void ui_carousel_add_item(lv_obj_t* carousel, lv_obj_t* item) {
     // Track the tile
     state->real_tiles.push_back(tile);
 
+    // Rebuild indicator dots to match new page count
+    ui_carousel_rebuild_indicators(carousel);
+
     spdlog::trace("[ui_carousel] Added item, page count now {}", state->real_tiles.size());
 }
 
@@ -248,6 +348,21 @@ void ui_carousel_rebuild_indicators(lv_obj_t* carousel) {
         return;
     }
 
-    // Stub: will be implemented in Task 4-5 with actual indicator dots
-    spdlog::trace("[ui_carousel] Rebuild indicators stub ({} pages)", state->real_tiles.size());
+    // Clear existing dots
+    lv_obj_clean(state->indicator_row);
+
+    // Create one dot per real page
+    int count = static_cast<int>(state->real_tiles.size());
+    for (int i = 0; i < count; i++) {
+        lv_obj_t* dot = lv_obj_create(state->indicator_row);
+        lv_obj_set_size(dot, 8, 8);
+        lv_obj_set_style_radius(dot, 4, LV_PART_MAIN);
+        lv_obj_set_style_border_width(dot, 0, LV_PART_MAIN);
+        lv_obj_remove_flag(dot, LV_OBJ_FLAG_SCROLLABLE);
+    }
+
+    // Apply active/inactive styles
+    update_indicators(state);
+
+    spdlog::trace("[ui_carousel] Rebuilt indicators ({} dots)", count);
 }
