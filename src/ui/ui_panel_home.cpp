@@ -29,6 +29,7 @@
 #include "format_utils.h"
 #include "home_widget_config.h"
 #include "home_widget_registry.h"
+#include "home_widgets/fan_stack_widget.h"
 #include "home_widgets/led_widget.h"
 #include "home_widgets/network_widget.h"
 #include "home_widgets/power_widget.h"
@@ -238,6 +239,8 @@ void HomePanel::init_subjects() {
     helix::register_widget_factory("temp_stack", [this]() {
         return std::make_unique<helix::TempStackWidget>(printer_state_, temp_control_panel_);
     });
+    helix::register_widget_factory(
+        "fan_stack", [this]() { return std::make_unique<helix::FanStackWidget>(printer_state_); });
     helix::register_widget_factory("thermistor", [this]() {
         return std::make_unique<helix::ThermistorWidget>(printer_state_);
     });
