@@ -49,7 +49,7 @@ class PanelWidgetConfigFixture {
 
 TEST_CASE("PanelWidgetRegistry: returns all widget definitions", "[panel_widget][widget_config]") {
     const auto& defs = get_all_widget_defs();
-    REQUIRE(defs.size() == 13);
+    REQUIRE(defs.size() == 14);
 }
 
 TEST_CASE("PanelWidgetRegistry: all widget IDs are unique", "[panel_widget][widget_config]") {
