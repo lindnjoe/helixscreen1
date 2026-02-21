@@ -11,7 +11,6 @@
 #include "lvgl/src/libs/expat/expat.h"
 #include "lvgl/src/themes/lv_theme_private.h"
 #include "lvgl/src/xml/lv_xml.h"
-#include "settings_manager.h"
 #include "theme_loader.h"
 
 #include <spdlog/spdlog.h>

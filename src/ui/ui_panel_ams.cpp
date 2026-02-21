@@ -29,7 +29,6 @@
 #include "observer_factory.h"
 #include "printer_detector.h"
 #include "printer_state.h"
-#include "settings_manager.h"
 #include "static_panel_registry.h"
 #include "theme_manager.h"
 #include "ui/ams_drawing_utils.h"

@@ -4,7 +4,6 @@
 #include "audio_settings_manager.h"
 
 #include "config.h"
-#include "settings_manager.h"
 #include "spdlog/spdlog.h"
 #include "static_subject_registry.h"
 

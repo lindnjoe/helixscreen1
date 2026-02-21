@@ -33,7 +33,6 @@ enum class ZMovementStyle { AUTO = 0, BED_MOVES = 1, NOZZLE_MOVES = 2 };
  * - LED control (depends on MoonrakerClient)
  * - Z movement style (depends on PrinterState)
  * - External spool info (depends on AMS types)
- * - Printer image (config-only, simple delegation candidate for later)
  *
  * Thread safety: Single-threaded, main LVGL thread only.
  */
