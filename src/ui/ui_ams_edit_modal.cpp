@@ -316,7 +316,7 @@ void AmsEditModal::fetch_vendors_from_spoolman() {
     // Capture callback guard for async safety [L012]
     std::weak_ptr<bool> guard = callback_guard_;
 
-    api_->get_spoolman_spools(
+    api_->spoolman().get_spoolman_spools(
         [this, guard](const std::vector<SpoolInfo>& spools) {
             // Extract vendor list on this thread (WebSocket), then marshal to main
             std::set<std::string> unique_vendors;
@@ -421,7 +421,7 @@ void AmsEditModal::populate_picker() {
     // Use weak_ptr pattern for async callback safety [L012]
     std::weak_ptr<bool> weak_guard = callback_guard_;
 
-    api_->get_spoolman_spools(
+    api_->spoolman().get_spoolman_spools(
         [this, weak_guard](const std::vector<SpoolInfo>& spools) {
             helix::ui::queue_update([this, weak_guard, spools]() {
                 if (weak_guard.expired() || !dialog_ || !subjects_initialized_) {

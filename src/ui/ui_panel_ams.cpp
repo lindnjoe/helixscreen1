@@ -191,7 +191,7 @@ void AmsPanel::init_subjects() {
                         spdlog::info(
                             "[AmsPanel] Slot {} has Spoolman ID {}, setting as active spool", slot,
                             slot_info.spoolman_id);
-                        self->api_->set_active_spool(
+                        self->api_->spoolman().set_active_spool(
                             slot_info.spoolman_id,
                             []() { spdlog::debug("[AmsPanel] Active spool set successfully"); },
                             [](const MoonrakerError& err) {
@@ -375,7 +375,7 @@ void AmsPanel::sync_spoolman_active_spool() {
     if (slot_info.spoolman_id > 0) {
         spdlog::debug("[{}] Syncing Spoolman: slot {} → spool ID {}", get_name(), current_slot,
                       slot_info.spoolman_id);
-        api_->set_active_spool(
+        api_->spoolman().set_active_spool(
             slot_info.spoolman_id, []() {},
             [](const MoonrakerError& err) {
                 spdlog::warn("[AmsPanel] Failed to sync active spool: {}", err.message);

@@ -207,7 +207,7 @@ void SpoolmanPanel::refresh_spools() {
 
     show_loading_state();
 
-    api->get_spoolman_spools(
+    api->spoolman().get_spoolman_spools(
         [this](const std::vector<SpoolInfo>& spools) {
             spdlog::info("[{}] Received {} spools from Spoolman", get_name(), spools.size());
 
@@ -230,7 +230,7 @@ void SpoolmanPanel::refresh_spools() {
                 return;
             }
 
-            api_inner->get_spoolman_status(
+            api_inner->spoolman().get_spoolman_status(
                 [this, spools](bool /*connected*/, int active_id) {
                     spdlog::debug("[{}] Active spool ID: {}", get_name(), active_id);
                     // Schedule UI update on main thread
@@ -429,7 +429,7 @@ void SpoolmanPanel::set_active_spool(int spool_id) {
         return;
     }
 
-    api->set_active_spool(
+    api->spoolman().set_active_spool(
         spool_id,
         [this, spool_id]() {
             spdlog::info("[{}] Set active spool to {}", get_name(), spool_id);
@@ -528,7 +528,7 @@ void SpoolmanPanel::delete_spool(int spool_id) {
                 return;
             }
 
-            api->delete_spoolman_spool(
+            api->spoolman().delete_spoolman_spool(
                 id,
                 [id]() {
                     spdlog::info("[Spoolman] Spool {} deleted successfully", id);
