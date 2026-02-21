@@ -335,6 +335,7 @@ void register_xml_components() {
     // Settings overlay panels
     register_xml("about_overlay.xml");
     register_xml("display_settings_overlay.xml");
+    register_xml("home_widget_row.xml");
     register_xml("home_widgets_overlay.xml");
     register_xml("sound_settings_overlay.xml");
     register_xml("led_settings_overlay.xml");

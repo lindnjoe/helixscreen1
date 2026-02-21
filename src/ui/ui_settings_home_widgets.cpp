@@ -22,6 +22,8 @@
 
 #include <spdlog/spdlog.h>
 
+#include <fmt/format.h>
+
 namespace helix::settings {
 
 // ============================================================================
@@ -236,36 +238,6 @@ void HomeWidgetsOverlay::populate_widget_list() {
 
 void HomeWidgetsOverlay::create_widget_row(lv_obj_t* parent, const helix::HomeWidgetEntry& entry,
                                            const helix::HomeWidgetDef& def, size_t index) {
-    // Row container: horizontal flex layout
-    lv_obj_t* row = lv_obj_create(parent);
-    lv_obj_set_width(row, LV_PCT(100));
-    lv_obj_set_height(row, LV_SIZE_CONTENT);
-    lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(row, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_left(row, theme_manager_get_spacing("space_lg"), 0);
-    lv_obj_set_style_pad_right(row, theme_manager_get_spacing("space_lg"), 0);
-    lv_obj_set_style_pad_top(row, theme_manager_get_spacing("space_md"), 0);
-    lv_obj_set_style_pad_bottom(row, theme_manager_get_spacing("space_md"), 0);
-    lv_obj_set_style_pad_gap(row, theme_manager_get_spacing("space_sm"), 0);
-    lv_obj_remove_flag(row, LV_OBJ_FLAG_SCROLLABLE);
-
-    // Drag handle icon (reorder grip) - first element in row
-    const char* handle_attrs[] = {"src",     "swap_vertical", "size", "sm",
-                                  "variant", "muted",         nullptr};
-    auto* handle = lv_xml_create(row, "icon", handle_attrs);
-    if (handle) {
-        lv_obj_remove_flag(static_cast<lv_obj_t*>(handle), LV_OBJ_FLAG_CLICKABLE);
-    }
-
-    // Long-press drag events on the entire row (not just the handle icon).
-    // The switch is excluded in the event handler by checking the event target.
-    // NOTE: Uses lv_obj_add_event_cb (not XML event_cb) because rows are created
-    // dynamically from data — there's no static XML to attach callbacks to.
-    lv_obj_add_flag(row, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_event_cb(row, on_drag_handle_event, LV_EVENT_LONG_PRESSED, nullptr);
-    lv_obj_add_event_cb(row, on_drag_handle_event, LV_EVENT_PRESSING, nullptr);
-    lv_obj_add_event_cb(row, on_drag_handle_event, LV_EVENT_RELEASED, nullptr);
-
     // Check hardware gate (if the widget has one)
     bool hw_available = true;
     if (def.hardware_gate_subject) {
@@ -274,61 +246,60 @@ void HomeWidgetsOverlay::create_widget_row(lv_obj_t* parent, const helix::HomeWi
             int value = lv_subject_get_int(gate_subject);
             hw_available = (value > 0);
         } else {
-            // Subject not registered yet - treat as unavailable
             hw_available = false;
             spdlog::trace("[{}] Hardware gate subject '{}' not found for '{}'", get_name(),
                           def.hardware_gate_subject, def.id);
         }
     }
 
-    // Widget icon (using XML component for proper font/size/color handling)
-    const char* icon_variant = hw_available ? "secondary" : "muted";
-    const char* icon_attrs[] = {"src", def.icon, "size", "sm", "variant", icon_variant, nullptr};
-    auto* icon = lv_xml_create(row, "icon", icon_attrs);
-    if (icon) {
-        lv_obj_remove_flag(static_cast<lv_obj_t*>(icon), LV_OBJ_FLAG_CLICKABLE);
-    }
-
-    // Text column (name + description)
-    lv_obj_t* text_col = lv_obj_create(row);
-    lv_obj_set_height(text_col, LV_SIZE_CONTENT);
-    lv_obj_set_flex_grow(text_col, 1);
-    lv_obj_set_flex_flow(text_col, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_style_pad_all(text_col, 0, 0);
-    lv_obj_set_style_pad_gap(text_col, theme_manager_get_spacing("space_xxs"), 0);
-    lv_obj_remove_flag(text_col,
-                       static_cast<lv_obj_flag_t>(LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE));
-
-    // Widget display name — append "(not detected)" inline when hardware unavailable
-    lv_obj_t* name_label = lv_label_create(text_col);
+    // Build label text — append "(not detected)" when hardware unavailable
+    std::string label_text;
     if (hw_available) {
-        lv_label_set_text(name_label, lv_tr(def.display_name));
+        label_text = lv_tr(def.display_name);
     } else {
-        lv_label_set_text_fmt(name_label, "%s (%s)", lv_tr(def.display_name),
-                              lv_tr("not detected"));
-    }
-    lv_obj_set_style_text_font(name_label, theme_manager_get_font("font_body"), 0);
-    lv_obj_set_style_text_color(name_label,
-                                theme_manager_get_color(hw_available ? "text" : "text_subtle"), 0);
-
-    // Description line — always shown
-    lv_obj_t* desc_label = lv_label_create(text_col);
-    lv_label_set_text(desc_label, lv_tr(def.description));
-    lv_obj_set_style_text_font(desc_label, theme_manager_get_font("font_small"), 0);
-    lv_obj_set_style_text_color(desc_label, theme_manager_get_color("text_muted"), 0);
-
-    // Toggle switch
-    lv_obj_t* sw = lv_switch_create(row);
-
-    if (!hw_available) {
-        lv_obj_add_state(sw, LV_STATE_DISABLED);
-    } else if (entry.enabled) {
-        lv_obj_add_state(sw, LV_STATE_CHECKED);
+        label_text = fmt::format("{} ({})", lv_tr(def.display_name), lv_tr("not detected"));
     }
 
-    // Store config index in user_data for the callback
-    lv_obj_set_user_data(sw, reinterpret_cast<void*>(index));
-    lv_obj_add_event_cb(sw, on_widget_toggle_changed, LV_EVENT_VALUE_CHANGED, nullptr);
+    const char* icon_variant = hw_available ? "secondary" : "muted";
+
+    // Create row from XML component
+    const char* attrs[] = {"label",        label_text.c_str(),
+                           "label_tag",    def.translation_tag ? def.translation_tag : "",
+                           "description",  lv_tr(def.description),
+                           "icon",         def.icon,
+                           "icon_variant", icon_variant,
+                           nullptr};
+
+    auto* row = static_cast<lv_obj_t*>(lv_xml_create(parent, "home_widget_row", attrs));
+    if (!row) {
+        spdlog::error("[{}] Failed to create home_widget_row for '{}'", get_name(), def.id);
+        return;
+    }
+
+    // Wire drag events on the row (not in XML — rows are dynamic, each needs unique state)
+    lv_obj_add_flag(row, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(row, on_drag_handle_event, LV_EVENT_LONG_PRESSED, nullptr);
+    lv_obj_add_event_cb(row, on_drag_handle_event, LV_EVENT_PRESSING, nullptr);
+    lv_obj_add_event_cb(row, on_drag_handle_event, LV_EVENT_RELEASED, nullptr);
+
+    // Make drag handle non-clickable so it doesn't steal events
+    auto* handle = lv_obj_find_by_name(row, "drag_handle");
+    if (handle) {
+        lv_obj_remove_flag(handle, LV_OBJ_FLAG_CLICKABLE);
+    }
+
+    // Configure switch state from runtime data
+    auto* sw = lv_obj_find_by_name(row, "toggle");
+    if (sw) {
+        if (!hw_available) {
+            lv_obj_add_state(sw, LV_STATE_DISABLED);
+        } else if (entry.enabled) {
+            lv_obj_add_state(sw, LV_STATE_CHECKED);
+        }
+
+        lv_obj_set_user_data(sw, reinterpret_cast<void*>(index));
+        lv_obj_add_event_cb(sw, on_widget_toggle_changed, LV_EVENT_VALUE_CHANGED, nullptr);
+    }
 }
 
 // ============================================================================
@@ -708,14 +679,9 @@ void HomeWidgetsOverlay::finalize_drag() {
         uint32_t child_count = lv_obj_get_child_count(widget_list_);
         for (uint32_t i = 0; i < child_count; ++i) {
             lv_obj_t* row = lv_obj_get_child(widget_list_, static_cast<int32_t>(i));
-            uint32_t row_child_count = lv_obj_get_child_count(row);
-            if (row_child_count > 0) {
-                lv_obj_t* last_child =
-                    lv_obj_get_child(row, static_cast<int32_t>(row_child_count - 1));
-                if (lv_obj_check_type(last_child, &lv_switch_class)) {
-                    lv_obj_set_user_data(last_child,
-                                         reinterpret_cast<void*>(static_cast<size_t>(i)));
-                }
+            lv_obj_t* sw = lv_obj_find_by_name(row, "toggle");
+            if (sw) {
+                lv_obj_set_user_data(sw, reinterpret_cast<void*>(static_cast<size_t>(i)));
             }
         }
         return;
