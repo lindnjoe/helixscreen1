@@ -1242,26 +1242,41 @@ static void draw_parallel_topology(lv_event_t* e, FilamentPathData* data) {
             draw_nozzle_bambu(layer, slot_x, toolhead_y, noz_color, tool_scale, toolhead_opa);
         }
 
-        // Tool label (T0, T1, etc.) below nozzle
-        // Mounted tool gets green highlight, others get normal text color
+        // Tool badge (T0, T1, etc.) below nozzle — matches system_path_canvas style
         if (data->label_font) {
+            char tool_label[16];
+            snprintf(tool_label, sizeof(tool_label), "T%d", i);
+
+            int32_t font_h = lv_font_get_line_height(data->label_font);
+            int32_t label_len = (int32_t)strlen(tool_label);
+            int32_t badge_w = LV_MAX(24, label_len * (font_h * 3 / 5) + 6);
+            int32_t badge_h = font_h + 4;
+            int32_t badge_top = toolhead_y + tool_scale * 3 + 4;
+            int32_t badge_left = slot_x - badge_w / 2;
+
+            // Badge background (rounded rect)
+            lv_area_t badge_area = {badge_left, badge_top, badge_left + badge_w,
+                                    badge_top + badge_h};
+            lv_draw_fill_dsc_t fill_dsc;
+            lv_draw_fill_dsc_init(&fill_dsc);
+            fill_dsc.color = data->color_idle;
+            fill_dsc.opa = (lv_opa_t)LV_MIN(200, toolhead_opa);
+            fill_dsc.radius = 4;
+            lv_draw_fill(layer, &fill_dsc, &badge_area);
+
+            // Badge text
             lv_draw_label_dsc_t label_dsc;
             lv_draw_label_dsc_init(&label_dsc);
             label_dsc.color = is_mounted ? theme_manager_get_color("success") : data->color_text;
             label_dsc.opa = toolhead_opa;
             label_dsc.font = data->label_font;
             label_dsc.align = LV_TEXT_ALIGN_CENTER;
-
-            char tool_label[16];
-            snprintf(tool_label, sizeof(tool_label), "T%d", i);
             label_dsc.text = tool_label;
-            label_dsc.text_local = 1; // Text is on stack, copy it
+            label_dsc.text_local = 1;
 
-            // Position label below nozzle tip
-            int32_t font_h = lv_font_get_line_height(data->label_font);
-            int32_t label_y = toolhead_y + tool_scale * 3 + 4; // Below nozzle tip
-            lv_area_t label_area = {slot_x - 20, label_y, slot_x + 20, label_y + font_h};
-            lv_draw_label(layer, &label_dsc, &label_area);
+            lv_area_t text_area = {badge_left, badge_top + 2, badge_left + badge_w,
+                                   badge_top + 2 + font_h};
+            lv_draw_label(layer, &label_dsc, &text_area);
         }
     }
 }
