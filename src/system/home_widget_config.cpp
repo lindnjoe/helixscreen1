@@ -52,8 +52,14 @@ void HomeWidgetConfig::load() {
             continue;
         }
 
+        // Load optional per-widget config
+        nlohmann::json widget_config;
+        if (item.contains("config") && item["config"].is_object()) {
+            widget_config = item["config"];
+        }
+
         seen_ids.insert(id);
-        entries_.push_back({id, enabled});
+        entries_.push_back({id, enabled, widget_config});
     }
 
     // Append any new widgets from registry that are not in saved config
@@ -61,7 +67,7 @@ void HomeWidgetConfig::load() {
         if (seen_ids.count(def.id) == 0) {
             spdlog::debug("[HomeWidgetConfig] Appending new widget: {} (default_enabled={})",
                           def.id, def.default_enabled);
-            entries_.push_back({def.id, def.default_enabled});
+            entries_.push_back({def.id, def.default_enabled, {}});
         }
     }
 
@@ -76,7 +82,11 @@ void HomeWidgetConfig::load() {
 void HomeWidgetConfig::save() {
     json widgets_array = json::array();
     for (const auto& entry : entries_) {
-        widgets_array.push_back({{"id", entry.id}, {"enabled", entry.enabled}});
+        json item = {{"id", entry.id}, {"enabled", entry.enabled}};
+        if (!entry.config.empty()) {
+            item["config"] = entry.config;
+        }
+        widgets_array.push_back(std::move(item));
     }
     config_.set<json>("/home_widgets", widgets_array);
     config_.save();
@@ -113,12 +123,32 @@ bool HomeWidgetConfig::is_enabled(const std::string& id) const {
     return it != entries_.end() && it->enabled;
 }
 
+nlohmann::json HomeWidgetConfig::get_widget_config(const std::string& id) const {
+    auto it = std::find_if(entries_.begin(), entries_.end(),
+                           [&id](const HomeWidgetEntry& e) { return e.id == id; });
+    if (it != entries_.end() && !it->config.empty()) {
+        return it->config;
+    }
+    return nlohmann::json::object();
+}
+
+void HomeWidgetConfig::set_widget_config(const std::string& id, const nlohmann::json& config) {
+    auto it = std::find_if(entries_.begin(), entries_.end(),
+                           [&id](const HomeWidgetEntry& e) { return e.id == id; });
+    if (it != entries_.end()) {
+        it->config = config;
+        save();
+    } else {
+        spdlog::debug("[HomeWidgetConfig] set_widget_config: widget '{}' not found", id);
+    }
+}
+
 std::vector<HomeWidgetEntry> HomeWidgetConfig::build_defaults() {
     std::vector<HomeWidgetEntry> defaults;
     const auto& defs = get_all_widget_defs();
     defaults.reserve(defs.size());
     for (const auto& def : defs) {
-        defaults.push_back({def.id, def.default_enabled});
+        defaults.push_back({def.id, def.default_enabled, {}});
     }
     return defaults;
 }

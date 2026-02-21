@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include "hv/json.hpp"
+
 namespace helix {
 
 class Config;
@@ -13,9 +15,10 @@ class Config;
 struct HomeWidgetEntry {
     std::string id;
     bool enabled;
+    nlohmann::json config; // Optional per-widget config (empty object = no config)
 
     bool operator==(const HomeWidgetEntry& other) const {
-        return id == other.id && enabled == other.enabled;
+        return id == other.id && enabled == other.enabled && config == other.config;
     }
 };
 
@@ -42,6 +45,12 @@ class HomeWidgetConfig {
     void reset_to_defaults();
 
     bool is_enabled(const std::string& id) const;
+
+    /// Get per-widget config for a given widget ID (empty object if not set)
+    nlohmann::json get_widget_config(const std::string& id) const;
+
+    /// Set per-widget config for a given widget ID, then save
+    void set_widget_config(const std::string& id, const nlohmann::json& config);
 
   private:
     Config& config_;

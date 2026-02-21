@@ -41,7 +41,7 @@ class HomeWidgetConfigFixture {
 
 TEST_CASE("HomeWidgetRegistry: returns all widget definitions", "[home][widget_config]") {
     const auto& defs = get_all_widget_defs();
-    REQUIRE(defs.size() == 12);
+    REQUIRE(defs.size() == 13);
 }
 
 TEST_CASE("HomeWidgetRegistry: all widget IDs are unique", "[home][widget_config]") {
@@ -55,7 +55,7 @@ TEST_CASE("HomeWidgetRegistry: all widget IDs are unique", "[home][widget_config
 TEST_CASE("HomeWidgetRegistry: can look up widget by ID", "[home][widget_config]") {
     const auto* def = find_widget_def("temperature");
     REQUIRE(def != nullptr);
-    REQUIRE(std::string(def->display_name) == "Temperature");
+    REQUIRE(std::string(def->display_name) == "Nozzle Temperature");
 }
 
 TEST_CASE("HomeWidgetRegistry: unknown ID returns nullptr", "[home][widget_config]") {
@@ -516,7 +516,8 @@ TEST_CASE("HomeWidgetRegistry: can find every registered widget by ID", "[home][
 TEST_CASE("HomeWidgetRegistry: known hardware-gated widgets have gate subjects",
           "[home][widget_config]") {
     // These widgets require specific hardware
-    const char* gated[] = {"power", "ams", "led", "humidity", "width_sensor", "probe", "filament"};
+    const char* gated[] = {"power",        "ams",   "led",      "humidity",
+                           "width_sensor", "probe", "filament", "thermistor"};
     for (const auto* id : gated) {
         CAPTURE(id);
         const auto* def = find_widget_def(id);

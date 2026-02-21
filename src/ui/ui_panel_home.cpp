@@ -34,6 +34,7 @@
 #include "home_widgets/power_widget.h"
 #include "home_widgets/temp_stack_widget.h"
 #include "home_widgets/temperature_widget.h"
+#include "home_widgets/thermistor_widget.h"
 #include "injection_point_manager.h"
 #include "led/led_controller.h"
 #include "led/ui_led_control_overlay.h"
@@ -208,6 +209,8 @@ void HomePanel::init_subjects() {
         {"ams_clicked_cb", ams_clicked_cb},
         {"temp_stack_nozzle_cb", helix::TempStackWidget::temp_stack_nozzle_cb},
         {"temp_stack_bed_cb", helix::TempStackWidget::temp_stack_bed_cb},
+        {"thermistor_clicked_cb", helix::ThermistorWidget::thermistor_clicked_cb},
+        {"thermistor_picker_backdrop_cb", helix::ThermistorWidget::thermistor_picker_backdrop_cb},
     });
 
     // Subscribe to AmsState slot_count to show/hide AMS indicator
@@ -234,6 +237,9 @@ void HomePanel::init_subjects() {
                                    []() { return std::make_unique<helix::NetworkWidget>(); });
     helix::register_widget_factory("temp_stack", [this]() {
         return std::make_unique<helix::TempStackWidget>(printer_state_, temp_control_panel_);
+    });
+    helix::register_widget_factory("thermistor", [this]() {
+        return std::make_unique<helix::ThermistorWidget>(printer_state_);
     });
 
     spdlog::debug("[{}] Registered subjects and event callbacks", get_name());

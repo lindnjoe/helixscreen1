@@ -70,6 +70,7 @@ class Config {
     friend class HardwareValidatorConfigFixture;
     friend class MmuDetectionFixture;
     friend class HomeWidgetConfigFixture;
+    friend class ThermistorConfigFixture;
 
   public:
     /**
