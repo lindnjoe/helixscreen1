@@ -20,7 +20,7 @@ Complete reference for HelixScreen configuration options.
 - [Moonraker Settings](#moonraker-settings)
 - [G-code Viewer Settings](#g-code-viewer-settings)
 - [AMS Settings](#ams-settings)
-- [Home Widget Settings](#home-widget-settings)
+- [Panel Widget Settings](#panel-widget-settings)
 - [Cache Settings](#cache-settings)
 - [Streaming Settings](#streaming-settings)
 - [Safety Settings](#safety-settings)
@@ -75,7 +75,7 @@ The configuration file is JSON format with several top-level sections:
   "log_path": "",
   "log_level": "warn",
 
-  "home_widgets": [ ... ],
+  "panel_widgets": { ... },
   "theme": { ... },
   "display": { ... },
   "input": { ... },
@@ -780,31 +780,38 @@ Located in the `ams` section:
 
 ---
 
-## Home Widget Settings
+## Panel Widget Settings
 
-Located at the top level as `home_widgets`:
+Located under the `panel_widgets` key, grouped by panel ID:
 
 ```json
 {
-  "home_widgets": [
-    {"id": "power", "enabled": true},
-    {"id": "network", "enabled": true},
-    {"id": "firmware_restart", "enabled": true},
-    {"id": "ams", "enabled": true},
-    {"id": "temperature", "enabled": true},
-    {"id": "led", "enabled": true},
-    {"id": "humidity", "enabled": true},
-    {"id": "width_sensor", "enabled": true},
-    {"id": "probe", "enabled": true},
-    {"id": "filament_sensor", "enabled": true},
-    {"id": "notifications", "enabled": true}
-  ]
+  "panel_widgets": {
+    "home": [
+      {"id": "power", "enabled": true},
+      {"id": "network", "enabled": false},
+      {"id": "firmware_restart", "enabled": false},
+      {"id": "ams", "enabled": true},
+      {"id": "temperature", "enabled": true},
+      {"id": "temp_stack", "enabled": false},
+      {"id": "led", "enabled": true},
+      {"id": "humidity", "enabled": true},
+      {"id": "width_sensor", "enabled": true},
+      {"id": "probe", "enabled": true},
+      {"id": "filament", "enabled": true},
+      {"id": "fan_stack", "enabled": false},
+      {"id": "thermistor", "enabled": false},
+      {"id": "notifications", "enabled": true}
+    ]
+  }
 }
 ```
 
-### `home_widgets`
+> **Migration note:** If your config has the older `home_widgets` key, HelixScreen automatically migrates it to `panel_widgets.home` on first launch.
+
+### `panel_widgets.home`
 **Type:** array of objects
-**Default:** All widgets enabled in the order shown above
+**Default:** See defaults in table below
 **Description:** Controls which widgets appear on the Home Panel and in what order. Each object has:
 
 - `id` — Widget identifier (see table below)
@@ -812,25 +819,27 @@ Located at the top level as `home_widgets`:
 
 **Available widget IDs:**
 
-| ID | Widget | Hardware-Gated |
-|----|--------|---------------|
-| `power` | Moonraker power device controls | Yes (requires power devices) |
-| `network` | WiFi/Ethernet status | No |
-| `firmware_restart` | Klipper firmware restart | No |
-| `ams` | Multi-material spool status | Yes (requires AMS/MMU) |
-| `temperature` | Nozzle temperature with heating animation | No |
-| `led` | LED quick toggle | No |
-| `humidity` | Enclosure humidity sensor | Yes (requires sensor) |
-| `width_sensor` | Filament width sensor | Yes (requires sensor) |
-| `probe` | Z probe status and offset | Yes (requires probe) |
-| `filament_sensor` | Filament runout detection | Yes (requires sensor) |
-| `notifications` | Pending alerts with severity badge | No |
+| ID | Widget | Default | Hardware-Gated |
+|----|--------|---------|---------------|
+| `power` | Moonraker power device controls | Enabled | Yes (requires power devices) |
+| `network` | WiFi/Ethernet status | Disabled | No |
+| `firmware_restart` | Klipper firmware restart | Disabled | No |
+| `ams` | Multi-material spool status | Enabled | Yes (requires AMS/MMU) |
+| `temperature` | Nozzle temperature with heating animation | Enabled | No |
+| `temp_stack` | Stacked nozzle, bed, and chamber temps | Disabled | No |
+| `led` | LED quick toggle | Enabled | Yes (requires LEDs) |
+| `humidity` | Enclosure humidity sensor | Enabled | Yes (requires sensor) |
+| `width_sensor` | Filament width sensor | Enabled | Yes (requires sensor) |
+| `probe` | Z probe status and offset | Enabled | Yes (requires probe) |
+| `filament` | Filament runout detection | Enabled | Yes (requires sensor) |
+| `fan_stack` | Part, hotend, and auxiliary fan speeds | Disabled | No |
+| `thermistor` | Custom temperature sensor (chamber, etc.) | Disabled | Yes (requires sensor) |
+| `notifications` | Pending alerts with severity badge | Enabled | No |
 
 **Notes:**
-- Maximum 10 widgets can be enabled simultaneously
 - The array order determines display order on the Home Panel
 - Hardware-gated widgets are hidden on the Home Panel if their hardware isn't detected, even when enabled
-- New widgets added in future versions are automatically appended with `enabled: true`
+- New widgets added in future versions are automatically appended with their default enabled state
 - Unknown widget IDs (from older versions) are silently ignored
 
 This is best configured via **Settings > Home Widgets** rather than editing the JSON directly.
@@ -1357,19 +1366,24 @@ Environment="HELIX_TOUCH_DEVICE=/dev/input/event0"
     "adaptive_layer_target_ms": 16
   },
 
-  "home_widgets": [
-    {"id": "temperature", "enabled": true},
-    {"id": "network", "enabled": true},
-    {"id": "led", "enabled": true},
-    {"id": "ams", "enabled": true},
-    {"id": "notifications", "enabled": true},
-    {"id": "power", "enabled": true},
-    {"id": "firmware_restart", "enabled": false},
-    {"id": "humidity", "enabled": false},
-    {"id": "width_sensor", "enabled": false},
-    {"id": "probe", "enabled": false},
-    {"id": "filament_sensor", "enabled": false}
-  ],
+  "panel_widgets": {
+    "home": [
+      {"id": "temperature", "enabled": true},
+      {"id": "network", "enabled": true},
+      {"id": "led", "enabled": true},
+      {"id": "ams", "enabled": true},
+      {"id": "notifications", "enabled": true},
+      {"id": "power", "enabled": true},
+      {"id": "firmware_restart", "enabled": false},
+      {"id": "humidity", "enabled": false},
+      {"id": "width_sensor", "enabled": false},
+      {"id": "probe", "enabled": false},
+      {"id": "filament", "enabled": false},
+      {"id": "temp_stack", "enabled": false},
+      {"id": "fan_stack", "enabled": false},
+      {"id": "thermistor", "enabled": false}
+    ]
+  },
 
   "ams": {
     "spool_style": "3d"

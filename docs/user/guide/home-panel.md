@@ -26,18 +26,21 @@ Below the status area, the Home Panel displays a row of **configurable widgets**
 | Widget | What It Does |
 |--------|-------------|
 | **Power** | Toggle Moonraker power devices. Only appears if you have power devices configured. |
-| **Network** | Shows WiFi signal strength or Ethernet status at a glance. |
-| **Firmware Restart** | Restart Klipper firmware with one tap. Always shown when Klipper is in SHUTDOWN state, even if disabled. |
+| **Network** | Shows WiFi signal strength or Ethernet status at a glance. Disabled by default. |
+| **Firmware Restart** | Restart Klipper firmware with one tap. Always shown when Klipper is in SHUTDOWN state, even if disabled. Disabled by default. |
 | **AMS Status** | Mini view of your multi-material spool slots. Only appears if an AMS/MMU system is detected. |
 | **Temperature** | Nozzle temperature readout with animated heating icon. Tap to open the Temperature panel. |
+| **Temperatures** | Stacked view of nozzle, bed, and chamber temperatures in a single widget. Disabled by default. |
 | **LED Light** | Quick toggle for your LEDs. Long-press for the full LED Control Overlay (see [LED Controls](#led-controls) below). |
 | **Humidity** | Enclosure humidity sensor reading. Only appears if a humidity sensor is detected. |
 | **Width Sensor** | Filament width sensor reading. Only appears if a width sensor is detected. |
 | **Probe** | Z probe status and offset. Only appears if a probe is configured. |
 | **Filament Sensor** | Filament runout detection status. Only appears if a filament sensor is detected. |
+| **Fan Speeds** | Part cooling, hotend, and auxiliary fan speeds at a glance. Disabled by default. |
+| **Thermistor** | Monitor a custom temperature sensor (e.g., chamber, enclosure heater). Only appears if extra temperature sensors are detected. Disabled by default. |
 | **Notifications** | Pending alerts with severity badge. Tap to open notification history. |
 
-Up to **10 widgets** can be enabled at once. They automatically arrange into 1 or 2 rows depending on how many are active.
+Widgets automatically arrange into 1 or 2 rows depending on how many are active.
 
 ### Hardware-Gated Widgets
 
@@ -52,7 +55,7 @@ To change which widgets appear and their order:
 3. **Reorder** by long-pressing the drag handle (arrows icon) on a row and dragging it to a new position
 4. Changes take effect immediately when you leave the overlay
 
-To reset to defaults, disable all widgets and re-enable the ones you want, or edit the config file directly (see [Configuration Reference](../CONFIGURATION.md#home-widget-settings)).
+To reset to defaults, disable all widgets and re-enable the ones you want, or edit the config file directly (see [Configuration Reference](../CONFIGURATION.md#panel-widget-settings)).
 
 ---
 
