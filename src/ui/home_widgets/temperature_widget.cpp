@@ -34,9 +34,6 @@ void TemperatureWidget::attach(lv_obj_t* widget_obj, lv_obj_t* parent_screen) {
     // Store this pointer for event callback recovery
     lv_obj_set_user_data(widget_obj_, this);
 
-    // Register click callback
-    lv_xml_register_event_cb(nullptr, "temp_clicked_cb", temp_clicked_cb);
-
     // Set up temperature observers
     using helix::ui::observe_int_sync;
 

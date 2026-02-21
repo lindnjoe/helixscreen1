@@ -730,9 +730,17 @@ void NavigationManager::switch_to_panel_impl(int panel_id) {
         }
     }
 
-    // Invoke close callbacks and clean up dynamic backdrops for any overlays being cleared
-    // (e.g., AMS panel needs to destroy its UI to free memory)
+    // Deactivate overlays, invoke close callbacks, and clean up backdrops
+    // for any overlays being cleared (e.g., settings overlay needs on_deactivate to save)
     for (lv_obj_t* panel : panel_stack_) {
+        // Call on_deactivate() if this overlay has a registered instance
+        auto inst_it = overlay_instances_.find(panel);
+        if (inst_it != overlay_instances_.end()) {
+            spdlog::trace("[NavigationManager] Calling on_deactivate() for overlay {} (navbar)",
+                          (void*)panel);
+            inst_it->second->on_deactivate();
+        }
+
         // Invoke close callback if registered
         auto it = overlay_close_callbacks_.find(panel);
         if (it != overlay_close_callbacks_.end()) {

@@ -206,6 +206,8 @@ void HomePanel::init_subjects() {
         {"network_clicked_cb", network_clicked_cb},
         {"printer_manager_clicked_cb", printer_manager_clicked_cb},
         {"ams_clicked_cb", ams_clicked_cb},
+        {"temp_stack_nozzle_cb", helix::TempStackWidget::temp_stack_nozzle_cb},
+        {"temp_stack_bed_cb", helix::TempStackWidget::temp_stack_bed_cb},
     });
 
     // Subscribe to AmsState slot_count to show/hide AMS indicator

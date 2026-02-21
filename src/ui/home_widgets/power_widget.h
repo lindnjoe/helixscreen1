@@ -5,6 +5,8 @@
 
 #include "home_widget.h"
 
+#include <memory>
+
 class MoonrakerAPI;
 
 namespace helix {
@@ -32,6 +34,9 @@ class PowerWidget : public HomeWidget {
 
     bool power_on_ = false;
     bool power_long_pressed_ = false;
+
+    // Shared flag for async callback safety — set false on detach
+    std::shared_ptr<bool> alive_ = std::make_shared<bool>(false);
 
     void handle_power_toggle();
     void handle_power_long_press();

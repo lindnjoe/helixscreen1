@@ -59,6 +59,8 @@ class TempStackWidget : public HomeWidget {
     void handle_nozzle_clicked();
     void handle_bed_clicked();
 
+  public:
+    // Public for early XML callback registration (before attach)
     static void temp_stack_nozzle_cb(lv_event_t* e);
     static void temp_stack_bed_cb(lv_event_t* e);
 };

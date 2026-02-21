@@ -30,10 +30,6 @@ void TempStackWidget::attach(lv_obj_t* widget_obj, lv_obj_t* parent_screen) {
     parent_screen_ = parent_screen;
     s_active_instance = this;
 
-    // Register click callbacks
-    lv_xml_register_event_cb(nullptr, "temp_stack_nozzle_cb", temp_stack_nozzle_cb);
-    lv_xml_register_event_cb(nullptr, "temp_stack_bed_cb", temp_stack_bed_cb);
-
     using helix::ui::observe_int_sync;
 
     // Nozzle observers

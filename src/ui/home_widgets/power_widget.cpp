@@ -29,6 +29,7 @@ PowerWidget::~PowerWidget() {
 void PowerWidget::attach(lv_obj_t* widget_obj, lv_obj_t* parent_screen) {
     widget_obj_ = widget_obj;
     parent_screen_ = parent_screen;
+    *alive_ = true;
 
     if (widget_obj_) {
         lv_obj_set_user_data(widget_obj_, this);
@@ -47,6 +48,7 @@ void PowerWidget::attach(lv_obj_t* widget_obj, lv_obj_t* parent_screen) {
 }
 
 void PowerWidget::detach() {
+    *alive_ = false;
     if (widget_obj_) {
         lv_obj_set_user_data(widget_obj_, nullptr);
     }
@@ -82,17 +84,16 @@ void PowerWidget::handle_power_toggle() {
     const char* action = power_on_ ? "off" : "on";
     bool new_state = !power_on_;
 
+    std::weak_ptr<bool> weak_alive = alive_;
     for (const auto& device : selected) {
         api_->set_device_power(
             device, action,
-            [this, device]() {
+            [device]() {
                 spdlog::debug("[PowerWidget] Power device '{}' set successfully", device);
             },
-            [this, device](const MoonrakerError& err) {
+            [device](const MoonrakerError& err) {
                 spdlog::error("[PowerWidget] Failed to set power device '{}': {}", device,
                               err.message);
-                // On error, refresh from actual state
-                refresh_power_state();
             });
     }
 
@@ -130,10 +131,12 @@ void PowerWidget::refresh_power_state() {
         return;
     std::set<std::string> selected_set(selected.begin(), selected.end());
 
-    // Query power devices to determine if selected ones are on
+    // Query power devices to determine if selected ones are on.
+    // Use weak_ptr to alive_ flag so async callback is safe if widget is destroyed.
+    std::weak_ptr<bool> weak_alive = alive_;
+    PowerWidget* self_ptr = this;
     api_->get_power_devices(
-        [this, selected_set](const std::vector<PowerDevice>& devices) {
-            // Check if any selected device is on
+        [weak_alive, self_ptr, selected_set](const std::vector<PowerDevice>& devices) {
             bool any_on = false;
             for (const auto& dev : devices) {
                 if (selected_set.count(dev.device) > 0 && dev.status == "on") {
@@ -142,10 +145,14 @@ void PowerWidget::refresh_power_state() {
                 }
             }
 
-            helix::ui::queue_update([this, any_on]() {
-                power_on_ = any_on;
-                update_power_icon(power_on_);
-                spdlog::debug("[PowerWidget] Power state refreshed: {}", power_on_ ? "on" : "off");
+            helix::ui::queue_update([weak_alive, self_ptr, any_on]() {
+                auto alive = weak_alive.lock();
+                if (!alive || !*alive)
+                    return;
+                self_ptr->power_on_ = any_on;
+                self_ptr->update_power_icon(self_ptr->power_on_);
+                spdlog::debug("[PowerWidget] Power state refreshed: {}",
+                              self_ptr->power_on_ ? "on" : "off");
             });
         },
         [](const MoonrakerError& err) {
