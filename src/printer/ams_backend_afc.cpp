@@ -1892,6 +1892,7 @@ AmsError AmsBackendAfc::load_filament(int slot_index) {
 }
 
 AmsError AmsBackendAfc::unload_filament() {
+    std::string lane_name;
     {
         std::lock_guard<std::recursive_mutex> lock(mutex_);
 
@@ -1904,10 +1905,24 @@ AmsError AmsBackendAfc::unload_filament() {
             return AmsError(AmsResult::WRONG_STATE, "No filament loaded", "No filament to unload",
                             "Load filament first");
         }
+
+        AmsError slot_err = validate_slot_index(system_info_.current_slot);
+        if (!slot_err) {
+            return slot_err;
+        }
+
+        lane_name = slots_.name_of(system_info_.current_slot);
+        if (lane_name.empty()) {
+            return AmsErrorHelper::invalid_slot(system_info_.current_slot,
+                                                system_info_.total_slots - 1);
+        }
     }
 
-    spdlog::info("[AMS AFC] Unloading filament");
-    return execute_gcode("TOOL_UNLOAD");
+    std::ostringstream cmd;
+    cmd << "TOOL_UNLOAD LANE=" << lane_name;
+
+    spdlog::info("[AMS AFC] Unloading filament from lane {}", lane_name);
+    return execute_gcode(cmd.str());
 }
 
 AmsError AmsBackendAfc::select_slot(int slot_index) {

@@ -2189,6 +2189,37 @@ TEST_CASE("AFC standard single-unit system unchanged by mixed topology code",
 }
 
 // ============================================================================
+// unload_filament() Tests
+// ============================================================================
+
+TEST_CASE("AFC unload_filament sends TOOL_UNLOAD with lane name", "[ams][afc][unload]") {
+    AmsBackendAfcTestHelper helper;
+    helper.initialize_test_lanes_with_slots(4);
+    helper.set_running(true);
+    helper.set_filament_loaded(true);
+    helper.set_current_slot(1);
+
+    auto result = helper.unload_filament();
+
+    REQUIRE(result.success());
+    REQUIRE(helper.has_gcode("TOOL_UNLOAD LANE=" + helper.get_slot_name(1)));
+}
+
+TEST_CASE("AFC unload_filament validates current slot", "[ams][afc][unload]") {
+    AmsBackendAfcTestHelper helper;
+    helper.initialize_test_lanes_with_slots(4);
+    helper.set_running(true);
+    helper.set_filament_loaded(true);
+    helper.set_current_slot(99);
+
+    auto result = helper.unload_filament();
+
+    REQUIRE_FALSE(result.success());
+    REQUIRE(result.result == AmsResult::INVALID_SLOT);
+    REQUIRE(helper.captured_gcodes.empty());
+}
+
+// ============================================================================
 // eject_lane() Tests
 // ============================================================================
 
