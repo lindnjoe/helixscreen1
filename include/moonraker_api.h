@@ -48,6 +48,7 @@
 #include "calibration_types.h"
 #include "moonraker_client.h"
 #include "moonraker_error.h"
+#include "moonraker_history_api.h"
 #include "moonraker_spoolman_api.h"
 #include "moonraker_types.h"
 #include "print_history_data.h"
@@ -94,9 +95,6 @@ class MoonrakerAPI {
     using FileMetadataCallback = std::function<void(const FileMetadata&)>;
     using BoolCallback = std::function<void(bool)>;
     using StringCallback = std::function<void(const std::string&)>;
-    using HistoryListCallback =
-        std::function<void(const std::vector<PrintHistoryJob>&, uint64_t total_count)>;
-    using HistoryTotalsCallback = std::function<void(const PrintHistoryTotals&)>;
     using TimelapseSettingsCallback = std::function<void(const TimelapseSettings&)>;
     using WebcamListCallback = std::function<void(const std::vector<WebcamInfo>&)>;
     using JsonCallback = std::function<void(const json&)>;
@@ -851,47 +849,6 @@ class MoonrakerAPI {
     bool ensure_http_base_url();
 
     // ========================================================================
-    // Print History Operations
-    // ========================================================================
-
-    /**
-     * @brief Get paginated list of print history jobs
-     *
-     * Calls server.history.list Moonraker endpoint.
-     *
-     * @param limit Maximum number of jobs to return (default 50)
-     * @param start Offset for pagination (0-based)
-     * @param since Unix timestamp - only include jobs after this time (0 = no filter)
-     * @param before Unix timestamp - only include jobs before this time (0 = no filter)
-     * @param on_success Callback with parsed job list and total count
-     * @param on_error Error callback
-     */
-    void get_history_list(int limit, int start, double since, double before,
-                          HistoryListCallback on_success, ErrorCallback on_error);
-
-    /**
-     * @brief Get aggregated history totals/statistics
-     *
-     * Calls server.history.totals Moonraker endpoint.
-     *
-     * @param on_success Callback with totals struct
-     * @param on_error Error callback
-     */
-    void get_history_totals(HistoryTotalsCallback on_success, ErrorCallback on_error);
-
-    /**
-     * @brief Delete a job from history by its unique ID
-     *
-     * Calls server.history.delete_job Moonraker endpoint.
-     *
-     * @param job_id Unique job identifier from PrintHistoryJob::job_id
-     * @param on_success Success callback (job deleted)
-     * @param on_error Error callback
-     */
-    void delete_history_job(const std::string& job_id, SuccessCallback on_success,
-                            ErrorCallback on_error);
-
-    // ========================================================================
     // Timelapse Operations (Moonraker-Timelapse Plugin)
     // ========================================================================
 
@@ -1309,6 +1266,18 @@ class MoonrakerAPI {
     // ========================================================================
 
     /**
+     * @brief Get History API for print history operations
+     *
+     * All history methods (get_history_list, get_history_totals, delete_history_job)
+     * are available through this accessor.
+     *
+     * @return Reference to MoonrakerHistoryAPI
+     */
+    MoonrakerHistoryAPI& history() {
+        return *history_api_;
+    }
+
+    /**
      * @brief Get Spoolman API for filament tracking operations
      *
      * All Spoolman methods (get_spoolman_spools, set_active_spool, etc.)
@@ -1423,6 +1392,7 @@ class MoonrakerAPI {
     std::vector<MacroInfo> get_user_macros(bool include_system = false) const;
 
   protected:
+    std::unique_ptr<MoonrakerHistoryAPI> history_api_;   ///< Print history API
     std::unique_ptr<MoonrakerSpoolmanAPI> spoolman_api_; ///< Spoolman filament tracking API
 
   private:

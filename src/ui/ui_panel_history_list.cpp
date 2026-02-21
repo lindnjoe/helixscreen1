@@ -391,7 +391,7 @@ void HistoryListPanel::refresh_from_api() {
 
     spdlog::debug("[{}] Fetching first page of history (limit={})", get_name(), PAGE_SIZE);
 
-    api->get_history_list(
+    api->history().get_history_list(
         PAGE_SIZE, // limit - use page size
         0,         // start - first page
         0.0,       // since (no filter)
@@ -433,7 +433,7 @@ void HistoryListPanel::load_more() {
     spdlog::debug("[{}] Loading more jobs (start={}, limit={})", get_name(), start_offset,
                   PAGE_SIZE);
 
-    api->get_history_list(
+    api->history().get_history_list(
         PAGE_SIZE,    // limit
         start_offset, // start - continue from where we left off
         0.0,          // since (no filter)
@@ -1233,7 +1233,7 @@ void HistoryListPanel::confirm_delete() {
 
     MoonrakerAPI* api = get_moonraker_api();
     if (api) {
-        api->delete_history_job(
+        api->history().delete_history_job(
             job_id,
             [this, job_id, filename]() {
                 spdlog::info("[{}] Job deleted: {} ({})", get_name(), filename, job_id);
