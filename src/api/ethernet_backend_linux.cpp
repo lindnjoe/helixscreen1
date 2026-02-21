@@ -52,6 +52,11 @@ bool EthernetBackendLinux::is_ethernet_interface(const std::string& name) {
         return true;
     }
 
+     // Accept enP* (Orange Pi / Rockchip specific naming)
+    if (name.compare(0, 3, "enP") == 0) { 
+        return true;                      
+    }  
+
     // Accept ens* (hot-plug naming)
     if (name.compare(0, 3, "ens") == 0) {
         return true;
