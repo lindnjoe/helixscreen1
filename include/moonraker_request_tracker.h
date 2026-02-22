@@ -4,6 +4,7 @@
 #pragma once
 
 #include "json_fwd.h"
+#include "moonraker_client.h" // RequestId, INVALID_REQUEST_ID
 #include "moonraker_error.h"
 #include "moonraker_events.h"
 #include "moonraker_request.h"
