@@ -9,7 +9,7 @@
     <event_cb trigger="clicked" callback="thermistor_picker_backdrop_cb"/>
     <!-- Context menu card - positioned by C++ -->
     <lv_obj name="context_menu"
-            width="200" height="content" style_bg_color="#elevated_bg" style_bg_opa="255"
+            width="content" height="content" style_bg_color="#elevated_bg" style_bg_opa="255"
             style_radius="#border_radius" style_pad_all="#space_sm" style_pad_gap="#space_xs"
             flex_flow="column" style_flex_main_place="start" style_flex_cross_place="start"
             scrollable="false" clickable="true">
@@ -17,8 +17,9 @@
       <lv_obj width="100%" height="1" style_bg_color="#text_muted" style_bg_opa="38"
               style_pad_all="0" scrollable="false"/>
       <!-- Sensor rows populated dynamically by C++ -->
-      <lv_obj name="sensor_list" width="100%" height="content" max_height="200"
-              flex_flow="column" style_pad_all="0" style_pad_gap="0"
+      <!-- max_height set dynamically by C++ to ~2/3 screen height -->
+      <lv_obj name="sensor_list" width="100%" height="content"
+              flex_flow="column" style_pad_all="#space_xs" style_pad_gap="0"
               scrollable="true"/>
     </lv_obj>
   </view>
