@@ -377,19 +377,20 @@ void AmsBackendAfc::handle_status_update(const nlohmann::json& notification) {
     }
 
     bool state_changed = false;
+    std::string deferred_error_event; // Collect error event to emit outside lock
 
     {
         std::lock_guard<std::mutex> lock(mutex_);
 
         // Parse global AFC state if present
         if (params.contains("AFC") && params["AFC"].is_object()) {
-            parse_afc_state(params["AFC"]);
+            parse_afc_state(params["AFC"], deferred_error_event);
             state_changed = true;
         }
 
         // Legacy: also check for lowercase "afc" (older AFC versions)
         if (params.contains("afc") && params["afc"].is_object()) {
-            parse_afc_state(params["afc"]);
+            parse_afc_state(params["afc"], deferred_error_event);
             state_changed = true;
         }
 
@@ -462,12 +463,17 @@ void AmsBackendAfc::handle_status_update(const nlohmann::json& notification) {
         }
     }
 
+    // Emit events OUTSIDE the lock to avoid deadlock with callbacks
+    if (!deferred_error_event.empty()) {
+        emit_event(EVENT_ERROR, deferred_error_event);
+    }
     if (state_changed) {
         emit_event(EVENT_STATE_CHANGED);
     }
 }
 
-void AmsBackendAfc::parse_afc_state(const nlohmann::json& afc_data) {
+void AmsBackendAfc::parse_afc_state(const nlohmann::json& afc_data,
+                                    std::string& deferred_error_event) {
     // Parse current lane (AFC reports this as "current_lane")
     if (afc_data.contains("current_lane") && afc_data["current_lane"].is_string()) {
         std::string lane_name = afc_data["current_lane"].get<std::string>();
@@ -537,10 +543,10 @@ void AmsBackendAfc::parse_afc_state(const nlohmann::json& afc_data) {
                 // New or changed message - update dedup tracker
                 last_seen_message_ = msg_text;
 
-                // Emit error event for backward compatibility
+                // Defer error event for emission outside lock (avoids deadlock)
                 if (msg_type == "error" && msg_text != last_error_msg_) {
                     last_error_msg_ = msg_text;
-                    emit_event(EVENT_ERROR, msg_text);
+                    deferred_error_event = msg_text;
                 }
 
                 // Suppress toasts when:
@@ -1447,6 +1453,12 @@ void AmsBackendAfc::parse_lane_data(const nlohmann::json& lane_data) {
         initialize_slots(new_lane_names);
     }
 
+    // Track whether any lane has tool_loaded — used to update filament_loaded
+    // after scanning all lanes. Without this, filament_loaded could stay stale
+    // if no lane reports tool_loaded, leaving the Unload button stuck disabled.
+    bool any_tool_loaded = false;
+    int tool_loaded_slot = -1;
+
     // Update lane information
     for (int i = 0; i < slots_.slot_count(); ++i) {
         std::string lane_name = slots_.name_of(i);
@@ -1487,8 +1499,8 @@ void AmsBackendAfc::parse_lane_data(const nlohmann::json& lane_data) {
 
         if (tool_loaded) {
             slot.status = SlotStatus::LOADED;
-            system_info_.current_slot = i;
-            system_info_.filament_loaded = true;
+            any_tool_loaded = true;
+            tool_loaded_slot = i;
         } else if (lane.contains("loaded") && lane["loaded"].is_boolean() &&
                    lane["loaded"].get<bool>()) {
             // Hub-loaded: filament is present and ready, not at toolhead
@@ -1521,6 +1533,15 @@ void AmsBackendAfc::parse_lane_data(const nlohmann::json& lane_data) {
         if (lane.contains("total_weight") && lane["total_weight"].is_number()) {
             slot.total_weight_g = lane["total_weight"].get<float>();
         }
+    }
+
+    // Update filament_loaded from lane scan results.
+    // The top-level parse_afc_state() may also set this from AFC's own
+    // filament_loaded field, but lane data is the authoritative source for
+    // which specific slot is loaded.
+    system_info_.filament_loaded = any_tool_loaded;
+    if (any_tool_loaded) {
+        system_info_.current_slot = tool_loaded_slot;
     }
 }
 

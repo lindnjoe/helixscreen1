@@ -270,6 +270,19 @@ void ThermistorWidget::show_sensor_picker() {
         return;
     }
 
+    // Resolve responsive spacing tokens before building rows
+    auto get_token = [](const char* name, int fallback) {
+        const char* s = lv_xml_get_const(nullptr, name);
+        return s ? std::atoi(s) : fallback;
+    };
+    int space_xs = get_token("space_xs", 4);
+    int space_sm = get_token("space_sm", 6);
+    int space_md = get_token("space_md", 10);
+
+    // Cap sensor list height at 2/3 of screen
+    int screen_h = lv_obj_get_height(parent_screen_);
+    lv_obj_set_style_max_height(sensor_list, screen_h * 2 / 3, 0);
+
     // Populate sensor rows
     for (const auto& sensor : sensors) {
         bool is_selected = (sensor.klipper_name == selected_sensor_);
@@ -278,8 +291,8 @@ void ThermistorWidget::show_sensor_picker() {
         lv_obj_t* row = lv_obj_create(sensor_list);
         lv_obj_set_width(row, LV_PCT(100));
         lv_obj_set_height(row, LV_SIZE_CONTENT);
-        lv_obj_set_style_pad_all(row, 6, 0);
-        lv_obj_set_style_pad_gap(row, 4, 0);
+        lv_obj_set_style_pad_all(row, space_sm, 0);
+        lv_obj_set_style_pad_gap(row, space_xs, 0);
         lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
         lv_obj_set_flex_align(row, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
         lv_obj_remove_flag(row, LV_OBJ_FLAG_SCROLLABLE);
@@ -348,32 +361,29 @@ void ThermistorWidget::show_sensor_picker() {
     // Position the context menu card near the widget
     lv_obj_t* card = lv_obj_find_by_name(picker_backdrop_, "context_menu");
     if (card && widget_obj_) {
-        // Get widget position on screen
-        lv_point_t widget_pos;
-        lv_obj_get_coords(widget_obj_, (lv_area_t*)&widget_pos);
-
         int screen_w = lv_obj_get_width(parent_screen_);
-        int screen_h = lv_obj_get_height(parent_screen_);
 
         // Get actual screen coordinates of the widget
         lv_area_t widget_area;
         lv_obj_get_coords(widget_obj_, &widget_area);
 
         // Position card below the widget, centered horizontally
-        int card_w = 200;
+        int card_w = std::clamp(screen_w * 3 / 10, 160, 240);
+        lv_obj_set_width(card, card_w);
         int card_x = (widget_area.x1 + widget_area.x2) / 2 - card_w / 2;
-        int card_y = widget_area.y2 + 4;
+        int card_y = widget_area.y2 + space_xs;
+        int max_card_h = screen_h * 2 / 3;
 
-        // Clamp to screen bounds
-        if (card_x < 4)
-            card_x = 4;
-        if (card_x + card_w > screen_w - 4)
-            card_x = screen_w - card_w - 4;
-        if (card_y + 200 > screen_h) {
+        // Clamp to screen bounds using responsive margin
+        if (card_x < space_md)
+            card_x = space_md;
+        if (card_x + card_w > screen_w - space_md)
+            card_x = screen_w - card_w - space_md;
+        if (card_y + max_card_h > screen_h - space_md) {
             // Show above widget instead
-            card_y = widget_area.y1 - 200 - 4;
-            if (card_y < 4)
-                card_y = 4;
+            card_y = widget_area.y1 - max_card_h - space_xs;
+            if (card_y < space_md)
+                card_y = space_md;
         }
 
         lv_obj_set_pos(card, card_x, card_y);
