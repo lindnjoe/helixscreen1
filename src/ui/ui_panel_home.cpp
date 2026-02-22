@@ -213,6 +213,7 @@ void HomePanel::init_subjects() {
         {"on_fan_stack_clicked", helix::FanStackWidget::on_fan_stack_clicked},
         {"temp_stack_nozzle_cb", helix::TempStackWidget::temp_stack_nozzle_cb},
         {"temp_stack_bed_cb", helix::TempStackWidget::temp_stack_bed_cb},
+        {"temp_stack_chamber_cb", helix::TempStackWidget::temp_stack_chamber_cb},
         {"thermistor_clicked_cb", helix::ThermistorWidget::thermistor_clicked_cb},
         {"thermistor_picker_backdrop_cb", helix::ThermistorWidget::thermistor_picker_backdrop_cb},
         {"favorite_macro_1_clicked_cb", helix::FavoriteMacroWidget::clicked_1_cb},
@@ -1104,7 +1105,12 @@ void HomePanel::refresh_printer_image() {
         lv_obj_t* img = lv_obj_find_by_name(panel_, "printer_image");
         if (img) {
             // Clear source before destroying buffer it points to
-            lv_image_set_src(img, "");
+            // Note: must use NULL, not "" — empty string byte 0x00 gets misclassified
+            // as LV_IMAGE_SRC_VARIABLE by lv_image_src_get_type
+            lv_image_set_src(img, nullptr);
+            // Restore contain alignment so the original image scales correctly
+            // during the ~50ms gap before the new snapshot is taken
+            lv_image_set_inner_align(img, LV_IMAGE_ALIGN_CONTAIN);
         }
         lv_draw_buf_destroy(cached_printer_snapshot_);
         cached_printer_snapshot_ = nullptr;
