@@ -397,6 +397,20 @@ void FavoriteMacroWidget::show_macro_picker() {
         return;
     }
 
+    // Resolve responsive spacing tokens for row padding and card positioning
+    auto get_token = [](const char* name, int fallback) {
+        const char* s = lv_xml_get_const(nullptr, name);
+        return s ? std::atoi(s) : fallback;
+    };
+    int space_xs = get_token("space_xs", 4);
+    int space_sm = get_token("space_sm", 6);
+    int space_md = get_token("space_md", 10);
+    int space_lg = get_token("space_lg", 16);
+
+    // Cap the scrollable macro list to ~2/3 of screen height
+    int screen_h = lv_obj_get_height(parent_screen_);
+    lv_obj_set_style_max_height(macro_list, screen_h * 2 / 3, 0);
+
     // Populate macro rows
     for (const auto& macro : sorted_macros) {
         bool is_selected = (macro == macro_name_);
@@ -404,8 +418,8 @@ void FavoriteMacroWidget::show_macro_picker() {
         lv_obj_t* row = lv_obj_create(macro_list);
         lv_obj_set_width(row, LV_PCT(100));
         lv_obj_set_height(row, LV_SIZE_CONTENT);
-        lv_obj_set_style_pad_all(row, 6, 0);
-        lv_obj_set_style_pad_gap(row, 4, 0);
+        lv_obj_set_style_pad_all(row, space_sm, 0);
+        lv_obj_set_style_pad_gap(row, space_xs, 0);
         lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
         lv_obj_set_flex_align(row, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
         lv_obj_remove_flag(row, LV_OBJ_FLAG_SCROLLABLE);
@@ -458,19 +472,25 @@ void FavoriteMacroWidget::show_macro_picker() {
         lv_area_t widget_area;
         lv_obj_get_coords(widget_obj_, &widget_area);
 
-        int card_w = 220;
-        int card_x = (widget_area.x1 + widget_area.x2) / 2 - card_w / 2;
-        int card_y = widget_area.y2 + 4;
+        // Card width: ~30% of screen, clamped to reasonable bounds
+        int card_w = std::clamp(screen_w * 3 / 10, 180, 280);
+        lv_obj_set_width(card, card_w);
 
-        // Clamp to screen bounds
-        if (card_x < 4)
-            card_x = 4;
-        if (card_x + card_w > screen_w - 4)
-            card_x = screen_w - card_w - 4;
-        if (card_y + 250 > screen_h) {
-            card_y = widget_area.y1 - 250 - 4;
-            if (card_y < 4)
-                card_y = 4;
+        // Estimate max card height: header + list (2/3 screen) + padding
+        int max_card_h = space_lg * 3 + screen_h * 2 / 3 + space_md * 2;
+        int card_x = (widget_area.x1 + widget_area.x2) / 2 - card_w / 2;
+        int card_y = widget_area.y2 + space_xs;
+
+        // Clamp to screen bounds using responsive margin
+        int margin = space_md;
+        if (card_x < margin)
+            card_x = margin;
+        if (card_x + card_w > screen_w - margin)
+            card_x = screen_w - card_w - margin;
+        if (card_y + max_card_h > screen_h - margin) {
+            card_y = screen_h - max_card_h - margin;
+            if (card_y < margin)
+                card_y = margin;
         }
 
         lv_obj_set_pos(card, card_x, card_y);
