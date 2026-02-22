@@ -136,28 +136,6 @@ std::string get_device_phys(int event_num) {
 }
 
 /**
- * @brief Check if an input device is connected via USB
- *
- * Reads the sysfs "phys" property and delegates to helix::is_usb_input_phys().
- *
- * @param device_path Path to input device (e.g., "/dev/input/event4")
- * @return true if the device is USB-connected
- */
-bool is_usb_input_device(const std::string& device_path) {
-    int event_num = -1;
-    if (sscanf(device_path.c_str(), "/dev/input/event%d", &event_num) != 1 || event_num < 0) {
-        return false;
-    }
-
-    std::string phys_path = "/sys/class/input/event" + std::to_string(event_num) + "/device/phys";
-    std::string phys = read_sysfs_file(phys_path);
-
-    bool is_usb = helix::is_usb_input_phys(phys);
-    spdlog::debug("[Fbdev Backend] Device {} phys='{}' is_usb={}", device_path, phys, is_usb);
-    return is_usb;
-}
-
-/**
  * @brief Load affine touch calibration coefficients from config
  *
  * Reads the calibration data saved by the touch calibration wizard.
