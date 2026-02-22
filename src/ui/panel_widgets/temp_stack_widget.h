@@ -8,6 +8,8 @@
 
 #include "panel_widget.h"
 
+#include <memory>
+
 class TempControlPanel;
 
 namespace helix {
@@ -44,6 +46,8 @@ class TempStackWidget : public PanelWidget {
     int cached_nozzle_target_ = 0;
     int cached_bed_temp_ = 25;
     int cached_bed_target_ = 0;
+
+    std::shared_ptr<bool> alive_ = std::make_shared<bool>(false);
 
     // Observers
     ObserverGuard nozzle_temp_observer_;

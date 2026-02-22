@@ -59,11 +59,40 @@ MoonrakerAPI::MoonrakerAPI(MoonrakerClient& client, PrinterState& state) : clien
 }
 
 MoonrakerAPI::~MoonrakerAPI() {
+    // Signal shutdown to prevent new threads from launching
+    shutting_down_.store(true);
+
+    // Join tracked HTTP threads (power device operations)
+    {
+        std::list<std::thread> threads_to_join;
+        {
+            std::lock_guard<std::mutex> lock(http_threads_mutex_);
+            threads_to_join = std::move(http_threads_);
+        }
+        for (auto& t : threads_to_join) {
+            if (t.joinable()) {
+                t.join();
+            }
+        }
+    }
+
     // Deinit LVGL subject before destruction to prevent dangling observer crashes
     // (same pattern as StaticSubjectRegistry — observers must be disconnected before lv_deinit)
     lv_subject_deinit(&build_volume_version_);
 
-    // HTTP thread cleanup is handled by ~MoonrakerFileTransferAPI and ~MoonrakerRestAPI
+    // Sub-API HTTP thread cleanup is handled by ~MoonrakerFileTransferAPI, ~MoonrakerRestAPI,
+    // and ~MoonrakerTimelapseAPI via their own thread tracking
+}
+
+void MoonrakerAPI::launch_http_thread(std::function<void()> func) {
+    std::lock_guard<std::mutex> lock(http_threads_mutex_);
+
+    // Check shutdown under lock to prevent race with destructor's move
+    if (shutting_down_.load()) {
+        return;
+    }
+
+    http_threads_.emplace_back([func = std::move(func)]() { func(); });
 }
 
 bool MoonrakerAPI::ensure_http_base_url() {

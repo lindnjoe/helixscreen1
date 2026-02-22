@@ -110,6 +110,9 @@ std::map<std::string, std::string> MacroParamModal::collect_values() const {
     std::map<std::string, std::string> result;
 
     for (size_t i = 0; i < params_.size() && i < textareas_.size(); ++i) {
+        if (!textareas_[i] || !lv_obj_is_valid(textareas_[i])) {
+            continue;
+        }
         const char* text = lv_textarea_get_text(textareas_[i]);
         if (text && text[0] != '\0') {
             result[params_[i].name] = text;

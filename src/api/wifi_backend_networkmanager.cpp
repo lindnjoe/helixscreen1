@@ -92,8 +92,12 @@ void WifiBackendNetworkManager::stop() {
     scan_active_ = false;
     connect_active_ = false;
 
-    // Stop status polling thread
-    status_running_ = false;
+    // Stop status polling thread — hold CV mutex to ensure notify
+    // is not lost if thread is between lock release and wait_for
+    {
+        std::lock_guard<std::mutex> lock(status_cv_mutex_);
+        status_running_ = false;
+    }
     status_cv_.notify_all();
     if (status_thread_.joinable()) {
         status_thread_.join();
@@ -285,12 +289,14 @@ void WifiBackendNetworkManager::scan_thread_func() {
     auto networks = parse_scan_output(output);
 
     // Cache results
+    size_t found_count = 0;
     {
         std::lock_guard<std::mutex> lock(networks_mutex_);
         cached_networks_ = std::move(networks);
+        found_count = cached_networks_.size();
     }
 
-    spdlog::debug("[WifiBackend] NM: Scan complete, {} networks found", cached_networks_.size());
+    spdlog::debug("[WifiBackend] NM: Scan complete, {} networks found", found_count);
 
     if (scan_active_) {
         fire_event("SCAN_COMPLETE");
@@ -786,9 +792,10 @@ void WifiBackendNetworkManager::status_thread_func() {
             "[WifiBackend] NM: Status cache updated (connected={}, ssid='{}', signal={}%)",
             fresh_status.connected, fresh_status.ssid, fresh_status.signal_strength);
 
-        // Sleep until next poll or wakeup signal
+        // Sleep until next poll or wakeup signal (use dedicated CV mutex
+        // to avoid blocking get_status() callers during the wait)
         {
-            std::unique_lock<std::mutex> lock(status_mutex_);
+            std::unique_lock<std::mutex> lock(status_cv_mutex_);
             status_cv_.wait_for(lock, POLL_INTERVAL, [this] { return !status_running_.load(); });
         }
     }
@@ -797,6 +804,11 @@ void WifiBackendNetworkManager::status_thread_func() {
 }
 
 void WifiBackendNetworkManager::request_status_refresh() {
+    // Lock CV mutex to ensure notify isn't lost between predicate
+    // check and wait_for entry in status_thread_func
+    {
+        std::lock_guard<std::mutex> lock(status_cv_mutex_);
+    }
     status_cv_.notify_one();
 }
 

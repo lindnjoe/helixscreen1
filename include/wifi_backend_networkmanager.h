@@ -87,7 +87,8 @@ class WifiBackendNetworkManager : public WifiBackend {
 
     // Background status polling thread
     std::thread status_thread_;
-    std::mutex status_mutex_;
+    std::mutex status_mutex_;    // Protects cached_status_ only
+    std::mutex status_cv_mutex_; // Dedicated mutex for condvar wait
     std::condition_variable status_cv_;
     std::atomic<bool> status_running_{false};
     ConnectionStatus cached_status_; // Protected by status_mutex_

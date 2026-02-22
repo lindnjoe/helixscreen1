@@ -358,6 +358,33 @@ void ThermistorWidget::show_sensor_picker() {
 
     s_active_picker_ = this;
 
+    // Self-clearing delete callback — if LVGL deletes picker_backdrop_ via parent
+    // deletion (e.g., user navigates away), clear our pointer to prevent dangling access
+    lv_obj_add_event_cb(
+        picker_backdrop_,
+        [](lv_event_t* e) {
+            auto* self = static_cast<ThermistorWidget*>(lv_event_get_user_data(e));
+            if (self) {
+                // Clean up heap-allocated strings before LVGL frees the tree
+                lv_obj_t* backdrop = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
+                lv_obj_t* sensor_list = lv_obj_find_by_name(backdrop, "sensor_list");
+                if (sensor_list) {
+                    uint32_t count = lv_obj_get_child_count(sensor_list);
+                    for (uint32_t i = 0; i < count; ++i) {
+                        lv_obj_t* row = lv_obj_get_child(sensor_list, i);
+                        auto* name_ptr = static_cast<std::string*>(lv_obj_get_user_data(row));
+                        delete name_ptr;
+                        lv_obj_set_user_data(row, nullptr);
+                    }
+                }
+                self->picker_backdrop_ = nullptr;
+                if (s_active_picker_ == self) {
+                    s_active_picker_ = nullptr;
+                }
+            }
+        },
+        LV_EVENT_DELETE, this);
+
     // Position the context menu card near the widget
     lv_obj_t* card = lv_obj_find_by_name(picker_backdrop_, "context_menu");
     if (card && widget_obj_) {

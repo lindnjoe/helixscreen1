@@ -62,8 +62,11 @@
 
 #include <atomic>
 #include <functional>
+#include <list>
 #include <memory>
+#include <mutex>
 #include <optional>
+#include <thread>
 #include <vector>
 
 /**
@@ -620,18 +623,10 @@ class MoonrakerAPI {
         return *file_api_;
     }
 
-  protected:
-    std::unique_ptr<MoonrakerAdvancedAPI> advanced_api_;          ///< Advanced panel operations API
-    std::unique_ptr<MoonrakerFileTransferAPI> file_transfer_api_; ///< HTTP file transfer API
-    std::unique_ptr<MoonrakerFileAPI> file_api_;                  ///< File management API
-    std::unique_ptr<MoonrakerHistoryAPI> history_api_;            ///< Print history API
-    std::unique_ptr<MoonrakerJobAPI> job_api_;                    ///< Job control API
-    std::unique_ptr<MoonrakerMotionAPI> motion_api_;              ///< Motion control API
-    std::unique_ptr<MoonrakerRestAPI> rest_api_;                  ///< REST endpoint & WLED API
-    std::unique_ptr<MoonrakerSpoolmanAPI> spoolman_api_;   ///< Spoolman filament tracking API
-    std::unique_ptr<MoonrakerTimelapseAPI> timelapse_api_; ///< Timelapse & webcam API
-
   private:
+    // Data members MUST be declared BEFORE sub-API unique_ptrs.
+    // C++ destroys members in reverse declaration order, so data members
+    // (declared first) are destroyed LAST, after sub-APIs that reference them.
     std::string http_base_url_; ///< HTTP base URL for file transfers
     helix::MoonrakerClient& client_;
 
@@ -644,4 +639,24 @@ class MoonrakerAPI {
 
     SafetyLimits safety_limits_;
     bool limits_explicitly_set_ = false;
+
+    /// Launch an HTTP thread with lifecycle tracking (joined on destruction)
+    void launch_http_thread(std::function<void()> func);
+
+    mutable std::mutex http_threads_mutex_;
+    std::list<std::thread> http_threads_;
+    std::atomic<bool> shutting_down_{false};
+
+  protected:
+    // Sub-API unique_ptrs declared AFTER data members they reference
+    // (http_base_url_, safety_limits_) so they are destroyed FIRST.
+    std::unique_ptr<MoonrakerAdvancedAPI> advanced_api_;          ///< Advanced panel operations API
+    std::unique_ptr<MoonrakerFileTransferAPI> file_transfer_api_; ///< HTTP file transfer API
+    std::unique_ptr<MoonrakerFileAPI> file_api_;                  ///< File management API
+    std::unique_ptr<MoonrakerHistoryAPI> history_api_;            ///< Print history API
+    std::unique_ptr<MoonrakerJobAPI> job_api_;                    ///< Job control API
+    std::unique_ptr<MoonrakerMotionAPI> motion_api_;              ///< Motion control API
+    std::unique_ptr<MoonrakerRestAPI> rest_api_;                  ///< REST endpoint & WLED API
+    std::unique_ptr<MoonrakerSpoolmanAPI> spoolman_api_;   ///< Spoolman filament tracking API
+    std::unique_ptr<MoonrakerTimelapseAPI> timelapse_api_; ///< Timelapse & webcam API
 };

@@ -116,14 +116,12 @@ MoonrakerRestAPI::~MoonrakerRestAPI() {
 }
 
 void MoonrakerRestAPI::launch_http_thread(std::function<void()> func) {
+    std::lock_guard<std::mutex> lock(http_threads_mutex_);
+
+    // Check shutdown under lock to prevent race with destructor's move
     if (shutting_down_.load()) {
         return;
     }
-
-    std::lock_guard<std::mutex> lock(http_threads_mutex_);
-
-    // Clean up finished threads
-    http_threads_.remove_if([](std::thread& t) { return !t.joinable(); });
 
     http_threads_.emplace_back([func = std::move(func)]() { func(); });
 }
