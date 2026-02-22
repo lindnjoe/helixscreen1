@@ -8,15 +8,7 @@
        - Title: left-aligned (vs centered) to maximize usable width
        - Padding: #space_sm left, #space_xl right (vs larger standard padding)
   -->
-  <!-- Used in modal overlays, sub-screens, and detail views -->
-  <!-- Provides consistent back button + centered title + optional action button -->
-  <!-- Key improvements over v1:
-       - Flat 3-element layout (no nested containers) for true centering
-       - Symmetric padding (left + right) for visual balance
-       - Title uses flex_grow + text_align for perfect centering
-       - Uses text_heading/text_body components for theme consistency
-       - XML-controlled action button visibility via hide_action_button prop
-  -->
+  <!-- Reusable Header Bar: back button + title + optional action button -->
   <!-- API Properties -->
   <api>
     <prop name="title" type="string"/>
