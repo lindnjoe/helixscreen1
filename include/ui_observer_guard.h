@@ -121,6 +121,8 @@ class ObserverGuard {
   private:
     lv_observer_t* observer_ = nullptr;
     std::weak_ptr<bool> alive_token_; ///< Tracks dynamic subject lifetime
-    bool has_alive_token_ =
-        false; ///< True if alive_token_ was set (distinguishes "never set" from "expired")
+    /// Distinguishes "token never set" from "token expired". Required because a
+    /// default-constructed weak_ptr reports expired() == true, which would cause
+    /// static-subject guards to falsely skip lv_observer_remove() and leak observers.
+    bool has_alive_token_ = false;
 };

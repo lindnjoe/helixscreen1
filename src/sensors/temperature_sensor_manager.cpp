@@ -131,7 +131,25 @@ void TemperatureSensorManager::discover(const std::vector<std::string>& klipper_
         }
     }
 
-    // Remove stale dynamic subjects
+    // Remove stale dynamic subjects using explicit two-phase protocol:
+    // Phase 1: Expire lifetime tokens — invalidates ObserverGuard weak_ptrs
+    //          so they won't call lv_observer_remove() on freed observers.
+    // Phase 2: Erase subjects — DynamicIntSubject destructor calls lv_subject_deinit().
+    for (auto& [name, subj] : temp_subjects_) {
+        bool found = false;
+        for (const auto& sensor : sensors_) {
+            if (sensor.klipper_name == name) {
+                found = true;
+                break;
+            }
+        }
+        if (!found && subj) {
+            spdlog::trace("[TemperatureSensorManager] Expiring lifetime token for orphaned "
+                          "sensor: {}",
+                          name);
+            subj->lifetime.reset(); // Phase 1: expire before deinit
+        }
+    }
     for (auto it = temp_subjects_.begin(); it != temp_subjects_.end();) {
         bool found = false;
         for (const auto& sensor : sensors_) {
@@ -141,7 +159,7 @@ void TemperatureSensorManager::discover(const std::vector<std::string>& klipper_
             }
         }
         if (!found) {
-            it = temp_subjects_.erase(it);
+            it = temp_subjects_.erase(it); // Phase 2: deinit via destructor
         } else {
             ++it;
         }
