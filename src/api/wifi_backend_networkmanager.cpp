@@ -75,7 +75,8 @@ WiFiError WifiBackendNetworkManager::start() {
         supports_5ghz_cached_ = (!props.empty() && (props.find("5GHz") != std::string::npos ||
                                                     props.find("5 GHz") != std::string::npos));
         supports_5ghz_resolved_ = true;
-        spdlog::debug("[WifiBackend] NM: 5GHz support: {}", supports_5ghz_cached_);
+        bool has_5ghz = supports_5ghz_cached_.load();
+        spdlog::debug("[WifiBackend] NM: 5GHz support: {}", has_5ghz);
     }
 
     return WiFiErrorHelper::success();
