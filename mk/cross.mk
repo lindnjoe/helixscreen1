@@ -854,7 +854,7 @@ define deploy-common
 		echo "$(DIM)Generating pre-rendered splash images...$(RESET)"; \
 		$(MAKE) gen-images-ad5m; \
 	fi
-	@if [ ! -d build/assets/images/printers/prerendered ]; then \
+	@if [ ! -d build/assets/images/printers/prerendered ] || [ -z "$$(ls -A build/assets/images/printers/prerendered/*.bin 2>/dev/null)" ]; then \
 		echo "$(DIM)Generating pre-rendered printer images...$(RESET)"; \
 		$(MAKE) gen-printer-images; \
 	fi
@@ -867,7 +867,9 @@ define deploy-common
 		$(MAKE) gen-splash-3d; \
 	fi
 	@# Stop running processes and prepare directory
-	ssh $(1) "killall helix-watchdog helix-screen helix-splash 2>/dev/null || true; mkdir -p $(2)/bin"
+	@# Stop systemd service first (prevents respawning), then kill any stragglers
+	ssh $(1) "sudo systemctl stop helixscreen 2>/dev/null; systemctl --user stop helix-screen 2>/dev/null; killall helix-watchdog helix-screen helix-splash 2>/dev/null; sleep 0.5; killall -9 helix-watchdog helix-screen helix-splash 2>/dev/null; true"
+	ssh $(1) "mkdir -p $(2)/bin"
 	ssh $(1) "rm -f $(2)/*.xml 2>/dev/null || true"
 	@# Sync binaries and launcher to bin/
 	rsync -avz --progress $(3)/helix-screen $(3)/helix-splash $(1):$(2)/bin/
@@ -1032,7 +1034,7 @@ deploy-ad5m:
 		echo "$(DIM)Generating pre-rendered splash images...$(RESET)"; \
 		$(MAKE) gen-images-ad5m; \
 	fi
-	@if [ ! -d build/assets/images/printers/prerendered ]; then \
+	@if [ ! -d build/assets/images/printers/prerendered ] || [ -z "$$(ls -A build/assets/images/printers/prerendered/*.bin 2>/dev/null)" ]; then \
 		echo "$(DIM)Generating pre-rendered printer images...$(RESET)"; \
 		$(MAKE) gen-printer-images; \
 	fi
@@ -1212,7 +1214,7 @@ deploy-cc1:
 		echo "$(DIM)Generating pre-rendered splash images...$(RESET)"; \
 		$(MAKE) gen-images; \
 	fi
-	@if [ ! -d build/assets/images/printers/prerendered ]; then \
+	@if [ ! -d build/assets/images/printers/prerendered ] || [ -z "$$(ls -A build/assets/images/printers/prerendered/*.bin 2>/dev/null)" ]; then \
 		echo "$(DIM)Generating pre-rendered printer images...$(RESET)"; \
 		$(MAKE) gen-printer-images; \
 	fi
@@ -1378,7 +1380,7 @@ deploy-k1:
 		echo "$(DIM)Generating pre-rendered splash images...$(RESET)"; \
 		$(MAKE) gen-images; \
 	fi
-	@if [ ! -d build/assets/images/printers/prerendered ]; then \
+	@if [ ! -d build/assets/images/printers/prerendered ] || [ -z "$$(ls -A build/assets/images/printers/prerendered/*.bin 2>/dev/null)" ]; then \
 		echo "$(DIM)Generating pre-rendered printer images...$(RESET)"; \
 		$(MAKE) gen-printer-images; \
 	fi
@@ -1462,7 +1464,7 @@ deploy-k1-dynamic:
 		echo "$(DIM)Generating pre-rendered splash images...$(RESET)"; \
 		$(MAKE) gen-images; \
 	fi
-	@if [ ! -d build/assets/images/printers/prerendered ]; then \
+	@if [ ! -d build/assets/images/printers/prerendered ] || [ -z "$$(ls -A build/assets/images/printers/prerendered/*.bin 2>/dev/null)" ]; then \
 		echo "$(DIM)Generating pre-rendered printer images...$(RESET)"; \
 		$(MAKE) gen-printer-images; \
 	fi
@@ -1564,7 +1566,7 @@ deploy-k2:
 		echo "$(DIM)Generating pre-rendered splash images...$(RESET)"; \
 		$(MAKE) gen-images; \
 	fi
-	@if [ ! -d build/assets/images/printers/prerendered ]; then \
+	@if [ ! -d build/assets/images/printers/prerendered ] || [ -z "$$(ls -A build/assets/images/printers/prerendered/*.bin 2>/dev/null)" ]; then \
 		echo "$(DIM)Generating pre-rendered printer images...$(RESET)"; \
 		$(MAKE) gen-printer-images; \
 	fi
