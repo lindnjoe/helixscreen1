@@ -32,19 +32,22 @@ fetch_url() {
 
 # Download a URL to a file
 # Returns 0 on success (file exists and is non-empty), non-zero on failure
+# Sets _DOWNLOAD_HTTP_CODE to the HTTP status (curl only, empty for wget)
 # Args: url dest [max_seconds] [min_speed_bps]
 #   max_seconds:  total transfer timeout (default 300)
 #   min_speed_bps: abort if average speed stays below this for 20s (default 0 = disabled)
 #                  Set to e.g. 51200 (50 KB/s) for CDN attempts so a slow CDN
 #                  fails fast and the caller can fall through to a better source.
+_DOWNLOAD_HTTP_CODE=""
 download_file() {
     local url=$1 dest=$2 max_secs=${3:-300} min_speed=${4:-0}
+    _DOWNLOAD_HTTP_CODE=""
     if command -v curl >/dev/null 2>&1; then
         local http_code progress_flag speed_flags
         if [ -t 2 ]; then
             progress_flag="--progress-bar"
         else
-            progress_flag="--no-progress-meter"
+            progress_flag="-s"
         fi
         # Speed floor: abort if average speed stays below min_speed for 20 consecutive
         # seconds. Lets a slow CDN fail fast so we can fall through to GitHub.
@@ -53,20 +56,28 @@ download_file() {
         else
             speed_flags=""
         fi
+        # Note: progress output goes to stderr naturally (no 2>&1).
+        # The \n before %{http_code} ensures it's on its own line for tail -1.
         http_code=$(curl -SL \
             --connect-timeout 30 \
             --max-time "$max_secs" \
             $progress_flag \
             $speed_flags \
-            -w "%{http_code}" \
+            -w "\n%{http_code}" \
             -o "$dest" \
-            "$url" 2>&1) || true
+            "$url") || true
         http_code=$(printf '%s' "$http_code" | tail -1)
+        _DOWNLOAD_HTTP_CODE="$http_code"
         [ "$http_code" = "200" ] && [ -f "$dest" ] && [ -s "$dest" ]
     elif command -v wget >/dev/null 2>&1; then
         # wget has no built-in speed floor; rely on max_secs being short for CDN calls.
-        wget --timeout="$max_secs" -O "$dest" "$url" 2>&1 && \
-            [ -f "$dest" ] && [ -s "$dest" ]
+        if [ -t 2 ]; then
+            wget --timeout="$max_secs" -O "$dest" "$url" && \
+                [ -f "$dest" ] && [ -s "$dest" ]
+        else
+            wget -q --timeout="$max_secs" -O "$dest" "$url" && \
+                [ -f "$dest" ] && [ -s "$dest" ]
+        fi
     else
         return 1
     fi
@@ -289,6 +300,9 @@ download_release() {
     log_error "Failed to download release."
     log_error "Tried: $r2_url"
     log_error "Tried: $gh_url"
+    if [ -n "$_DOWNLOAD_HTTP_CODE" ] && [ "$_DOWNLOAD_HTTP_CODE" != "200" ]; then
+        log_error "HTTP status: $_DOWNLOAD_HTTP_CODE"
+    fi
     log_error ""
     log_error "Possible causes:"
     log_error "  - Version ${version} may not exist for platform ${platform}"

@@ -1665,14 +1665,52 @@ fetch_url() {
 
 # Download a URL to a file
 # Returns 0 on success (file exists and is non-empty), non-zero on failure
+# Sets _DOWNLOAD_HTTP_CODE to the HTTP status (curl only, empty for wget)
+# Args: url dest [max_seconds] [min_speed_bps]
+#   max_seconds:  total transfer timeout (default 300)
+#   min_speed_bps: abort if average speed stays below this for 20s (default 0 = disabled)
+#                  Set to e.g. 51200 (50 KB/s) for CDN attempts so a slow CDN
+#                  fails fast and the caller can fall through to a better source.
+_DOWNLOAD_HTTP_CODE=""
 download_file() {
-    local url=$1 dest=$2
+    local url=$1 dest=$2 max_secs=${3:-300} min_speed=${4:-0}
+    _DOWNLOAD_HTTP_CODE=""
     if command -v curl >/dev/null 2>&1; then
-        local http_code
-        http_code=$(curl -sSL --connect-timeout 30 -w "%{http_code}" -o "$dest" "$url" 2>/dev/null) || true
+        local http_code progress_flag speed_flags
+        if [ -t 2 ]; then
+            progress_flag="--progress-bar"
+        else
+            progress_flag="-s"
+        fi
+        # Speed floor: abort if average speed stays below min_speed for 20 consecutive
+        # seconds. Lets a slow CDN fail fast so we can fall through to GitHub.
+        if [ "${min_speed:-0}" -gt 0 ] 2>/dev/null; then
+            speed_flags="--speed-limit ${min_speed} --speed-time 20"
+        else
+            speed_flags=""
+        fi
+        # Note: progress output goes to stderr naturally (no 2>&1).
+        # The \n before %{http_code} ensures it's on its own line for tail -1.
+        http_code=$(curl -SL \
+            --connect-timeout 30 \
+            --max-time "$max_secs" \
+            $progress_flag \
+            $speed_flags \
+            -w "\n%{http_code}" \
+            -o "$dest" \
+            "$url") || true
+        http_code=$(printf '%s' "$http_code" | tail -1)
+        _DOWNLOAD_HTTP_CODE="$http_code"
         [ "$http_code" = "200" ] && [ -f "$dest" ] && [ -s "$dest" ]
     elif command -v wget >/dev/null 2>&1; then
-        wget -q --timeout=30 -O "$dest" "$url" 2>/dev/null && [ -f "$dest" ] && [ -s "$dest" ]
+        # wget has no built-in speed floor; rely on max_secs being short for CDN calls.
+        if [ -t 2 ]; then
+            wget --timeout="$max_secs" -O "$dest" "$url" && \
+                [ -f "$dest" ] && [ -s "$dest" ]
+        else
+            wget -q --timeout="$max_secs" -O "$dest" "$url" && \
+                [ -f "$dest" ] && [ -s "$dest" ]
+        fi
     else
         return 1
     fi
@@ -1865,7 +1903,7 @@ download_release() {
     log_info "Downloading HelixScreen ${version} for ${platform}..."
     log_info "URL: $r2_url"
 
-    if download_file "$r2_url" "$dest"; then
+    if download_file "$r2_url" "$dest" 300 51200; then
         # Quick validation — make sure it's actually a gzip file
         if gunzip -t "$dest" 2>/dev/null; then
             local size
@@ -1884,37 +1922,29 @@ download_release() {
     local gh_url="https://github.com/${GITHUB_REPO}/releases/download/${version}/${filename}"
     log_info "URL: $gh_url"
 
-    local http_code=""
-    if command -v curl >/dev/null 2>&1; then
-        http_code=$(curl -sSL --connect-timeout 30 -w "%{http_code}" -o "$dest" "$gh_url")
-    elif command -v wget >/dev/null 2>&1; then
-        if wget -q --timeout=30 -O "$dest" "$gh_url"; then
-            http_code="200"
-        else
-            http_code="failed"
-        fi
+    if download_file "$gh_url" "$dest"; then
+        validate_tarball "$dest" "Downloaded "
+        local size
+        size=$(ls -lh "$dest" | awk '{print $5}')
+        log_success "Downloaded ${filename} (${size}) from GitHub"
+        return 0
     fi
 
-    if [ ! -f "$dest" ] || [ ! -s "$dest" ]; then
-        log_error "Failed to download release."
-        log_error "Tried: $r2_url"
-        log_error "Tried: $gh_url"
-        if [ -n "$http_code" ] && [ "$http_code" != "200" ]; then
-            log_error "HTTP status: $http_code"
-        fi
-        log_error ""
-        log_error "Possible causes:"
-        log_error "  - Version ${version} may not exist for platform ${platform}"
-        log_error "  - Network connectivity issues"
-        log_error "  - CDN and GitHub may be unavailable"
-        exit 1
+    log_error "Failed to download release."
+    log_error "Tried: $r2_url"
+    log_error "Tried: $gh_url"
+    if [ -n "$_DOWNLOAD_HTTP_CODE" ] && [ "$_DOWNLOAD_HTTP_CODE" != "200" ]; then
+        log_error "HTTP status: $_DOWNLOAD_HTTP_CODE"
     fi
-
-    validate_tarball "$dest" "Downloaded "
-
-    local size
-    size=$(ls -lh "$dest" | awk '{print $5}')
-    log_success "Downloaded ${filename} (${size}) from GitHub"
+    log_error ""
+    log_error "Possible causes:"
+    log_error "  - Version ${version} may not exist for platform ${platform}"
+    log_error "  - Network connectivity issues"
+    log_error "  - CDN and GitHub may be unavailable"
+    log_error ""
+    log_error "To install manually, download on another machine and use:"
+    log_error "  ./install.sh --local /path/to/${filename}"
+    exit 1
 }
 
 # Use a local tarball instead of downloading
