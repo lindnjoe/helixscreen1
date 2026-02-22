@@ -60,6 +60,7 @@
 #include "printer_discovery.h"
 #include "printer_state.h"
 
+#include <atomic>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -639,7 +640,7 @@ class MoonrakerAPI {
 
     /// Subject for notifying when build_volume changes (version counter)
     lv_subject_t build_volume_version_;
-    int build_volume_version_counter_ = 0;
+    std::atomic<int> build_volume_version_counter_{0};
 
     SafetyLimits safety_limits_;
     bool limits_explicitly_set_ = false;

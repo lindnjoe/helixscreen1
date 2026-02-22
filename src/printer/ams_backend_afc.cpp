@@ -44,7 +44,10 @@ AmsBackendAfc::AmsBackendAfc(MoonrakerAPI* api, MoonrakerClient* client)
     spdlog::debug("[AMS AFC] Backend created");
 }
 
-// Destructor not needed -- base class handles subscription cleanup
+AmsBackendAfc::~AmsBackendAfc() {
+    // Invalidate alive guard FIRST so in-flight async callbacks bail out
+    alive_->store(false);
+}
 
 // ============================================================================
 // Lifecycle Management
@@ -1238,9 +1241,12 @@ void AmsBackendAfc::detect_afc_version() {
     // Namespace: afc-install (contains {"version": "1.0.0"})
     nlohmann::json params = {{"namespace", "afc-install"}};
 
+    auto alive = alive_;
     client_->send_jsonrpc(
         "server.database.get_item", params,
-        [this](const nlohmann::json& response) {
+        [this, alive](const nlohmann::json& response) {
+            if (!alive->load())
+                return;
             bool should_query_lane_data = false;
 
             if (response.contains("value") && response["value"].is_object()) {
@@ -1285,7 +1291,9 @@ void AmsBackendAfc::detect_afc_version() {
                 query_lane_data();
             }
         },
-        [this](const MoonrakerError& err) {
+        [this, alive](const MoonrakerError& err) {
+            if (!alive->load())
+                return;
             spdlog::warn("[AMS AFC] Could not detect AFC version: {}", err.message);
             std::lock_guard<std::mutex> lock(mutex_);
             afc_version_ = "unknown";
@@ -1379,9 +1387,12 @@ void AmsBackendAfc::query_initial_state() {
 
     spdlog::debug("[AMS AFC] Querying initial state for {} objects", objects_to_query.size());
 
+    auto alive = alive_;
     client_->send_jsonrpc(
         "printer.objects.query", params,
-        [this](const nlohmann::json& response) {
+        [this, alive](const nlohmann::json& response) {
+            if (!alive->load())
+                return;
             // Response structure: {"jsonrpc": "2.0", "result": {"eventtime": ..., "status": {...}},
             // "id": ...}
             if (response.contains("result") && response["result"].contains("status") &&
@@ -1416,9 +1427,12 @@ void AmsBackendAfc::query_lane_data() {
     // Params: { "namespace": "AFC", "key": "lane_data" }
     nlohmann::json params = {{"namespace", "AFC"}, {"key", "lane_data"}};
 
+    auto alive = alive_;
     client_->send_jsonrpc(
         "server.database.get_item", params,
-        [this](const nlohmann::json& response) {
+        [this, alive](const nlohmann::json& response) {
+            if (!alive->load())
+                return;
             if (response.contains("value") && response["value"].is_object()) {
                 {
                     std::lock_guard<std::mutex> lock(mutex_);
@@ -2288,12 +2302,12 @@ void AmsBackendAfc::load_afc_configs() {
 
     configs_loading_ = true;
 
-    // Create managers if not yet created
+    // Create managers if not yet created (share alive guard for callback safety)
     if (!afc_config_) {
-        afc_config_ = std::make_unique<AfcConfigManager>(api_);
+        afc_config_ = std::make_unique<AfcConfigManager>(api_, alive_);
     }
     if (!macro_vars_config_) {
-        macro_vars_config_ = std::make_unique<AfcConfigManager>(api_);
+        macro_vars_config_ = std::make_unique<AfcConfigManager>(api_, alive_);
     }
 
     // Track completion of both loads
@@ -2303,7 +2317,10 @@ void AmsBackendAfc::load_afc_configs() {
     // configs_loaded_ is std::atomic<bool> — the store (release) after both loads complete
     // synchronizes-with the load (acquire) in get_device_actions() on the main thread,
     // ensuring all parser writes are visible before the main thread reads them.
-    auto check_done = [this, loads_remaining]() {
+    auto alive = alive_;
+    auto check_done = [this, alive, loads_remaining]() {
+        if (!alive->load())
+            return;
         if (loads_remaining->fetch_sub(1) == 1) {
             // Both loads complete — release barrier ensures parser state is visible
             configs_loading_.store(false, std::memory_order_relaxed);

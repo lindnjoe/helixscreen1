@@ -3,6 +3,8 @@
 
 #include "moonraker_api.h"
 
+#include "ui_update_queue.h"
+
 #include "moonraker_api_internal.h"
 #include "spdlog/spdlog.h"
 
@@ -90,9 +92,12 @@ bool MoonrakerAPI::ensure_http_base_url() {
 
 void MoonrakerAPI::notify_build_volume_changed() {
     // Increment version counter to notify observers
-    build_volume_version_counter_++;
-    lv_subject_set_int(&build_volume_version_, build_volume_version_counter_);
-    spdlog::debug("[MoonrakerAPI] Build volume changed, version={}", build_volume_version_counter_);
+    // Counter is atomic since it's incremented from background thread and read from UI thread
+    int new_version = ++build_volume_version_counter_;
+    // Queue the subject update for the UI thread — lv_subject_set_int() is not thread-safe
+    helix::ui::queue_update(
+        [this, new_version]() { lv_subject_set_int(&build_volume_version_, new_version); });
+    spdlog::debug("[MoonrakerAPI] Build volume changed, version={}", new_version);
 }
 
 // ============================================================================
