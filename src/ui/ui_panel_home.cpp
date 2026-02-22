@@ -34,6 +34,7 @@
 #include "moonraker_api.h"
 #include "observer_factory.h"
 #include "panel_widget_manager.h"
+#include "panel_widgets/fan_stack_widget.h"
 #include "panel_widgets/network_widget.h"
 #include "panel_widgets/power_widget.h"
 #include "panel_widgets/temp_stack_widget.h"
@@ -209,6 +210,7 @@ void HomePanel::init_subjects() {
         {"network_clicked_cb", network_clicked_cb},
         {"printer_manager_clicked_cb", printer_manager_clicked_cb},
         {"ams_clicked_cb", ams_clicked_cb},
+        {"on_fan_stack_clicked", helix::FanStackWidget::on_fan_stack_clicked},
         {"temp_stack_nozzle_cb", helix::TempStackWidget::temp_stack_nozzle_cb},
         {"temp_stack_bed_cb", helix::TempStackWidget::temp_stack_bed_cb},
         {"thermistor_clicked_cb", helix::ThermistorWidget::thermistor_clicked_cb},
