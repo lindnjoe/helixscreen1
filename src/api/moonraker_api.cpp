@@ -24,6 +24,7 @@ MoonrakerAPI::MoonrakerAPI(MoonrakerClient& client, PrinterState& state) : clien
     (void)state;
 
     // Create sub-APIs
+    advanced_api_ = std::make_unique<MoonrakerAdvancedAPI>(client, *this);
     file_api_ = std::make_unique<MoonrakerFileAPI>(client);
     file_transfer_api_ = std::make_unique<MoonrakerFileTransferAPI>(client, http_base_url_);
     history_api_ = std::make_unique<MoonrakerHistoryAPI>(client);
@@ -50,9 +51,9 @@ MoonrakerAPI::MoonrakerAPI(MoonrakerClient& client, PrinterState& state) : clien
                       hardware_.hostname(), hardware_.kinematics());
     });
 
-    // Wire up bed mesh callback: Client pushes data to API when it arrives from WebSocket
+    // Wire up bed mesh callback: Client pushes data to advanced API when it arrives from WebSocket
     client_.set_bed_mesh_callback(
-        [this](const json& bed_mesh) { this->update_bed_mesh(bed_mesh); });
+        [this](const json& bed_mesh) { this->advanced_api_->update_bed_mesh(bed_mesh); });
 }
 
 MoonrakerAPI::~MoonrakerAPI() {

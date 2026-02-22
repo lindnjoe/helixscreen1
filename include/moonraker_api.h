@@ -44,8 +44,7 @@
 
 #pragma once
 
-#include "advanced_panel_types.h"
-#include "calibration_types.h"
+#include "moonraker_advanced_api.h"
 #include "moonraker_client.h"
 #include "moonraker_error.h"
 #include "moonraker_file_api.h"
@@ -62,11 +61,8 @@
 #include "printer_state.h"
 
 #include <functional>
-#include <map>
 #include <memory>
-#include <mutex>
 #include <optional>
-#include <set>
 #include <vector>
 
 /**
@@ -79,16 +75,9 @@ class MoonrakerAPI {
   public:
     // ========== G-code execute_gcode timeout constants ==========
     // Default is 30s (in MoonrakerClient). These are for long-running commands.
-    static constexpr uint32_t HOMING_TIMEOUT_MS = 300000; // 5 min — G28 on large printers
-    static constexpr uint32_t CALIBRATION_TIMEOUT_MS =
-        300000; // 5 min — BED_MESH_CALIBRATE, SCREWS_TILT_CALCULATE
-    static constexpr uint32_t LEVELING_TIMEOUT_MS = 600000; // 10 min — QGL, Z_TILT_ADJUST
-    static constexpr uint32_t SHAPER_TIMEOUT_MS =
-        300000; // 5 min — SHAPER_CALIBRATE, MEASURE_AXES_NOISE
-    static constexpr uint32_t PID_TIMEOUT_MS = 900000;           // 15 min — PID_CALIBRATE
+    // Advanced calibration timeouts are in MoonrakerAdvancedAPI.
+    static constexpr uint32_t HOMING_TIMEOUT_MS = 300000;        // 5 min — G28 on large printers
     static constexpr uint32_t AMS_OPERATION_TIMEOUT_MS = 300000; // 5 min — MMU/AFC/tool change ops
-    static constexpr uint32_t PROBING_TIMEOUT_MS =
-        180000; // 3 min — PROBE_CALIBRATE, Z_ENDSTOP_CALIBRATE
     static constexpr uint32_t EXTRUSION_TIMEOUT_MS =
         120000; // 2 min — filament purge/load at slow feedrate
 
@@ -97,8 +86,6 @@ class MoonrakerAPI {
     using BoolCallback = std::function<void(bool)>;
     using StringCallback = std::function<void(const std::string&)>;
     using JsonCallback = std::function<void(const json&)>;
-    /// Progress callback for bed mesh calibration: (current_probe, total_probes)
-    using BedMeshProgressCallback = std::function<void(int current, int total)>;
 
     /**
      * @brief Constructor
@@ -392,86 +379,6 @@ class MoonrakerAPI {
     bool ensure_http_base_url();
 
     // ========================================================================
-    // Domain Service Operations (Bed Mesh, Object Exclusion)
-    // ========================================================================
-
-    /**
-     * @brief Get currently active bed mesh profile
-     *
-     * Returns pointer to the active mesh profile loaded from Moonraker's
-     * bed_mesh object. The probed_matrix field contains the 2D Z-height
-     * array ready for rendering.
-     *
-     * @return Pointer to active mesh profile, or nullptr if none loaded
-     */
-    const BedMeshProfile* get_active_bed_mesh() const;
-
-    /**
-     * @brief Update bed mesh data from Moonraker status
-     *
-     * Called by MoonrakerClient when bed_mesh data is received from
-     * Moonraker subscriptions. Parses the JSON and updates local storage.
-     *
-     * Thread-safe: Uses internal mutex for synchronization.
-     *
-     * @param bed_mesh_data JSON object containing bed_mesh status fields
-     */
-    void update_bed_mesh(const json& bed_mesh_data);
-
-    /**
-     * @brief Get list of available mesh profile names
-     *
-     * Returns profile names from bed_mesh.profiles (e.g., "default",
-     * "adaptive", "calibration"). Empty vector if no profiles available
-     * or discovery hasn't completed.
-     *
-     * @return Vector of profile names
-     */
-    std::vector<std::string> get_bed_mesh_profiles() const;
-
-    /**
-     * @brief Check if bed mesh data is available
-     *
-     * @return true if a mesh profile with valid probed_matrix is loaded
-     */
-    bool has_bed_mesh() const;
-
-    /**
-     * @brief Get mesh data for a specific stored profile
-     *
-     * Returns the mesh data for any stored profile (not just the active one).
-     * This enables showing Z range for all profiles in the list.
-     *
-     * @param profile_name Name of the profile to retrieve
-     * @return Pointer to profile data, or nullptr if not found
-     */
-    const BedMeshProfile* get_bed_mesh_profile(const std::string& profile_name) const;
-
-    /**
-     * @brief Get set of currently excluded object names (async)
-     *
-     * Queries Klipper's exclude_object module for the list of objects
-     * that have been excluded from the current print.
-     *
-     * @param on_success Callback with set of excluded object names
-     * @param on_error Error callback
-     */
-    void get_excluded_objects(std::function<void(const std::set<std::string>&)> on_success,
-                              ErrorCallback on_error);
-
-    /**
-     * @brief Get list of available objects in current print (async)
-     *
-     * Queries Klipper's exclude_object module for the list of objects
-     * defined in the current G-code file (from EXCLUDE_OBJECT_DEFINE).
-     *
-     * @param on_success Callback with vector of available object names
-     * @param on_error Error callback
-     */
-    void get_available_objects(std::function<void(const std::vector<std::string>&)> on_success,
-                               ErrorCallback on_error);
-
-    // ========================================================================
     // Connection and Subscription Proxies
     // ========================================================================
 
@@ -599,136 +506,20 @@ class MoonrakerAPI {
     void notify_build_volume_changed();
 
     // ========================================================================
-    // Advanced Panel Operations - Bed Leveling
+    // Sub-API Accessors (Delegated)
     // ========================================================================
 
     /**
-     * @brief Start automatic bed mesh calibration with progress tracking
+     * @brief Get Advanced API for calibration, bed mesh, macros, etc.
      *
-     * Executes BED_MESH_CALIBRATE command and tracks probe progress via
-     * notify_gcode_response parsing.
+     * All advanced panel methods (bed mesh, input shaper, PID calibration,
+     * machine limits, macros, save_config) are available through this accessor.
      *
-     * @param on_progress Called for each probe point (current, total)
-     * @param on_complete Called when calibration completes successfully
-     * @param on_error Called on failure
+     * @return Reference to MoonrakerAdvancedAPI
      */
-    virtual void start_bed_mesh_calibrate(BedMeshProgressCallback on_progress,
-                                          SuccessCallback on_complete, ErrorCallback on_error);
-
-    /**
-     * @brief Calculate screw adjustments for manual bed leveling
-     *
-     * Executes SCREWS_TILT_CALCULATE command. Requires [screws_tilt_adjust]
-     * section in printer.cfg.
-     *
-     * @param on_success Called with screw adjustment results
-     * @param on_error Called on failure
-     */
-    virtual void calculate_screws_tilt(helix::ScrewTiltCallback on_success, ErrorCallback on_error);
-
-    /**
-     * @brief Run Quad Gantry Level
-     *
-     * Executes QUAD_GANTRY_LEVEL command for Voron-style printers.
-     *
-     * @param on_success Called when leveling completes
-     * @param on_error Called on failure
-     */
-    virtual void run_qgl(SuccessCallback on_success, ErrorCallback on_error);
-
-    /**
-     * @brief Run Z-Tilt Adjust
-     *
-     * Executes Z_TILT_ADJUST command for multi-motor Z printers.
-     *
-     * @param on_success Called when adjustment completes
-     * @param on_error Called on failure
-     */
-    virtual void run_z_tilt_adjust(SuccessCallback on_success, ErrorCallback on_error);
-
-    // ========================================================================
-    // Advanced Panel Operations - Input Shaping
-    // ========================================================================
-
-    /**
-     * @brief Start resonance test for input shaper calibration
-     *
-     * Executes TEST_RESONANCES command for the specified axis.
-     * Requires accelerometer configuration in printer.cfg.
-     *
-     * @param axis Axis to test ('X' or 'Y')
-     * @param on_progress Called with progress percentage (0-100)
-     * @param on_complete Called with test results
-     * @param on_error Called on failure
-     */
-    virtual void start_resonance_test(char axis, helix::AdvancedProgressCallback on_progress,
-                                      helix::InputShaperCallback on_complete,
-                                      ErrorCallback on_error);
-
-    /**
-     * @brief Start Klippain Shake&Tune calibration
-     *
-     * Executes AXES_SHAPER_CALIBRATION macro from Klippain.
-     * Provides enhanced calibration with graphs.
-     *
-     * @param axis Axis to calibrate ("X", "Y", or "all")
-     * @param on_success Called when calibration completes
-     * @param on_error Called on failure
-     */
-    virtual void start_klippain_shaper_calibration(const std::string& axis,
-                                                   SuccessCallback on_success,
-                                                   ErrorCallback on_error);
-
-    /**
-     * @brief Apply input shaper settings
-     *
-     * Sets the shaper type and frequency via SET_INPUT_SHAPER command.
-     *
-     * @param axis Axis to configure ('X' or 'Y')
-     * @param shaper_type Shaper algorithm (e.g., "mzv", "ei")
-     * @param freq_hz Shaper frequency in Hz
-     * @param on_success Called when settings are applied
-     * @param on_error Called on failure
-     */
-    virtual void set_input_shaper(char axis, const std::string& shaper_type, double freq_hz,
-                                  SuccessCallback on_success, ErrorCallback on_error);
-
-    /// Callback for accelerometer noise level check (noise value 0-1000+, <100 is good)
-    using NoiseCheckCallback = std::function<void(float noise_level)>;
-
-    /// Callback for input shaper configuration query
-    using InputShaperConfigCallback = std::function<void(const InputShaperConfig&)>;
-
-    /**
-     * @brief Check accelerometer noise level
-     *
-     * Runs MEASURE_AXES_NOISE G-code command to measure the ambient noise
-     * level of the accelerometer. Used to verify ADXL345 is working correctly
-     * before running resonance tests.
-     *
-     * Output format from Klipper: "axes_noise = 0.012345"
-     * Values < 100 are considered good.
-     *
-     * @param on_complete Called with noise level on success
-     * @param on_error Called on failure (e.g., no accelerometer configured)
-     */
-    virtual void measure_axes_noise(NoiseCheckCallback on_complete, ErrorCallback on_error);
-
-    /**
-     * @brief Get current input shaper configuration
-     *
-     * Queries the printer state to retrieve the currently active input
-     * shaper settings for both X and Y axes.
-     *
-     * @param on_success Called with current InputShaperConfig
-     * @param on_error Called on failure
-     */
-    virtual void get_input_shaper_config(InputShaperConfigCallback on_success,
-                                         ErrorCallback on_error);
-
-    // ========================================================================
-    // Spoolman API (Delegated)
-    // ========================================================================
+    MoonrakerAdvancedAPI& advanced() {
+        return *advanced_api_;
+    }
 
     /**
      * @brief Get File Transfer API for HTTP download/upload operations
@@ -828,109 +619,8 @@ class MoonrakerAPI {
         return *file_api_;
     }
 
-    // ========================================================================
-    // Advanced Panel Operations - Machine Limits
-    // ========================================================================
-
-    /**
-     * @brief Get current machine limits
-     *
-     * Queries toolhead object for velocity and acceleration limits.
-     *
-     * @param on_success Called with current limits
-     * @param on_error Called on failure
-     */
-    virtual void get_machine_limits(helix::MachineLimitsCallback on_success,
-                                    ErrorCallback on_error);
-
-    /**
-     * @brief Set machine limits (temporary, not saved to config)
-     *
-     * Uses SET_VELOCITY_LIMIT command. Changes are lost on Klipper restart.
-     *
-     * @param limits New limits to apply
-     * @param on_success Called when limits are applied
-     * @param on_error Called on failure
-     */
-    virtual void set_machine_limits(const MachineLimits& limits, SuccessCallback on_success,
-                                    ErrorCallback on_error);
-
-    /**
-     * @brief Save current configuration to printer.cfg
-     *
-     * Executes SAVE_CONFIG command. This will restart Klipper.
-     *
-     * @param on_success Called when save is initiated
-     * @param on_error Called on failure
-     */
-    virtual void save_config(SuccessCallback on_success, ErrorCallback on_error);
-
-    // ========================================================================
-    // Advanced Panel Operations - PID Calibration
-    // ========================================================================
-
-    /// Callback for PID calibration progress (sample number, tolerance value; -1.0 = n/a)
-    using PIDProgressCallback = std::function<void(int sample, float tolerance)>;
-
-    /// Callback for PID calibration result
-    using PIDCalibrateCallback = std::function<void(float kp, float ki, float kd)>;
-
-    /**
-     * @brief Fetch current PID values for a heater from printer configuration
-     *
-     * Queries configfile.settings to get the currently active PID parameters.
-     * Used to show old→new deltas after PID calibration.
-     *
-     * @param heater Heater name ("extruder" or "heater_bed")
-     * @param on_complete Called with current Kp, Ki, Kd values
-     * @param on_error Called if values cannot be retrieved
-     */
-    virtual void get_heater_pid_values(const std::string& heater, PIDCalibrateCallback on_complete,
-                                       ErrorCallback on_error);
-
-    /**
-     * @brief Start PID calibration for a heater
-     *
-     * Executes PID_CALIBRATE HEATER={heater} TARGET={target_temp} command
-     * and collects results via gcode_response parsing.
-     *
-     * @param heater Heater name ("extruder" or "heater_bed")
-     * @param target_temp Target temperature for calibration
-     * @param on_complete Called with PID values on success
-     * @param on_error Called on failure
-     */
-    virtual void start_pid_calibrate(const std::string& heater, int target_temp,
-                                     PIDCalibrateCallback on_complete, ErrorCallback on_error,
-                                     PIDProgressCallback on_progress = nullptr);
-
-    // ========================================================================
-    // Advanced Panel Operations - Macros
-    // ========================================================================
-
-    /**
-     * @brief Execute a G-code macro with optional parameters
-     *
-     * @param name Macro name (e.g., "CLEAN_NOZZLE")
-     * @param params Parameter map (e.g., {"TEMP": "210"})
-     * @param on_success Called when macro execution starts
-     * @param on_error Called on failure
-     */
-    virtual void execute_macro(const std::string& name,
-                               const std::map<std::string, std::string>& params,
-                               SuccessCallback on_success, ErrorCallback on_error);
-
-    /**
-     * @brief Get list of user-visible macros
-     *
-     * Returns macros filtered by category, excluding system macros
-     * (those starting with _) unless explicitly requested.
-     *
-     * @param include_system Include _* system macros
-     * @return Vector of macro information
-     */
-    std::vector<MacroInfo> get_user_macros(bool include_system = false) const;
-
   protected:
+    std::unique_ptr<MoonrakerAdvancedAPI> advanced_api_;          ///< Advanced panel operations API
     std::unique_ptr<MoonrakerFileTransferAPI> file_transfer_api_; ///< HTTP file transfer API
     std::unique_ptr<MoonrakerFileAPI> file_api_;                  ///< File management API
     std::unique_ptr<MoonrakerHistoryAPI> history_api_;            ///< Print history API
@@ -953,10 +643,4 @@ class MoonrakerAPI {
 
     SafetyLimits safety_limits_;
     bool limits_explicitly_set_ = false;
-
-    // Bed mesh storage (migrated from MoonrakerClient)
-    BedMeshProfile active_bed_mesh_;
-    std::vector<std::string> bed_mesh_profiles_;
-    std::map<std::string, BedMeshProfile> stored_bed_mesh_profiles_; // All profiles with mesh data
-    mutable std::mutex bed_mesh_mutex_;
 };

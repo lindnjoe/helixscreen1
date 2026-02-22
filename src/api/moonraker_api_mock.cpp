@@ -37,16 +37,28 @@ MoonrakerFileTransferAPIMock::MoonrakerFileTransferAPIMock(MoonrakerClient& clie
         "[MoonrakerFileTransferAPIMock] Created - HTTP methods will use local test files");
 }
 
+// ============================================================================
+// MoonrakerAdvancedAPIMock Implementation
+// ============================================================================
+
+MoonrakerAdvancedAPIMock::MoonrakerAdvancedAPIMock(MoonrakerClient& client, MoonrakerAPI& api)
+    : MoonrakerAdvancedAPI(client, api) {}
+
 MoonrakerAPIMock::MoonrakerAPIMock(MoonrakerClient& client, PrinterState& state)
     : MoonrakerAPI(client, state) {
     spdlog::debug("[MoonrakerAPIMock] Created - using mock sub-APIs");
 
     // Replace base sub-APIs with mock versions
+    advanced_api_ = std::make_unique<MoonrakerAdvancedAPIMock>(client, *this);
     file_transfer_api_ =
         std::make_unique<MoonrakerFileTransferAPIMock>(client, get_http_base_url());
     rest_api_ = std::make_unique<MoonrakerRestAPIMock>(client, get_http_base_url());
     spoolman_api_ = std::make_unique<MoonrakerSpoolmanAPIMock>(client);
     timelapse_api_ = std::make_unique<MoonrakerTimelapseAPIMock>(client, get_http_base_url());
+}
+
+MoonrakerAdvancedAPIMock& MoonrakerAPIMock::advanced_mock() {
+    return static_cast<MoonrakerAdvancedAPIMock&>(*advanced_api_);
 }
 
 MoonrakerFileTransferAPIMock& MoonrakerAPIMock::transfers_mock() {
@@ -865,20 +877,17 @@ std::string MockScrewsTiltState::offset_to_adjustment(float offset_mm) {
 }
 
 // ============================================================================
-// MoonrakerAPIMock - Screws Tilt Override
+// MoonrakerAdvancedAPIMock - Calibration Overrides
 // ============================================================================
 
-void MoonrakerAPIMock::calculate_screws_tilt(ScrewTiltCallback on_success,
-                                             ErrorCallback /*on_error*/) {
-    spdlog::info("[MoonrakerAPIMock] calculate_screws_tilt called (probe #{})",
+void MoonrakerAdvancedAPIMock::calculate_screws_tilt(ScrewTiltCallback on_success,
+                                                     ErrorCallback /*on_error*/) {
+    spdlog::info("[MoonrakerAdvancedAPIMock] calculate_screws_tilt called (probe #{})",
                  mock_bed_state_.get_probe_count() + 1);
 
-    // Simulate probing delay (2 seconds) via timer
-    // For now, call synchronously - in real app this would be async
     auto results = mock_bed_state_.probe();
 
     // After showing results, simulate user making adjustments
-    // This prepares the state for the next probe call
     mock_bed_state_.simulate_user_adjustments();
 
     if (on_success) {
@@ -886,19 +895,20 @@ void MoonrakerAPIMock::calculate_screws_tilt(ScrewTiltCallback on_success,
     }
 }
 
-void MoonrakerAPIMock::reset_mock_bed_state() {
+void MoonrakerAdvancedAPIMock::reset_mock_bed_state() {
     mock_bed_state_.reset();
-    spdlog::info("[MoonrakerAPIMock] Mock bed state reset");
+    spdlog::info("[MoonrakerAdvancedAPIMock] Mock bed state reset");
 }
 
-void MoonrakerAPIMock::start_bed_mesh_calibrate(BedMeshProgressCallback on_progress,
-                                                SuccessCallback on_complete,
-                                                ErrorCallback /*on_error*/) {
-    spdlog::info("[MoonrakerAPIMock] start_bed_mesh_calibrate() - simulating probe sequence");
+void MoonrakerAdvancedAPIMock::start_bed_mesh_calibrate(BedMeshProgressCallback on_progress,
+                                                        SuccessCallback on_complete,
+                                                        ErrorCallback /*on_error*/) {
+    spdlog::info(
+        "[MoonrakerAdvancedAPIMock] start_bed_mesh_calibrate() - simulating probe sequence");
 
     // Context struct to track state across timer callbacks
     struct ProbeSimContext {
-        MoonrakerAPIMock* api;
+        MoonrakerAdvancedAPIMock* advanced;
         BedMeshProgressCallback on_progress;
         SuccessCallback on_complete;
         int current = 0;
@@ -914,7 +924,7 @@ void MoonrakerAPIMock::start_bed_mesh_calibrate(BedMeshProgressCallback on_progr
 
         if (c->current <= c->total) {
             // Report progress
-            spdlog::debug("[MoonrakerAPIMock] Probe {}/{}", c->current, c->total);
+            spdlog::debug("[MoonrakerAdvancedAPIMock] Probe {}/{}", c->current, c->total);
             if (c->on_progress) {
                 c->on_progress(c->current, c->total);
             }
@@ -922,22 +932,22 @@ void MoonrakerAPIMock::start_bed_mesh_calibrate(BedMeshProgressCallback on_progr
 
         if (c->current >= c->total) {
             // Simulation complete - regenerate mesh with new random data
-            spdlog::info("[MoonrakerAPIMock] Probe simulation complete, regenerating mesh");
+            spdlog::info("[MoonrakerAdvancedAPIMock] Probe simulation complete, regenerating mesh");
             lv_timer_delete(t);
 
             // Send BED_MESH_CALIBRATE to client mock to regenerate mesh data
             // Match real API: no PROFILE= parameter, mesh goes to "default" profile
-            c->api->execute_gcode(
+            c->advanced->api_.execute_gcode(
                 "BED_MESH_CALIBRATE",
                 [c]() {
-                    spdlog::debug("[MoonrakerAPIMock] Mesh regenerated");
+                    spdlog::debug("[MoonrakerAdvancedAPIMock] Mesh regenerated");
                     if (c->on_complete) {
                         c->on_complete();
                     }
                     delete c;
                 },
                 [c](const MoonrakerError& err) {
-                    spdlog::error("[MoonrakerAPIMock] Mesh regen failed: {}", err.message);
+                    spdlog::error("[MoonrakerAdvancedAPIMock] Mesh regen failed: {}", err.message);
                     if (c->on_complete) {
                         c->on_complete(); // Still complete the UI flow
                     }

@@ -1216,7 +1216,7 @@ void ControlsPanel::handle_qgl() {
                     NOTIFY_ERROR("QGL failed: {}", err.user_message());
                 }
             },
-            MoonrakerAPI::LEVELING_TIMEOUT_MS);
+            MoonrakerAdvancedAPI::LEVELING_TIMEOUT_MS);
     }
 }
 
@@ -1247,7 +1247,7 @@ void ControlsPanel::handle_z_tilt() {
                     NOTIFY_ERROR("Z-Tilt failed: {}", err.user_message());
                 }
             },
-            MoonrakerAPI::LEVELING_TIMEOUT_MS);
+            MoonrakerAdvancedAPI::LEVELING_TIMEOUT_MS);
     }
 }
 

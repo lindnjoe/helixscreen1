@@ -493,7 +493,7 @@ void ZOffsetCalibrationPanel::begin_probe_sequence() {
                         this);
                 }
             },
-            MoonrakerAPI::PROBING_TIMEOUT_MS);
+            MoonrakerAdvancedAPI::PROBING_TIMEOUT_MS);
     } else {
         // Probe calibrate or endstop strategy
         std::string gcode;
@@ -540,7 +540,7 @@ void ZOffsetCalibrationPanel::begin_probe_sequence() {
                         this);
                 }
             },
-            MoonrakerAPI::PROBING_TIMEOUT_MS);
+            MoonrakerAdvancedAPI::PROBING_TIMEOUT_MS);
     }
 }
 

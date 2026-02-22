@@ -241,6 +241,54 @@ class MoonrakerTimelapseAPIMock : public MoonrakerTimelapseAPI {
  * Overrides all MoonrakerRestAPI methods to return mock data.
  * WLED state is tracked internally for toggle/brightness/preset testing.
  */
+/**
+ * @brief Mock Advanced API for testing calibration and macro operations
+ *
+ * Overrides bed mesh calibration and screws tilt methods with mock implementations
+ * that simulate realistic behavior without real hardware.
+ */
+class MoonrakerAdvancedAPIMock : public MoonrakerAdvancedAPI {
+  public:
+    using SuccessCallback = MoonrakerAdvancedAPI::SuccessCallback;
+    using ErrorCallback = MoonrakerAdvancedAPI::ErrorCallback;
+    using BedMeshProgressCallback = MoonrakerAdvancedAPI::BedMeshProgressCallback;
+
+    MoonrakerAdvancedAPIMock(helix::MoonrakerClient& client, MoonrakerAPI& api);
+    ~MoonrakerAdvancedAPIMock() override = default;
+
+    // ========================================================================
+    // Overridden Calibration Methods (simulate realistic behavior)
+    // ========================================================================
+
+    /**
+     * @brief Mock bed mesh calibration with progress simulation
+     */
+    void start_bed_mesh_calibrate(BedMeshProgressCallback on_progress, SuccessCallback on_complete,
+                                  ErrorCallback on_error) override;
+
+    /**
+     * @brief Simulate SCREWS_TILT_CALCULATE with iterative bed leveling
+     */
+    void calculate_screws_tilt(helix::ScrewTiltCallback on_success,
+                               ErrorCallback on_error) override;
+
+    /**
+     * @brief Reset the mock bed to initial out-of-level state
+     */
+    void reset_mock_bed_state();
+
+    /**
+     * @brief Get the mock bed state for inspection/testing
+     */
+    MockScrewsTiltState& get_mock_bed_state() {
+        return mock_bed_state_;
+    }
+
+  private:
+    /// Mock bed state for screws tilt simulation
+    MockScrewsTiltState mock_bed_state_;
+};
+
 class MoonrakerRestAPIMock : public MoonrakerRestAPI {
   public:
     using SuccessCallback = MoonrakerRestAPI::SuccessCallback;
@@ -469,48 +517,17 @@ class MoonrakerAPIMock : public MoonrakerAPI {
     std::vector<std::string> get_available_objects_from_mock() const;
 
     // ========================================================================
-    // Overridden Calibration Methods (simulate realistic behavior)
+    // Advanced Mock Access
     // ========================================================================
 
     /**
-     * @brief Mock bed mesh calibration with progress simulation
+     * @brief Get the Advanced mock sub-API for mock-specific helpers
      *
-     * Logs the call and immediately calls on_complete for now.
-     * Phase 6 will add proper progress simulation.
+     * Provides access to mock-only methods like reset_mock_bed_state().
      *
-     * @param on_progress Progress callback (current, total)
-     * @param on_complete Completion callback
-     * @param on_error Error callback (rarely called - mock usually succeeds)
+     * @return Reference to MoonrakerAdvancedAPIMock
      */
-    void start_bed_mesh_calibrate(BedMeshProgressCallback on_progress, SuccessCallback on_complete,
-                                  ErrorCallback on_error) override;
-
-    /**
-     * @brief Simulate SCREWS_TILT_CALCULATE with iterative bed leveling
-     *
-     * First call returns screws out of level. Subsequent calls show
-     * progressively better alignment as user "adjusts" screws.
-     * Typically reaches level state after 2-4 probes.
-     *
-     * @param on_success Callback with screw adjustment results
-     * @param on_error Error callback (rarely called - mock usually succeeds)
-     */
-    void calculate_screws_tilt(helix::ScrewTiltCallback on_success,
-                               ErrorCallback on_error) override;
-
-    /**
-     * @brief Reset the mock bed to initial out-of-level state
-     *
-     * Call this to restart the bed leveling simulation from scratch.
-     */
-    void reset_mock_bed_state();
-
-    /**
-     * @brief Get the mock bed state for inspection/testing
-     */
-    MockScrewsTiltState& get_mock_bed_state() {
-        return mock_bed_state_;
-    }
+    MoonrakerAdvancedAPIMock& advanced_mock();
 
     // ========================================================================
     // File Transfer Mock Access
@@ -561,9 +578,6 @@ class MoonrakerAPIMock : public MoonrakerAPI {
 
     // Mock power device states (for toggle testing)
     std::map<std::string, bool> mock_power_states_;
-
-    /// Mock bed state for screws tilt simulation
-    MockScrewsTiltState mock_bed_state_;
 
     // Mock subscription ID counter
     helix::SubscriptionId mock_next_subscription_id_ = 100;
