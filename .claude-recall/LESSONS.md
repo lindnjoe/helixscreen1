@@ -37,7 +37,7 @@
 > Text-only buttons: use `align="center"` on child. Icon+text buttons with flex_flow="row": need ALL THREE flex properties - style_flex_main_place="center" (horizontal), style_flex_cross_place="center" (vertical align items), style_flex_track_place="center" (vertical position of row). Missing track_place causes content to sit at top.
 
 ### [L031] [***--|*****] XML no recompile
-- **Uses**: 26 | **Velocity**: 6.0075 | **Learned**: 2025-12-27 | **Last**: 2026-02-22 | **Category**: gotcha | **Type**: constraint
+- **Uses**: 27 | **Velocity**: 7.0075 | **Learned**: 2025-12-27 | **Last**: 2026-02-22 | **Category**: gotcha | **Type**: constraint
 > XML files are loaded at RUNTIME - never rebuild after XML-only changes. Just relaunch the app. This includes layout changes, styling, bindings, event callbacks - anything in ui_xml/*.xml. Only rebuild when C++ code changes.
 
 ### [L039] [*----|-----] Unique XML callback names
@@ -96,8 +96,8 @@
 - **Uses**: 1 | **Velocity**: 0 | **Learned**: 2026-01-20 | **Last**: 2026-01-20 | **Category**: pattern | **Type**: constraint
 > Always use lv_obj_safe_delete() instead of raw lv_obj_delete() - it guards against shutdown race conditions by checking lv_is_initialized() and lv_display_get_next() before deletion, and auto-nulls the pointer to prevent use-after-free
 
-### [L060] [*----|****-] Interactive UI testing requires user
-- **Uses**: 3 | **Velocity**: 2.01 | **Learned**: 2026-02-01 | **Last**: 2026-02-22 | **Category**: correction | **Type**: constraint
+### [L060] [**---|*****] Interactive UI testing requires user
+- **Uses**: 5 | **Velocity**: 4.01 | **Learned**: 2026-02-01 | **Last**: 2026-02-22 | **Category**: correction | **Type**: constraint
 > NEVER use timed delays expecting automatic navigation. THE EXACT PATTERN THAT WORKS:
 > **Step 1** - Start app with Bash tool using `run_in_background: true`:
 > ```bash
