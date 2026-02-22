@@ -5,7 +5,11 @@
 
 #include "ui_error_reporting.h"
 
+#include "app_constants.h"
 #include "runtime_config.h"
+
+using AppConstants::Update::PREUPDATE_CONFIG_BACKUP;
+using AppConstants::Update::PREUPDATE_ENV_BACKUP;
 
 #include <fstream>
 #include <iomanip>
@@ -343,6 +347,54 @@ void Config::init(const std::string& config_path) {
                     // Fall through to create default config
                 }
                 break;
+            }
+        }
+
+        // Recovery: check for .pre-update backup created by the in-app updater.
+        // Backups live in /var/log/ (outside INSTALL_DIR) so they survive the
+        // atomic swap that moves INSTALL_DIR → INSTALL_DIR.old.
+        if (stat(config_path.c_str(), &buffer) != 0) {
+            if (stat(PREUPDATE_CONFIG_BACKUP, &buffer) == 0) {
+                spdlog::warn("[Config] Config missing after upgrade — restoring from pre-update "
+                             "backup: {}",
+                             PREUPDATE_CONFIG_BACKUP);
+
+                fs::path config_dir = fs::path(config_path).parent_path();
+                if (!config_dir.empty() && !fs::exists(config_dir)) {
+                    std::error_code ec;
+                    fs::create_directories(config_dir, ec);
+                    if (ec) {
+                        spdlog::error("[Config] Failed to create config dir {}: {}",
+                                      config_dir.string(), ec.message());
+                    }
+                }
+
+                try {
+                    fs::copy_file(PREUPDATE_CONFIG_BACKUP, config_path);
+                    spdlog::info("[Config] Restored config from pre-update backup");
+                    fs::remove(PREUPDATE_CONFIG_BACKUP);
+                } catch (const fs::filesystem_error& e) {
+                    spdlog::error("[Config] Failed to restore from pre-update backup: {}",
+                                  e.what());
+                }
+            }
+        }
+
+        // Restore helixscreen.env independently — it can be lost even if config survived
+        {
+            std::string env_path =
+                (fs::path(config_path).parent_path() / "helixscreen.env").string();
+            struct stat env_st{};
+            if (stat(env_path.c_str(), &env_st) != 0 && stat(PREUPDATE_ENV_BACKUP, &env_st) == 0) {
+                spdlog::warn("[Config] helixscreen.env missing after upgrade — restoring from "
+                             "pre-update backup");
+                try {
+                    fs::copy_file(PREUPDATE_ENV_BACKUP, env_path);
+                    spdlog::info("[Config] Restored helixscreen.env from pre-update backup");
+                    fs::remove(PREUPDATE_ENV_BACKUP);
+                } catch (const fs::filesystem_error& e) {
+                    spdlog::error("[Config] Failed to restore helixscreen.env: {}", e.what());
+                }
             }
         }
     }
