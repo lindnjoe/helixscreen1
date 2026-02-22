@@ -7,6 +7,7 @@
 #include "ui_icon.h"
 #include "ui_icon_codepoints.h"
 #include "ui_update_queue.h"
+#include "ui_utils.h"
 
 #include "app_globals.h"
 #include "config.h"
@@ -39,6 +40,13 @@ helix::PanelWidgetConfig& get_widget_config_ref() {
     static helix::PanelWidgetConfig config("home", *helix::Config::get_instance());
     config.load();
     return config;
+}
+// File-local helper: single shared MacroParamModal instance.
+// Using one instance avoids s_active_instance_ stomping when two widget slots
+// both try to open param modals (the old code had two separate static locals).
+helix::MacroParamModal& get_shared_param_modal() {
+    static helix::MacroParamModal modal;
+    return modal;
 }
 } // namespace
 
@@ -231,12 +239,15 @@ void FavoriteMacroWidget::fetch_and_execute() {
             // No params — execute directly
             execute_with_params({});
         } else {
-            // Has params — show modal
-            static MacroParamModal modal;
-            modal.show_for_macro(parent_screen_, macro_name_, cached_params_,
-                                 [this](const std::map<std::string, std::string>& values) {
-                                     execute_with_params(values);
-                                 });
+            // Has params — show modal (guard against widget destruction while modal is open)
+            std::weak_ptr<bool> weak_alive = alive_;
+            get_shared_param_modal().show_for_macro(
+                parent_screen_, macro_name_, cached_params_,
+                [this, weak_alive](const std::map<std::string, std::string>& values) {
+                    if (weak_alive.expired())
+                        return;
+                    execute_with_params(values);
+                });
         }
         return;
     }
@@ -271,27 +282,30 @@ void FavoriteMacroWidget::fetch_and_execute() {
 
             // Parse and cache params (on UI thread via queue)
             auto parsed = parse_macro_params(gcode_template);
-            ui::queue_update([this, weak_alive, parsed = std::move(parsed),
-                              macro_name_copy]() mutable {
-                if (weak_alive.expired())
-                    return;
+            ui::queue_update(
+                [this, weak_alive, parsed = std::move(parsed), macro_name_copy]() mutable {
+                    if (weak_alive.expired())
+                        return;
 
-                cached_params_ = std::move(parsed);
-                params_cached_ = true;
+                    cached_params_ = std::move(parsed);
+                    params_cached_ = true;
 
-                spdlog::debug("[FavoriteMacroWidget] Cached {} params for {}",
-                              cached_params_.size(), macro_name_copy);
+                    spdlog::debug("[FavoriteMacroWidget] Cached {} params for {}",
+                                  cached_params_.size(), macro_name_copy);
 
-                if (cached_params_.empty()) {
-                    execute_with_params({});
-                } else {
-                    static MacroParamModal modal;
-                    modal.show_for_macro(parent_screen_, macro_name_, cached_params_,
-                                         [this](const std::map<std::string, std::string>& values) {
-                                             execute_with_params(values);
-                                         });
-                }
-            });
+                    if (cached_params_.empty()) {
+                        execute_with_params({});
+                    } else {
+                        // Guard against widget destruction while modal is open
+                        get_shared_param_modal().show_for_macro(
+                            parent_screen_, macro_name_, cached_params_,
+                            [this, weak_alive](const std::map<std::string, std::string>& values) {
+                                if (weak_alive.expired())
+                                    return;
+                                execute_with_params(values);
+                            });
+                    }
+                });
         },
         [macro_name_copy](const MoonrakerError& err) {
             spdlog::warn("[FavoriteMacroWidget] Failed to query template for {}: {}",
@@ -313,17 +327,26 @@ void FavoriteMacroWidget::execute_with_params(const std::map<std::string, std::s
 
     spdlog::info("[FavoriteMacroWidget] Executing: {}", gcode);
 
+    // Capture copies — callbacks fire from WebSocket thread after widget may be destroyed
+    std::string macro_name_copy = macro_name_;
     api->execute_gcode(
         gcode,
-        [this]() { spdlog::info("[FavoriteMacroWidget] {} executed successfully", macro_name_); },
-        [this](const MoonrakerError& err) {
-            spdlog::error("[FavoriteMacroWidget] {} failed: {}", macro_name_, err.message);
+        [macro_name_copy]() {
+            spdlog::info("[FavoriteMacroWidget] {} executed successfully", macro_name_copy);
+        },
+        [macro_name_copy](const MoonrakerError& err) {
+            spdlog::error("[FavoriteMacroWidget] {} failed: {}", macro_name_copy, err.message);
         });
 }
 
 void FavoriteMacroWidget::show_macro_picker() {
     if (picker_backdrop_ || !parent_screen_) {
         return;
+    }
+
+    // Dismiss any other widget's picker before opening ours
+    if (s_active_picker_ && s_active_picker_ != this) {
+        s_active_picker_->dismiss_macro_picker();
     }
 
     MoonrakerAPI* api = get_api();
@@ -350,8 +373,7 @@ void FavoriteMacroWidget::show_macro_picker() {
     lv_obj_t* macro_list = lv_obj_find_by_name(picker_backdrop_, "macro_list");
     if (!macro_list) {
         spdlog::error("[FavoriteMacroWidget] macro_list not found in picker XML");
-        lv_obj_delete(picker_backdrop_);
-        picker_backdrop_ = nullptr;
+        helix::ui::safe_delete(picker_backdrop_);
         return;
     }
 
@@ -458,20 +480,22 @@ void FavoriteMacroWidget::dismiss_macro_picker() {
         return;
     }
 
-    // Clean up heap-allocated macro name strings
-    lv_obj_t* macro_list = lv_obj_find_by_name(picker_backdrop_, "macro_list");
-    if (macro_list) {
-        uint32_t count = lv_obj_get_child_count(macro_list);
-        for (uint32_t i = 0; i < count; ++i) {
-            lv_obj_t* row = lv_obj_get_child(macro_list, i);
-            auto* name_ptr = static_cast<std::string*>(lv_obj_get_user_data(row));
-            delete name_ptr;
-            lv_obj_set_user_data(row, nullptr);
+    // Clean up heap-allocated macro name strings (only if object is still valid —
+    // parent screen deletion auto-frees children, leaving stale pointers)
+    if (lv_obj_is_valid(picker_backdrop_)) {
+        lv_obj_t* macro_list = lv_obj_find_by_name(picker_backdrop_, "macro_list");
+        if (macro_list) {
+            uint32_t count = lv_obj_get_child_count(macro_list);
+            for (uint32_t i = 0; i < count; ++i) {
+                lv_obj_t* row = lv_obj_get_child(macro_list, i);
+                auto* name_ptr = static_cast<std::string*>(lv_obj_get_user_data(row));
+                delete name_ptr;
+                lv_obj_set_user_data(row, nullptr);
+            }
         }
     }
 
-    lv_obj_delete(picker_backdrop_);
-    picker_backdrop_ = nullptr;
+    helix::ui::safe_delete(picker_backdrop_);
     s_active_picker_ = nullptr;
 
     spdlog::debug("[FavoriteMacroWidget] Picker dismissed");

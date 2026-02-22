@@ -46,11 +46,13 @@ void MacroParamModal::on_ok() {
         auto values = collect_values();
         on_execute_(values);
     }
+    textareas_.clear(); // Clear before hide() — widgets are about to be deleted
     s_active_instance_ = nullptr;
     hide();
 }
 
 void MacroParamModal::on_cancel() {
+    textareas_.clear(); // Clear before hide() — widgets are about to be deleted
     s_active_instance_ = nullptr;
     hide();
 }
