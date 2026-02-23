@@ -131,7 +131,7 @@ test-build:
 	$(ECHO) "$(CYAN)$(BOLD)Building tests with parallel compilation...$(RESET)"
 	@START_TIME=$$(date +%s); \
 	NPROC=$$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4); \
-	$(MAKE) -j$$NPROC $(TEST_BIN) && \
+	$(MAKE) -j$$NPROC $(TEST_BIN) || exit $$?; \
 	END_TIME=$$(date +%s); \
 	DURATION=$$((END_TIME - START_TIME)); \
 	echo "$(GREEN)✓ Tests built in $${DURATION}s$(RESET)"
