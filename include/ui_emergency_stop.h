@@ -22,6 +22,7 @@
 enum class RecoveryReason {
     NONE,         ///< No active recovery
     SHUTDOWN,     ///< Klipper entered SHUTDOWN state (e-stop, thermal runaway, config error)
+    ERROR,        ///< Klipper entered ERROR state (MCU connection failure, config error)
     DISCONNECTED, ///< Klipper firmware disconnected from Moonraker
 };
 
