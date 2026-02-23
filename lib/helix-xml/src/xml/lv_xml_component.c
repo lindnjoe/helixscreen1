@@ -19,7 +19,6 @@
 #include "parsers/lv_xml_obj_parser.h"
 #include "../libs/expat/expat.h"
 #include "../misc/lv_fs.h"
-#include "../core/lv_global.h"
 #include <string.h>
 
 /*********************
@@ -33,8 +32,18 @@
  **********************/
 typedef enum {
     STYLE_PROP_TYPE_INT,
+    STYLE_PROP_TYPE_OPA,
+    STYLE_PROP_TYPE_COLOR,
     STYLE_PROP_TYPE_UNKNOWN
 } style_prop_anim_type_t;
+
+typedef struct {
+    lv_style_selector_t selector;
+    lv_style_prop_t prop;
+    style_prop_anim_type_t prop_type;
+    lv_color_t color_start;
+    lv_color_t color_end;
+} anim_data_t;
 
 /**********************
  *  STATIC PROTOTYPES
@@ -44,11 +53,10 @@ static void end_metadata_handler(void * user_data, const char * name);
 static void process_const_element(lv_xml_parser_state_t * state, const char ** attrs);
 static void process_font_element(lv_xml_parser_state_t * state, const char * type, const char ** attrs);
 static void process_image_element(lv_xml_parser_state_t * state, const char * type, const char ** attrs);
-static void process_prop_element(lv_xml_parser_state_t * state, const char ** attrs);
+static void process_prop_element(lv_xml_parser_state_t * state, const char * name, const char ** attrs);
 static char * extract_view_content(const char * xml_definition);
 static style_prop_anim_type_t style_prop_anim_get_type(lv_style_prop_t prop);
-static int32_t anim_value_to_int(lv_style_prop_t prop_type, const char * value_str);
-static void int_anim_exec_cb(lv_anim_t * a, int32_t v);
+static void anim_exec_cb(lv_anim_t * a, int32_t v);
 
 /**********************
  *  STATIC VARIABLES
@@ -99,7 +107,7 @@ lv_obj_t * lv_xml_component_process(lv_xml_parser_state_t * state, const char * 
         return NULL;
     }
 
-    /* Apply the properties of the component, e.g. <my_button x="20" styles="red"/> */
+    /* Apply the properties of the component, e.g. <my_button x="20" width="300"/> */
     state->item = item;
     lv_widget_processor_t * extended_proc = lv_xml_widget_get_extended_widget_processor(scope->extends);
     extended_proc->apply_cb(state, attrs);
@@ -121,6 +129,8 @@ lv_obj_t * lv_xml_component_process(lv_xml_parser_state_t * state, const char * 
 
 lv_xml_component_scope_t * lv_xml_component_get_scope(const char * component_name)
 {
+    if(component_name == NULL) return NULL;
+
     lv_xml_component_scope_t * scope;
     LV_LL_READ(&component_scope_ll, scope) {
         if(lv_streq(scope->name, component_name)) return scope;
@@ -274,7 +284,6 @@ lv_result_t lv_xml_component_unregister(const char * name)
     }
     lv_ll_clear(&scope->param_ll);
 
-
     lv_xml_font_t * font;
     LV_LL_READ(&scope->font_ll, font) {
         lv_free((char *)font->name);
@@ -319,6 +328,7 @@ lv_result_t lv_xml_component_unregister(const char * name)
         lv_xml_anim_timeline_child_t * child;
         LV_LL_READ(&timeline->anims_ll, child) {
             if(child->is_anim) {
+                lv_free(child->data.anim.user_data); /*It was anim_data_t*/
                 lv_free(child->data.anim.var); /*It was the name of the target object*/
             }
             else {
@@ -593,10 +603,6 @@ static void process_animation_element(lv_xml_parser_state_t * state, const char 
 
     lv_style_selector_t selector = lv_xml_style_selector_text_to_enum(selector_str);
 
-    int32_t start = anim_value_to_int(prop_type, start_str);
-    int32_t end = anim_value_to_int(prop_type, end_str);
-
-
     if(target_str[0] == '#') target_str = lv_xml_get_const(&state->scope, &target_str[1]);
     if(prop_str[0] == '#') prop_str = lv_xml_get_const(&state->scope, &prop_str[1]);
     if(start_str[0] == '#') start_str = lv_xml_get_const(&state->scope, &start_str[1]);
@@ -616,20 +622,41 @@ static void process_animation_element(lv_xml_parser_state_t * state, const char 
         return;
     }
 
-    uint32_t selector_and_prop = ((prop & 0xff) << 24) | selector;
-
     lv_xml_anim_timeline_child_t * child = lv_ll_ins_tail(&at->anims_ll);
     child->is_anim = true;
     lv_anim_t * a = &child->data.anim;
 
+    anim_data_t * anim_data = lv_malloc(sizeof(anim_data_t));
+    anim_data->selector = selector;
+    anim_data->prop = prop;
+    anim_data->prop_type = prop_type;
+
     lv_anim_init(a);
+
+    if(prop_type == STYLE_PROP_TYPE_INT) {
+        int32_t start = lv_xml_to_size(start_str);
+        int32_t end = lv_xml_to_size(end_str);
+        lv_anim_set_values(a, start, end);
+        lv_anim_set_custom_exec_cb(a, anim_exec_cb);
+    }
+    else if(prop_type == STYLE_PROP_TYPE_OPA) {
+        int32_t start = lv_xml_to_opa(start_str);
+        int32_t end = lv_xml_to_opa(end_str);
+        lv_anim_set_values(a, start, end);
+        lv_anim_set_custom_exec_cb(a, anim_exec_cb);
+    }
+    else if(prop_type == STYLE_PROP_TYPE_COLOR) {
+        anim_data->color_start = lv_xml_to_color(start_str);
+        anim_data->color_end = lv_xml_to_color(end_str);
+        lv_anim_set_values(a, 0, 255);
+        lv_anim_set_custom_exec_cb(a, anim_exec_cb);
+    }
+
     lv_anim_set_var(a, lv_strdup(target_str));
-    lv_anim_set_values(a, start, end);
-    lv_anim_set_custom_exec_cb(a, int_anim_exec_cb);
     lv_anim_set_duration(a, lv_xml_atoi(duration_str));
     lv_anim_set_delay(a, lv_xml_atoi(delay_str));
     lv_anim_set_early_apply(a, lv_xml_to_bool(early_apply_str));
-    lv_anim_set_user_data(a, (void *)((uintptr_t)selector_and_prop));
+    lv_anim_set_user_data(a, anim_data);
 }
 
 static void process_include_timeline_element(lv_xml_parser_state_t * state, const char ** attrs)
@@ -843,8 +870,10 @@ static void process_grad_stop_element(lv_xml_parser_state_t * state, const char 
     dsc->stops_count++;
 }
 
-static void process_prop_element(lv_xml_parser_state_t * state, const char ** attrs)
+static void process_prop_element(lv_xml_parser_state_t * state, const char * name, const char ** attrs)
 {
+    if(!lv_streq(name, "prop")) return;
+
     lv_xml_param_t * prop = lv_ll_ins_tail(&state->scope.param_ll);
     lv_memzero(prop, sizeof(lv_xml_param_t));
 
@@ -879,7 +908,7 @@ static void start_metadata_handler(void * user_data, const char * name, const ch
     switch(state->section) {
         case LV_XML_PARSER_SECTION_API:
             if(old_section != state->section) return;   /*Ignore the section opening, e.g. <api>*/
-            process_prop_element(state, attrs);
+            process_prop_element(state, name, attrs);
             break;
 
         case LV_XML_PARSER_SECTION_CONSTS:
@@ -990,34 +1019,22 @@ static style_prop_anim_type_t style_prop_anim_get_type(lv_style_prop_t prop)
         case LV_STYLE_MARGIN_RIGHT:
         case LV_STYLE_MARGIN_TOP:
         case LV_STYLE_MARGIN_BOTTOM:
-        case LV_STYLE_BG_OPA:
         case LV_STYLE_BG_MAIN_STOP:
         case LV_STYLE_BG_GRAD_STOP:
         case LV_STYLE_BG_IMAGE_RECOLOR_OPA:
         case LV_STYLE_BORDER_WIDTH:
-        case LV_STYLE_BORDER_OPA:
         case LV_STYLE_OUTLINE_WIDTH:
-        case LV_STYLE_OUTLINE_OPA:
         case LV_STYLE_OUTLINE_PAD:
         case LV_STYLE_SHADOW_WIDTH:
         case LV_STYLE_SHADOW_OFFSET_X:
         case LV_STYLE_SHADOW_OFFSET_Y:
         case LV_STYLE_SHADOW_SPREAD:
-        case LV_STYLE_SHADOW_OPA:
-        case LV_STYLE_TEXT_OPA:
         case LV_STYLE_TEXT_LETTER_SPACE:
         case LV_STYLE_TEXT_LINE_SPACE:
-        case LV_STYLE_IMAGE_OPA:
-        case LV_STYLE_IMAGE_RECOLOR_OPA:
-        case LV_STYLE_LINE_OPA:
         case LV_STYLE_LINE_WIDTH:
         case LV_STYLE_LINE_DASH_WIDTH:
         case LV_STYLE_LINE_DASH_GAP:
-        case LV_STYLE_ARC_OPA:
         case LV_STYLE_ARC_WIDTH:
-        case LV_STYLE_OPA:
-        case LV_STYLE_OPA_LAYERED:
-        case LV_STYLE_COLOR_FILTER_OPA:
         case LV_STYLE_TRANSFORM_WIDTH:
         case LV_STYLE_TRANSFORM_HEIGHT:
         case LV_STYLE_TRANSLATE_X:
@@ -1028,8 +1045,33 @@ static style_prop_anim_type_t style_prop_anim_get_type(lv_style_prop_t prop)
         case LV_STYLE_TRANSFORM_ROTATION:
         case LV_STYLE_TRANSFORM_PIVOT_X:
         case LV_STYLE_TRANSFORM_PIVOT_Y:
-        case LV_STYLE_RECOLOR_OPA:
             return STYLE_PROP_TYPE_INT;
+
+        case LV_STYLE_ARC_OPA:
+        case LV_STYLE_OPA:
+        case LV_STYLE_OPA_LAYERED:
+        case LV_STYLE_BG_OPA:
+        case LV_STYLE_BG_IMAGE_OPA:
+        case LV_STYLE_BORDER_OPA:
+        case LV_STYLE_OUTLINE_OPA:
+        case LV_STYLE_SHADOW_OPA:
+        case LV_STYLE_TEXT_OPA:
+        case LV_STYLE_LINE_OPA:
+        case LV_STYLE_IMAGE_OPA:
+        case LV_STYLE_IMAGE_RECOLOR_OPA:
+        case LV_STYLE_RECOLOR_OPA:
+        case LV_STYLE_COLOR_FILTER_OPA:
+            return STYLE_PROP_TYPE_OPA;
+
+        case LV_STYLE_ARC_COLOR:
+        case LV_STYLE_BG_COLOR:
+        case LV_STYLE_BG_GRAD_COLOR:
+        case LV_STYLE_BORDER_COLOR:
+        case LV_STYLE_LINE_COLOR:
+        case LV_STYLE_OUTLINE_COLOR:
+        case LV_STYLE_SHADOW_COLOR:
+        case LV_STYLE_TEXT_COLOR:
+            return STYLE_PROP_TYPE_COLOR;
 
         default:
             return STYLE_PROP_TYPE_UNKNOWN;
@@ -1037,24 +1079,19 @@ static style_prop_anim_type_t style_prop_anim_get_type(lv_style_prop_t prop)
     }
 }
 
-static int32_t anim_value_to_int(lv_style_prop_t prop_type, const char * value_str)
+static void anim_exec_cb(lv_anim_t * a, int32_t v)
 {
-    if(prop_type == STYLE_PROP_TYPE_INT) {
-        return lv_xml_atoi(value_str);
+    anim_data_t * anim_data = lv_anim_get_user_data(a);
+
+    lv_style_value_t style_value = {0};
+    if(anim_data->prop_type == STYLE_PROP_TYPE_INT || anim_data->prop_type == STYLE_PROP_TYPE_OPA) {
+        style_value.num = v;
+    }
+    else if(anim_data->prop_type == STYLE_PROP_TYPE_COLOR) {
+        style_value.color = lv_color_mix(anim_data->color_end, anim_data->color_start, v);
     }
 
-    return 0;
-}
-
-static void int_anim_exec_cb(lv_anim_t * a, int32_t v)
-{
-    uint32_t data = (lv_uintptr_t)lv_anim_get_user_data(a);
-    lv_style_prop_t prop = data >> 24;
-    lv_style_selector_t selector = data & 0x00ffffff;
-
-    lv_style_value_t style_value;
-    style_value.num = v;
-    lv_obj_set_local_style_prop(a->var, prop, style_value, selector);
+    lv_obj_set_local_style_prop(a->var, anim_data->prop, style_value, anim_data->selector);
 }
 
 

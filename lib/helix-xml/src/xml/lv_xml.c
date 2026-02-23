@@ -39,6 +39,7 @@
 #include "parsers/lv_xml_chart_parser.h"
 #include "parsers/lv_xml_table_parser.h"
 #include "parsers/lv_xml_dropdown_parser.h"
+#include "parsers/lv_xml_imagebutton_parser.h"
 #include "parsers/lv_xml_roller_parser.h"
 #include "parsers/lv_xml_scale_parser.h"
 #include "parsers/lv_xml_buttonmatrix_parser.h"
@@ -55,7 +56,6 @@
 #include "parsers/lv_xml_qrcode_parser.h"
 #include "../libs/expat/expat.h"
 #include "../draw/lv_draw_image.h"
-#include "../core/lv_global.h"
 #include "../misc/lv_anim_timeline_private.h"
 
 /*********************
@@ -150,6 +150,15 @@ void lv_xml_init(void)
 #if LV_USE_DROPDOWN
     lv_xml_register_widget("lv_dropdown", lv_xml_dropdown_create, lv_xml_dropdown_apply);
     lv_xml_register_widget("lv_dropdown-list", lv_xml_dropdown_list_create, lv_xml_dropdown_list_apply);
+#endif
+
+#if LV_USE_IMAGEBUTTON
+    lv_xml_register_widget("lv_imagebutton", lv_xml_imagebutton_create, lv_xml_imagebutton_apply);
+    lv_xml_register_widget("lv_imagebutton-src_left", lv_xml_imagebutton_src_left_create,
+                           lv_xml_imagebutton_src_left_apply);
+    lv_xml_register_widget("lv_imagebutton-src_right", lv_xml_imagebutton_src_right_create,
+                           lv_xml_imagebutton_src_right_apply);
+    lv_xml_register_widget("lv_imagebutton-src_mid", lv_xml_imagebutton_src_mid_create, lv_xml_imagebutton_src_mid_apply);
 #endif
 
 #if LV_USE_ROLLER
@@ -874,43 +883,57 @@ static void view_start_element_handler(void * user_data, const char * name, cons
 
     resolve_consts(attrs, &state->scope);
 
-    void * item = NULL;
+    state->item = NULL;
     /* Select the widget specific parser type based on the name */
     lv_widget_processor_t * p = lv_xml_widget_get_processor(name);
     if(p) {
-        item = p->create_cb(state, attrs);
-        state->item = item;
+        state->item = p->create_cb(state, attrs);
+        if(state->item) {
+            /*If it's a widget remove all styles. E.g. if it extends an `lv_button`
+             *now it has the button theme styles. However if it were a real widget
+             *it had e.g. `my_widget_class` so the button's theme wouldn't apply on it.
+             *Removing the style will ensure a better preview*/
+            if(state->scope.is_widget && is_view) lv_obj_remove_style_all(state->item);
 
-
-        /*If it's a widget remove all styles. E.g. if it extends an `lv_button`
-         *now it has the button theme styles. However if it were a real widget
-         *it had e.g. `my_widget_class` so the button's theme wouldn't apply on it.
-         *Removing the style will ensure a better preview*/
-        if(state->scope.is_widget && is_view) lv_obj_remove_style_all(item);
-
-        /*Apply the attributes from e.g. `<lv_slider value="30" x="20">`*/
-        if(item) {
+            /*Apply the attributes from e.g. `<lv_slider value="30" x="20">`*/
             p->apply_cb(state, attrs);
         }
     }
 
     /* If not a widget, check if it is a component */
-    if(item == NULL) {
-        item = lv_xml_component_process(state, name, attrs);
-        state->item = item;
+    if(state->item == NULL) {
+        state->item = lv_xml_component_process(state, name, attrs);
     }
 
-    /* If it isn't a component either then it is unknown */
-    if(item == NULL) {
-        LV_LOG_WARN("'%s' is not a known widget, element, or component", name);
+    /* If not a component either, check if it is a slot, e.g. my_button-icon */
+    if(state->item == NULL) {
+        char buf[128];
+        if(lv_strlen(name) >= sizeof(buf)) {
+            LV_LOG_WARN("Component/slot name '%s' is too long (max 127 chars); skipping slot parsing.", name);
+        }
+        else {
+            lv_strlcpy(buf, name, sizeof(buf));
+            char * bufp = buf;
+            const char * comp_name = lv_xml_split_str(&bufp, '-');
+            const char * slot_name = bufp;
+            lv_xml_component_scope_t * comp_scope = lv_xml_component_get_scope(comp_name);
+            if(comp_scope && lv_streq(comp_name, comp_scope->name)) {
+                state->item = lv_obj_find_by_name(state->parent, slot_name);
+            }
+        }
+    }
+
+    /* If it isn't a slot either then it is unknown */
+    if(state->item == NULL) {
+        LV_LOG_WARN("'%s' is not a known widget, element, component, or slot", name);
         return;
     }
 
     void ** new_parent = lv_ll_ins_tail(&state->parent_ll);
-    *new_parent = item;
+    *new_parent = state->item;
 
     if(is_view) {
-        state->view = item;
+        state->view = state->item;
     }
 }
 

@@ -114,13 +114,6 @@ lv_result_t lv_xml_register_const(lv_xml_component_scope_t * scope, const char *
 
 const char * lv_xml_get_const(lv_xml_component_scope_t * scope, const char * name);
 
-/**
- * Get a constant value by name without logging a warning if not found.
- * Useful for probing whether a constant exists before falling back to alternatives.
- * @param scope     the component scope (NULL for globals)
- * @param name      constant name to look up
- * @return          the constant value or NULL if not found (no warning logged)
- */
 const char * lv_xml_get_const_silent(lv_xml_component_scope_t * scope, const char * name);
 
 lv_result_t lv_xml_register_event_cb(lv_xml_component_scope_t * scope, const char * name, lv_event_cb_t cb);
