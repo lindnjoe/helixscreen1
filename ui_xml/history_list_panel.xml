@@ -13,6 +13,8 @@
             width="100%" height="content" flex_flow="row" style_flex_main_place="start" style_flex_cross_place="center"
             style_pad_column="#space_md" style_pad_left="#space_md" style_pad_right="#space_md"
             style_pad_top="#space_sm" style_pad_bottom="#space_sm">
+      <!-- Disable content when printer not connected or klippy not ready -->
+      <bind_state_if_not_eq subject="nav_buttons_enabled" state="disabled" ref_value="1"/>
       <!-- Search box - fills remaining space -->
       <text_input name="search_box"
                   placeholder_text="Search filename..." placeholder_tag="Search filename..." translation_tag="Search filename..." flex_grow="1" style_min_width="120"
@@ -33,6 +35,8 @@
             width="100%" height="content" flex_grow="1" flex_flow="column" style_pad_top="#space_sm"
             style_pad_bottom="#space_md" style_pad_left="#space_md" style_pad_right="#space_md"
             style_pad_row="#space_sm" scrollable="true">
+      <!-- Disable content when printer not connected or klippy not ready -->
+      <bind_state_if_not_eq subject="nav_buttons_enabled" state="disabled" ref_value="1"/>
       <!-- ================================================================== -->
       <!-- STATE: LOADING (state=0) -->
       <!-- ================================================================== -->

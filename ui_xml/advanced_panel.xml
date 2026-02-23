@@ -8,6 +8,8 @@
   <view name="advanced_panel"
         extends="lv_obj" width="100%" height="100%" style_pad_all="0" style_pad_gap="0" flex_flow="column"
         scrollable="true" style_bg_color="#screen_bg">
+    <!-- Disable all controls when printer not connected or klippy not ready -->
+    <bind_state_if_not_eq subject="nav_buttons_enabled" state="disabled" ref_value="1"/>
     <!-- ================================================================== -->
     <!-- EMERGENCY CONTROLS SECTION (from emergency-stop branch) -->
     <!-- ================================================================== -->

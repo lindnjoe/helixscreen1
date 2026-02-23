@@ -30,6 +30,8 @@
     <lv_obj name="overlay_content"
             width="100%" flex_grow="1" style_pad_all="#space_lg" style_pad_gap="#space_md" scrollable="false"
             flex_flow="column">
+      <!-- Disable content when printer not connected or klippy not ready -->
+      <bind_state_if_not_eq subject="nav_buttons_enabled" state="disabled" ref_value="1"/>
       <!-- Spool List (scrollable) - visible when state = SPOOLS (2) -->
       <lv_obj name="spool_list"
               width="100%" flex_grow="1" style_pad_all="0" scrollable="true" flex_flow="column"

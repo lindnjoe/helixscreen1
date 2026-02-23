@@ -26,6 +26,8 @@
   <view name="controls_panel"
         extends="lv_obj" width="100%" height="100%" style_pad_all="#space_xs" style_border_width="0" flex_flow="column"
         style_bg_color="#screen_bg" style_pad_gap="#space_xs" scrollable="false">
+    <!-- Disable all controls when printer not connected or klippy not ready -->
+    <bind_state_if_not_eq subject="nav_buttons_enabled" state="disabled" ref_value="1"/>
     <!-- Row 1: Position card (left) | Right section with conditional E-Stop + Temps/Cooling -->
     <!-- Using explicit 55% height instead of flex-grow to avoid LVGL hidden-object bug -->
     <lv_obj width="100%" height="50%" style_pad_all="0" flex_flow="row" style_pad_gap="#space_xs" scrollable="false">

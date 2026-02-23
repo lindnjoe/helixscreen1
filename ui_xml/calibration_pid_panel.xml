@@ -20,6 +20,8 @@
     <lv_obj name="overlay_content"
             width="100%" flex_grow="1" style_pad_all="#space_lg"
             flex_flow="column" style_pad_gap="#space_lg" scrollable="false">
+      <!-- Disable content when printer not connected or klippy not ready -->
+      <bind_state_if_not_eq subject="nav_buttons_enabled" state="disabled" ref_value="1"/>
       <!-- ================================================================== -->
       <!-- STATE: IDLE - Heater selection and target temperature -->
       <!-- ================================================================== -->

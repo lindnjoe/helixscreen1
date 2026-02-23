@@ -33,6 +33,8 @@
     <lv_obj name="overlay_content"
             width="100%" flex_grow="1" style_pad_all="#space_md" scrollable="false" flex_flow="row"
             style_pad_gap="#space_md">
+      <!-- Disable content when printer not connected or klippy not ready -->
+      <bind_state_if_not_eq subject="nav_buttons_enabled" state="disabled" ref_value="1"/>
       <!-- Left: 3D Mesh Canvas wrapper (fills remaining space) -->
       <lv_obj name="canvas_wrapper" height="100%" flex_grow="1" style_pad_all="0" scrollable="false">
         <bed_mesh name="bed_mesh_canvas" width="100%" height="100%" clickable="true" style_border_width="0"/>

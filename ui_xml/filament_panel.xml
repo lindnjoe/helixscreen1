@@ -25,6 +25,8 @@
   <view name="filament_panel"
         extends="lv_obj" width="100%" height="100%" style_border_width="0" style_pad_all="#space_md" scrollable="false"
         flex_flow="row" style_flex_cross_place="start" style_pad_gap="#space_md" style_bg_color="#screen_bg">
+    <!-- Disable all controls when printer not connected or klippy not ready -->
+    <bind_state_if_not_eq subject="nav_buttons_enabled" state="disabled" ref_value="1"/>
 
     <!-- ================================================================== -->
     <!-- LEFT COLUMN: Temperature Status & AMS                              -->

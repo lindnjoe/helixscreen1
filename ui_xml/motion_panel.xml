@@ -24,6 +24,8 @@
     <lv_obj name="overlay_content"
             width="100%" flex_grow="1" style_pad_all="#space_lg" scrollable="false" style_border_opa="0" flex_flow="row"
             style_flex_main_place="center">
+      <!-- Disable content when printer not connected or klippy not ready -->
+      <bind_state_if_not_eq subject="nav_buttons_enabled" state="disabled" ref_value="1"/>
       <!-- Left Column (65%): XY Jog Pad -->
       <lv_obj name="left_column" width="65%" height="100%" style_pad_all="0" scrollable="false" style_border_opa="0">
         <!-- Circular Jog Pad: Custom-Drawn Two-Zone Design (Bambu Lab Style) -->
