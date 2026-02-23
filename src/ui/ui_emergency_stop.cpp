@@ -515,8 +515,9 @@ void EmergencyStopOverlay::home_firmware_restart_clicked(lv_event_t* e) {
     LV_UNUSED(e);
     spdlog::info("[Home] Firmware Restart clicked from Home panel");
 
-    // If Klipper is already in SHUTDOWN or ERROR, restart immediately (no confirmation needed).
-    // Otherwise, confirm because restarting interrupts a running printer.
+    // If Klipper is in SHUTDOWN or ERROR, restart immediately (no confirmation needed —
+    // printer is already stopped). For READY or STARTUP, show confirmation since
+    // restarting could interrupt active operations or connection attempts.
     lv_subject_t* klippy = lv_xml_get_subject(nullptr, "klippy_state");
     int klippy_val = klippy ? lv_subject_get_int(klippy) : 0;
     bool in_error_state = (klippy_val == static_cast<int>(KlippyState::SHUTDOWN) ||
