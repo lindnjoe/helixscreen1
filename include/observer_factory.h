@@ -26,6 +26,7 @@
 #include "moonraker_client.h" // ConnectionState
 #include "printer_state.h"    // PrintJobState
 
+#include <memory>
 #include <string>
 #include <type_traits>
 
@@ -285,10 +286,17 @@ namespace detail {
 
 /**
  * @brief Context for lambda-based observers
+ *
+ * The `alive` token lets deferred lambdas (queued via queue_update) detect
+ * when the observer has been destroyed between queueing and execution.
+ * Without this, the copied panel pointer in the deferred lambda becomes
+ * dangling if the panel is destroyed during a widget rebuild.
+ * See issue #174: SEGV in LedWidget::update_light_icon() via stale pointer.
  */
 template <typename Panel, typename Handler> struct LambdaObserverContext {
     Panel* panel;
     Handler handler;
+    std::shared_ptr<bool> alive = std::make_shared<bool>(true);
 };
 
 /**
@@ -338,10 +346,17 @@ ObserverGuard observe_int_sync(lv_subject_t* subject, Panel* panel, Handler&& ha
                 // Copy handler and panel pointer so the deferred lambda is
                 // self-contained and safe even if the observer context is
                 // destroyed before execution (the exact crash in issue #82).
+                // The weak alive token detects when the observer (and thus
+                // the panel) has been destroyed between queueing and
+                // execution (issue #174).
                 auto handler_copy = c->handler;
                 auto* panel_ptr = c->panel;
-                helix::ui::queue_update(
-                    [handler_copy, panel_ptr, value]() { handler_copy(panel_ptr, value); });
+                std::weak_ptr<bool> weak_alive = c->alive;
+                helix::ui::queue_update([handler_copy, panel_ptr, value, weak_alive]() {
+                    if (weak_alive.expired())
+                        return;
+                    handler_copy(panel_ptr, value);
+                });
             }
         },
         ctx);
@@ -473,7 +488,10 @@ ObserverGuard observe_string(lv_subject_t* subject, Panel* panel, Handler&& hand
                 std::string str_copy = str ? str : "";
                 auto handler_copy = c->handler;
                 auto* panel_ptr = c->panel;
-                helix::ui::queue_update([handler_copy, panel_ptr, str_copy]() {
+                std::weak_ptr<bool> weak_alive = c->alive;
+                helix::ui::queue_update([handler_copy, panel_ptr, str_copy, weak_alive]() {
+                    if (weak_alive.expired())
+                        return;
                     handler_copy(panel_ptr, str_copy.c_str());
                 });
             }
