@@ -250,7 +250,7 @@
 
 /* Draw using OpenGL ES textures - GPU-accelerated on Pi via DRM+EGL.
  * Uses LVGL's bundled GLAD loader for OpenGL ES function loading.
- * Currently disabled: LVGL's implementation uses C++11 raw strings in .c files. */
+ * LVGL's opengles .c files use C++11 raw strings — compiled as C++ by the build system. */
 #ifdef HELIX_ENABLE_OPENGLES
     #define LV_USE_DRAW_OPENGLES 1
     #define LV_DRAW_OPENGLES_TEXTURE_CACHE_COUNT 64
@@ -1167,9 +1167,13 @@
 #define LV_USE_WINDOWS    0
 
 /* Use OpenGL ES display driver (GLAD-based).
- * Disabled: LVGL's implementation uses C++11 raw strings in .c files and
- * has tight coupling between draw backend and display driver. */
-#define LV_USE_OPENGLES   0
+ * Required for GPU-accelerated rendering via DRM+EGL on Pi.
+ * Gated by HELIX_ENABLE_OPENGLES (set by build system for Pi DRM builds). */
+#ifdef HELIX_ENABLE_OPENGLES
+    #define LV_USE_OPENGLES   1
+#else
+    #define LV_USE_OPENGLES   0
+#endif
 
 /* QNX Screen display and input drivers */
 #define LV_USE_QNX              0
