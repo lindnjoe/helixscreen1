@@ -62,8 +62,7 @@ class CrashReporterTestFixture {
         }
     }
 
-    void write_log_file(const std::string& content,
-                        const std::string& filename = "helix-screen.log") {
+    void write_log_file(const std::string& content, const std::string& filename = "helix.log") {
         std::ofstream ofs((temp_dir_ / filename).string());
         ofs << content;
     }
