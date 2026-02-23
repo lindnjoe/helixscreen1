@@ -49,6 +49,14 @@ setup() {
     grep -q 'SupplementaryGroups=video input render tty' "$SERVICE_TEMPLATE"
 }
 
+@test "service template HAS AmbientCapabilities with CAP_SYS_TTY_CONFIG" {
+    grep -q 'AmbientCapabilities=.*CAP_SYS_TTY_CONFIG' "$SERVICE_TEMPLATE"
+}
+
+@test "service template HAS AmbientCapabilities with CAP_SYS_BOOT" {
+    grep -q 'AmbientCapabilities=.*CAP_SYS_BOOT' "$SERVICE_TEMPLATE"
+}
+
 # --- Substitution tests (copy to tmpdir, run sed, verify) ---
 
 @test "substitution replaces all @@HELIX_USER@@ with biqu" {

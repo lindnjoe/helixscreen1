@@ -70,9 +70,10 @@ NoNewPrivileges=true
 # Allow framebuffer/DRM access
 SupplementaryGroups=video input render tty
 
-# Console suppression: KDSETMODE KD_GRAPHICS prevents kernel messages from
-# bleeding through LVGL's partial framebuffer repaints. Requires CAP_SYS_TTY_CONFIG.
-AmbientCapabilities=CAP_SYS_TTY_CONFIG
+# CAP_SYS_TTY_CONFIG: KDSETMODE KD_GRAPHICS prevents kernel messages from
+# bleeding through LVGL's partial framebuffer repaints.
+# CAP_SYS_BOOT: allows watchdog to reboot the system from crash recovery dialog.
+AmbientCapabilities=CAP_SYS_TTY_CONFIG CAP_SYS_BOOT
 
 # Logging
 StandardOutput=journal

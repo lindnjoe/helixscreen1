@@ -451,7 +451,67 @@ static CrashInfo run_child_process(const WatchdogArgs& args, pid_t splash_pid) {
 // =============================================================================
 
 /**
+ * @brief Try a reboot method via fork+exec, return true if exec succeeded
+ *
+ * Uses fork so that exec failure doesn't replace the watchdog process,
+ * allowing fallback to the next method.
+ */
+static bool try_reboot_exec(const char* desc, const char* path,
+                            const std::vector<const char*>& argv) {
+    spdlog::info("[Watchdog] Trying {}", desc);
+
+    pid_t pid = fork();
+    if (pid < 0) {
+        spdlog::warn("[Watchdog] fork() failed for {}: {}", desc, strerror(errno));
+        return false;
+    }
+
+    if (pid == 0) {
+        // Child - exec the reboot command
+        execv(path, const_cast<char* const*>(argv.data()));
+        _exit(127); // exec failed
+    }
+
+    // Parent - wait briefly for the child
+    int status = 0;
+    int attempts = 0;
+    while (attempts < 10) {
+        pid_t ret = waitpid(pid, &status, WNOHANG);
+        if (ret == pid) {
+            if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+                spdlog::info("[Watchdog] {} succeeded, system rebooting...", desc);
+                // Give the system a moment to process the reboot request
+                sleep(10);
+                return true; // Shouldn't reach here if reboot worked
+            }
+            spdlog::warn("[Watchdog] {} failed (exit code {})", desc,
+                         WIFEXITED(status) ? WEXITSTATUS(status) : -1);
+            return false;
+        }
+        if (ret < 0 && errno != EINTR) {
+            break;
+        }
+        usleep(200000); // 200ms
+        attempts++;
+    }
+
+    // Still running after 2s - assume it's working (reboot in progress)
+    spdlog::info("[Watchdog] {} still running, assuming reboot in progress...", desc);
+    sleep(10);
+    // If we're still here, it didn't work
+    kill(pid, SIGKILL);
+    waitpid(pid, nullptr, 0);
+    return false;
+}
+
+/**
  * @brief Perform system restart using appropriate method
+ *
+ * Tries multiple reboot strategies in order:
+ * 1. systemctl reboot (needs privileges or polkit)
+ * 2. gdbus call to logind Reboot (works without privilege escalation)
+ * 3. /sbin/reboot
+ * 4. reboot() syscall (needs CAP_SYS_BOOT)
  */
 [[noreturn]] static void perform_system_restart() {
     spdlog::info("[Watchdog] Initiating system restart");
@@ -461,20 +521,27 @@ static CrashInfo run_child_process(const WatchdogArgs& args, pid_t splash_pid) {
 
     std::error_code ec;
     if (std::filesystem::exists("/run/systemd/system", ec)) {
-        // Systemd is running - use systemctl for clean shutdown
-        spdlog::info("[Watchdog] Using systemctl reboot");
-        execlp("systemctl", "systemctl", "reboot", nullptr);
+        // Try systemctl reboot (works if polkit allows it or running as root)
+        try_reboot_exec("systemctl reboot", "/usr/bin/systemctl",
+                        {"/usr/bin/systemctl", "reboot", nullptr});
+
+        // Try D-Bus call to logind - works for unprivileged users on systems
+        // with active sessions (no polkit prompt needed for interactive=true)
+        try_reboot_exec("logind D-Bus Reboot", "/usr/bin/gdbus",
+                        {"/usr/bin/gdbus", "call", "--system", "--dest", "org.freedesktop.login1",
+                         "--object-path", "/org/freedesktop/login1", "--method",
+                         "org.freedesktop.login1.Manager.Reboot", "true", nullptr});
     }
 
     // Fallback to /sbin/reboot
-    spdlog::info("[Watchdog] Using /sbin/reboot");
-    execl("/sbin/reboot", "reboot", nullptr);
+    try_reboot_exec("/sbin/reboot", "/sbin/reboot", {"/sbin/reboot", nullptr});
 
-    // Last resort: direct syscall
-    spdlog::warn("[Watchdog] Using reboot syscall");
+    // Last resort: direct syscall (requires CAP_SYS_BOOT)
+    spdlog::warn("[Watchdog] All exec methods failed, trying reboot syscall");
     reboot(RB_AUTOBOOT);
 
     // Should never reach here
+    spdlog::error("[Watchdog] All reboot methods failed");
     _exit(1);
 }
 
