@@ -4,6 +4,7 @@
 
 #include "ui_nav_manager.h"
 #include "ui_panel_notification_history.h"
+#include "ui_update_queue.h"
 #include "ui_utils.h"
 
 #include "display_settings_manager.h"
@@ -57,8 +58,21 @@ void NotificationManager::notification_history_clicked([[maybe_unused]] lv_event
         panel.init_subjects();
     }
 
-    // Clean up old panel if it exists but is hidden/invalid
-    helix::ui::safe_delete(mgr.notification_panel_obj_);
+    // Clean up old panel if it exists but is hidden/invalid.
+    // Defer deletion to avoid destroying objects during input event processing,
+    // which can trigger lv_event_mark_deleted on a corrupt event chain (issue #179).
+    if (mgr.notification_panel_obj_ && lv_obj_is_valid(mgr.notification_panel_obj_)) {
+        lv_obj_t* old_panel = mgr.notification_panel_obj_;
+        mgr.notification_panel_obj_ = nullptr;
+        helix::ui::queue_update([old_panel]() {
+            if (lv_obj_is_valid(old_panel)) {
+                helix::ui::defocus_tree(old_panel);
+                lv_obj_delete(old_panel);
+            }
+        });
+    } else {
+        mgr.notification_panel_obj_ = nullptr;
+    }
 
     // Now create XML component
     lv_obj_t* panel_obj =

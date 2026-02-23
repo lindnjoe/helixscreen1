@@ -954,8 +954,8 @@ void LedSettingsOverlay::populate_led_chips_impl() {
         return;
 
     lv_obj_t* chip_container = lv_obj_find_by_name(led_chip_row, "chip_container");
-    if (!chip_container) {
-        spdlog::warn("[{}] LED chip row found but no chip_container", get_name());
+    if (!chip_container || !lv_obj_is_valid(chip_container)) {
+        spdlog::warn("[{}] LED chip row found but chip_container invalid/missing", get_name());
         return;
     }
 
