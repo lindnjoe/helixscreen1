@@ -12,7 +12,7 @@
 #include "app_globals.h"
 #include "display_settings_manager.h"
 #include "format_utils.h"
-#include "lvgl/src/xml/lv_xml.h"
+#include "helix-xml/src/xml/lv_xml.h"
 #include "moonraker_api.h"
 #include "observer_factory.h"
 #include "ui/fan_spin_animation.h"

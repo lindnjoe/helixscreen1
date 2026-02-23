@@ -250,7 +250,7 @@ jobs:
   release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: [build-platforms]
+    needs: [build-platforms, build-android]
     permissions:
       contents: write  # Required to create releases
 

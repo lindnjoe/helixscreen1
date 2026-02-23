@@ -12,7 +12,7 @@
 #include "ui_nav_manager.h"
 #include "ui_update_queue.h"
 
-#include "lvgl/src/xml/lv_xml.h"
+#include "helix-xml/src/xml/lv_xml.h"
 #include "runtime_config.h"
 #include "static_panel_registry.h"
 #include "theme_manager.h"

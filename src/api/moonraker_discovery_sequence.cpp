@@ -230,247 +230,241 @@ void MoonrakerDiscoverySequence::continue_discovery() {
                     true); // silent — suppress error toast
 
                 // Step 3: Get printer information
-                client_.send_jsonrpc(
-                    "printer.info", {}, [this](json printer_response) {
-                        if (is_stale())
-                            return;
-                        if (printer_response.contains("result")) {
-                            const json& result = printer_response["result"];
-                            auto hostname = result.value("hostname", "unknown");
-                            auto software_version = result.value("software_version", "unknown");
-                            hardware_.set_hostname(hostname);
-                            hardware_.set_software_version(software_version);
-                            std::string state = result.value("state", "");
-                            std::string state_message = result.value("state_message", "");
+                client_.send_jsonrpc("printer.info", {}, [this](json printer_response) {
+                    if (is_stale())
+                        return;
+                    if (printer_response.contains("result")) {
+                        const json& result = printer_response["result"];
+                        auto hostname = result.value("hostname", "unknown");
+                        auto software_version = result.value("software_version", "unknown");
+                        hardware_.set_hostname(hostname);
+                        hardware_.set_software_version(software_version);
+                        std::string state = result.value("state", "");
+                        std::string state_message = result.value("state_message", "");
 
-                            spdlog::debug("[Moonraker Client] Printer hostname: {}", hostname);
-                            spdlog::debug("[Moonraker Client] Klipper software version: {}",
-                                          software_version);
-                            if (!state_message.empty()) {
-                                spdlog::info("[Moonraker Client] Printer state: {}", state_message);
-                            }
-
-                            // Set klippy state based on printer.info response
-                            // This ensures we recognize shutdown/error states at startup
-                            if (state == "shutdown") {
-                                spdlog::warn(
-                                    "[Moonraker Client] Printer is in SHUTDOWN state at startup");
-                                get_printer_state().set_klippy_state(KlippyState::SHUTDOWN);
-                            } else if (state == "error") {
-                                spdlog::warn(
-                                    "[Moonraker Client] Printer is in ERROR state at startup");
-                                get_printer_state().set_klippy_state(KlippyState::ERROR);
-                            } else if (state == "startup") {
-                                spdlog::info("[Moonraker Client] Printer is starting up");
-                                get_printer_state().set_klippy_state(KlippyState::STARTUP);
-                            } else if (state == "ready") {
-                                get_printer_state().set_klippy_state(KlippyState::READY);
-                            }
+                        spdlog::debug("[Moonraker Client] Printer hostname: {}", hostname);
+                        spdlog::debug("[Moonraker Client] Klipper software version: {}",
+                                      software_version);
+                        if (!state_message.empty()) {
+                            spdlog::info("[Moonraker Client] Printer state: {}", state_message);
                         }
 
-                        // Step 4: Query configfile for accelerometer detection
-                        // Klipper's objects/list only returns objects with get_status() methods.
-                        // Accelerometers (adxl345, lis2dw, mpu9250, resonance_tester) don't have
-                        // get_status() since they're on-demand calibration tools.
-                        // Must check configfile.config keys instead.
-                        client_.send_jsonrpc(
-                            "printer.objects.query",
-                            {{"objects", json::object({{"configfile", json::array({"config"})}})}},
-                            [this](json config_response) {
-                                if (config_response.contains("result") &&
-                                    config_response["result"].contains("status") &&
-                                    config_response["result"]["status"].contains("configfile") &&
-                                    config_response["result"]["status"]["configfile"].contains(
-                                        "config")) {
-                                    const auto& cfg =
-                                        config_response["result"]["status"]["configfile"]["config"];
-                                    hardware_.parse_config_keys(cfg);
-
-                                    // Update LED controller with configfile data (effect targets +
-                                    // output_pin PWM)
-                                    nlohmann::json cfg_copy = cfg;
-                                    helix::ui::queue_update([cfg_copy]() {
-                                        auto& led_ctrl = helix::led::LedController::instance();
-                                        if (led_ctrl.is_initialized()) {
-                                            led_ctrl.update_effect_targets(cfg_copy);
-                                            led_ctrl.update_output_pin_config(cfg_copy);
-                                        }
-                                    });
-                                }
-                            },
-                            [](const MoonrakerError& err) {
-                                // Configfile query failed - not critical, continue with discovery
-                                spdlog::debug(
-                                    "[Moonraker Client] Configfile query failed, continuing: {}",
-                                    err.message);
-                            });
-
-                        // Step 4b: Query OS version from machine.system_info (parallel)
-                        client_.send_jsonrpc(
-                            "machine.system_info", json::object(),
-                            [this](json sys_response) {
-                                // Extract distribution name: result.system_info.distribution.name
-                                if (sys_response.contains("result") &&
-                                    sys_response["result"].contains("system_info") &&
-                                    sys_response["result"]["system_info"].contains(
-                                        "distribution") &&
-                                    sys_response["result"]["system_info"]["distribution"].contains(
-                                        "name")) {
-                                    std::string os_name = sys_response["result"]["system_info"]
-                                                                      ["distribution"]["name"]
-                                                                          .get<std::string>();
-                                    hardware_.set_os_version(os_name);
-                                    spdlog::debug("[Moonraker Client] OS version: {}", os_name);
-                                }
-                            },
-                            [](const MoonrakerError& err) {
-                                spdlog::debug("[Moonraker Client] machine.system_info query "
-                                              "failed, continuing: "
-                                              "{}",
-                                              err.message);
-                            });
-
-                        // Step 5: Query MCU information for printer detection
-                        // Find all MCU objects (e.g., "mcu", "mcu EBBCan", "mcu rpi")
-                        std::vector<std::string> mcu_objects;
-                        for (const auto& obj : hardware_.printer_objects()) {
-                            // Match "mcu" or "mcu <name>" pattern
-                            if (obj == "mcu" || obj.rfind("mcu ", 0) == 0) {
-                                mcu_objects.push_back(obj);
-                            }
+                        // Set klippy state based on printer.info response
+                        // This ensures we recognize shutdown/error states at startup
+                        if (state == "shutdown") {
+                            spdlog::warn(
+                                "[Moonraker Client] Printer is in SHUTDOWN state at startup");
+                            get_printer_state().set_klippy_state(KlippyState::SHUTDOWN);
+                        } else if (state == "error") {
+                            spdlog::warn("[Moonraker Client] Printer is in ERROR state at startup");
+                            get_printer_state().set_klippy_state(KlippyState::ERROR);
+                        } else if (state == "startup") {
+                            spdlog::info("[Moonraker Client] Printer is starting up");
+                            get_printer_state().set_klippy_state(KlippyState::STARTUP);
+                        } else if (state == "ready") {
+                            get_printer_state().set_klippy_state(KlippyState::READY);
                         }
+                    }
 
-                        if (mcu_objects.empty()) {
-                            spdlog::debug(
-                                "[Moonraker Client] No MCU objects found, skipping MCU query");
-                            // Continue to subscription step
-                            complete_discovery_subscription();
-                            return;
-                        }
+                    // Step 4: Query configfile for accelerometer detection
+                    // Klipper's objects/list only returns objects with get_status() methods.
+                    // Accelerometers (adxl345, lis2dw, mpu9250, resonance_tester) don't have
+                    // get_status() since they're on-demand calibration tools.
+                    // Must check configfile.config keys instead.
+                    client_.send_jsonrpc(
+                        "printer.objects.query",
+                        {{"objects", json::object({{"configfile", json::array({"config"})}})}},
+                        [this](json config_response) {
+                            if (config_response.contains("result") &&
+                                config_response["result"].contains("status") &&
+                                config_response["result"]["status"].contains("configfile") &&
+                                config_response["result"]["status"]["configfile"].contains(
+                                    "config")) {
+                                const auto& cfg =
+                                    config_response["result"]["status"]["configfile"]["config"];
+                                hardware_.parse_config_keys(cfg);
 
-                        // Query all MCU objects in parallel using a shared counter
-                        auto pending_mcu_queries =
-                            std::make_shared<std::atomic<size_t>>(mcu_objects.size());
-                        auto mcu_results =
-                            std::make_shared<std::vector<std::pair<std::string, std::string>>>();
-                        auto mcu_version_results =
-                            std::make_shared<std::vector<std::pair<std::string, std::string>>>();
-                        auto mcu_results_mutex = std::make_shared<std::mutex>();
-
-                        for (const auto& mcu_obj : mcu_objects) {
-                            json mcu_query = {{mcu_obj, nullptr}};
-                            client_.send_jsonrpc(
-                                "printer.objects.query", {{"objects", mcu_query}},
-                                [this, mcu_obj, pending_mcu_queries, mcu_results,
-                                 mcu_version_results, mcu_results_mutex](json mcu_response) {
-                                    if (is_stale())
-                                        return;
-                                    std::string chip_type;
-                                    std::string mcu_version;
-
-                                    // Extract MCU chip type and version from response
-                                    if (mcu_response.contains("result") &&
-                                        mcu_response["result"].contains("status") &&
-                                        mcu_response["result"]["status"].contains(mcu_obj)) {
-                                        const json& mcu_data =
-                                            mcu_response["result"]["status"][mcu_obj];
-
-                                        if (mcu_data.contains("mcu_constants") &&
-                                            mcu_data["mcu_constants"].is_object() &&
-                                            mcu_data["mcu_constants"].contains("MCU") &&
-                                            mcu_data["mcu_constants"]["MCU"].is_string()) {
-                                            chip_type =
-                                                mcu_data["mcu_constants"]["MCU"].get<std::string>();
-                                            spdlog::debug(
-                                                "[Moonraker Client] Detected MCU '{}': {}", mcu_obj,
-                                                chip_type);
-                                        }
-
-                                        // Extract mcu_version for About section
-                                        if (mcu_data.contains("mcu_version") &&
-                                            mcu_data["mcu_version"].is_string()) {
-                                            mcu_version =
-                                                mcu_data["mcu_version"].get<std::string>();
-                                            spdlog::debug("[Moonraker Client] MCU '{}' version: {}",
-                                                          mcu_obj, mcu_version);
-                                        }
-                                    }
-
-                                    // Store results thread-safely
-                                    {
-                                        std::lock_guard<std::mutex> lock(*mcu_results_mutex);
-                                        if (!chip_type.empty()) {
-                                            mcu_results->push_back({mcu_obj, chip_type});
-                                        }
-                                        if (!mcu_version.empty()) {
-                                            mcu_version_results->push_back({mcu_obj, mcu_version});
-                                        }
-                                    }
-
-                                    // Check if all queries complete
-                                    if (pending_mcu_queries->fetch_sub(1) == 1) {
-                                        // All MCU queries complete - populate mcu and mcu_list
-                                        std::vector<std::string> mcu_list;
-                                        std::string primary_mcu;
-
-                                        // Sort results to ensure consistent ordering (primary "mcu"
-                                        // first)
-                                        std::lock_guard<std::mutex> lock(*mcu_results_mutex);
-                                        auto sort_mcu_first = [](const auto& a, const auto& b) {
-                                            // "mcu" comes first, then alphabetical
-                                            if (a.first == "mcu")
-                                                return true;
-                                            if (b.first == "mcu")
-                                                return false;
-                                            return a.first < b.first;
-                                        };
-                                        std::sort(mcu_results->begin(), mcu_results->end(),
-                                                  sort_mcu_first);
-                                        std::sort(mcu_version_results->begin(),
-                                                  mcu_version_results->end(), sort_mcu_first);
-
-                                        for (const auto& [obj_name, chip] : *mcu_results) {
-                                            mcu_list.push_back(chip);
-                                            if (obj_name == "mcu" && primary_mcu.empty()) {
-                                                primary_mcu = chip;
-                                            }
-                                        }
-
-                                        // Update hardware discovery with MCU info
-                                        hardware_.set_mcu(primary_mcu);
-                                        hardware_.set_mcu_list(mcu_list);
-                                        hardware_.set_mcu_versions(*mcu_version_results);
-
-                                        if (!primary_mcu.empty()) {
-                                            spdlog::info("[Moonraker Client] Primary MCU: {}",
-                                                         primary_mcu);
-                                        }
-                                        if (mcu_list.size() > 1) {
-                                            spdlog::info("[Moonraker Client] All MCUs: {}",
-                                                         json(mcu_list).dump());
-                                        }
-
-                                        // Continue to subscription step
-                                        complete_discovery_subscription();
-                                    }
-                                },
-                                [this, mcu_obj,
-                                 pending_mcu_queries](const MoonrakerError& err) {
-                                    if (is_stale())
-                                        return;
-
-                                    spdlog::warn("[Moonraker Client] MCU query for '{}' failed: {}",
-                                                 mcu_obj, err.message);
-
-                                    // Check if all queries complete (even on error)
-                                    if (pending_mcu_queries->fetch_sub(1) == 1) {
-                                        // Continue to subscription step even if some MCU queries
-                                        // failed
-                                        complete_discovery_subscription();
+                                // Update LED controller with configfile data (effect targets +
+                                // output_pin PWM)
+                                nlohmann::json cfg_copy = cfg;
+                                helix::ui::queue_update([cfg_copy]() {
+                                    auto& led_ctrl = helix::led::LedController::instance();
+                                    if (led_ctrl.is_initialized()) {
+                                        led_ctrl.update_effect_targets(cfg_copy);
+                                        led_ctrl.update_output_pin_config(cfg_copy);
                                     }
                                 });
+                            }
+                        },
+                        [](const MoonrakerError& err) {
+                            // Configfile query failed - not critical, continue with discovery
+                            spdlog::debug(
+                                "[Moonraker Client] Configfile query failed, continuing: {}",
+                                err.message);
+                        });
+
+                    // Step 4b: Query OS version from machine.system_info (parallel)
+                    client_.send_jsonrpc(
+                        "machine.system_info", json::object(),
+                        [this](json sys_response) {
+                            // Extract distribution name: result.system_info.distribution.name
+                            if (sys_response.contains("result") &&
+                                sys_response["result"].contains("system_info") &&
+                                sys_response["result"]["system_info"].contains("distribution") &&
+                                sys_response["result"]["system_info"]["distribution"].contains(
+                                    "name")) {
+                                std::string os_name =
+                                    sys_response["result"]["system_info"]["distribution"]["name"]
+                                        .get<std::string>();
+                                hardware_.set_os_version(os_name);
+                                spdlog::debug("[Moonraker Client] OS version: {}", os_name);
+                            }
+                        },
+                        [](const MoonrakerError& err) {
+                            spdlog::debug("[Moonraker Client] machine.system_info query "
+                                          "failed, continuing: "
+                                          "{}",
+                                          err.message);
+                        });
+
+                    // Step 5: Query MCU information for printer detection
+                    // Find all MCU objects (e.g., "mcu", "mcu EBBCan", "mcu rpi")
+                    std::vector<std::string> mcu_objects;
+                    for (const auto& obj : hardware_.printer_objects()) {
+                        // Match "mcu" or "mcu <name>" pattern
+                        if (obj == "mcu" || obj.rfind("mcu ", 0) == 0) {
+                            mcu_objects.push_back(obj);
                         }
-                    });
+                    }
+
+                    if (mcu_objects.empty()) {
+                        spdlog::debug(
+                            "[Moonraker Client] No MCU objects found, skipping MCU query");
+                        // Continue to subscription step
+                        complete_discovery_subscription();
+                        return;
+                    }
+
+                    // Query all MCU objects in parallel using a shared counter
+                    auto pending_mcu_queries =
+                        std::make_shared<std::atomic<size_t>>(mcu_objects.size());
+                    auto mcu_results =
+                        std::make_shared<std::vector<std::pair<std::string, std::string>>>();
+                    auto mcu_version_results =
+                        std::make_shared<std::vector<std::pair<std::string, std::string>>>();
+                    auto mcu_results_mutex = std::make_shared<std::mutex>();
+
+                    for (const auto& mcu_obj : mcu_objects) {
+                        json mcu_query = {{mcu_obj, nullptr}};
+                        client_.send_jsonrpc(
+                            "printer.objects.query", {{"objects", mcu_query}},
+                            [this, mcu_obj, pending_mcu_queries, mcu_results, mcu_version_results,
+                             mcu_results_mutex](json mcu_response) {
+                                if (is_stale())
+                                    return;
+                                std::string chip_type;
+                                std::string mcu_version;
+
+                                // Extract MCU chip type and version from response
+                                if (mcu_response.contains("result") &&
+                                    mcu_response["result"].contains("status") &&
+                                    mcu_response["result"]["status"].contains(mcu_obj)) {
+                                    const json& mcu_data =
+                                        mcu_response["result"]["status"][mcu_obj];
+
+                                    if (mcu_data.contains("mcu_constants") &&
+                                        mcu_data["mcu_constants"].is_object() &&
+                                        mcu_data["mcu_constants"].contains("MCU") &&
+                                        mcu_data["mcu_constants"]["MCU"].is_string()) {
+                                        chip_type =
+                                            mcu_data["mcu_constants"]["MCU"].get<std::string>();
+                                        spdlog::debug("[Moonraker Client] Detected MCU '{}': {}",
+                                                      mcu_obj, chip_type);
+                                    }
+
+                                    // Extract mcu_version for About section
+                                    if (mcu_data.contains("mcu_version") &&
+                                        mcu_data["mcu_version"].is_string()) {
+                                        mcu_version = mcu_data["mcu_version"].get<std::string>();
+                                        spdlog::debug("[Moonraker Client] MCU '{}' version: {}",
+                                                      mcu_obj, mcu_version);
+                                    }
+                                }
+
+                                // Store results thread-safely
+                                {
+                                    std::lock_guard<std::mutex> lock(*mcu_results_mutex);
+                                    if (!chip_type.empty()) {
+                                        mcu_results->push_back({mcu_obj, chip_type});
+                                    }
+                                    if (!mcu_version.empty()) {
+                                        mcu_version_results->push_back({mcu_obj, mcu_version});
+                                    }
+                                }
+
+                                // Check if all queries complete
+                                if (pending_mcu_queries->fetch_sub(1) == 1) {
+                                    // All MCU queries complete - populate mcu and mcu_list
+                                    std::vector<std::string> mcu_list;
+                                    std::string primary_mcu;
+
+                                    // Sort results to ensure consistent ordering (primary "mcu"
+                                    // first)
+                                    std::lock_guard<std::mutex> lock(*mcu_results_mutex);
+                                    auto sort_mcu_first = [](const auto& a, const auto& b) {
+                                        // "mcu" comes first, then alphabetical
+                                        if (a.first == "mcu")
+                                            return true;
+                                        if (b.first == "mcu")
+                                            return false;
+                                        return a.first < b.first;
+                                    };
+                                    std::sort(mcu_results->begin(), mcu_results->end(),
+                                              sort_mcu_first);
+                                    std::sort(mcu_version_results->begin(),
+                                              mcu_version_results->end(), sort_mcu_first);
+
+                                    for (const auto& [obj_name, chip] : *mcu_results) {
+                                        mcu_list.push_back(chip);
+                                        if (obj_name == "mcu" && primary_mcu.empty()) {
+                                            primary_mcu = chip;
+                                        }
+                                    }
+
+                                    // Update hardware discovery with MCU info
+                                    hardware_.set_mcu(primary_mcu);
+                                    hardware_.set_mcu_list(mcu_list);
+                                    hardware_.set_mcu_versions(*mcu_version_results);
+
+                                    if (!primary_mcu.empty()) {
+                                        spdlog::info("[Moonraker Client] Primary MCU: {}",
+                                                     primary_mcu);
+                                    }
+                                    if (mcu_list.size() > 1) {
+                                        spdlog::info("[Moonraker Client] All MCUs: {}",
+                                                     json(mcu_list).dump());
+                                    }
+
+                                    // Continue to subscription step
+                                    complete_discovery_subscription();
+                                }
+                            },
+                            [this, mcu_obj, pending_mcu_queries](const MoonrakerError& err) {
+                                if (is_stale())
+                                    return;
+
+                                spdlog::warn("[Moonraker Client] MCU query for '{}' failed: {}",
+                                             mcu_obj, err.message);
+
+                                // Check if all queries complete (even on error)
+                                if (pending_mcu_queries->fetch_sub(1) == 1) {
+                                    // Continue to subscription step even if some MCU queries
+                                    // failed
+                                    complete_discovery_subscription();
+                                }
+                            });
+                    }
+                });
             });
         },
         [this](const MoonrakerError& err) {

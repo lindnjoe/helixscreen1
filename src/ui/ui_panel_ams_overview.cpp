@@ -24,7 +24,7 @@
 #include "ams_types.h"
 #include "app_globals.h"
 #include "display_settings_manager.h"
-#include "lvgl/src/xml/lv_xml.h"
+#include "helix-xml/src/xml/lv_xml.h"
 #include "observer_factory.h"
 #include "printer_detector.h"
 #include "static_panel_registry.h"

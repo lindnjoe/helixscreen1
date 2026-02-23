@@ -8,7 +8,8 @@
 
 #include "display_settings_manager.h"
 #include "format_utils.h"
-#include "lvgl/src/xml/lv_xml.h"
+#include "helix-xml/src/xml/lv_xml.h"
+#include "settings_manager.h"
 #include "theme_manager.h"
 #include "ui/fan_spin_animation.h"
 #include "ui/ui_event_trampoline.h"
