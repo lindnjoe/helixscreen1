@@ -151,7 +151,7 @@ class KeyboardManager {
     LongPressState longpress_state_ = LP_IDLE;
     lv_obj_t* overlay_ = nullptr;
     uint32_t pressed_btn_id_ = 0;
-    const char* pressed_char_ = nullptr;
+    char pressed_char_ = 0;
     const char* alternatives_ = nullptr;
     lv_point_t press_point_{};
     lv_area_t pressed_key_area_{};

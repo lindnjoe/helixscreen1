@@ -147,7 +147,7 @@ bool KeyboardManager::point_in_area(const lv_area_t* area, const lv_point_t* poi
 void KeyboardManager::overlay_cleanup() {
     helix::ui::safe_delete(overlay_);
     alternatives_ = nullptr;
-    pressed_char_ = nullptr;
+    pressed_char_ = 0;
     pressed_btn_id_ = 0;
 }
 
@@ -339,7 +339,7 @@ void KeyboardManager::longpress_event_handler(lv_event_t* e) {
 
         mgr.longpress_state_ = LP_PRESSED;
         mgr.pressed_btn_id_ = btn_id;
-        mgr.pressed_char_ = btn_text;
+        mgr.pressed_char_ = (btn_text && btn_text[0]) ? btn_text[0] : 0;
 
         lv_indev_t* indev = lv_indev_active();
         if (indev) {
@@ -373,10 +373,10 @@ void KeyboardManager::longpress_event_handler(lv_event_t* e) {
                 lv_textarea_add_text(mgr.context_textarea_, str);
                 mgr.longpress_state_ = LP_ALT_SELECTED;
                 spdlog::info("[KeyboardManager] LONG_PRESSED '{}' - auto-inserted alt '{}'",
-                             mgr.pressed_char_ ? mgr.pressed_char_ : "?", mgr.alternatives_[0]);
+                             mgr.pressed_char_ ? mgr.pressed_char_ : '?', mgr.alternatives_[0]);
             } else {
                 spdlog::info("[KeyboardManager] LONG_PRESSED detected for '{}' - overlay shown",
-                             mgr.pressed_char_ ? mgr.pressed_char_ : "?");
+                             mgr.pressed_char_ ? mgr.pressed_char_ : '?');
             }
         }
 
@@ -438,8 +438,9 @@ void KeyboardManager::longpress_event_handler(lv_event_t* e) {
                                  selected_char);
                 } else if (mgr.point_in_area(&mgr.pressed_key_area_, &release_point)) {
                     spdlog::info("[KeyboardManager] Release in original key area");
-                    if (mgr.pressed_char_ && mgr.context_textarea_ != nullptr) {
-                        lv_textarea_add_text(mgr.context_textarea_, mgr.pressed_char_);
+                    if (mgr.pressed_char_ != 0 && mgr.context_textarea_ != nullptr) {
+                        char str[2] = {mgr.pressed_char_, '\0'};
+                        lv_textarea_add_text(mgr.context_textarea_, str);
                         spdlog::info("[KeyboardManager] Inserted primary character: '{}'",
                                      mgr.pressed_char_);
                     }
