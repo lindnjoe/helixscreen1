@@ -157,13 +157,12 @@ bool DisplayManager::init(const Config& config) {
         return false;
     }
 
-    // Log GPU acceleration status for DRM backend
 #ifdef HELIX_DISPLAY_DRM
     if (auto* drm = dynamic_cast<DisplayBackendDRM*>(m_backend.get())) {
         if (drm->is_gpu_accelerated()) {
-            spdlog::info("[DisplayManager] Rendering: GPU-accelerated (OpenGL ES via EGL)");
+            spdlog::info("[Display] Rendering: GPU-accelerated (OpenGL ES via EGL)");
         } else {
-            spdlog::info("[DisplayManager] Rendering: CPU (DRM dumb buffers)");
+            spdlog::info("[Display] Rendering: CPU (DRM dumb buffers)");
         }
     }
 #endif

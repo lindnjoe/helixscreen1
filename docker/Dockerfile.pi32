@@ -50,8 +50,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Add armhf architecture and install ONLY the target libraries we actually link against.
-# GPU libs (libgbm, libgles2-mesa, libegl1-mesa) included for EGL/OpenGL ES rendering.
-#   - libfmt-dev:armhf is excluded (spdlog bundles its own fmt — external fmt causes soname
+# Specifically excluded (not linked, would only bloat the image):
+#   - libfmt-dev:armhf (spdlog bundles its own fmt — external fmt causes soname
 #     mismatches across Debian versions: Bullseye=libfmt.so.7, Bookworm=libfmt.so.9)
 #
 # Note: libssl-dev provides static archives (.a) used for static linking of OpenSSL.

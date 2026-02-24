@@ -316,8 +316,9 @@ endif
 	}
 	$(call emit-compile-command,$(CXX),$(SUBMODULE_CXXFLAGS) $(PCH_FLAGS) $(INCLUDES) $(LV_CONF),$<,$@)
 
-# Compile lv_opengles_shader.c as C++ (uses C++11 raw string literals R"(...)").
-# -fpermissive: the file is C code with void* implicit casts that C++ rejects.
+# Compile LVGL OpenGL ES shader assets as C++ (raw string literals require C++11)
+# Only the assets/ subdirectory needs C++ — the rest compiles fine as C.
+# -fpermissive allows void* implicit conversions from C-style LVGL allocations.
 # Only built when ENABLE_OPENGLES=yes (LVGL_OPENGLES_OBJS is empty otherwise).
 $(LVGL_OPENGLES_OBJS): $(OBJ_DIR)/lvgl/%.o: $(LVGL_DIR)/%.c lv_conf.h
 	$(Q)mkdir -p $(dir $@)

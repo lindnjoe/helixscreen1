@@ -244,7 +244,7 @@ lv_display_t* DisplayBackendDRM::create_display(int width, int height) {
     lv_result_t result = lv_linux_drm_set_file(display_, drm_device_.c_str(), -1);
     if (result != LV_RESULT_OK) {
         spdlog::error("[DRM Backend] Failed to initialize DRM on {}", drm_device_);
-        lv_display_delete(display_); // error-path cleanup: display not yet returned to caller
+        lv_display_delete(display_); // NOLINT(helix-shutdown) init error path, not shutdown
         display_ = nullptr;
         return nullptr;
     }
