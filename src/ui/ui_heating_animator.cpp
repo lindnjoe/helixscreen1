@@ -122,7 +122,7 @@ void HeatingIconAnimator::update(int current_temp, int target_temp) {
             current_color_ = get_secondary_color();
             current_opacity_ = LV_OPA_COVER;
             apply_color();
-            spdlog::debug("[HeatingIconAnimator] State: OFF");
+            spdlog::trace("[HeatingIconAnimator] State: OFF");
             break;
 
         case State::HEATING:
@@ -137,7 +137,7 @@ void HeatingIconAnimator::update(int current_temp, int target_temp) {
             if (!pulse_active_) {
                 start_pulse();
             }
-            spdlog::debug("[HeatingIconAnimator] State: HEATING");
+            spdlog::trace("[HeatingIconAnimator] State: HEATING");
             break;
 
         case State::AT_TARGET:
@@ -145,7 +145,7 @@ void HeatingIconAnimator::update(int current_temp, int target_temp) {
             stop_pulse();
             current_color_ = theme_manager_get_color("temp_gradient_hot");
             current_opacity_ = LV_OPA_COVER;
-            spdlog::debug("[HeatingIconAnimator] State: AT_TARGET");
+            spdlog::trace("[HeatingIconAnimator] State: AT_TARGET");
             break;
         }
     }
@@ -205,7 +205,7 @@ void HeatingIconAnimator::start_pulse() {
     lv_anim_set_exec_cb(&anim, pulse_anim_cb);
     lv_anim_start(&anim);
 
-    spdlog::debug("[HeatingIconAnimator] Pulse animation started");
+    spdlog::trace("[HeatingIconAnimator] Pulse animation started");
 }
 
 void HeatingIconAnimator::stop_pulse() {
@@ -217,7 +217,7 @@ void HeatingIconAnimator::stop_pulse() {
     lv_anim_delete(this, pulse_anim_cb);
     current_opacity_ = LV_OPA_COVER;
 
-    spdlog::debug("[HeatingIconAnimator] Pulse animation stopped");
+    spdlog::trace("[HeatingIconAnimator] Pulse animation stopped");
 }
 
 void HeatingIconAnimator::apply_color() {
