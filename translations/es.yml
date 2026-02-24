@@ -44,7 +44,6 @@ translations:
   Abort: Abortar
   Abort failed: Error al cancelar
   Aborting AFC operation...: Cancelando operación AFC...
-  About HelixScreen: Acerca de HelixScreen
   Accel to Decel: Acel a Desacel
   Acceleration to deceleration limit (mm/s²): Límite de aceleración a desaceleración (mm/s²)
   Accelerometers: Acelerómetros
@@ -110,7 +109,6 @@ translations:
   Bed is Level!: ¡La Cama está Nivelada!
   Bed °C: Cama °C
   'Bed:': 'Cama:'
-  Beta features are enabled: Funciones Beta están habilitadas
   'Beta features: OFF': 'Funciones Beta: OFF'
   'Beta features: ON': 'Funciones Beta: ON'
   Black: Negro
@@ -163,7 +161,6 @@ translations:
   Checking for plugin...: Buscando plugin...
   Checking slots...: Verificando ranuras...
   Checking timelapse plugin...: Verificando plugin de timelapse...
-  Chm: Cám
   Choose 12-hour or 24-hour time display: Elija visualización de hora de 12 o 24 horas
   Choose an existing filament, or tap + New to create one.: Elige un filamento o toca + Nuevo para crear uno.
   Choose display language: Elija el idioma de visualización
@@ -399,7 +396,6 @@ translations:
   Gray: Gris
   Guides and reference: Guías y referencia
   H: H
-  HE: HE
   HELP & SUPPORT: AYUDA Y SOPORTE
   Happy Hare MMU: Happy Hare MMU
   Hardware: Hardware
@@ -421,7 +417,7 @@ translations:
   Heating...: Calentando...
   HelixScreen: HelixScreen
   HelixScreen Crashed: HelixScreen se Bloqueó
-  HelixScreen is detecting your display orientation: ''
+  HelixScreen is detecting your display orientation: HelixScreen está detectando la orientación de su pantalla
   HelixScreen will integrate with your filament changer for multi-spool/color print operations.: HelixScreen se integrará con su cambiador de filamento para operaciones de impresión multi-bobina/color.
   Help improve HelixScreen?: ¿Ayudar a mejorar HelixScreen?
   Higher = faster: Mayor = más rápido
@@ -475,7 +471,7 @@ translations:
   Keyboard Test (Gboard-style): Prueba de Teclado (estilo Gboard)
   Klipper: Klipper
   'Klipper firmware has disconnected from the host. ': 'El firmware de Klipper se ha desconectado del host. '
-  'Klipper has entered an error state. This is typically caused by an MCU ': ''
+  'Klipper has entered an error state. This is typically caused by an MCU ': Klipper ha entrado en un estado de error. Esto generalmente es causado por un MCU
   'Klipper has entered shutdown state. This may be due to an emergency stop, ': 'Klipper ha entrado en estado de apagado. Esto puede ser debido a una parada de emergencia, '
   Klipper will restart to apply changes: Klipper se reiniciará para aplicar los cambios
   Klipper will restart to apply changes.: Klipper se reiniciará para aplicar los cambios.
@@ -668,7 +664,6 @@ translations:
   PRE-PRINT STEPS: PASOS PREVIOS A IMPRESIÓN
   PRINTER: IMPRESORA
   Paper Test Calibration: Calibración con Prueba de Papel
-  Part: Pieza
   Part Cooling Fan: Ventilador de Enfriamiento de Pieza
   Part Fan: Ventilador de Pieza
   Password: Contraseña
@@ -703,7 +698,7 @@ translations:
   Power: Energía
   Power Control: Control de Energía
   Power Devices: Dispositivos de energía
-  Preparing: ''
+  Preparing: Preparando
   Preparing Print: Preparando Impresión
   Preset: Preajuste
   Presets: Preajustes
@@ -809,7 +804,7 @@ translations:
   Restarting HelixScreen...: Reiniciando HelixScreen...
   Restarting Klipper...: Reiniciando Klipper...
   Restarting Moonraker...: Reiniciando Moonraker...
-  Restarting...: ''
+  Restarting...: Reiniciando...
   Resume: Reanudar
   Resume Print: Reanudar Impresión
   Retract: Retraer
@@ -821,7 +816,7 @@ translations:
   Review detected hardware validation issues: Revisar problemas de validación de hardware detectados
   Review your changes: Revisar sus cambios
   'Role:': 'Rol:'
-  'Rotation: %d\xc2\xb0 - %ds remaining (or wait to retry)': ''
+  'Rotation: %d\xc2\xb0 - %ds remaining (or wait to retry)': 'Rotación: %d\xc2\xb0 - %ds restantes (o espere para reintentar)'
   Run: Ejecutar
   Run Macro: Ejecutar macro
   Runout Sensor: Sensor de Agotamiento
@@ -849,7 +844,7 @@ translations:
   Saving config... Klipper will restart.: Guardando config... Klipper se reiniciará.
   Saving will restart Klipper and CANCEL any active print!: ¡Guardar reiniciará Klipper y CANCELARÁ cualquier impresión activa!
   Scanning for networks...: Buscando redes...
-  'Score: 0': ''
+  'Score: 0': 'Puntuación: 0'
   Screen Dim: Atenuación de Pantalla
   Screen dims to lower brightness after period of inactivity: La pantalla atenúa el brillo después de un período de inactividad
   Screen will dim after the selected period of inactivity: La pantalla se atenuará después del período de inactividad seleccionado
@@ -887,7 +882,6 @@ translations:
   'Set ': 'Establecer '
   Set Active: Establecer activo
   Settings: Ajustes
-  Settings reset to defaults: Ajustes restablecidos a valores predeterminados
   Settings reset to defaults. Restarting...: Ajustes restablecidos a valores predeterminados. Reiniciando...
   Setup Timelapse: Configurar Timelapse
   Shadow Intensity: Intensidad de Sombra
@@ -953,8 +947,8 @@ translations:
   THEME COLORS: COLORES DEL TEMA
   TPU: TPU
   Takes 3-5 min. Do not interrupt.: Tarda 3-5 min. No interrumpa.
-  Tap again to confirm this orientation: ''
-  Tap anywhere if this text is right-side up: ''
+  Tap again to confirm this orientation: Toque de nuevo para confirmar esta orientación
+  Tap anywhere if this text is right-side up: Toque en cualquier lugar si este texto está derecho
   Tap to show keyboard...: Toque para mostrar teclado...
   Target Temperature: Temperatura Objetivo
   Telemetry Data: Datos de telemetría
@@ -968,7 +962,7 @@ translations:
   Test Network: Probar Red
   Test Sound: Sonido de prueba
   Test probe repeatability: Probar repetibilidad de sonda
-  'Testing rotation: %d\xc2\xb0 (%d/%d) - %ds remaining': ''
+  'Testing rotation: %d\xc2\xb0 (%d/%d) - %ds remaining': 'Probando rotación: %d\xc2\xb0 (%d/%d) - %ds restantes'
   Thanks! Anonymous usage data helps improve HelixScreen.: ¡Gracias! Los datos de uso anónimos ayudan a mejorar HelixScreen.
   Thanks! TOTALLY anonymous usage data helps improve HelixScreen.: ¡Gracias! Los datos de uso TOTALMENTE anónimos ayudan a mejorar HelixScreen.
   ? The HelixPrint plugin enables fast G-code modifications directly on your printer—like skipping bed mesh for quick reprints.
@@ -1050,7 +1044,6 @@ translations:
   Update Available: Actualización disponible
   Update Channel: Canal de actualización
   Update Failed: Actualización fallida
-  Update Installed: Actualización instalada
   Upload: Subir
   Upload Debug Bundle: Subir paquete de diagnóstico
   Upload Failed: Error al subir

@@ -44,7 +44,6 @@ translations:
   Abort: Прервать
   Abort failed: Ошибка прерывания
   Aborting AFC operation...: Прерывание операции AFC...
-  About HelixScreen: О HelixScreen
   Accel to Decel: Ускорение к торможению
   Acceleration to deceleration limit (mm/s²): Предел ускорения к торможению (мм/с²)
   Accelerometers: Акселерометры
@@ -110,7 +109,6 @@ translations:
   Bed is Level!: Стол выровнен!
   Bed °C: Стол °C
   'Bed:': 'Стол:'
-  Beta features are enabled: Beta-функции включены
   'Beta features: OFF': 'Beta-функции: ВЫКЛ'
   'Beta features: ON': 'Beta-функции: ВКЛ'
   Black: Чёрный
@@ -163,7 +161,6 @@ translations:
   Checking for plugin...: Поиск плагина...
   Checking slots...: Проверка слотов...
   Checking timelapse plugin...: Проверка плагина таймлапса...
-  Chm: Кам
   Choose 12-hour or 24-hour time display: Выберите 12-часовой или 24-часовой формат времени
   Choose an existing filament, or tap + New to create one.: Выберите существующий филамент или нажмите + Новый, чтобы создать.
   Choose display language: Выберите язык интерфейса
@@ -399,7 +396,6 @@ translations:
   Gray: Серый
   Guides and reference: Руководства и справка
   H: Х
-  HE: ХЭ
   HELP & SUPPORT: ПОМОЩЬ И ПОДДЕРЖКА
   Happy Hare MMU: Happy Hare MMU
   Hardware: Оборудование
@@ -421,7 +417,7 @@ translations:
   Heating...: Нагрев...
   HelixScreen: HelixScreen
   HelixScreen Crashed: HelixScreen аварийно завершился
-  HelixScreen is detecting your display orientation: ''
+  HelixScreen is detecting your display orientation: HelixScreen определяет ориентацию дисплея
   HelixScreen will integrate with your filament changer for multi-spool/color print operations.: HelixScreen интегрируется с вашим сменщиком филамента для многокатушечной/многоцветной печати.
   Help improve HelixScreen?: Помочь улучшить HelixScreen?
   Higher = faster: Выше = быстрее
@@ -475,7 +471,7 @@ translations:
   Keyboard Test (Gboard-style): Тест клавиатуры (стиль Gboard)
   Klipper: Klipper
   'Klipper firmware has disconnected from the host. ': 'Прошивка Klipper отключилась от хоста. '
-  'Klipper has entered an error state. This is typically caused by an MCU ': ''
+  'Klipper has entered an error state. This is typically caused by an MCU ': 'Klipper перешёл в состояние ошибки. Обычно это вызвано MCU '
   'Klipper has entered shutdown state. This may be due to an emergency stop, ': 'Klipper перешёл в состояние остановки. Это может быть вызвано аварийной остановкой, '
   Klipper will restart to apply changes: Klipper перезапустится для применения изменений
   Klipper will restart to apply changes.: Klipper перезапустится для применения изменений.
@@ -668,7 +664,6 @@ translations:
   PRE-PRINT STEPS: ЭТАПЫ ПОДГОТОВКИ
   PRINTER: ПРИНТЕР
   Paper Test Calibration: Калибровка бумажным тестом
-  Part: Дет
   Part Cooling Fan: Вентилятор охлаждения детали
   Part Fan: Вент. детали
   Password: Пароль
@@ -703,7 +698,7 @@ translations:
   Power: Питание
   Power Control: Управление питанием
   Power Devices: Устройства питания
-  Preparing: ''
+  Preparing: Подготовка
   Preparing Print: Подготовка печати
   Preset: Пресет
   Presets: Пресеты
@@ -809,7 +804,7 @@ translations:
   Restarting HelixScreen...: Перезапуск HelixScreen...
   Restarting Klipper...: Перезапуск Klipper...
   Restarting Moonraker...: Перезапуск Moonraker...
-  Restarting...: ''
+  Restarting...: Перезапуск...
   Resume: Продолжить
   Resume Print: Продолжить печать
   Retract: Ретракция
@@ -821,7 +816,7 @@ translations:
   Review detected hardware validation issues: Просмотр обнаруженных проблем валидации оборудования
   Review your changes: Просмотр ваших изменений
   'Role:': 'Тип:'
-  'Rotation: %d\xc2\xb0 - %ds remaining (or wait to retry)': ''
+  'Rotation: %d\xc2\xb0 - %ds remaining (or wait to retry)': 'Поворот: %d\xc2\xb0 - осталось %ds (или подождите для повтора)'
   Run: Запуск
   Run Macro: Запустить макрос
   Runout Sensor: Датчик окончания
@@ -849,7 +844,7 @@ translations:
   Saving config... Klipper will restart.: Сохранение конфигурации... Klipper перезапустится.
   Saving will restart Klipper and CANCEL any active print!: Сохранение перезапустит Klipper и ОТМЕНИТ любую активную печать!
   Scanning for networks...: Поиск сетей...
-  'Score: 0': ''
+  'Score: 0': 'Счёт: 0'
   Screen Dim: Затемнение экрана
   Screen dims to lower brightness after period of inactivity: Экран затемняется после периода простоя
   Screen will dim after the selected period of inactivity: Экран затемнится после выбранного периода простоя
@@ -887,7 +882,6 @@ translations:
   'Set ': 'Установить '
   Set Active: Сделать активной
   Settings: Настройки
-  Settings reset to defaults: Настройки сброшены к значениям по умолчанию
   Settings reset to defaults. Restarting...: Настройки сброшены к значениям по умолчанию. Перезапуск...
   Setup Timelapse: Настроить таймлапс
   Shadow Intensity: Интенсивность тени
@@ -953,8 +947,8 @@ translations:
   THEME COLORS: ЦВЕТА ТЕМЫ
   TPU: TPU
   Takes 3-5 min. Do not interrupt.: Занимает 3-5 мин. Не прерывайте.
-  Tap again to confirm this orientation: ''
-  Tap anywhere if this text is right-side up: ''
+  Tap again to confirm this orientation: Нажмите ещё раз для подтверждения ориентации
+  Tap anywhere if this text is right-side up: Нажмите в любом месте, если текст расположен правильно
   Tap to show keyboard...: Нажмите для показа клавиатуры...
   Target Temperature: Целевая температура
   Telemetry Data: Данные телеметрии
@@ -968,7 +962,7 @@ translations:
   Test Network: Тест сети
   Test Sound: Тестовый звук
   Test probe repeatability: Тест повторяемости датчика
-  'Testing rotation: %d\xc2\xb0 (%d/%d) - %ds remaining': ''
+  'Testing rotation: %d\xc2\xb0 (%d/%d) - %ds remaining': 'Тест поворота: %d\xc2\xb0 (%d/%d) - осталось %ds'
   Thanks! Anonymous usage data helps improve HelixScreen.: Спасибо! Анонимные данные использования помогают улучшить HelixScreen.
   Thanks! TOTALLY anonymous usage data helps improve HelixScreen.: Спасибо! ПОЛНОСТЬЮ анонимные данные использования помогают улучшить HelixScreen.
   ? The HelixPrint plugin enables fast G-code modifications directly on your printer—like skipping bed mesh for quick reprints.
@@ -1050,7 +1044,6 @@ translations:
   Update Available: Доступно обновление
   Update Channel: Канал обновлений
   Update Failed: Ошибка обновления
-  Update Installed: Обновление установлено
   Upload: Отправить
   Upload Debug Bundle: Отправить пакет диагностики
   Upload Failed: Ошибка отправки

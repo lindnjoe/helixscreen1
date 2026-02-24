@@ -44,7 +44,6 @@ translations:
   Abort: 中止
   Abort failed: 中止失败
   Aborting AFC operation...: 正在中止AFC操作...
-  About HelixScreen: 关于 HelixScreen
   Accel to Decel: 加速到减速
   Acceleration to deceleration limit (mm/s²): 加速到减速限制 (mm/s²)
   Accelerometers: 加速度计
@@ -110,7 +109,6 @@ translations:
   Bed is Level!: 热床已水平！
   Bed °C: 热床 °C
   'Bed:': 热床：
-  Beta features are enabled: 已启用测试版功能
   'Beta features: OFF': '测试版功能: 关'
   'Beta features: ON': '测试版功能: 开'
   Black: 黑色
@@ -163,7 +161,6 @@ translations:
   Checking for plugin...: 正在检查插件...
   Checking slots...: 正在检查料仓...
   Checking timelapse plugin...: 正在检查延时摄影插件...
-  Chm: 腔体
   Choose 12-hour or 24-hour time display: 选择 12 小时制或 24 小时制
   Choose an existing filament, or tap + New to create one.: 选择已有耗材，或点击 + 新建来创建。
   Choose display language: 选择显示语言
@@ -399,7 +396,6 @@ translations:
   Gray: 灰色
   Guides and reference: 指南与参考
   H: 头
-  HE: 喷头
   HELP & SUPPORT: 帮助与支持
   Happy Hare MMU: Happy Hare MMU
   Hardware: 硬件
@@ -421,7 +417,7 @@ translations:
   Heating...: 正在加热...
   HelixScreen: HelixScreen
   HelixScreen Crashed: HelixScreen 崩溃
-  HelixScreen is detecting your display orientation: ''
+  HelixScreen is detecting your display orientation: HelixScreen正在检测显示屏方向
   HelixScreen will integrate with your filament changer for multi-spool/color print operations.: HelixScreen 将与您的耗材更换器集成，用于多料盘/多色打印操作。
   Help improve HelixScreen?: 帮助改进 HelixScreen？
   Higher = faster: 越高 = 越快
@@ -475,7 +471,7 @@ translations:
   Keyboard Test (Gboard-style): 键盘测试（Gboard 风格）
   Klipper: Klipper
   'Klipper firmware has disconnected from the host. ': 'Klipper 固件已与主机断开连接。 '
-  'Klipper has entered an error state. This is typically caused by an MCU ': ''
+  'Klipper has entered an error state. This is typically caused by an MCU ': 'Klipper已进入错误状态。这通常是由MCU'
   'Klipper has entered shutdown state. This may be due to an emergency stop, ': Klipper 已进入关机状态。这可能是由于紧急停止、
   Klipper will restart to apply changes: Klipper 将重启以应用更改
   Klipper will restart to apply changes.: Klipper 将重启以应用更改。
@@ -668,7 +664,6 @@ translations:
   PRE-PRINT STEPS: 打印前步骤
   PRINTER: 打印机
   Paper Test Calibration: 纸张测试校准
-  Part: 零件
   Part Cooling Fan: 零件冷却风扇
   Part Fan: 零件风扇
   Password: 密码
@@ -703,7 +698,7 @@ translations:
   Power: 电源
   Power Control: 电源控制
   Power Devices: 电源设备
-  Preparing: ''
+  Preparing: 准备中
   Preparing Print: 准备打印
   Preset: 预设
   Presets: 预设
@@ -809,7 +804,7 @@ translations:
   Restarting HelixScreen...: 正在重启 HelixScreen…
   Restarting Klipper...: 正在重启 Klipper...
   Restarting Moonraker...: 正在重启 Moonraker...
-  Restarting...: ''
+  Restarting...: 重启中...
   Resume: 恢复
   Resume Print: 恢复打印
   Retract: 回抽
@@ -821,7 +816,7 @@ translations:
   Review detected hardware validation issues: 查看检测到的硬件验证问题
   Review your changes: 查看您的更改
   'Role:': 角色：
-  'Rotation: %d\xc2\xb0 - %ds remaining (or wait to retry)': ''
+  'Rotation: %d\xc2\xb0 - %ds remaining (or wait to retry)': '旋转: %d\xc2\xb0 - 剩余%ds (或等待重试)'
   Run: 运行
   Run Macro: 运行宏
   Runout Sensor: 断料传感器
@@ -849,7 +844,7 @@ translations:
   Saving config... Klipper will restart.: 正在保存配置... Klipper 将重启。
   Saving will restart Klipper and CANCEL any active print!: 保存将重启 Klipper 并取消任何正在进行的打印！
   Scanning for networks...: 正在扫描网络...
-  'Score: 0': ''
+  'Score: 0': '得分: 0'
   Screen Dim: 屏幕变暗
   Screen dims to lower brightness after period of inactivity: 一段时间不活动后屏幕会降低亮度
   Screen will dim after the selected period of inactivity: 在选定的不活动时间后屏幕将变暗
@@ -887,7 +882,6 @@ translations:
   'Set ': '设置 '
   Set Active: 设为活动
   Settings: 设置
-  Settings reset to defaults: 设置已重置为默认值
   Settings reset to defaults. Restarting...: 设置已重置为默认值。正在重启...
   Setup Timelapse: 设置延时摄影
   Shadow Intensity: 阴影强度
@@ -953,8 +947,8 @@ translations:
   THEME COLORS: 主题颜色
   TPU: TPU
   Takes 3-5 min. Do not interrupt.: 需要 3-5 分钟。请勿中断。
-  Tap again to confirm this orientation: ''
-  Tap anywhere if this text is right-side up: ''
+  Tap again to confirm this orientation: 再次点击确认此方向
+  Tap anywhere if this text is right-side up: 如果文字方向正确请点击任意位置
   Tap to show keyboard...: 点击显示键盘...
   Target Temperature: 目标温度
   Telemetry Data: 遥测数据
@@ -968,7 +962,7 @@ translations:
   Test Network: 测试网络
   Test Sound: 测试声音
   Test probe repeatability: 测试探针重复性
-  'Testing rotation: %d\xc2\xb0 (%d/%d) - %ds remaining': ''
+  'Testing rotation: %d\xc2\xb0 (%d/%d) - %ds remaining': '测试旋转: %d\xc2\xb0 (%d/%d) - 剩余%ds'
   Thanks! Anonymous usage data helps improve HelixScreen.: 感谢！匿名使用数据有助于改进 HelixScreen。
   Thanks! TOTALLY anonymous usage data helps improve HelixScreen.: 感谢！完全匿名的使用数据有助于改进 HelixScreen。
   ? The HelixPrint plugin enables fast G-code modifications directly on your printer—like skipping bed mesh for quick reprints.
@@ -1050,7 +1044,6 @@ translations:
   Update Available: 有可用更新
   Update Channel: 更新通道
   Update Failed: 更新失败
-  Update Installed: 更新已安装
   Upload: 上传
   Upload Debug Bundle: 上传调试捆绑包
   Upload Failed: 上传失败

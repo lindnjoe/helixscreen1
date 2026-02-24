@@ -44,7 +44,6 @@ translations:
   Abort: Abort
   Abort failed: Abort failed
   Aborting AFC operation...: Aborting AFC operation...
-  About HelixScreen: About HelixScreen
   Accel to Decel: Accel to Decel
   Acceleration to deceleration limit (mm/s²): Acceleration to deceleration limit (mm/s²)
   Accelerometers: Accelerometers
@@ -110,7 +109,6 @@ translations:
   Bed is Level!: Bed is Level!
   Bed °C: Bed °C
   'Bed:': 'Bed:'
-  Beta features are enabled: Beta features are enabled
   'Beta features: OFF': 'Beta features: OFF'
   'Beta features: ON': 'Beta features: ON'
   Black: Black
@@ -163,7 +161,6 @@ translations:
   Checking for plugin...: Checking for plugin...
   Checking slots...: Checking slots...
   Checking timelapse plugin...: Checking timelapse plugin...
-  Chm: Chm
   Choose 12-hour or 24-hour time display: Choose 12-hour or 24-hour time display
   Choose an existing filament, or tap + New to create one.: Choose an existing filament, or tap + New to create one.
   Choose display language: Choose display language
@@ -399,7 +396,6 @@ translations:
   Gray: Gray
   Guides and reference: Guides and reference
   H: H
-  HE: HE
   HELP & SUPPORT: HELP & SUPPORT
   Happy Hare MMU: Happy Hare MMU
   Hardware: Hardware
@@ -668,7 +664,6 @@ translations:
   PRE-PRINT STEPS: PRE-PRINT STEPS
   PRINTER: PRINTER
   Paper Test Calibration: Paper Test Calibration
-  Part: Part
   Part Cooling Fan: Part Cooling Fan
   Part Fan: Part Fan
   Password: Password
@@ -887,7 +882,6 @@ translations:
   'Set ': 'Set '
   Set Active: Set Active
   Settings: Settings
-  Settings reset to defaults: Settings reset to defaults
   Settings reset to defaults. Restarting...: Settings reset to defaults. Restarting...
   Setup Timelapse: Setup Timelapse
   Shadow Intensity: Shadow Intensity
@@ -1050,7 +1044,6 @@ translations:
   Update Available: Update Available
   Update Channel: Update Channel
   Update Failed: Update Failed
-  Update Installed: Update Installed
   Upload: Upload
   Upload Debug Bundle: Upload Debug Bundle
   Upload Failed: Upload Failed
