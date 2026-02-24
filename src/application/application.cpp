@@ -682,10 +682,13 @@ bool Application::init_display() {
     // Run rotation probe on first boot if no rotation is configured.
     // Must happen after display init (touch is ready) but before layout init
     // (which depends on final rotated dimensions).
+    // Skip if: CLI rotation set, env var set, already probed, or config already
+    // has a /display/rotate key (even if 0 — means user already configured it).
 #ifdef HELIX_DISPLAY_FBDEV
     if (m_args.rotation == 0 && !std::getenv("HELIX_DISPLAY_ROTATION")) {
         bool probed = m_config->get<bool>("/display/rotation_probed", false);
-        if (!probed) {
+        bool has_rotate_key = m_config->exists("/display/rotate");
+        if (!probed && !has_rotate_key) {
             m_display->run_rotation_probe();
             m_screen_width = m_display->width();
             m_screen_height = m_display->height();
