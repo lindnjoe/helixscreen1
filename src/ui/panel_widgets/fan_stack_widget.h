@@ -86,6 +86,9 @@ class FanStackWidget : public PanelWidget {
 
     bool animations_enabled_ = false;
 
+    // Carousel mode: one observer per fan dial (not limited to 3 slots)
+    std::vector<ObserverGuard> carousel_observers_;
+
     // Carousel mode: owned FanDial instances
     std::vector<std::unique_ptr<FanDial>> fan_dials_;
 

@@ -199,9 +199,7 @@ void FanStackWidget::detach() {
     aux_observer_.reset();
     version_observer_.reset();
     anim_settings_observer_.reset();
-
-    // Destroy carousel FanDial instances before LVGL cleanup
-    fan_dials_.clear();
+    carousel_observers_.clear();
 
     // Stop any running animations before clearing pointers
     if (part_icon_)
@@ -210,6 +208,9 @@ void FanStackWidget::detach() {
         stop_spin(hotend_icon_);
     if (aux_icon_)
         stop_spin(aux_icon_);
+
+    // Destroy carousel FanDial instances
+    fan_dials_.clear();
 
     if (widget_obj_)
         lv_obj_set_user_data(widget_obj_, nullptr);
@@ -392,6 +393,7 @@ void FanStackWidget::bind_carousel_fans() {
     part_observer_.reset();
     hotend_observer_.reset();
     aux_observer_.reset();
+    carousel_observers_.clear();
     fan_dials_.clear();
 
     const auto& fans = printer_state_.get_fans();
@@ -417,8 +419,11 @@ void FanStackWidget::bind_carousel_fans() {
 
         // Wire speed change callback to send fan speed commands
         std::string object_name = fan.object_name;
+        auto& ps = printer_state_;
         dial->set_on_speed_changed(
-            [this, object_name](const std::string& /*fan_id*/, int speed_percent) {
+            [weak_alive, &ps, object_name](const std::string& /*fan_id*/, int speed_percent) {
+                if (weak_alive.expired())
+                    return;
                 auto* api = get_moonraker_api();
                 if (!api) {
                     spdlog::warn("[FanStackWidget] Cannot send fan speed - no API connection");
@@ -426,8 +431,7 @@ void FanStackWidget::bind_carousel_fans() {
                     return;
                 }
 
-                printer_state_.update_fan_speed(object_name,
-                                                static_cast<double>(speed_percent) / 100.0);
+                ps.update_fan_speed(object_name, static_cast<double>(speed_percent) / 100.0);
                 api->set_fan_speed(
                     object_name, static_cast<double>(speed_percent), []() {},
                     [object_name](const MoonrakerError& err) {
@@ -494,21 +498,7 @@ void FanStackWidget::bind_carousel_fans() {
                 },
                 lifetime);
 
-            // Store observer in one of the three slots based on fan type
-            switch (fan.type) {
-            case FanType::PART_COOLING:
-                if (!part_observer_)
-                    part_observer_ = std::move(obs);
-                break;
-            case FanType::HEATER_FAN:
-                if (!hotend_observer_)
-                    hotend_observer_ = std::move(obs);
-                break;
-            default:
-                if (!aux_observer_)
-                    aux_observer_ = std::move(obs);
-                break;
-            }
+            carousel_observers_.push_back(std::move(obs));
         }
 
         // Wire long-press on all FanDial descendants so mode toggle works
@@ -649,7 +639,7 @@ void FanStackWidget::fan_carousel_long_press_cb(lv_event_t* e) {
 void FanStackWidget::carousel_dial_long_press_cb(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[FanStackWidget] carousel_dial_long_press_cb");
     auto* self = static_cast<FanStackWidget*>(lv_event_get_user_data(e));
-    if (self) {
+    if (self && self->widget_obj_) {
         self->long_pressed_ = true;
         self->toggle_display_mode();
     }

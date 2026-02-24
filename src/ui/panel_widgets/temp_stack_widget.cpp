@@ -173,12 +173,15 @@ void TempStackWidget::attach_carousel(lv_obj_t* widget_obj) {
         return;
     }
 
+    // Use carousel itself as temporary parent (ui_carousel_add_item reparents into tiles)
+    lv_obj_t* page_parent = carousel;
+
     // Helper to create a carousel page with icon + temp_display
     auto create_temp_page = [&](const char* icon_src, const char* icon_name,
                                 const char* bind_current, const char* bind_target,
                                 const char* page_name) -> lv_obj_t* {
         // Create page container
-        lv_obj_t* page = lv_obj_create(lv_scr_act()); // temporary parent, reparented by carousel
+        lv_obj_t* page = lv_obj_create(page_parent); // reparented by ui_carousel_add_item
         lv_obj_set_size(page, LV_PCT(100), LV_PCT(100));
         lv_obj_set_style_pad_all(page, 0, 0);
         lv_obj_set_style_bg_opa(page, LV_OPA_TRANSP, 0);
@@ -188,7 +191,7 @@ void TempStackWidget::attach_carousel(lv_obj_t* widget_obj) {
                               LV_FLEX_ALIGN_CENTER);
         lv_obj_set_style_pad_gap(page, theme_manager_get_spacing("space_xs"), 0);
         lv_obj_add_flag(page, LV_OBJ_FLAG_CLICKABLE);
-        lv_obj_set_user_data(page, const_cast<char*>(page_name));
+        lv_obj_set_name(page, page_name);
 
         // Click callback to open temp overlay; long-press to toggle mode
         lv_obj_add_event_cb(page, temp_carousel_page_cb, LV_EVENT_CLICKED, nullptr);
@@ -212,7 +215,7 @@ void TempStackWidget::attach_carousel(lv_obj_t* widget_obj) {
     };
 
     // Nozzle page (use nozzle_icon component for the icon instead)
-    lv_obj_t* nozzle_page = lv_obj_create(lv_scr_act());
+    lv_obj_t* nozzle_page = lv_obj_create(page_parent);
     lv_obj_set_size(nozzle_page, LV_PCT(100), LV_PCT(100));
     lv_obj_set_style_pad_all(nozzle_page, 0, 0);
     lv_obj_set_style_bg_opa(nozzle_page, LV_OPA_TRANSP, 0);
@@ -222,7 +225,7 @@ void TempStackWidget::attach_carousel(lv_obj_t* widget_obj) {
                           LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_gap(nozzle_page, theme_manager_get_spacing("space_xs"), 0);
     lv_obj_add_flag(nozzle_page, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_set_user_data(nozzle_page, const_cast<char*>("nozzle"));
+    lv_obj_set_name(nozzle_page, "nozzle");
     lv_obj_add_event_cb(nozzle_page, temp_carousel_page_cb, LV_EVENT_CLICKED, nullptr);
     lv_obj_add_event_cb(nozzle_page, temp_carousel_long_press_cb, LV_EVENT_LONG_PRESSED, nullptr);
 
@@ -236,7 +239,6 @@ void TempStackWidget::attach_carousel(lv_obj_t* widget_obj) {
     lv_xml_create(nozzle_page, "temp_display", nozzle_td_attrs);
     make_children_passthrough(nozzle_page);
     ui_carousel_add_item(carousel, nozzle_page);
-    add_long_press_recursive(nozzle_page, temp_carousel_long_press_cb, nullptr);
 
     // Attach nozzle heating animator
     lv_obj_t* nozzle_glyph = lv_obj_find_by_name(nozzle_page, "nozzle_icon_glyph");
@@ -252,7 +254,6 @@ void TempStackWidget::attach_carousel(lv_obj_t* widget_obj) {
     lv_obj_t* bed_page =
         create_temp_page("radiator", "carousel_bed_icon", "bed_temp", "bed_target", "bed");
     ui_carousel_add_item(carousel, bed_page);
-    add_long_press_recursive(bed_page, temp_carousel_long_press_cb, nullptr);
 
     // Attach bed heating animator
     lv_obj_t* bed_glyph = lv_obj_find_by_name(bed_page, "carousel_bed_icon");
@@ -275,7 +276,6 @@ void TempStackWidget::attach_carousel(lv_obj_t* widget_obj) {
         lv_obj_t* chamber_page = create_temp_page("fridge_industrial", "carousel_chamber_icon",
                                                   "chamber_temp", "chamber_temp", "chamber");
         ui_carousel_add_item(carousel, chamber_page);
-        add_long_press_recursive(chamber_page, temp_carousel_long_press_cb, nullptr);
     }
 
     // Observe heating state for animators in carousel mode
@@ -543,30 +543,23 @@ void TempStackWidget::temp_carousel_long_press_cb(lv_event_t* e) {
 
 void TempStackWidget::temp_carousel_page_cb(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[TempStackWidget] temp_carousel_page_cb");
-    if (!s_active_instance)
-        return;
-
-    // Suppress click after long-press
-    if (s_active_instance->long_pressed_) {
-        s_active_instance->long_pressed_ = false;
-        spdlog::debug("[TempStackWidget] Carousel page click suppressed (follows long-press)");
-        return;
-    }
-
-    // Determine which page was clicked from user_data
-    auto* target = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
-    auto* page_id = static_cast<const char*>(lv_obj_get_user_data(target));
-
-    if (!page_id) {
-        return;
-    }
-
-    if (std::strcmp(page_id, "nozzle") == 0) {
-        s_active_instance->handle_nozzle_clicked();
-    } else if (std::strcmp(page_id, "bed") == 0) {
-        s_active_instance->handle_bed_clicked();
-    } else if (std::strcmp(page_id, "chamber") == 0) {
-        s_active_instance->handle_chamber_clicked();
+    if (s_active_instance) {
+        if (s_active_instance->long_pressed_) {
+            s_active_instance->long_pressed_ = false;
+            spdlog::debug("[TempStackWidget] Carousel page click suppressed (follows long-press)");
+        } else {
+            auto* target = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
+            const char* page_id = lv_obj_get_name(target);
+            if (page_id) {
+                if (std::strcmp(page_id, "nozzle") == 0) {
+                    s_active_instance->handle_nozzle_clicked();
+                } else if (std::strcmp(page_id, "bed") == 0) {
+                    s_active_instance->handle_bed_clicked();
+                } else if (std::strcmp(page_id, "chamber") == 0) {
+                    s_active_instance->handle_chamber_clicked();
+                }
+            }
+        }
     }
     LVGL_SAFE_EVENT_CB_END();
 }
