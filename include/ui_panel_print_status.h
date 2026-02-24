@@ -420,6 +420,7 @@ class PrintStatusPanel : public OverlayBase {
 
     static void on_nozzle_card_clicked(lv_event_t* e);
     static void on_bed_card_clicked(lv_event_t* e);
+    static void on_dismiss_overlay_clicked(lv_event_t* e);
     static void on_pause_clicked(lv_event_t* e);
     static void on_tune_clicked(lv_event_t* e);
     static void on_cancel_clicked(lv_event_t* e);

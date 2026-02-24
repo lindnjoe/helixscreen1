@@ -23,15 +23,10 @@
 namespace helix {
 namespace gcode {
 
-// Re-use GhostRenderMode from TinyGL header for API compat
-// (already defined in gcode_tinygl_renderer.h when both exist)
-#ifndef HELIX_GHOST_RENDER_MODE_DEFINED
-#define HELIX_GHOST_RENDER_MODE_DEFINED
 enum class GhostRenderMode : uint8_t { Dimmed = 0, Stipple = 1 };
 constexpr GhostRenderMode kDefaultGhostRenderMode = GhostRenderMode::Stipple;
-#endif
 
-/// Return type for get_options() — matches TinyGL API
+/// Return type for get_options()
 struct RenderingOptions {
     bool show_extrusions = true;
     bool show_travels = false;
@@ -42,8 +37,7 @@ struct RenderingOptions {
 
 /// GPU-accelerated G-code 3D renderer using OpenGL ES 2.0
 ///
-/// Drop-in replacement for GCodeTinyGLRenderer. Renders to FBO,
-/// reads pixels back into lv_draw_buf_t for LVGL compositing.
+/// Renders to FBO, reads pixels back into lv_draw_buf_t for LVGL compositing.
 /// Requires DRM+EGL display backend.
 class GCodeGLESRenderer {
   public:
@@ -151,7 +145,7 @@ class GCodeGLESRenderer {
 
     void render_to_fbo(const ParsedGCodeFile& gcode, const GCodeCamera& camera);
     void draw_layers(const std::vector<LayerVBO>& vbos, int layer_start, int layer_end,
-                     float color_scale, float ghost_alpha);
+                     float color_scale, float alpha);
     void blit_to_lvgl(lv_layer_t* layer, const lv_area_t* widget_coords);
 
     // ====== Frame Skip ======
@@ -201,7 +195,6 @@ class GCodeGLESRenderer {
     int u_base_color_ = -1;
     int u_specular_intensity_ = -1;
     int u_specular_shininess_ = -1;
-    int u_ghost_alpha_ = -1;
     int u_model_view_ = -1;
     int u_base_alpha_ = -1;
     // Attribute locations

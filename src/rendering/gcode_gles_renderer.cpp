@@ -183,14 +183,8 @@ static const char* kFragmentShaderSource = R"(
     uniform float u_specular_intensity;
     uniform float u_specular_shininess;
     uniform float u_base_alpha;
-    uniform float u_ghost_alpha;
 
     void main() {
-        if (u_ghost_alpha < 1.0) {
-            vec2 fc = floor(gl_FragCoord.xy);
-            if (mod(fc.x + fc.y, 2.0) < 0.5) discard;
-        }
-
         vec3 n = normalize(v_normal);
         vec3 view_dir = normalize(-v_position);
 
@@ -517,7 +511,6 @@ bool GCodeGLESRenderer::compile_shaders() {
     u_base_color_ = glGetUniformLocation(program_, "u_base_color");
     u_specular_intensity_ = glGetUniformLocation(program_, "u_specular_intensity");
     u_specular_shininess_ = glGetUniformLocation(program_, "u_specular_shininess");
-    u_ghost_alpha_ = glGetUniformLocation(program_, "u_ghost_alpha");
     u_model_view_ = glGetUniformLocation(program_, "u_model_view");
     u_base_alpha_ = glGetUniformLocation(program_, "u_base_alpha");
     a_position_ = glGetAttribLocation(program_, "a_position");
@@ -748,6 +741,24 @@ void GCodeGLESRenderer::upload_geometry(const RibbonGeometry& geom, std::vector<
         // Each strip = 4 vertices → 2 triangles → 6 vertices (for GL_TRIANGLES)
         size_t total_verts = strip_count * 6;
         std::vector<float> buf(total_verts * 9); // 9 floats per vertex
+
+        // Diagnostic: dump first 3 strips of layers 0-2 for vertex position debugging
+        bool dump_verts = (layer <= 2 && strip_count > 0);
+        if (dump_verts) {
+            size_t dump_count = std::min(strip_count, size_t(3));
+            for (size_t ds = 0; ds < dump_count; ++ds) {
+                const auto& strip = geom.strips[first_strip + ds];
+                glm::vec3 p0 = geom.quantization.dequantize_vec3(geom.vertices[strip[0]].position);
+                glm::vec3 p1 = geom.quantization.dequantize_vec3(geom.vertices[strip[1]].position);
+                glm::vec3 p2 = geom.quantization.dequantize_vec3(geom.vertices[strip[2]].position);
+                glm::vec3 p3 = geom.quantization.dequantize_vec3(geom.vertices[strip[3]].position);
+                spdlog::info("[GCode GLES] Layer {} strip {}: BL({:.2f},{:.2f},{:.2f}) "
+                             "BR({:.2f},{:.2f},{:.2f}) TL({:.2f},{:.2f},{:.2f}) "
+                             "TR({:.2f},{:.2f},{:.2f})",
+                             layer, ds, p0.x, p0.y, p0.z, p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, p3.x,
+                             p3.y, p3.z);
+            }
+        }
 
         size_t out_idx = 0;
         for (size_t s = 0; s < strip_count; ++s) {
@@ -987,11 +998,16 @@ void GCodeGLESRenderer::render_to_fbo(const ParsedGCodeFile& /*gcode*/, const GC
             draw_layers(*active_vbos, draw_start, solid_end, 1.0f, 1.0f);
         }
 
-        // Pass 2: Ghost layers (progress_layer_+1 to end)
+        // Pass 2: Ghost layers (progress_layer_+1 to end) with alpha blending
         int ghost_start = std::max(progress_layer_ + 1, draw_start);
         if (ghost_start <= draw_end) {
-            draw_layers(*active_vbos, ghost_start, draw_end, ghost_opacity_ / 255.0f,
-                        (ghost_render_mode_ == GhostRenderMode::Stipple) ? 0.5f : 1.0f);
+            float alpha = ghost_opacity_ / 255.0f;
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glDepthMask(GL_FALSE); // Don't write ghost depth (prevents z-fighting)
+            draw_layers(*active_vbos, ghost_start, draw_end, 1.0f, alpha);
+            glDepthMask(GL_TRUE);
+            glDisable(GL_BLEND);
         }
     } else {
         // Normal: all layers solid
@@ -1003,12 +1019,11 @@ void GCodeGLESRenderer::render_to_fbo(const ParsedGCodeFile& /*gcode*/, const GC
 }
 
 void GCodeGLESRenderer::draw_layers(const std::vector<LayerVBO>& vbos, int layer_start,
-                                    int layer_end, float color_scale, float ghost_alpha) {
+                                    int layer_end, float color_scale, float alpha) {
     // Set uniforms for this draw batch
     glUniform4fv(u_base_color_, 1, glm::value_ptr(filament_color_));
     glUniform1f(u_color_scale_, color_scale);
-    glUniform1f(u_ghost_alpha_, ghost_alpha);
-    glUniform1f(u_base_alpha_, 1.0f);
+    glUniform1f(u_base_alpha_, alpha);
 
     constexpr size_t kStride = 9 * sizeof(float);
 

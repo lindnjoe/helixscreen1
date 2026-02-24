@@ -63,7 +63,6 @@ class GCodeViewerState {
 #endif
 
         // Check HELIX_GCODE_MODE env var for render mode override
-        // Default is 2D (TinyGL is too slow for production on ALL platforms)
         const char* mode_env = std::getenv("HELIX_GCODE_MODE");
         if (mode_env) {
             if (std::strcmp(mode_env, "3D") == 0) {
@@ -232,7 +231,7 @@ class GCodeViewerState {
     float content_offset_y_percent_{0.0f};
 
     /// Render mode setting - set by constructor based on HELIX_GCODE_MODE env var
-    /// Default is 2D_LAYER (TinyGL is too slow for production use everywhere)
+    /// Render mode setting - configurable via HELIX_GCODE_MODE env var
     GcodeViewerRenderMode render_mode_{GcodeViewerRenderMode::Layer2D};
 
     /// Helper to check if currently using 2D layer renderer
@@ -328,7 +327,7 @@ static bool has_gcode_data(const gcode_viewer_state_t* st) {
 /**
  * @brief Main draw callback - renders G-code using custom renderer
  *
- * Dispatches to either the 3D TinyGL renderer or the 2D layer renderer
+ * Dispatches to either the 3D GLES renderer or the 2D layer renderer
  * based on current render mode and AUTO fallback state.
  */
 static void gcode_viewer_draw_cb(lv_event_t* e) {
@@ -485,7 +484,7 @@ static void gcode_viewer_draw_cb(lv_event_t* e) {
                 label_to_delete);
         }
     } else {
-        // 3D TinyGL Renderer (isometric ribbon view)
+        // 3D GLES Renderer (isometric ribbon view)
         st->renderer_->render(layer, *st->gcode_file, *st->camera_, &widget_coords);
     }
 
@@ -671,17 +670,11 @@ static void gcode_viewer_pressing_cb(lv_event_t* e) {
     int dy = point.y - st->last_drag_pos.y;
 
     if (dx != 0 || dy != 0) {
-        // Convert pixel movement to rotation angles
-        // Scale factor: ~0.5 degrees per pixel
-        // Touch: finger drags model surface (follows finger direction)
-        // Mouse: grab-and-rotate background (opposite to drag direction)
-#if LV_USE_SDL
-        constexpr float sign = -1.0f; // Mouse: invert
-#else
-        constexpr float sign = 1.0f; // Touch: direct
-#endif
-        float delta_azimuth = sign * dx * 0.5f;
-        float delta_elevation = sign * -dy * 0.5f;
+        // Convert pixel movement to rotation angles (~0.5 degrees per pixel)
+        // Azimuth: drag right = orbit right
+        // Elevation: drag up = tilt up (screen Y is inverted, so positive dy = down)
+        float delta_azimuth = dx * 0.5f;
+        float delta_elevation = dy * 0.5f;
 
         st->camera_->rotate(delta_azimuth, delta_elevation);
 
@@ -2130,7 +2123,7 @@ void ui_gcode_viewer_set_specular(lv_obj_t* obj, float intensity, float shinines
 #else
     (void)intensity;
     (void)shininess;
-    spdlog::warn("[GCode Viewer] set_specular() ignored - not using TinyGL 3D renderer");
+    spdlog::warn("[GCode Viewer] set_specular() ignored - 3D renderer not available");
 #endif
 }
 

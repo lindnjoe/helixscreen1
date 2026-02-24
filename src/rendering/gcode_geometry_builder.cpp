@@ -291,8 +291,9 @@ RibbonGeometry GeometryBuilder::build(const ParsedGCodeFile& gcode,
     SimplificationOptions validated_opts = options;
     validated_opts.validate();
 
-    spdlog::info("[GCode Geometry] Building G-code geometry (tolerance={:.3f}mm, merging={})",
-                 validated_opts.tolerance_mm, validated_opts.enable_merging);
+    spdlog::info("[GCode::Builder] Config: layer_height={:.3f}mm, extrusion_width={:.3f}mm, "
+                 "tube_sides={}, tolerance={:.3f}mm",
+                 layer_height_mm_, extrusion_width_mm_, tube_sides_, validated_opts.tolerance_mm);
 
     // Calculate quantization parameters from bounding box
     // IMPORTANT: Expand bounds to account for tube width (vertices extend beyond segment positions)
@@ -309,19 +310,13 @@ RibbonGeometry GeometryBuilder::build(const ParsedGCodeFile& gcode,
         "[GCode Geometry] Expanded quantization bounds by {:.1f}mm for tube width {:.1f}mm",
         expansion_margin, max_tube_width);
 
-    // Build Z-height to layer index lookup map
-    // Used later to assign layer indices to strips for ghost layer rendering
-    std::unordered_map<int, uint16_t> z_to_layer_index;
-    for (size_t i = 0; i < gcode.layers.size(); ++i) {
-        // Quantize Z to 0.01mm precision for reliable lookups
-        int z_key = static_cast<int>(std::round(gcode.layers[i].z_height * 100.0f));
-        z_to_layer_index[z_key] = static_cast<uint16_t>(i);
-    }
-
-    // Collect all segments from all layers
+    // Collect all segments from all layers, stamping each with its source layer index
     std::vector<ToolpathSegment> all_segments;
-    for (const auto& layer : gcode.layers) {
-        all_segments.insert(all_segments.end(), layer.segments.begin(), layer.segments.end());
+    for (size_t li = 0; li < gcode.layers.size(); ++li) {
+        for (const auto& seg : gcode.layers[li].segments) {
+            all_segments.push_back(seg);
+            all_segments.back().layer_index = static_cast<uint16_t>(li);
+        }
     }
 
     stats_.input_segments = all_segments.size();
@@ -365,24 +360,10 @@ RibbonGeometry GeometryBuilder::build(const ParsedGCodeFile& gcode,
                      simplified.size());
     }
 
-    // Find the maximum Z height (top layer) dynamically for debug filtering
-    float max_z = -std::numeric_limits<float>::infinity();
-    for (const auto& segment : simplified) {
-        float z = std::round(segment.start.z * 100.0f) / 100.0f;
-        if (z > max_z)
-            max_z = z;
-    }
-
     // Step 2: Generate ribbon geometry with vertex sharing
     // Track previous segment end vertices for reuse
     std::optional<TubeCap> prev_end_cap;
     glm::vec3 prev_end_pos{0.0f};
-
-    // DEBUG: Track segment Y range and vertex sharing statistics
-    float seg_y_min = FLT_MAX, seg_y_max = -FLT_MAX;
-    size_t segments_skipped = 0;
-    size_t segments_shared = 0;
-    size_t sharing_candidates = 0; // Segments where prev_end_cap exists
 
     // Layer tracking for ghost layer rendering
     // Temporary map to accumulate strips per layer, then convert to ranges
@@ -393,9 +374,6 @@ RibbonGeometry GeometryBuilder::build(const ParsedGCodeFile& gcode,
     // Initialize per-layer bounding boxes for frustum culling
     geometry.layer_bboxes.resize(gcode.layers.size());
 
-    spdlog::info("[GCode::Builder] Setting max_layer_index = {} (from {} layers)",
-                 geometry.max_layer_index, gcode.layers.size());
-
     for (size_t i = 0; i < simplified.size(); ++i) {
         const auto& segment = simplified[i];
 
@@ -404,23 +382,11 @@ RibbonGeometry GeometryBuilder::build(const ParsedGCodeFile& gcode,
         // Skip travel moves (non-extrusion moves)
         // TODO: Make this configurable if we want to visualize travel paths
         if (!segment.is_extrusion) {
-            segments_skipped++;
             continue;
         }
 
-        // Determine layer index from segment Z-height
-        int z_key = static_cast<int>(std::round(segment.start.z * 100.0f));
-        uint16_t layer_idx = 0;
-        auto it = z_to_layer_index.find(z_key);
-        if (it == z_to_layer_index.end()) {
-            it = z_to_layer_index.find(z_key + 1);
-        }
-        if (it == z_to_layer_index.end()) {
-            it = z_to_layer_index.find(z_key - 1);
-        }
-        if (it != z_to_layer_index.end()) {
-            layer_idx = it->second;
-        }
+        // Use source layer index stamped during segment collection
+        uint16_t layer_idx = segment.layer_index;
 
         // Expand per-layer bounding box for frustum culling
         if (layer_idx < geometry.layer_bboxes.size()) {
@@ -429,36 +395,14 @@ RibbonGeometry GeometryBuilder::build(const ParsedGCodeFile& gcode,
             layer_bbox.expand(segment.end);
         }
 
-        // Track Y range
-        seg_y_min = std::min({seg_y_min, segment.start.y, segment.end.y});
-        seg_y_max = std::max({seg_y_max, segment.start.y, segment.end.y});
-
-        // Check if we can share vertices with previous segment (OPTIMIZATION ENABLED!)
+        // Check if we can share vertices with previous segment
         bool can_share = false;
-        float dist = 0.0f;
-        float connection_tolerance = 0.0f;
         if (prev_end_cap.has_value()) {
-            sharing_candidates++;
-
             // Segments must connect spatially (within epsilon) and be same type
-            dist = glm::distance(segment.start, prev_end_pos);
-            // Use width-based tolerance: if gap is less than extrusion width, consider them
-            // connected
-            connection_tolerance = segment.width * 0.5f;
+            float dist = glm::distance(segment.start, prev_end_pos);
+            float connection_tolerance = segment.width * 0.5f;
             can_share = (dist < connection_tolerance) &&
                         (segment.is_extrusion == simplified[i - 1].is_extrusion);
-
-            if (can_share) {
-                segments_shared++;
-            }
-
-            // Debug top layer connections
-            float z = std::round(segment.start.z * 100.0f) / 100.0f;
-            if (z == max_z) {
-                spdlog::trace("[GCode Geometry]   Seg {:3d}: dist={:.4f}mm, tol={:.4f}mm, "
-                              "width={:.4f}mm, can_share={}",
-                              i, dist, connection_tolerance, segment.width, can_share);
-            }
         }
 
         // Track strip count before generating geometry
@@ -492,62 +436,6 @@ RibbonGeometry GeometryBuilder::build(const ParsedGCodeFile& gcode,
         }
     }
 
-    spdlog::debug("[GCode::Builder] Layer tracking: {} layers, {} total strips",
-                  geometry.layer_strip_ranges.size(), geometry.strips.size());
-
-    spdlog::trace("[GCode Geometry] Segment Y range: [{:.1f}, {:.1f}]", seg_y_min, seg_y_max);
-
-    // Categorize segments in top layer by angle and type (max_z already calculated above)
-    size_t total_segs = 0, extrusion_segs = 0, travel_segs = 0;
-    size_t diagonal_45_segs = 0, horizontal_segs = 0, vertical_segs = 0, other_angle_segs = 0;
-
-    for (const auto& segment : simplified) {
-        float z = std::round(segment.start.z * 100.0f) / 100.0f;
-        if (std::abs(z - max_z) < 0.01f) {
-            total_segs++;
-
-            // Categorize by extrusion vs travel
-            if (segment.is_extrusion) {
-                extrusion_segs++;
-            } else {
-                travel_segs++;
-            }
-
-            // Calculate segment angle in XY plane
-            glm::vec2 delta(segment.end.x - segment.start.x, segment.end.y - segment.start.y);
-            float length_2d = glm::length(delta);
-
-            if (length_2d > 0.01f) { // Skip near-zero length segments
-                float angle_rad = std::atan2(delta.y, delta.x);
-                float angle_deg = glm::degrees(angle_rad);
-
-                // Normalize angle to [0, 180) for direction-independent classification
-                if (angle_deg < 0)
-                    angle_deg += 180.0f;
-
-                // Categorize by angle (±5° tolerance)
-                if (std::abs(angle_deg - 45.0f) < 5.0f || std::abs(angle_deg - 135.0f) < 5.0f) {
-                    diagonal_45_segs++;
-                } else if (std::abs(angle_deg - 0.0f) < 5.0f ||
-                           std::abs(angle_deg - 180.0f) < 5.0f) {
-                    horizontal_segs++;
-                } else if (std::abs(angle_deg - 90.0f) < 5.0f) {
-                    vertical_segs++;
-                } else {
-                    other_angle_segs++;
-                }
-            }
-        }
-    }
-
-    if (total_segs > 0) {
-        spdlog::debug(
-            "[GCode Geometry] Top layer Z={:.2f}mm: {} segments ({} extrusion, {} travel, angles: "
-            "{}°±45°, {}°h, {}°v, {} other)",
-            max_z, total_segs, extrusion_segs, travel_segs, diagonal_45_segs, horizontal_segs,
-            vertical_segs, other_angle_segs);
-    }
-
     // Store quantization parameters for dequantization during rendering
     geometry.quantization = quant_params_;
 
@@ -559,31 +447,6 @@ RibbonGeometry GeometryBuilder::build(const ParsedGCodeFile& gcode,
     // Each TriangleStrip has 4 indices forming 2 triangles
     stats_.triangles_generated = geometry.strips.size() * 2;
     stats_.memory_bytes = geometry.memory_usage();
-
-    // Log vertex sharing statistics
-    float sharing_rate =
-        sharing_candidates > 0 ? (100.0f * segments_shared / sharing_candidates) : 0.0f;
-    spdlog::info("[GCode::Builder] Vertex sharing: {}/{} segments ({:.1f}%)", segments_shared,
-                 sharing_candidates, sharing_rate);
-    if (sharing_rate < 40.0f) {
-        spdlog::warn("[GCode::Builder] Low vertex sharing rate ({:.1f}%) - expected ~50% for "
-                     "continuous toolpaths",
-                     sharing_rate);
-    }
-
-    // Log palette statistics
-    spdlog::info("[GCode::Builder] Palette stats: {} normals, {} colors (smooth_shading={})",
-                 geometry.normal_palette.size(), geometry.color_palette.size(),
-                 use_smooth_shading_);
-
-    // Log cache statistics
-    spdlog::debug("[GCode::Builder] Cache stats: normal_cache={} entries, color_cache={} entries",
-                  geometry.normal_cache->size(), geometry.color_cache->size());
-
-    if (segments_skipped > 0) {
-        spdlog::debug("[GCode::Builder] Skipped {} travel move segments (non-extrusion)",
-                      segments_skipped);
-    }
 
     stats_.log();
 
@@ -629,15 +492,35 @@ GeometryBuilder::simplify_segments(const std::vector<ToolpathSegment>& segments,
         bool same_width = (std::abs(current.width - next.width) < 0.001f);
 
         if (same_type && endpoints_connect && same_object && same_width) {
-            // Check if current.start, current.end, next.end are collinear
-            bool collinear =
-                are_collinear(current.start, current.end, next.end, options.tolerance_mm);
+            // Direction check: prevent merging segments with significantly different directions.
+            // This preserves zigzag fill patterns where perpendicular distance is small but
+            // the direction changes sharply (e.g., 90-degree turns in solid infill).
+            glm::vec3 merged_dir = next.end - current.start;
+            glm::vec3 candidate_dir = next.end - next.start;
+            float merged_len2 = glm::length2(merged_dir);
+            float candidate_len2 = glm::length2(candidate_dir);
 
-            if (collinear) {
-                // Merge: extend current segment to end at next.end
-                current.end = next.end;
-                current.extrusion_amount += next.extrusion_amount;
-                continue; // Skip adding next to simplified list
+            bool direction_ok = true;
+            if (merged_len2 > 1e-8f && candidate_len2 > 1e-8f) {
+                glm::vec3 d1 = merged_dir / std::sqrt(merged_len2);
+                glm::vec3 d2 = candidate_dir / std::sqrt(candidate_len2);
+                float dot = glm::dot(d1, d2);
+                dot = std::max(-1.0f, std::min(1.0f, dot)); // Clamp for acos safety
+                float angle_deg = glm::degrees(std::acos(dot));
+                direction_ok = (angle_deg <= options.max_direction_change_deg);
+            }
+
+            if (direction_ok) {
+                // Check if current.start, current.end, next.end are collinear
+                bool collinear =
+                    are_collinear(current.start, current.end, next.end, options.tolerance_mm);
+
+                if (collinear) {
+                    // Merge: extend current segment to end at next.end
+                    current.end = next.end;
+                    current.extrusion_amount += next.extrusion_amount;
+                    continue; // Skip adding next to simplified list
+                }
             }
         }
 
@@ -775,28 +658,33 @@ GeometryBuilder::generate_ribbon_vertices(const ToolpathSegment& segment, Ribbon
     const glm::vec3 prev_pos = segment.start - half_height * perp_up;
     const glm::vec3 curr_pos = segment.end - half_height * perp_up;
 
-    // Generate N vertex offsets in elliptical arrangement
-    // Vertex i is at angle (i * 2π/N) around the ellipse
-    // Position offset = cos(angle)*half_width*right + sin(angle)*half_height*perp_up
-    const float angle_step = 2.0f * static_cast<float>(M_PI) / N;
+    // Generate N vertex offsets for tube cross-section
     std::vector<glm::vec3> vertex_offsets(static_cast<size_t>(N));
 
-    for (int i = 0; i < N; i++) {
-        float angle = i * angle_step; // 0°, 360°/N, 2×360°/N, ...
-        vertex_offsets[static_cast<size_t>(i)] =
-            half_width * std::cos(angle) * right + half_height * std::sin(angle) * perp_up;
+    if (N == 4) {
+        // Rectangle cross-section: flat top/bottom/sides with full width coverage.
+        // Adjacent extrusion lines tile seamlessly (no gaps between solid fill lines).
+        // Order: top-right, top-left, bottom-left, bottom-right
+        vertex_offsets[0] = +half_width * right + half_height * perp_up;
+        vertex_offsets[1] = -half_width * right + half_height * perp_up;
+        vertex_offsets[2] = -half_width * right - half_height * perp_up;
+        vertex_offsets[3] = +half_width * right - half_height * perp_up;
+    } else {
+        // Higher N: elliptical cross-section via parametric angle
+        const float angle_step = 2.0f * static_cast<float>(M_PI) / N;
+        for (int i = 0; i < N; i++) {
+            float angle = i * angle_step;
+            vertex_offsets[static_cast<size_t>(i)] =
+                half_width * std::cos(angle) * right + half_height * std::sin(angle) * perp_up;
+        }
     }
 
-    // Per-vertex radial normals for smooth shading
-    // Each vertex at angle theta gets normal = normalize(cos(theta)*right + sin(theta)*perp_up)
+    // Per-vertex normals derived from vertex offset direction (smooth shading)
     std::vector<glm::vec3> vertex_normals(static_cast<size_t>(N));
     for (int i = 0; i < N; i++) {
-        float angle = i * angle_step;
-        glm::vec3 radial =
-            half_width * std::cos(angle) * right + half_height * std::sin(angle) * perp_up;
-        float len = glm::length(radial);
+        float len = glm::length(vertex_offsets[static_cast<size_t>(i)]);
         if (len > 1e-6f) {
-            vertex_normals[static_cast<size_t>(i)] = radial / len;
+            vertex_normals[static_cast<size_t>(i)] = vertex_offsets[static_cast<size_t>(i)] / len;
         } else {
             vertex_normals[static_cast<size_t>(i)] = glm::vec3(0.0f, 0.0f, 1.0f);
         }
@@ -880,30 +768,6 @@ GeometryBuilder::generate_ribbon_vertices(const ToolpathSegment& segment, Ribbon
         end_cap[static_cast<size_t>(i)] = end_cap_base + static_cast<uint32_t>(2 * i);
     }
 
-    static int debug_count = 0;
-    if (debug_count < 2 && debug_face_colors_) {
-        spdlog::info("[GCode Geometry] === Segment {} | N={} | is_first={} ===", debug_count, N,
-                     is_first_segment);
-        spdlog::info(
-            "[GCode Geometry]   Segment: start=({:.3f},{:.3f},{:.3f}) end=({:.3f},{:.3f},{:.3f})",
-            segment.start.x, segment.start.y, segment.start.z, segment.end.x, segment.end.y,
-            segment.end.z);
-        spdlog::info(
-            "[GCode Geometry]   Direction: dir=({:.3f},{:.3f},{:.3f}) right=({:.3f},{:.3f},{:.3f}) "
-            "perp_up=({:.3f},{:.3f},{:.3f})",
-            dir.x, dir.y, dir.z, right.x, right.y, right.z, perp_up.x, perp_up.y, perp_up.z);
-        spdlog::info("[GCode Geometry]   Cross-section center: prev_pos=({:.3f},{:.3f},{:.3f}) "
-                     "curr_pos=({:.3f},{:.3f},{:.3f})",
-                     prev_pos.x, prev_pos.y, prev_pos.z, curr_pos.x, curr_pos.y, curr_pos.z);
-        spdlog::info("[GCode Geometry]   Curr vertices ({} total):", N);
-        for (int i = 0; i < N; i++) {
-            glm::vec3 pos = curr_pos + vertex_offsets[static_cast<size_t>(i)];
-            spdlog::info("[GCode Geometry]     v{}[{}]: ({:.3f},{:.3f},{:.3f})", i,
-                         end_cap[static_cast<size_t>(i)], pos.x, pos.y, pos.z);
-        }
-        debug_count++;
-    }
-
     // ========== TRIANGLE STRIPS GENERATION (Phase 4: N-based) ==========
 
     // Calculate vertex base indices
@@ -947,11 +811,6 @@ GeometryBuilder::generate_ribbon_vertices(const ToolpathSegment& segment, Ribbon
                 start_cap_base + static_cast<uint32_t>(i + 1)  // Duplicate (degenerate triangle)
             });
         }
-
-        if (debug_face_colors_) {
-            spdlog::info("[GCode Geometry] START CAP: N={} vertices, {} triangles (triangle fan)",
-                         N, N - 2);
-        }
     }
 
     // ========== END CAP VERTICES ==========
@@ -963,14 +822,6 @@ GeometryBuilder::generate_ribbon_vertices(const ToolpathSegment& segment, Ribbon
     uint16_t end_cap_normal_idx = add_to_normal_palette(geometry, cap_normal_end);
 
     uint32_t idx_end_cap_start = idx_start;
-
-    if (debug_face_colors_) {
-        spdlog::info("[GCode Geometry] END CAP SOURCE INDICES (first {} of {}):", std::min(N, 4),
-                     N);
-        for (int i = 0; i < std::min(N, 4); i++) {
-            spdlog::info("[GCode Geometry]   end_cap[{}]={}", i, end_cap[static_cast<size_t>(i)]);
-        }
-    }
 
     // Create N end cap vertices with axial normals
     for (int i = 0; i < N; i++) {
@@ -985,10 +836,6 @@ GeometryBuilder::generate_ribbon_vertices(const ToolpathSegment& segment, Ribbon
     }
     idx_start += static_cast<uint32_t>(N);
 
-    if (debug_face_colors_) {
-        spdlog::info("[GCode Geometry] END CAP VERTICES ADDED: {} vertices", N);
-    }
-
     // ========== END CAP STRIPS ==========
     // Triangle fan with REVERSED winding (CW instead of CCW) for opposite-facing cap
     for (int i = 1; i < N - 1; i++) {
@@ -998,14 +845,6 @@ GeometryBuilder::generate_ribbon_vertices(const ToolpathSegment& segment, Ribbon
             idx_end_cap_start + static_cast<uint32_t>(N - i - 1), // vN-i-1
             idx_end_cap_start + static_cast<uint32_t>(N - i - 1)  // Duplicate (degenerate)
         });
-    }
-
-    if (debug_face_colors_) {
-        spdlog::info(
-            "[GCode Geometry] END CAP: N={} vertices, {} triangles (reversed triangle fan)", N,
-            N - 2);
-        spdlog::info("[GCode Geometry]   Total geometry.strips.size() = {}",
-                     geometry.strips.size());
     }
 
     // ========== TRIANGLE COUNT VALIDATION ==========

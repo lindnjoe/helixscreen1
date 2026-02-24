@@ -303,6 +303,7 @@ void PrintStatusPanel::init_subjects() {
         {"on_print_status_nozzle_clicked", on_nozzle_card_clicked},
         {"on_print_status_bed_clicked", on_bed_card_clicked},
         {"on_print_status_objects", on_objects_clicked},
+        {"on_print_status_dismiss_overlay", on_dismiss_overlay_clicked},
     });
 
     subjects_initialized_ = true;
@@ -1081,6 +1082,16 @@ void PrintStatusPanel::on_bed_card_clicked(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[PrintStatusPanel] on_bed_card_clicked");
     (void)e;
     get_global_print_status_panel().handle_bed_card_click();
+    LVGL_SAFE_EVENT_CB_END();
+}
+
+void PrintStatusPanel::on_dismiss_overlay_clicked(lv_event_t* e) {
+    LVGL_SAFE_EVENT_CB_BEGIN("[PrintStatusPanel] on_dismiss_overlay_clicked");
+    auto* overlay = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
+    if (overlay) {
+        lv_obj_add_flag(overlay, LV_OBJ_FLAG_HIDDEN);
+        spdlog::debug("[PrintStatusPanel] Dismissed print end overlay");
+    }
     LVGL_SAFE_EVENT_CB_END();
 }
 

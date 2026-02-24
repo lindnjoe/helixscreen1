@@ -1124,7 +1124,7 @@ void GCodeLayerRenderer::render_selection_brackets(lv_layer_t* layer) {
         const AABB& bbox = it->second.bounding_box;
 
         // Calculate corner bracket length (20% of shortest edge, capped at 5mm)
-        // Same formula as TinyGL renderer
+        // Same formula as 3D renderer
         float dx = bbox.max.x - bbox.min.x;
         float dy = bbox.max.y - bbox.min.y;
         float dz = bbox.max.z - bbox.min.z;

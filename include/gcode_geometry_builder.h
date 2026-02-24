@@ -3,7 +3,7 @@
 //
 // G-Code Geometry Builder
 // Converts parsed G-code toolpath segments into optimized 3D ribbon geometry
-// for TinyGL rendering with coordinate quantization and segment simplification.
+// with coordinate quantization and segment simplification.
 
 #pragma once
 
@@ -223,18 +223,20 @@ struct RibbonGeometry {
  */
 struct SimplificationOptions {
     bool enable_merging = true; ///< Enable collinear segment merging
-    float tolerance_mm = 0.15f; ///< Merge tolerance (0.01 - 1.0mm) - higher = more aggressive
+    float tolerance_mm = 0.01f; ///< Merge tolerance (mm) - only merge truly collinear segments
     float min_segment_length_mm = 0.01f; ///< Minimum segment length to keep (filter micro-segments)
+    float max_direction_change_deg = 15.0f; ///< Max angle (degrees) between segments to allow merge
 
     /**
      * @brief Validate and clamp tolerance to safe range
      *
      * Max tolerance of 5.0mm allows very aggressive simplification for LOD
-     * during interaction. For final quality rendering, use 0.5mm or less.
+     * during interaction. For final quality rendering, use 0.01mm or less.
      */
     void validate() {
-        tolerance_mm = std::max(0.01f, std::min(5.0f, tolerance_mm));
+        tolerance_mm = std::max(0.001f, std::min(5.0f, tolerance_mm));
         min_segment_length_mm = std::max(0.0001f, min_segment_length_mm);
+        max_direction_change_deg = std::max(1.0f, std::min(90.0f, max_direction_change_deg));
     }
 };
 
@@ -265,7 +267,7 @@ class GeometryBuilder {
      *
      * @param gcode Parsed G-code file with toolpath segments
      * @param options Simplification configuration
-     * @return Optimized ribbon geometry ready for TinyGL rendering
+     * @return Optimized ribbon geometry ready for 3D rendering
      */
     RibbonGeometry build(const ParsedGCodeFile& gcode, const SimplificationOptions& options);
 

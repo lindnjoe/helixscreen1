@@ -414,7 +414,7 @@ class GCodeLayerRenderer {
      * @param layer LVGL draw layer
      *
      * Draws wireframe corner brackets at all 8 projected corners of each
-     * highlighted object's AABB. Ported from TinyGL renderer's render_bounding_box().
+     * highlighted object's AABB.
      */
     void render_selection_brackets(lv_layer_t* layer);
 
