@@ -302,6 +302,7 @@ else ifeq ($(PLATFORM_TARGET),native)
     TARGET_TRIPLE :=
     TARGET_CFLAGS :=
     DISPLAY_BACKEND := sdl
+    ENABLE_SSL := yes
     ENABLE_SDL := yes
     ENABLE_EVDEV := no
     BUILD_SUBDIR :=

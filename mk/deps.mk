@@ -354,7 +354,7 @@ else ifeq ($(UNAME_S),Darwin)
 		./configure --with-http-client
 	$(Q)MACOSX_DEPLOYMENT_TARGET=$(MACOS_MIN_VERSION) $(MAKE) -C $(LIBHV_DIR) libhv
 else
-	$(Q)cd $(LIBHV_DIR) && ./configure --with-http-client
+	$(Q)cd $(LIBHV_DIR) && ./configure --with-http-client $(if $(filter yes,$(ENABLE_SSL)),--with-openssl)
 	$(Q)$(MAKE) -C $(LIBHV_DIR) libhv
 endif
 	# Copy built library to architecture-specific output directory
