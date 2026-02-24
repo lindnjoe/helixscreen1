@@ -33,30 +33,12 @@ static std::unique_ptr<AmsBackendMock> create_mock_with_features(int gate_count)
 
     // ========================================================================
     // HELIX_MOCK_AMS — topology/type selection
-    // Replaces HELIX_MOCK_AMS_TYPE and HELIX_MOCK_MULTI_UNIT
     // ========================================================================
     const char* mock_ams_env = std::getenv("HELIX_MOCK_AMS");
     std::string ams_type;
 
     if (mock_ams_env) {
         ams_type = to_lower(mock_ams_env);
-    } else {
-        // Deprecation shim: check old HELIX_MOCK_AMS_TYPE
-        const char* old_type_env = std::getenv("HELIX_MOCK_AMS_TYPE");
-        if (old_type_env) {
-            ams_type = to_lower(old_type_env);
-            spdlog::warn("[AMS Backend] HELIX_MOCK_AMS_TYPE is deprecated, "
-                         "use HELIX_MOCK_AMS={} instead",
-                         ams_type);
-        }
-
-        // Deprecation shim: check old HELIX_MOCK_MULTI_UNIT
-        const char* old_multi_env = std::getenv("HELIX_MOCK_MULTI_UNIT");
-        if (old_multi_env && std::string(old_multi_env) == "1") {
-            ams_type = "multi";
-            spdlog::warn("[AMS Backend] HELIX_MOCK_MULTI_UNIT is deprecated, "
-                         "use HELIX_MOCK_AMS=multi instead");
-        }
     }
 
     if (!ams_type.empty()) {
@@ -77,35 +59,12 @@ static std::unique_ptr<AmsBackendMock> create_mock_with_features(int gate_count)
 
     // ========================================================================
     // HELIX_MOCK_AMS_STATE — visual scenario
-    // Replaces HELIX_MOCK_AMS_ERRORS and HELIX_MOCK_AMS_REALISTIC
     // ========================================================================
     const char* mock_state_env = std::getenv("HELIX_MOCK_AMS_STATE");
     std::string state_scenario;
 
     if (mock_state_env) {
         state_scenario = to_lower(mock_state_env);
-    } else {
-        // Deprecation shim: check old HELIX_MOCK_AMS_ERRORS
-        const char* old_errors_env = std::getenv("HELIX_MOCK_AMS_ERRORS");
-        if (old_errors_env && std::string(old_errors_env) == "1") {
-            state_scenario = "error";
-            spdlog::warn("[AMS Backend] HELIX_MOCK_AMS_ERRORS is deprecated, "
-                         "use HELIX_MOCK_AMS_STATE=error instead");
-        }
-
-        // Deprecation shim: check old HELIX_MOCK_AMS_REALISTIC
-        const char* old_realistic_env = std::getenv("HELIX_MOCK_AMS_REALISTIC");
-        if (old_realistic_env &&
-            (std::string(old_realistic_env) == "1" || std::string(old_realistic_env) == "true")) {
-            if (!state_scenario.empty()) {
-                spdlog::warn("[AMS Backend] Both HELIX_MOCK_AMS_ERRORS and "
-                             "HELIX_MOCK_AMS_REALISTIC set; using 'loading'. "
-                             "Use HELIX_MOCK_AMS_STATE to be explicit.");
-            }
-            state_scenario = "loading";
-            spdlog::warn("[AMS Backend] HELIX_MOCK_AMS_REALISTIC is deprecated, "
-                         "use HELIX_MOCK_AMS_STATE=loading instead");
-        }
     }
 
     if (!state_scenario.empty() && state_scenario != "idle") {

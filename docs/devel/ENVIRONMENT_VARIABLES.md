@@ -391,7 +391,7 @@ HELIX_AMS_GATES=16 ./build/bin/helix-screen --test
 
 ### `HELIX_MOCK_AMS`
 
-Select the mock AMS topology/type. Replaces the old `HELIX_MOCK_AMS_TYPE` and `HELIX_MOCK_MULTI_UNIT` variables.
+Select the mock AMS topology/type.
 
 | Property | Value |
 |----------|-------|
@@ -425,7 +425,7 @@ HELIX_MOCK_AMS=multi ./build/bin/helix-screen --test
 
 ### `HELIX_MOCK_AMS_STATE`
 
-Select the mock AMS visual scenario. Replaces the old `HELIX_MOCK_AMS_ERRORS` and `HELIX_MOCK_AMS_REALISTIC` variables.
+Select the mock AMS visual scenario.
 
 | Property | Value |
 |----------|-------|
@@ -455,21 +455,6 @@ HELIX_MOCK_AMS=afc HELIX_MOCK_AMS_STATE=error ./build/bin/helix-screen --test
 HELIX_MOCK_AMS=mixed HELIX_MOCK_AMS_STATE=loading ./build/bin/helix-screen --test
 ```
 
-### `HELIX_MOCK_AMS_TYPE` *(deprecated)*
-
-**Deprecated** — use `HELIX_MOCK_AMS` instead. Still works for one release cycle with a deprecation warning.
-
-### `HELIX_MOCK_MULTI_UNIT` *(deprecated)*
-
-**Deprecated** — use `HELIX_MOCK_AMS=multi` instead. Still works for one release cycle with a deprecation warning.
-
-### `HELIX_MOCK_AMS_ERRORS` *(deprecated)*
-
-**Deprecated** — use `HELIX_MOCK_AMS_STATE=error` instead. Still works for one release cycle with a deprecation warning.
-
-### `HELIX_MOCK_AMS_REALISTIC` *(deprecated)*
-
-**Deprecated** — use `HELIX_MOCK_AMS_STATE=loading` instead. Still works for one release cycle with a deprecation warning.
 
 ### `HELIX_MOCK_DRYER`
 
