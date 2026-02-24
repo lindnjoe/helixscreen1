@@ -273,7 +273,12 @@ LVGL_DEMO_SRCS := $(shell find $(LVGL_DIR)/demos -name "*.c" 2>/dev/null)
 LVGL_DEMO_OBJS := $(patsubst $(LVGL_DIR)/%.c,$(OBJ_DIR)/lvgl/%.o,$(LVGL_DEMO_SRCS))
 
 # 3D G-code Rendering default (must be set before APP_SRCS filtering below)
-ENABLE_GLES_3D ?= yes
+# EGL/GLES is only available on Linux — disable on macOS
+ifeq ($(UNAME_S),Darwin)
+    ENABLE_GLES_3D ?= no
+else
+    ENABLE_GLES_3D ?= yes
+endif
 
 # Application C sources
 APP_C_SRCS := $(wildcard $(SRC_DIR)/*.c)
