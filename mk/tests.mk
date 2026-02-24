@@ -71,6 +71,9 @@ TEST_PLATFORM_DEPS := $(WPA_DEPS)
 # Tool objects needed by tests (src/tools/ is excluded from APP_OBJS)
 TEST_TOOL_OBJS := $(OBJ_DIR)/tools/xml_attribute_validator.o
 
+# libhv dns_resolv C source needed by test_dns_resolver (not in libhv.a)
+DNS_RESOLV_OBJ := $(OBJ_DIR)/tests/dns_resolv.o
+
 # ============================================================================
 # AUTOMATIC APP OBJECT DISCOVERY
 # ============================================================================
@@ -497,6 +500,7 @@ $(TEST_BIN): $(TEST_CORE_DEPS) \
              $(TEST_LVGL_DEPS) \
              $(TEST_APP_OBJS) \
              $(TEST_TOOL_OBJS) \
+             $(DNS_RESOLV_OBJ) \
              $(MOCK_OBJS) \
              $(LV_MARKDOWN_OBJS) \
              $(FONT_OBJS) \
@@ -597,6 +601,12 @@ $(OBJ_DIR)/tests/application/%.o: $(TEST_UNIT_DIR)/application/%.cpp
 	$(ECHO) "$(BLUE)[TEST-APP]$(RESET) $<"
 	$(Q)$(CXX) $(CXXFLAGS) $(DEPFLAGS) $(PCH_FLAGS) -I$(TEST_DIR) -I$(TEST_UNIT_DIR)/application $(INCLUDES) -c $< -o $@
 	$(call emit-compile-command,$(CXX),$(CXXFLAGS) $(PCH_FLAGS) -I$(TEST_DIR) -I$(TEST_UNIT_DIR)/application $(INCLUDES),$<,$@)
+
+# Compile libhv dns_resolv.c for test_dns_resolver
+$(DNS_RESOLV_OBJ): $(LIBHV_DIR)/base/dns_resolv.c
+	$(Q)mkdir -p $(dir $@)
+	$(ECHO) "$(BLUE)[TEST-C]$(RESET) $<"
+	$(Q)$(CC) $(CFLAGS) $(LIBHV_INC) -c $< -o $@
 
 # Compile mock sources
 # Uses DEPFLAGS to track header dependencies
