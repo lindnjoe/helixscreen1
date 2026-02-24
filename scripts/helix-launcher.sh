@@ -191,18 +191,16 @@ LOG_LEVEL="${CLI_LOG_LEVEL:-${HELIX_LOG_LEVEL:-}}"
 MAIN_BIN=$(select_binary "${BIN_DIR}")
 
 # Default display backend based on which binary was selected.
-# DRM binary = drm backend; fbdev binary = fbdev backend.
-# Override with HELIX_DISPLAY_BACKEND env var or in systemd service file.
+# Only set explicitly when dual binaries exist (Pi with DRM+fbdev).
+# Non-Pi platforms (AD5M, K1, etc.) have only one binary and the C++ code
+# auto-detects the backend, so we leave the env var unset.
 if [ -z "${HELIX_DISPLAY_BACKEND:-}" ]; then
-    case "$(uname -s)" in
-        Linux)
-            if [ "$(basename "${MAIN_BIN}")" = "helix-screen-fbdev" ]; then
-                export HELIX_DISPLAY_BACKEND=fbdev
-            else
-                export HELIX_DISPLAY_BACKEND=drm
-            fi
-            ;;
-    esac
+    if [ "$(basename "${MAIN_BIN}")" = "helix-screen-fbdev" ]; then
+        export HELIX_DISPLAY_BACKEND=fbdev
+    elif [ -x "${FALLBACK_BIN}" ]; then
+        # Dual-binary Pi: primary selected, use DRM
+        export HELIX_DISPLAY_BACKEND=drm
+    fi
 fi
 
 # Log function (must be defined before first use)
@@ -291,19 +289,20 @@ fi
 
 # Run main application (via watchdog if available for crash recovery)
 # Note: PASSTHROUGH_ARGS is unquoted to allow word splitting (POSIX compatible)
+# Use "cmd || EXIT_CODE=$?" to capture non-zero exit codes under set -e,
+# allowing the crash fallback logic below to run instead of aborting the script.
+EXIT_CODE=0
 if [ "${USE_WATCHDOG}" = "1" ]; then
     # Watchdog supervises helix-screen and manages splash lifecycle
     # Watchdog and splash auto-detect resolution from display hardware
     log "Starting via watchdog supervisor"
     # shellcheck disable=SC2086
     "${WATCHDOG_BIN}" ${SPLASH_ARGS} -- \
-        "${MAIN_BIN}" ${EXTRA_FLAGS} ${PASSTHROUGH_ARGS}
-    EXIT_CODE=$?
+        "${MAIN_BIN}" ${EXTRA_FLAGS} ${PASSTHROUGH_ARGS} || EXIT_CODE=$?
 else
     # Direct launch (development, or watchdog not built)
     # shellcheck disable=SC2086
-    "${MAIN_BIN}" ${EXTRA_FLAGS} ${PASSTHROUGH_ARGS}
-    EXIT_CODE=$?
+    "${MAIN_BIN}" ${EXTRA_FLAGS} ${PASSTHROUGH_ARGS} || EXIT_CODE=$?
 fi
 
 # Runtime crash fallback: if DRM binary crashed and fbdev fallback exists, retry.
