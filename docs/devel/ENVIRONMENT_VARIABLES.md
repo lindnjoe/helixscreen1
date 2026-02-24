@@ -169,7 +169,36 @@ HELIX_DISPLAY_ROTATION=180 ./build/bin/helix-screen
 3. `/display/rotate` in `helixconfig.json`
 4. Default: `0` (no rotation)
 
-**Note:** Software rotation is only supported on embedded backends (fbdev/DRM). On SDL (desktop dev), rotation is logged as a warning and skipped due to LVGL's DIRECT render mode limitation. Touch input may need recalibration after rotation — use `HELIX_TOUCH_SWAP_AXES=1` or the touch calibration wizard.
+**Note:** Software rotation is only supported on embedded backends (fbdev/DRM). On SDL (desktop dev), rotation is logged as a warning and skipped due to LVGL's DIRECT render mode limitation.
+
+**Touch auto-rotation:** On fbdev, touch coordinates are automatically rotated to match the display rotation for non-USB-HID devices (e.g., Goodix, sun4i_ts). USB HID touchscreens (e.g., BTT HDMI) report logical coordinates natively and are not transformed. `HELIX_TOUCH_SWAP_AXES` is still available as a manual override for edge cases.
+
+### `HELIX_FORCE_ROTATION_PROBE`
+
+Force the rotation probe to run on next startup, even if it has already run or a rotation is configured. Useful for testing the probe UI on SDL or re-running on a device.
+
+| Property | Value |
+|----------|-------|
+| **Values** | `1` (force probe) |
+| **Default** | Unset (probe only on first boot, fbdev only, no existing rotation) |
+| **Files** | `src/application/application.cpp`, `src/application/display_manager.cpp` |
+
+```bash
+# Test the rotation probe on SDL (desktop)
+HELIX_FORCE_ROTATION_PROBE=1 ./build/bin/helix-screen --test -vv
+
+# Re-run probe on a device that already has rotation configured
+HELIX_FORCE_ROTATION_PROBE=1 ./build/bin/helix-screen
+```
+
+**Rotation probe behavior:**
+- On first boot with no configured rotation (fbdev only), HelixScreen cycles through 0°, 90°, 180°, 270° showing "Tap anywhere if this text is right-side up" for 5 seconds each
+- Two-tap confirmation: after initial tap, shows "Tap again to confirm" (10s timeout) to prevent accidental selection
+- Loops continuously until user confirms — does not exit after one cycle
+- Saves the confirmed rotation to `/display/rotate` in `helixconfig.json`
+- Sets `/display/rotation_probed` flag so it doesn't re-run on subsequent boots
+- Skips entirely if: rotation is already configured (config, env var, or CLI), or the probe has already run
+- Runs after translations are loaded (Phase 8c) so probe strings are translatable via `lv_tr()`
 
 ### `HELIX_DPI`
 
@@ -241,6 +270,7 @@ Simple axis range mapping via LVGL's built-in calibration. Use for devices with 
 - All four min/max variables must be set together for calibration to apply
 - To invert an axis, swap the min/max values (e.g., `MIN_Y=3200 MAX_Y=900` inverts Y)
 - These values override the kernel-reported axis ranges from `EVIOCGABS`
+- `HELIX_TOUCH_SWAP_AXES` is now primarily a manual override — touch auto-rotation handles most rotation scenarios automatically (see `HELIX_DISPLAY_ROTATION` above)
 
 **Example:**
 ```bash

@@ -305,6 +305,11 @@ int Application::run(int argc, char** argv) {
         return 1;
     }
 
+    // Phase 8c: Rotation probe + layout manager init
+    // Deferred from init_display() so lv_tr() is available for probe strings.
+    // Must run before Phase 9 (UI creation depends on layout dimensions).
+    run_rotation_probe_and_layout();
+
     // Phase 9a: Initialize core subjects and state (PrinterState, AmsState)
     // Must happen before Moonraker init because API creation needs PrinterState
     if (!init_core_subjects()) {
@@ -679,37 +684,9 @@ bool Application::init_display() {
     m_screen_width = m_display->width();
     m_screen_height = m_display->height();
 
-    // Run rotation probe on first boot if no rotation is configured.
-    // Must happen after display init (touch is ready) but before layout init
-    // (which depends on final rotated dimensions).
-    // Skip if: CLI rotation set, env var set, already probed, or config already
-    // has a /display/rotate key (even if 0 — means user already configured it).
-#ifdef HELIX_DISPLAY_FBDEV
-    if (m_args.rotation == 0 && !std::getenv("HELIX_DISPLAY_ROTATION")) {
-        bool probed = m_config->get<bool>("/display/rotation_probed", false);
-        bool has_rotate_key = m_config->exists("/display/rotate");
-        if (!probed && !has_rotate_key) {
-            m_display->run_rotation_probe();
-            m_screen_width = m_display->width();
-            m_screen_height = m_display->height();
-        }
-    }
-#endif
-
-    // Initialize layout manager (after display dimensions are known)
-    auto& layout_mgr = helix::LayoutManager::instance();
-    if (!m_args.layout.empty() && m_args.layout != "auto") {
-        layout_mgr.set_override(m_args.layout);
-    } else {
-        // Check config file for display.layout
-        std::string config_layout = m_config->get<std::string>("/display/layout", "auto");
-        if (config_layout != "auto") {
-            layout_mgr.set_override(config_layout);
-        }
-    }
-    layout_mgr.init(m_screen_width, m_screen_height);
-    spdlog::info("[Application] Layout: {} ({})", layout_mgr.name(),
-                 layout_mgr.is_standard() ? "default" : "override");
+    // Rotation probe and layout manager init are deferred to after
+    // init_translations() (Phase 8b) so that lv_tr() is available for
+    // the probe's user-facing strings. See run_rotation_probe_and_layout().
 
     // Register LVGL log handler AFTER lv_init() (called inside display->init())
     // Must be after lv_init() because it resets global state and clears callbacks
@@ -815,6 +792,49 @@ bool Application::init_assets() {
     spdlog::debug("[Application] Assets registered");
     helix::MemoryMonitor::log_now("after_fonts_loaded");
     return true;
+}
+
+void Application::run_rotation_probe_and_layout() {
+    // Run rotation probe on first boot if no rotation is configured.
+    // Skip if: CLI rotation set, env var set, already probed, or config already
+    // has a /display/rotate key (even if 0 — means user already configured it).
+    // HELIX_FORCE_ROTATION_PROBE=1 bypasses all guards (for testing on SDL).
+    {
+        bool force_probe = (std::getenv("HELIX_FORCE_ROTATION_PROBE") != nullptr);
+        bool should_probe = false;
+
+        if (force_probe) {
+            should_probe = true;
+            spdlog::info("[Application] Rotation probe forced via HELIX_FORCE_ROTATION_PROBE");
+        }
+#ifdef HELIX_DISPLAY_FBDEV
+        else if (m_args.rotation == 0 && !std::getenv("HELIX_DISPLAY_ROTATION")) {
+            bool probed = m_config->get<bool>("/display/rotation_probed", false);
+            bool has_rotate_key = m_config->exists("/display/rotate");
+            should_probe = !probed && !has_rotate_key;
+        }
+#endif
+
+        if (should_probe) {
+            m_display->run_rotation_probe();
+            m_screen_width = m_display->width();
+            m_screen_height = m_display->height();
+        }
+    }
+
+    // Initialize layout manager (after display dimensions are known)
+    auto& layout_mgr = helix::LayoutManager::instance();
+    if (!m_args.layout.empty() && m_args.layout != "auto") {
+        layout_mgr.set_override(m_args.layout);
+    } else {
+        std::string config_layout = m_config->get<std::string>("/display/layout", "auto");
+        if (config_layout != "auto") {
+            layout_mgr.set_override(config_layout);
+        }
+    }
+    layout_mgr.init(m_screen_width, m_screen_height);
+    spdlog::info("[Application] Layout: {} ({})", layout_mgr.name(),
+                 layout_mgr.is_standard() ? "default" : "override");
 }
 
 bool Application::register_widgets() {

@@ -77,6 +77,7 @@ class Application {
     bool init_config();
     bool init_logging();
     bool init_display();
+    void run_rotation_probe_and_layout();
     bool init_theme();
     bool init_assets();
     bool register_widgets();

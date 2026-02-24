@@ -377,11 +377,17 @@ sudo systemctl restart helixscreen
 - Content displayed at wrong angle
 - Touch offset from visual
 
-**Solutions:**
+**Automatic detection (first boot):**
 
-**Set rotation in config:**
+On first boot, HelixScreen automatically detects your display orientation. It cycles through 0°, 90°, 180°, and 270° — tap the screen when the text appears right-side up, then tap again to confirm. The rotation is saved automatically and touch coordinates adjust to match.
+
+If the automatic detection didn't run (e.g., you upgraded from an older version), you can trigger it by removing the rotation settings from your config file — see "Manual rotation" below.
+
+**Manual rotation:**
+
+Edit your config file (typically `~/helixscreen/config/helixconfig.json` or `/opt/helixscreen/config/helixconfig.json`):
+
 ```json
-// /opt/helixscreen/config/helixconfig.json
 {
   "display": {
     "rotate": 180
@@ -389,7 +395,19 @@ sudo systemctl restart helixscreen
 }
 ```
 
-Valid values: `0`, `90`, `180`, `270`
+Valid values: `0`, `90`, `180`, `270`. Restart HelixScreen after changing this value. Touch coordinates are automatically adjusted to match — no separate touch configuration is needed.
+
+**To re-run automatic detection:**
+
+Remove the `rotate` and `rotation_probed` keys from your config file's `display` section, then restart HelixScreen:
+
+```json
+{
+  "display": {
+    // remove "rotate" and "rotation_probed" from here
+  }
+}
+```
 
 **For DSI displays on Pi, you may also need `/boot/config.txt`:**
 ```ini
@@ -463,7 +481,7 @@ sudo usermod -aG input $USER
 
 **1. Ensure rotation is set correctly:**
 
-The `display.rotate` setting affects both display AND touch. Make sure it matches your physical display orientation:
+The `display.rotate` setting affects both display AND touch automatically. Make sure it matches your physical display orientation:
 
 ```json
 {
@@ -472,6 +490,8 @@ The `display.rotate` setting affects both display AND touch. Make sure it matche
   }
 }
 ```
+
+Restart HelixScreen after changing. Touch coordinates rotate automatically to match — you should not need any separate touch axis configuration.
 
 **2. Run touch calibration:**
 
@@ -484,7 +504,7 @@ The `display.rotate` setting affects both display AND touch. Make sure it matche
 
 **3. If calibration doesn't help:**
 
-The issue may be a display/touch rotation mismatch. Try different `rotate` values (0, 90, 180, 270) until touch aligns with visuals.
+Try different `rotate` values (0, 90, 180, 270) until touch aligns with visuals. Or remove the rotation config entirely and restart to re-trigger automatic detection (see "Display upside down or rotated" above).
 
 ---
 

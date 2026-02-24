@@ -242,7 +242,12 @@ Located in the `display` section:
 **Type:** integer
 **Default:** `0`
 **Values:** `0`, `90`, `180`, `270`
-**Description:** Rotate the entire display by specified degrees.
+**Description:** Rotate the entire display by the specified degrees. Touch coordinates are automatically adjusted to match. On first boot, HelixScreen detects the correct rotation automatically — this setting is saved by the detection wizard and can be changed manually if needed.
+
+### `rotation_probed`
+**Type:** boolean
+**Default:** `false`
+**Description:** Set to `true` after the automatic rotation detection wizard runs. Remove this key (along with `rotate`) to re-trigger automatic detection on next startup.
 
 ### `sleep_sec`
 **Type:** integer
