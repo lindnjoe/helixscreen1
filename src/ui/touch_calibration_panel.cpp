@@ -97,17 +97,26 @@ void TouchCalibrationPanel::capture_point(Point raw) {
         break;
     case State::POINT_3:
         touch_points_[2] = raw;
-        // Compute calibration and check for degenerate case (collinear points)
         if (compute_calibration(screen_points_, touch_points_, calibration_)) {
-            state_ = State::VERIFY;
-            start_countdown_timer();
+            // Validate the matrix produces reasonable results
+            if (validate_calibration_result(calibration_, screen_points_, touch_points_,
+                                            screen_width_, screen_height_)) {
+                state_ = State::VERIFY;
+                start_countdown_timer();
+            } else {
+                spdlog::warn("[TouchCalibrationPanel] Calibration matrix failed validation, "
+                             "restarting");
+                state_ = State::POINT_1;
+                calibration_.valid = false;
+                if (failure_callback_) {
+                    failure_callback_("Calibration produced unusual results. Please try again.");
+                }
+            }
         } else {
-            // Calibration failed (collinear/duplicate points) - restart from POINT_1
             spdlog::warn(
                 "[TouchCalibrationPanel] Calibration failed (degenerate points), restarting");
             state_ = State::POINT_1;
             calibration_.valid = false;
-            // Notify caller about the failure
             if (failure_callback_) {
                 failure_callback_("Touch points too close together. Please try again.");
             }

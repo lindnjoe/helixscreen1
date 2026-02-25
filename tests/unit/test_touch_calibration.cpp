@@ -923,6 +923,32 @@ TEST_CASE("TouchCalibrationPanel: fails when too many saturated samples",
     REQUIRE(failure_called == true);
 }
 
+TEST_CASE("TouchCalibrationPanel: rejects calibration with bad matrix",
+          "[touch-calibration][panel-validate]") {
+    helix::TouchCalibrationPanel panel;
+    panel.set_screen_size(800, 480);
+
+    bool failure_called = false;
+    std::string failure_reason;
+    panel.set_failure_callback([&](const char* reason) {
+        failure_called = true;
+        failure_reason = reason;
+    });
+    panel.start();
+
+    // Capture 3 points that produce a valid but terrible matrix
+    // Points very close together (not collinear, so compute_calibration succeeds)
+    // but resulting matrix will have huge residuals
+    panel.capture_point({100, 100});
+    panel.capture_point({102, 100});
+    panel.capture_point({100, 102});
+
+    // Should restart to POINT_1 (not enter VERIFY)
+    REQUIRE(panel.get_state() == helix::TouchCalibrationPanel::State::POINT_1);
+    REQUIRE(failure_called == true);
+    REQUIRE(failure_reason.find("unusual") != std::string::npos);
+}
+
 TEST_CASE("TouchCalibrationPanel: median filter removes outliers",
           "[touch-calibration][filtering]") {
     helix::TouchCalibrationPanel panel;

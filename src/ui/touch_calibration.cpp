@@ -127,7 +127,26 @@ bool validate_calibration_result(const TouchCalibration& cal, const Point screen
         return false;
     }
 
-    // Check 1: Back-transform residuals
+    // Check 1: Coefficient sanity — scaling factors beyond 10x indicate bad input
+    // (e.g., touch points clustered in a tiny area). The c/f offsets can be larger
+    // (up to screen dimensions), so use the general MAX_CALIBRATION_COEFFICIENT for those.
+    constexpr float MAX_SCALE_COEFFICIENT = 10.0f;
+    if (std::abs(cal.a) > MAX_SCALE_COEFFICIENT || std::abs(cal.b) > MAX_SCALE_COEFFICIENT ||
+        std::abs(cal.d) > MAX_SCALE_COEFFICIENT || std::abs(cal.e) > MAX_SCALE_COEFFICIENT) {
+        spdlog::warn("[TouchCalibration] Calibration coefficients out of range "
+                     "(a={:.2f}, b={:.2f}, d={:.2f}, e={:.2f})",
+                     cal.a, cal.b, cal.d, cal.e);
+        return false;
+    }
+    if (std::abs(cal.c) > MAX_CALIBRATION_COEFFICIENT ||
+        std::abs(cal.f) > MAX_CALIBRATION_COEFFICIENT) {
+        spdlog::warn("[TouchCalibration] Calibration offset out of range "
+                     "(c={:.2f}, f={:.2f})",
+                     cal.c, cal.f);
+        return false;
+    }
+
+    // Check 2: Back-transform residuals
     for (int i = 0; i < 3; i++) {
         Point transformed = transform_point(cal, touch_points[i]);
         float dx = static_cast<float>(transformed.x - screen_points[i].x);
@@ -143,7 +162,7 @@ bool validate_calibration_result(const TouchCalibration& cal, const Point screen
         }
     }
 
-    // Check 2: Center of touch range should map to somewhere near the screen
+    // Check 3: Center of touch range should map to somewhere near the screen
     int center_x = (touch_points[0].x + touch_points[1].x + touch_points[2].x) / 3;
     int center_y = (touch_points[0].y + touch_points[1].y + touch_points[2].y) / 3;
     Point center_transformed = transform_point(cal, {center_x, center_y});
