@@ -21,7 +21,7 @@
 > Avoid mutex locks in destructors during static destruction phase. Other objects may already be destroyed, causing deadlock or crash on exit
 
 ### [L014] [***--|*****] Register all XML components
-- **Uses**: 32 | **Velocity**: 6 | **Learned**: 2025-12-14 | **Last**: 2026-02-24 | **Category**: gotcha | **Type**: constraint
+- **Uses**: 33 | **Velocity**: 7 | **Learned**: 2025-12-14 | **Last**: 2026-02-24 | **Category**: gotcha | **Type**: constraint
 > When adding new XML components, must add lv_xml_component_register_from_file() call in main.cpp. Forgetting causes silent failures
 
 ### [L020] [***--|***--] ObserverGuard for cleanup
@@ -36,12 +36,12 @@
 - **Uses**: 8 | **Velocity**: 0 | **Learned**: 2025-12-21 | **Last**: 2026-01-30 | **Category**: pattern | **Type**: constraint
 > Text-only buttons: use `align="center"` on child. Icon+text buttons with flex_flow="row": need ALL THREE flex properties - style_flex_main_place="center" (horizontal), style_flex_cross_place="center" (vertical align items), style_flex_track_place="center" (vertical position of row). Missing track_place causes content to sit at top.
 
-### [L031] [***--|*****] XML no recompile
-- **Uses**: 46 | **Velocity**: 26.0075 | **Learned**: 2025-12-27 | **Last**: 2026-02-24 | **Category**: gotcha | **Type**: constraint
+### [L031] [****-|*****] XML no recompile
+- **Uses**: 51 | **Velocity**: 31.0075 | **Learned**: 2025-12-27 | **Last**: 2026-02-24 | **Category**: gotcha | **Type**: constraint
 > XML files are loaded at RUNTIME - never rebuild after XML-only changes. Just relaunch the app. This includes layout changes, styling, bindings, event callbacks - anything in ui_xml/*.xml. Only rebuild when C++ code changes.
 
-### [L039] [*----|-----] Unique XML callback names
-- **Uses**: 2 | **Velocity**: 0 | **Learned**: 2025-12-30 | **Last**: 2026-01-09 | **Category**: pattern | **Type**: constraint
+### [L039] [*----|***--] Unique XML callback names
+- **Uses**: 3 | **Velocity**: 1 | **Learned**: 2025-12-30 | **Last**: 2026-02-24 | **Category**: pattern | **Type**: constraint
 > All XML event_cb callback names must be globally unique using on_<component>_<action> pattern. LVGL's XML callback registry is a flat global namespace with no scoping. Generic names like on_modal_ok_clicked cause collisions when multiple components register handlers.
 
 ### [L040] [**---|****-] Inline XML attrs override bind_style
@@ -97,7 +97,7 @@
 > Always use lv_obj_safe_delete() instead of raw lv_obj_delete() - it guards against shutdown race conditions by checking lv_is_initialized() and lv_display_get_next() before deletion, and auto-nulls the pointer to prevent use-after-free
 
 ### [L060] [***--|*****] Interactive UI testing requires user
-- **Uses**: 17 | **Velocity**: 16.009999999999998 | **Learned**: 2026-02-01 | **Last**: 2026-02-24 | **Category**: correction | **Type**: constraint
+- **Uses**: 18 | **Velocity**: 17.009999999999998 | **Learned**: 2026-02-01 | **Last**: 2026-02-24 | **Category**: correction | **Type**: constraint
 > NEVER use timed delays expecting automatic navigation. THE EXACT PATTERN THAT WORKS:
 > **Step 1** - Start app with Bash tool using `run_in_background: true`:
 > ```bash
