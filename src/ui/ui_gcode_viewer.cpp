@@ -1189,38 +1189,39 @@ static void ui_gcode_viewer_load_file_async(lv_obj_t* obj, const char* file_path
     // Parses entire file into memory. Used for smaller files.
     // =========================================================================
 
-    // Create loading UI with dark theme styling (matching preparing_overlay pattern)
-    st->loading_container = lv_obj_create(obj);
-    lv_obj_set_size(st->loading_container, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-    lv_obj_center(st->loading_container);
-    lv_obj_set_flex_flow(st->loading_container, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(st->loading_container, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
-                          LV_FLEX_ALIGN_CENTER);
+    // Create loading UI only when the widget is visible. When the parent hides
+    // the viewer (e.g., detail panel uses XML-based loading overlay), creating an
+    // LVGL spinner child causes crashes during deletion — the spinner's animation
+    // timer events corrupt the event list during safe_delete in the async callback.
+    if (!lv_obj_has_flag(obj, LV_OBJ_FLAG_HIDDEN)) {
+        st->loading_container = lv_obj_create(obj);
+        lv_obj_set_size(st->loading_container, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+        lv_obj_center(st->loading_container);
+        lv_obj_set_flex_flow(st->loading_container, LV_FLEX_FLOW_COLUMN);
+        lv_obj_set_flex_align(st->loading_container, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
+                              LV_FLEX_ALIGN_CENTER);
 
-    // Style container: semi-transparent dark background, no border, padding for content
-    // Use theme_manager_get_color() for token lookup (not theme_manager_parse_hex_color which
-    // expects hex)
-    lv_obj_set_style_bg_color(st->loading_container, theme_manager_get_color("card_bg"),
-                              LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(st->loading_container, 220, LV_PART_MAIN);
-    lv_obj_set_style_border_width(st->loading_container, 0, LV_PART_MAIN);
-    lv_obj_set_style_radius(st->loading_container, 8, LV_PART_MAIN);
-    lv_obj_set_style_pad_all(st->loading_container, 24, LV_PART_MAIN);
-    lv_obj_set_style_pad_gap(st->loading_container, 12, LV_PART_MAIN);
+        lv_obj_set_style_bg_color(st->loading_container, theme_manager_get_color("card_bg"),
+                                  LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(st->loading_container, 220, LV_PART_MAIN);
+        lv_obj_set_style_border_width(st->loading_container, 0, LV_PART_MAIN);
+        lv_obj_set_style_radius(st->loading_container, 8, LV_PART_MAIN);
+        lv_obj_set_style_pad_all(st->loading_container, 24, LV_PART_MAIN);
+        lv_obj_set_style_pad_gap(st->loading_container, 12, LV_PART_MAIN);
 
-    st->loading_spinner = lv_spinner_create(st->loading_container);
-    lv_obj_set_size(st->loading_spinner, 48, 48); // ~lg size for small screens
+        st->loading_spinner = lv_spinner_create(st->loading_container);
+        lv_obj_set_size(st->loading_spinner, 48, 48);
 
-    // Apply consistent spinner styling (matching ui_spinner component)
-    lv_color_t primary = theme_manager_get_color("primary");
-    lv_obj_set_style_arc_color(st->loading_spinner, primary, LV_PART_INDICATOR);
-    lv_obj_set_style_arc_width(st->loading_spinner, 4, LV_PART_INDICATOR);
-    lv_obj_set_style_arc_opa(st->loading_spinner, LV_OPA_0, LV_PART_MAIN);
+        lv_color_t primary = theme_manager_get_color("primary");
+        lv_obj_set_style_arc_color(st->loading_spinner, primary, LV_PART_INDICATOR);
+        lv_obj_set_style_arc_width(st->loading_spinner, 4, LV_PART_INDICATOR);
+        lv_obj_set_style_arc_opa(st->loading_spinner, LV_OPA_0, LV_PART_MAIN);
 
-    st->loading_label = lv_label_create(st->loading_container);
-    lv_label_set_text(st->loading_label, "Loading G-code...");
-    // Set text color for visibility on dark background
-    lv_obj_set_style_text_color(st->loading_label, theme_manager_get_color("text"), LV_PART_MAIN);
+        st->loading_label = lv_label_create(st->loading_container);
+        lv_label_set_text(st->loading_label, "Loading G-code...");
+        lv_obj_set_style_text_color(st->loading_label, theme_manager_get_color("text"),
+                                    LV_PART_MAIN);
+    }
 
     // Launch worker thread via RAII-managed start_build()
     // Automatically cancels any existing build and joins the thread
