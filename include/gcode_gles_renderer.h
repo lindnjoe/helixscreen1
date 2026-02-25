@@ -254,6 +254,7 @@ class GCodeGLESRenderer {
         float azimuth = -999.0f;
         float elevation = -999.0f;
         float distance = -999.0f;
+        float zoom_level = -999.0f;
         glm::vec3 target{-999.0f};
         int progress_layer = -2;
         int layer_start = -2;

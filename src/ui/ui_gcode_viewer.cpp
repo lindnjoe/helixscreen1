@@ -41,6 +41,7 @@ constexpr int CLICK_DISTANCE_THRESHOLD = 10;        // Pixels: distinguish click
 
 using namespace helix;
 
+#include <algorithm>
 #include <atomic>
 #include <cstdint>
 #include <cstdlib>
@@ -185,7 +186,7 @@ class GCodeViewerState {
     lv_point_t drag_start{0, 0};
     lv_point_t last_drag_pos{0, 0};
 #if LV_USE_GESTURE_RECOGNITION
-    float last_pinch_scale{1.0f}; ///< Previous cumulative pinch scale for delta computation
+    float last_pinch_scale{0.0f}; ///< Previous cumulative pinch scale (0 = no reference yet)
     bool is_pinching{false};      ///< True during active pinch gesture (suppresses drag rotation)
 #endif
 
@@ -819,9 +820,9 @@ static void gcode_viewer_release_cb(lv_event_t* e) {
 /**
  * @brief Gesture callback - handle pinch-to-zoom (3D mode only)
  *
- * Uses LVGL's built-in gesture recognition. Pinch scale is cumulative
- * (>1 = spread apart, <1 = pinched together), so we compute delta from
- * the previous scale to get incremental zoom factor.
+ * ROTATE is disabled at the input-device level (threshold set to ~180°)
+ * so PINCH always wins the recognizer race.  We compute a per-frame
+ * delta from the cumulative scale to drive smooth, incremental zoom.
  */
 static void gcode_viewer_gesture_cb(lv_event_t* e) {
     lv_obj_t* obj = lv_event_get_target_obj(e);
@@ -830,30 +831,34 @@ static void gcode_viewer_gesture_cb(lv_event_t* e) {
     if (!st || st->is_using_2d_mode())
         return;
 
-    auto gesture_type = lv_event_get_gesture_type(e);
-    spdlog::debug("[GCode Viewer] GESTURE event: type={}", static_cast<int>(gesture_type));
-    if (gesture_type != LV_INDEV_GESTURE_PINCH)
+    if (lv_event_get_gesture_type(e) != LV_INDEV_GESTURE_PINCH)
         return;
 
     auto state = lv_event_get_gesture_state(e, LV_INDEV_GESTURE_PINCH);
-    spdlog::debug("[GCode Viewer] Pinch gesture state={}", static_cast<int>(state));
 
     if (state == LV_INDEV_GESTURE_STATE_ONGOING || state == LV_INDEV_GESTURE_STATE_RECOGNIZED) {
         st->is_pinching = true;
     }
 
     if (state == LV_INDEV_GESTURE_STATE_RECOGNIZED) {
-        float cumulative_scale = lv_event_get_pinch_scale(e);
-        if (cumulative_scale > 0.0f && st->last_pinch_scale > 0.0f) {
-            float delta = cumulative_scale / st->last_pinch_scale;
-            st->camera_->zoom(delta);
-            lv_obj_invalidate(obj);
-            spdlog::debug("[GCode Viewer] Pinch zoom: scale={:.3f}, delta={:.3f}", cumulative_scale,
-                          delta);
+        float scale = lv_event_get_pinch_scale(e);
+        if (scale > 0.0f && st->last_pinch_scale > 0.0f) {
+            float delta = scale / st->last_pinch_scale;
+            // Normal per-frame deltas are 0.85–1.15. Anything outside
+            // that range is a gesture restart (cumulative scale reset).
+            if (delta > 0.7f && delta < 1.4f) {
+                st->camera_->zoom(delta);
+                lv_obj_invalidate(obj);
+            } else {
+                spdlog::debug("[GCode Viewer] Pinch delta filtered: {:.4f}", delta);
+            }
         }
-        st->last_pinch_scale = cumulative_scale;
+        if (scale > 0.0f)
+            st->last_pinch_scale = scale;
     } else if (state == LV_INDEV_GESTURE_STATE_ENDED || state == LV_INDEV_GESTURE_STATE_CANCELED) {
-        st->last_pinch_scale = 1.0f;
+        spdlog::trace("[GCode Viewer] Pinch gesture ended (zoom={:.2f})",
+                      st->camera_->get_zoom_level());
+        st->last_pinch_scale = 0.0f;
         st->is_pinching = false;
     }
 }

@@ -890,6 +890,7 @@ void GCodeGLESRenderer::render(lv_layer_t* layer, const ParsedGCodeFile& gcode,
     current_state.azimuth = camera.get_azimuth();
     current_state.elevation = camera.get_elevation();
     current_state.distance = camera.get_distance();
+    current_state.zoom_level = camera.get_zoom_level();
     current_state.target = camera.get_target();
     current_state.progress_layer = progress_layer_;
     current_state.layer_start = layer_start_;
@@ -1202,12 +1203,12 @@ bool GCodeGLESRenderer::CachedRenderState::operator==(const CachedRenderState& o
     auto near_angle = [](float a, float b) { return std::abs(a - b) < kAngleEpsilon; };
     auto near_zoom = [](float a, float b) { return std::abs(a - b) < kZoomEpsilon; };
     return near_angle(azimuth, o.azimuth) && near_angle(elevation, o.elevation) &&
-           near_zoom(distance, o.distance) && near_angle(target.x, o.target.x) &&
-           near_angle(target.y, o.target.y) && near_angle(target.z, o.target.z) &&
-           progress_layer == o.progress_layer && layer_start == o.layer_start &&
-           layer_end == o.layer_end && highlight_count == o.highlight_count &&
-           exclude_count == o.exclude_count && filament_color == o.filament_color &&
-           ghost_opacity == o.ghost_opacity;
+           near_zoom(distance, o.distance) && near_zoom(zoom_level, o.zoom_level) &&
+           near_angle(target.x, o.target.x) && near_angle(target.y, o.target.y) &&
+           near_angle(target.z, o.target.z) && progress_layer == o.progress_layer &&
+           layer_start == o.layer_start && layer_end == o.layer_end &&
+           highlight_count == o.highlight_count && exclude_count == o.exclude_count &&
+           filament_color == o.filament_color && ghost_opacity == o.ghost_opacity;
 }
 
 // ============================================================

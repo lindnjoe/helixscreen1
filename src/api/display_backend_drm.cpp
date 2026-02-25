@@ -300,15 +300,33 @@ lv_indev_t* DisplayBackendDRM::create_input_pointer() {
     spdlog::info("[DRM Backend] Auto-detecting touch/pointer device via libinput...");
 
     // Try to find a touch device first (for touchscreens like DSI displays)
+    // Use evdev driver for touch devices — it supports multi-touch gesture
+    // recognition (pinch-to-zoom) while the libinput driver does not.
     char* touch_path = lv_libinput_find_dev(LV_LIBINPUT_CAPABILITY_TOUCH, true);
     if (touch_path) {
         spdlog::info("[DRM Backend] Found touch device: {}", touch_path);
+        pointer_ = lv_evdev_create(LV_INDEV_TYPE_POINTER, touch_path);
+        if (pointer_ != nullptr) {
+            spdlog::info("[DRM Backend] Evdev touch device created on {} (multi-touch enabled)",
+                         touch_path);
+#if LV_USE_GESTURE_RECOGNITION
+            // Lower pinch thresholds so PINCH recognizes quickly, and disable
+            // ROTATE by setting an unreachable threshold.  Without this, ROTATE
+            // (default 0.2 rad) wins the race, resets PINCH's cumulative scale
+            // to 1.0, and causes visible zoom jumps.
+            lv_indev_set_pinch_up_threshold(pointer_, 1.05f);
+            lv_indev_set_pinch_down_threshold(pointer_, 0.95f);
+            lv_indev_set_rotation_rad_threshold(pointer_, 3.14f);
+#endif
+            return pointer_;
+        }
+        // Fall back to libinput if evdev fails
         pointer_ = lv_libinput_create(LV_INDEV_TYPE_POINTER, touch_path);
         if (pointer_ != nullptr) {
             spdlog::info("[DRM Backend] Libinput touch device created on {}", touch_path);
             return pointer_;
         }
-        spdlog::warn("[DRM Backend] Failed to create libinput device for: {}", touch_path);
+        spdlog::warn("[DRM Backend] Failed to create input device for: {}", touch_path);
     }
 
     // Try pointer devices (mouse, trackpad)
