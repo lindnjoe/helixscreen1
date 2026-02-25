@@ -141,7 +141,10 @@ translations:
   Calibration & Tools: Calibration & Tools
   Calibration Complete!: Calibration Complete!
   Calibration Failed: Calibration Failed
+  Calibration complete: Calibration complete
+  Calibration failed - touch targets more precisely.: Calibration failed - touch targets more precisely.
   Calibration saved but cannot apply on SDL display: Calibration saved but cannot apply on SDL display
+  Calibration timed out. Please try again.: Calibration timed out. Please try again.
   Cancel: Cancel
   Cancel Escalation: Cancel Escalation
   Cancel Print: Cancel Print
@@ -185,6 +188,7 @@ translations:
   Complete: Complete
   Completed: Completed
   Completed in 3 probes: Completed in 3 probes
+  Computing calibration...: Computing calibration...
   Config-defined (read-only): Config-defined (read-only)
   Configuration added successfully.: Configuration added successfully.
   Configuration already present.: Configuration already present.
@@ -621,6 +625,7 @@ translations:
   No printers found: No printers found
   No profiles available: No profiles available
   No sensors detected: No sensors detected
+  No spool assigned: No spool assigned
   No spools found in Spoolman: No spools found in Spoolman
   No timelapse videos found: No timelapse videos found
   No vendors found: No vendors found
@@ -949,6 +954,10 @@ translations:
   Takes 3-5 min. Do not interrupt.: Takes 3-5 min. Do not interrupt.
   Tap again to confirm this orientation: Tap again to confirm this orientation
   Tap anywhere if this text is right-side up: Tap anywhere if this text is right-side up
+  Tap anywhere to begin: Tap anywhere to begin
+  Tap anywhere to begin calibration: Tap anywhere to begin calibration
+  Tap the crosshair (point %1$d of 3) \xe2\x80\x94 touch %2$d of %3$d: Tap the crosshair (point %1$d of 3) \xe2\x80\x94 touch %2$d of %3$d
+  Tap to assign: Tap to assign
   Tap to show keyboard...: Tap to show keyboard...
   Target Temperature: Target Temperature
   Telemetry Data: Telemetry Data
@@ -1015,7 +1024,9 @@ translations:
   Total Prints: Total Prints
   Touch Calibration: Touch Calibration
   Touch anywhere to test calibration: Touch anywhere to test calibration
+  Touch anywhere to verify accuracy: Touch anywhere to verify accuracy
   Touch screen to wake from sleep: Touch screen to wake from sleep
+  Touch the target (point %1$d of 3) \xe2\x80\x94 touch %2$d of %3$d: Touch the target (point %1$d of 3) \xe2\x80\x94 touch %2$d of %3$d
   Travels: Travels
   'Troubleshooting:': 'Troubleshooting:'
   Tune: Tune

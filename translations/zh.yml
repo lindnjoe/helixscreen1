@@ -141,7 +141,10 @@ translations:
   Calibration & Tools: 校准与工具
   Calibration Complete!: 校准完成！
   Calibration Failed: 校准失败
+  Calibration complete: 校准完成
+  Calibration failed - touch targets more precisely.: 校准失败 – 请更精确地触摸目标。
   Calibration saved but cannot apply on SDL display: 校准已保存，但无法在 SDL 显示上应用
+  Calibration timed out. Please try again.: 校准超时。请重试。
   Cancel: 取消
   Cancel Escalation: 取消升级
   Cancel Print: 取消打印
@@ -185,6 +188,7 @@ translations:
   Complete: 完成
   Completed: 已完成
   Completed in 3 probes: 已完成 3 次探测
+  Computing calibration...: 正在计算校准...
   Config-defined (read-only): 配置定义（只读）
   Configuration added successfully.: 配置添加成功。
   Configuration already present.: 配置已存在。
@@ -621,6 +625,7 @@ translations:
   No printers found: 未找到打印机
   No profiles available: 无可用配置
   No sensors detected: 未检测到传感器
+  No spool assigned: 未分配料盘
   No spools found in Spoolman: Spoolman中未找到料盘
   No timelapse videos found: 未找到延时视频
   No vendors found: 未找到供应商
@@ -949,6 +954,10 @@ translations:
   Takes 3-5 min. Do not interrupt.: 需要 3-5 分钟。请勿中断。
   Tap again to confirm this orientation: 再次点击确认此方向
   Tap anywhere if this text is right-side up: 如果文字方向正确请点击任意位置
+  Tap anywhere to begin: 点击任意位置开始
+  Tap anywhere to begin calibration: 点击任意位置开始校准
+  Tap the crosshair (point %1$d of 3) \xe2\x80\x94 touch %2$d of %3$d: 点击十字准星（第 %1$d 个点，共 3 个）\xe2\x80\x94 触摸 %2$d / %3$d
+  Tap to assign: 点击分配
   Tap to show keyboard...: 点击显示键盘...
   Target Temperature: 目标温度
   Telemetry Data: 遥测数据
@@ -1015,7 +1024,9 @@ translations:
   Total Prints: 总打印数
   Touch Calibration: 触摸校准
   Touch anywhere to test calibration: 触摸任意位置测试校准
+  Touch anywhere to verify accuracy: 触摸任意位置验证精度
   Touch screen to wake from sleep: 触摸屏幕唤醒
+  Touch the target (point %1$d of 3) \xe2\x80\x94 touch %2$d of %3$d: 触摸目标（第 %1$d 个点，共 3 个）\xe2\x80\x94 触摸 %2$d / %3$d
   Travels: 空驶
   'Troubleshooting:': 故障排除：
   Tune: 调优

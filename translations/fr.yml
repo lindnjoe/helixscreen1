@@ -141,7 +141,10 @@ translations:
   Calibration & Tools: Calibration et outils
   Calibration Complete!: Calibration terminée !
   Calibration Failed: Calibration échouée
+  Calibration complete: 'Calibration terminée'
+  Calibration failed - touch targets more precisely.: 'Échec de calibration – touchez les cibles plus précisément.'
   Calibration saved but cannot apply on SDL display: Calibration enregistrée mais impossible à appliquer sur un écran SDL
+  Calibration timed out. Please try again.: 'Délai expiré. Veuillez réessayer.'
   Cancel: Annuler
   Cancel Escalation: Annuler l'escalade
   Cancel Print: Annuler l'impression
@@ -185,6 +188,7 @@ translations:
   Complete: Terminé
   Completed: Terminé
   Completed in 3 probes: Terminé en 3 sondes
+  Computing calibration...: 'Calcul de la calibration...'
   Config-defined (read-only): Défini par la config (lecture seule)
   Configuration added successfully.: Configuration ajoutée avec succès.
   Configuration already present.: Configuration déjà présente.
@@ -621,6 +625,7 @@ translations:
   No printers found: Aucune imprimante trouvée
   No profiles available: Aucun profil disponible
   No sensors detected: Aucun capteur détecté
+  No spool assigned: 'Aucune bobine assignée'
   No spools found in Spoolman: Aucune bobine trouvée dans Spoolman
   No timelapse videos found: Aucune vidéo timelapse trouvée
   No vendors found: Aucun fournisseur trouvé
@@ -949,6 +954,10 @@ translations:
   Takes 3-5 min. Do not interrupt.: Prend 3-5 min. Ne pas interrompre.
   Tap again to confirm this orientation: 'Appuyez à nouveau pour confirmer cette orientation'
   Tap anywhere if this text is right-side up: 'Appuyez n''importe où si ce texte est à l''endroit'
+  Tap anywhere to begin: 'Appuyez n''importe où pour commencer'
+  Tap anywhere to begin calibration: 'Appuyez n''importe où pour démarrer la calibration'
+  Tap the crosshair (point %1$d of 3) \xe2\x80\x94 touch %2$d of %3$d: 'Appuyez sur la cible (point %1$d sur 3) \xe2\x80\x94 touche %2$d sur %3$d'
+  Tap to assign: 'Appuyez pour assigner'
   Tap to show keyboard...: Appuyez pour afficher le clavier...
   Target Temperature: Température cible
   Telemetry Data: Données de télémétrie
@@ -1015,7 +1024,9 @@ translations:
   Total Prints: Total des impressions
   Touch Calibration: Calibration tactile
   Touch anywhere to test calibration: Touchez n'importe où pour tester la calibration
+  Touch anywhere to verify accuracy: 'Touchez n''importe où pour vérifier la précision'
   Touch screen to wake from sleep: Touchez l'écran pour sortir de veille
+  Touch the target (point %1$d of 3) \xe2\x80\x94 touch %2$d of %3$d: 'Touchez la cible (point %1$d sur 3) \xe2\x80\x94 touche %2$d sur %3$d'
   Travels: Déplacements
   'Troubleshooting:': 'Dépannage :'
   Tune: Régler

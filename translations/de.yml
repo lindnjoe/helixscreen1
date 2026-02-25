@@ -141,7 +141,10 @@ translations:
   Calibration & Tools: Kalibrierung & Werkzeuge
   Calibration Complete!: Kalibrierung abgeschlossen!
   Calibration Failed: Kalibrierung fehlgeschlagen
+  Calibration complete: 'Kalibrierung abgeschlossen'
+  Calibration failed - touch targets more precisely.: 'Kalibrierung fehlgeschlagen – Ziele präziser berühren.'
   Calibration saved but cannot apply on SDL display: Kalibrierung gespeichert, kann aber auf SDL-Display nicht angewendet werden
+  Calibration timed out. Please try again.: 'Zeitüberschreitung. Bitte erneut versuchen.'
   Cancel: Abbrechen
   Cancel Escalation: Eskalation abbrechen
   Cancel Print: Druck abbrechen
@@ -185,6 +188,7 @@ translations:
   Complete: Abgeschlossen
   Completed: Abgeschlossen
   Completed in 3 probes: Abgeschlossen in 3 Messungen
+  Computing calibration...: 'Kalibrierung wird berechnet...'
   Config-defined (read-only): Konfigurationsdefiniert (schreibgeschützt)
   Configuration added successfully.: Konfiguration erfolgreich hinzugefügt.
   Configuration already present.: Konfiguration bereits vorhanden.
@@ -621,6 +625,7 @@ translations:
   No printers found: Keine Drucker gefunden
   No profiles available: Keine Profile verfügbar
   No sensors detected: Keine Sensoren erkannt
+  No spool assigned: Keine Spule zugewiesen
   No spools found in Spoolman: Keine Spulen in Spoolman gefunden
   No timelapse videos found: Keine Zeitraffer-Videos gefunden
   No vendors found: Keine Hersteller gefunden
@@ -949,6 +954,10 @@ translations:
   Takes 3-5 min. Do not interrupt.: Dauert 3-5 Min. Nicht unterbrechen.
   Tap again to confirm this orientation: 'Erneut tippen, um diese Ausrichtung zu bestätigen'
   Tap anywhere if this text is right-side up: 'Tippen Sie irgendwo, wenn dieser Text richtig herum ist'
+  Tap anywhere to begin: 'Tippen Sie irgendwo, um zu beginnen'
+  Tap anywhere to begin calibration: 'Tippen Sie irgendwo, um die Kalibrierung zu starten'
+  Tap the crosshair (point %1$d of 3) \xe2\x80\x94 touch %2$d of %3$d: 'Fadenkreuz antippen (Punkt %1$d von 3) \xe2\x80\x94 Berührung %2$d von %3$d'
+  Tap to assign: 'Zum Zuweisen tippen'
   Tap to show keyboard...: Tippen Sie, um die Tastatur anzuzeigen...
   Target Temperature: Zieltemperatur
   Telemetry Data: Telemetriedaten
@@ -1015,7 +1024,9 @@ translations:
   Total Prints: Gesamte Drucke
   Touch Calibration: Touch-Kalibrierung
   Touch anywhere to test calibration: Tippen Sie irgendwo, um die Kalibrierung zu testen
+  Touch anywhere to verify accuracy: 'Zum Überprüfen irgendwo berühren'
   Touch screen to wake from sleep: Touchscreen berühren zum Aufwecken
+  Touch the target (point %1$d of 3) \xe2\x80\x94 touch %2$d of %3$d: 'Ziel berühren (Punkt %1$d von 3) \xe2\x80\x94 Berührung %2$d von %3$d'
   Travels: Verfahrwege
   'Troubleshooting:': 'Fehlerbehebung:'
   Tune: Abstimmen

@@ -141,7 +141,10 @@ translations:
   Calibration & Tools: キャリブレーションとツール
   Calibration Complete!: キャリブレーション完了！
   Calibration Failed: キャリブレーション失敗
+  Calibration complete: キャリブレーション完了
+  Calibration failed - touch targets more precisely.: キャリブレーション失敗 – ターゲットをより正確にタッチしてください。
   Calibration saved but cannot apply on SDL display: キャリブレーションは保存されましたが SDL ディスプレイには適用できません
+  Calibration timed out. Please try again.: タイムアウトしました。もう一度お試しください。
   Cancel: キャンセル
   Cancel Escalation: エスカレーションをキャンセル
   Cancel Print: 印刷をキャンセル
@@ -185,6 +188,7 @@ translations:
   Complete: 完了
   Completed: 完了
   Completed in 3 probes: 3回のプローブで完了
+  Computing calibration...: キャリブレーション計算中...
   Config-defined (read-only): 設定で定義済み（読み取り専用）
   Configuration added successfully.: 設定が正常に追加されました。
   Configuration already present.: 設定は既に存在します。
@@ -621,6 +625,7 @@ translations:
   No printers found: プリンターが見つかりません
   No profiles available: 利用可能なプロファイルがありません
   No sensors detected: センサーが検出されませんでした
+  No spool assigned: スプール未割当
   No spools found in Spoolman: Spoolmanにスプールが見つかりません
   No timelapse videos found: タイムラプス動画が見つかりません
   No vendors found: ベンダーが見つかりません
@@ -949,6 +954,10 @@ translations:
   Takes 3-5 min. Do not interrupt.: 3〜5分かかります。中断しないでください。
   Tap again to confirm this orientation: 'もう一度タップしてこの向きを確定'
   Tap anywhere if this text is right-side up: 'この文字が正しい向きならどこかをタップ'
+  Tap anywhere to begin: どこかをタップして開始
+  Tap anywhere to begin calibration: どこかをタップしてキャリブレーション開始
+  Tap the crosshair (point %1$d of 3) \xe2\x80\x94 touch %2$d of %3$d: 十字をタップ（ポイント %1$d / 3）\xe2\x80\x94 タッチ %2$d / %3$d
+  Tap to assign: タップして割当
   Tap to show keyboard...: タップしてキーボードを表示...
   Target Temperature: 目標温度
   Telemetry Data: テレメトリデータ
@@ -1015,7 +1024,9 @@ translations:
   Total Prints: 総印刷数
   Touch Calibration: タッチキャリブレーション
   Touch anywhere to test calibration: どこでもタッチしてキャリブレーションをテスト
+  Touch anywhere to verify accuracy: どこかをタッチして精度を確認
   Touch screen to wake from sleep: 画面をタッチしてスリープ解除
+  Touch the target (point %1$d of 3) \xe2\x80\x94 touch %2$d of %3$d: ターゲットをタッチ（ポイント %1$d / 3）\xe2\x80\x94 タッチ %2$d / %3$d
   Travels: 移動
   'Troubleshooting:': 'トラブルシューティング:'
   Tune: チューニング

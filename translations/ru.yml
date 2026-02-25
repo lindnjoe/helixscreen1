@@ -141,7 +141,10 @@ translations:
   Calibration & Tools: Калибровка и инструменты
   Calibration Complete!: Калибровка завершена!
   Calibration Failed: Ошибка калибровки
+  Calibration complete: Калибровка завершена
+  Calibration failed - touch targets more precisely.: Калибровка не удалась – нажимайте на цели точнее.
   Calibration saved but cannot apply on SDL display: Калибровка сохранена, но не может быть применена на SDL дисплее
+  Calibration timed out. Please try again.: Время истекло. Попробуйте снова.
   Cancel: Отмена
   Cancel Escalation: Отменить эскалацию
   Cancel Print: Отменить печать
@@ -185,6 +188,7 @@ translations:
   Complete: Завершено
   Completed: Завершено
   Completed in 3 probes: Завершено за 3 замера
+  Computing calibration...: Вычисление калибровки...
   Config-defined (read-only): Определено в конфигурации (только чтение)
   Configuration added successfully.: Конфигурация успешно добавлена.
   Configuration already present.: Конфигурация уже присутствует.
@@ -621,6 +625,7 @@ translations:
   No printers found: Принтеры не найдены
   No profiles available: Профили недоступны
   No sensors detected: Датчики не обнаружены
+  No spool assigned: Катушка не назначена
   No spools found in Spoolman: Катушки не найдены в Spoolman
   No timelapse videos found: Таймлапс-видео не найдены
   No vendors found: Производители не найдены
@@ -949,6 +954,10 @@ translations:
   Takes 3-5 min. Do not interrupt.: Занимает 3-5 мин. Не прерывайте.
   Tap again to confirm this orientation: Нажмите ещё раз для подтверждения ориентации
   Tap anywhere if this text is right-side up: Нажмите в любом месте, если текст расположен правильно
+  Tap anywhere to begin: Нажмите в любом месте для начала
+  Tap anywhere to begin calibration: Нажмите в любом месте для начала калибровки
+  Tap the crosshair (point %1$d of 3) \xe2\x80\x94 touch %2$d of %3$d: Нажмите на перекрестие (точка %1$d из 3) \xe2\x80\x94 касание %2$d из %3$d
+  Tap to assign: Нажмите для назначения
   Tap to show keyboard...: Нажмите для показа клавиатуры...
   Target Temperature: Целевая температура
   Telemetry Data: Данные телеметрии
@@ -1015,7 +1024,9 @@ translations:
   Total Prints: Всего печатей
   Touch Calibration: Калибровка касания
   Touch anywhere to test calibration: Коснитесь экрана для проверки калибровки
+  Touch anywhere to verify accuracy: Коснитесь в любом месте для проверки точности
   Touch screen to wake from sleep: Коснитесь экрана для выхода из сна
+  Touch the target (point %1$d of 3) \xe2\x80\x94 touch %2$d of %3$d: Коснитесь цели (точка %1$d из 3) \xe2\x80\x94 касание %2$d из %3$d
   Travels: Перемещения
   'Troubleshooting:': 'Устранение неполадок:'
   Tune: Настройка

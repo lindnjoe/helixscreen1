@@ -141,7 +141,10 @@ translations:
   Calibration & Tools: Calibração e Ferramentas
   Calibration Complete!: Calibração Concluída!
   Calibration Failed: Calibração Falhou
+  Calibration complete: Calibração concluída
+  Calibration failed - touch targets more precisely.: Calibração falhou – toque nos alvos com mais precisão.
   Calibration saved but cannot apply on SDL display: Calibração salva mas não pode ser aplicada no display SDL
+  Calibration timed out. Please try again.: Tempo esgotado. Tente novamente.
   Cancel: Cancelar
   Cancel Escalation: Cancelar Escalação
   Cancel Print: Cancelar Impressão
@@ -185,6 +188,7 @@ translations:
   Complete: Concluído
   Completed: Concluído
   Completed in 3 probes: Concluído em 3 sondagens
+  Computing calibration...: Calculando calibração...
   Config-defined (read-only): Definido na configuração (somente leitura)
   Configuration added successfully.: Configuração adicionada com sucesso.
   Configuration already present.: Configuração já presente.
@@ -621,6 +625,7 @@ translations:
   No printers found: Nenhuma impressora encontrada
   No profiles available: Nenhum perfil disponível
   No sensors detected: Nenhum sensor detectado
+  No spool assigned: Nenhuma bobina atribuída
   No spools found in Spoolman: Nenhuma bobina encontrada no Spoolman
   No timelapse videos found: Nenhum vídeo timelapse encontrado
   No vendors found: Nenhum fornecedor encontrado
@@ -949,6 +954,10 @@ translations:
   Takes 3-5 min. Do not interrupt.: Leva 3-5 min. Não interrompa.
   Tap again to confirm this orientation: Toque novamente para confirmar esta orientação
   Tap anywhere if this text is right-side up: Toque em qualquer lugar se este texto estiver correto
+  Tap anywhere to begin: Toque em qualquer lugar para começar
+  Tap anywhere to begin calibration: Toque em qualquer lugar para iniciar a calibração
+  Tap the crosshair (point %1$d of 3) \xe2\x80\x94 touch %2$d of %3$d: Toque na mira (ponto %1$d de 3) \xe2\x80\x94 toque %2$d de %3$d
+  Tap to assign: Toque para atribuir
   Tap to show keyboard...: Toque para mostrar o teclado...
   Target Temperature: Temperatura Alvo
   Telemetry Data: Dados de Telemetria
@@ -1015,7 +1024,9 @@ translations:
   Total Prints: Total de Impressões
   Touch Calibration: Calibração de Toque
   Touch anywhere to test calibration: Toque em qualquer lugar para testar a calibração
+  Touch anywhere to verify accuracy: Toque em qualquer lugar para verificar a precisão
   Touch screen to wake from sleep: Toque na tela para acordar da suspensão
+  Touch the target (point %1$d of 3) \xe2\x80\x94 touch %2$d of %3$d: Toque no alvo (ponto %1$d de 3) \xe2\x80\x94 toque %2$d de %3$d
   Travels: Deslocamentos
   'Troubleshooting:': 'Solução de Problemas:'
   Tune: Ajustar
