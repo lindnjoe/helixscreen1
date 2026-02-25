@@ -255,7 +255,7 @@ void AmsEditModal::init_subjects() {
     color_name_buf_[0] = '\0';
     snprintf(temp_nozzle_buf_, sizeof(temp_nozzle_buf_), "200-230°C");
     snprintf(temp_bed_buf_, sizeof(temp_bed_buf_), "60°C");
-    snprintf(remaining_pct_buf_, sizeof(remaining_pct_buf_), "75%%");
+    snprintf(remaining_pct_buf_, sizeof(remaining_pct_buf_), "100%%");
 
     lv_subject_init_string(&slot_indicator_subject_, slot_indicator_buf_, nullptr,
                            sizeof(slot_indicator_buf_), "--");
@@ -274,7 +274,7 @@ void AmsEditModal::init_subjects() {
     subjects_.register_subject(&temp_bed_subject_);
 
     lv_subject_init_string(&remaining_pct_subject_, remaining_pct_buf_, nullptr,
-                           sizeof(remaining_pct_buf_), "75%");
+                           sizeof(remaining_pct_buf_), "100%");
     subjects_.register_subject(&remaining_pct_subject_);
 
     // Initialize save button text subject
@@ -310,6 +310,12 @@ void AmsEditModal::deinit_subjects() {
 
 void AmsEditModal::fetch_vendors_from_spoolman() {
     if (!api_ || vendors_loaded_) {
+        return;
+    }
+
+    // Skip Spoolman API call if not configured (avoids "method not found" toast)
+    auto* spoolman_subj = lv_xml_get_subject(nullptr, "printer_has_spoolman");
+    if (spoolman_subj && lv_subject_get_int(spoolman_subj) != 1) {
         return;
     }
 
@@ -723,12 +729,15 @@ void AmsEditModal::update_ui() {
     lv_subject_copy_string(&color_name_subject_, color_name_buf_);
 
     // Update remaining slider and label
-    int remaining_pct = 75; // Default
-    if (working_info_.total_weight_g > 0) {
-        remaining_pct = static_cast<int>(100.0f * working_info_.remaining_weight_g /
-                                         working_info_.total_weight_g);
-        remaining_pct = std::max(0, std::min(100, remaining_pct));
+    // Use synthetic 1000g total if no weight data (manual spool without Spoolman)
+    if (working_info_.total_weight_g <= 0) {
+        working_info_.total_weight_g = 1000.0f;
+        working_info_.remaining_weight_g =
+            (working_info_.remaining_weight_g > 0) ? working_info_.remaining_weight_g : 1000.0f;
     }
+    int remaining_pct =
+        static_cast<int>(100.0f * working_info_.remaining_weight_g / working_info_.total_weight_g);
+    remaining_pct = std::max(0, std::min(100, remaining_pct));
 
     lv_obj_t* remaining_slider = find_widget("remaining_slider");
     if (remaining_slider) {
@@ -740,13 +749,10 @@ void AmsEditModal::update_ui() {
     lv_subject_copy_string(&remaining_pct_subject_, remaining_pct_buf_);
 
     // Update progress bar fill width (shown in view mode)
-    lv_obj_t* progress_container = find_widget("remaining_progress_container");
+    // Use percentage width to avoid layout timing issues
     lv_obj_t* progress_fill = find_widget("remaining_progress_fill");
-    if (progress_container && progress_fill) {
-        lv_obj_update_layout(progress_container);
-        int container_width = lv_obj_get_width(progress_container);
-        int fill_width = container_width * remaining_pct / 100;
-        lv_obj_set_width(progress_fill, fill_width);
+    if (progress_fill) {
+        lv_obj_set_width(progress_fill, lv_pct(remaining_pct));
     }
 
     // Update temperature display based on material
@@ -921,10 +927,12 @@ void AmsEditModal::handle_remaining_changed(int percent) {
     lv_subject_copy_string(&remaining_pct_subject_, remaining_pct_buf_);
 
     // Update slot info remaining weight based on percentage
-    if (working_info_.total_weight_g > 0) {
-        working_info_.remaining_weight_g =
-            working_info_.total_weight_g * static_cast<float>(percent) / 100.0f;
+    // Use synthetic 1000g total if no weight data (manual spool without Spoolman)
+    if (working_info_.total_weight_g <= 0) {
+        working_info_.total_weight_g = 1000.0f;
     }
+    working_info_.remaining_weight_g =
+        working_info_.total_weight_g * static_cast<float>(percent) / 100.0f;
 
     update_sync_button_state();
     spdlog::trace("[AmsEditModal] Remaining changed to {}%", percent);
@@ -957,11 +965,8 @@ void AmsEditModal::handle_remaining_accept() {
 
     // Update the progress bar fill to match
     lv_obj_t* progress_fill = find_widget("remaining_progress_fill");
-    lv_obj_t* progress_container = find_widget("remaining_progress_container");
-    if (progress_fill && progress_container) {
-        int container_width = lv_obj_get_width(progress_container);
-        int fill_width = container_width * new_pct / 100;
-        lv_obj_set_width(progress_fill, fill_width);
+    if (progress_fill) {
+        lv_obj_set_width(progress_fill, lv_pct(new_pct));
     }
 
     // Exit edit mode - subject binding will show progress/edit button, hide slider/accept/cancel
