@@ -444,7 +444,7 @@ void WizardTouchCalibrationStep::handle_screen_touched(lv_event_t* e) {
                  static_cast<int>(state));
 
     // Capture the raw touch point (for SDL, screen coords == raw coords)
-    panel_->capture_point({point.x, point.y});
+    panel_->add_sample({point.x, point.y});
 
     // Auto-accept when VERIFY state is reached (wizard doesn't need user to click Accept)
     // The overlay has a different flow with explicit Accept/Verify

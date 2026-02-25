@@ -554,7 +554,7 @@ void TouchCalibrationOverlay::handle_screen_touched(lv_event_t* e) {
                  static_cast<int>(state));
 
     // Capture the raw touch point
-    panel_->capture_point({point.x, point.y});
+    panel_->add_sample({point.x, point.y});
 
     // If we just entered VERIFY, temporarily apply new calibration so accept/retry buttons
     // are tappable even if the previous calibration was bad
