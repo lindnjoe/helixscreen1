@@ -172,6 +172,10 @@ void register_xml_components() {
     // NOTE: Other AMS widgets (ams_slot, filament_path_canvas) are
     // registered lazily in ui_panel_ams.cpp when the AMS panel is first accessed
 
+    // AMS edit modal (MUST be after spool_canvas and hsv_picker registration)
+    // Registered globally so FilamentPanel can use it without AMS panel lazy init
+    register_xml("ams_edit_modal.xml");
+
     // Spoolman components (MUST be after spool_canvas registration)
     register_xml("spoolman_spool_row.xml");
     register_xml("spoolman_context_menu.xml");

@@ -252,12 +252,12 @@ void FilamentPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     nozzle_current_label_ = lv_obj_find_by_name(panel_, "nozzle_current_temp");
     bed_current_label_ = lv_obj_find_by_name(panel_, "bed_current_temp");
 
-    // Find temp layout widgets for dynamic sizing when AMS is hidden
-    temp_group_ = lv_obj_find_by_name(panel_, "temp_group");
+    // Find temp graph for dynamic sizing when bottom card changes
     temp_graph_card_ = lv_obj_find_by_name(panel_, "temp_graph_card");
 
     // Find multi-filament card widgets
     ams_status_card_ = lv_obj_find_by_name(panel_, "ams_status_card");
+    ams_card_header_row_ = lv_obj_find_by_name(panel_, "ams_card_header_row");
     extruder_selector_group_ = lv_obj_find_by_name(panel_, "extruder_selector_group");
     extruder_dropdown_ = lv_obj_find_by_name(panel_, "extruder_dropdown");
     btn_manage_slots_ = lv_obj_find_by_name(panel_, "btn_manage_slots");
@@ -284,26 +284,26 @@ void FilamentPanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
                                             self->update_multi_filament_card_visibility();
                                         });
 
-    // Subscribe to AMS type to expand temp graph when no AMS present
+    // Subscribe to AMS type to adjust graph sizing and card visibility
     ams_type_observer_ = observe_int_sync<FilamentPanel>(
         AmsState::instance().get_ams_type_subject(), this, [](FilamentPanel* self, int ams_type) {
-            if (!self->temp_group_ || !self->temp_graph_card_)
-                return;
-
             bool has_ams = (ams_type != 0);
+            bool multi_tool = helix::ToolState::instance().is_multi_tool();
+            bool card_has_ams_row = has_ams || multi_tool;
 
-            if (has_ams) {
-                // AMS visible: standard 120px graph
-                lv_obj_set_height(self->temp_graph_card_, 120);
-                lv_obj_set_flex_grow(self->temp_group_, 0);
-                lv_obj_set_flex_grow(self->temp_graph_card_, 0);
-            } else {
-                // AMS hidden: expand graph to fill available space
-                lv_obj_set_flex_grow(self->temp_group_, 1);
-                lv_obj_set_flex_grow(self->temp_graph_card_, 1);
+            // Adjust temp graph sizing based on whether bottom card shows the taller AMS row
+            if (self->temp_graph_card_) {
+                if (card_has_ams_row) {
+                    // AMS/multi-tool row is taller: standard 120px graph
+                    lv_obj_set_height(self->temp_graph_card_, 120);
+                    lv_obj_set_flex_grow(self->temp_graph_card_, 0);
+                } else {
+                    // External spool row is compact: expand graph to fill space
+                    lv_obj_set_flex_grow(self->temp_graph_card_, 1);
+                }
             }
 
-            // Update multi-filament card visibility (AMS state changed)
+            // Update card row visibility (AMS state changed)
             self->update_multi_filament_card_visibility();
         });
 
@@ -890,17 +890,28 @@ void FilamentPanel::update_multi_filament_card_visibility() {
         }
     }
 
+    bool external_spool_mode = !has_ams && !multi_tool;
+
     // External spool row visible when no AMS and no multi-tool
     if (external_spool_row_) {
-        if (!has_ams && !multi_tool) {
+        if (external_spool_mode) {
             lv_obj_remove_flag(external_spool_row_, LV_OBJ_FLAG_HIDDEN);
         } else {
             lv_obj_add_flag(external_spool_row_, LV_OBJ_FLAG_HIDDEN);
         }
     }
 
-    // Update card title dynamically
-    const char* title = (!has_ams && !multi_tool) ? "External Spool" : "Multi-Filament";
+    // Header row (icon + title) hidden in external spool mode
+    if (ams_card_header_row_) {
+        if (external_spool_mode) {
+            lv_obj_add_flag(ams_card_header_row_, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_remove_flag(ams_card_header_row_, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+
+    // Update card title dynamically (for AMS/multi-tool modes)
+    const char* title = external_spool_mode ? "External Spool" : "Multi-Filament";
     std::strncpy(card_title_buf_, title, sizeof(card_title_buf_) - 1);
     card_title_buf_[sizeof(card_title_buf_) - 1] = '\0';
     lv_subject_copy_string(&card_title_subject_, card_title_buf_);
@@ -939,7 +950,7 @@ void FilamentPanel::update_external_spool_from_state() {
     if (ext.has_value()) {
         ui_spool_canvas_set_color(external_spool_canvas_, lv_color_hex(ext->color_rgb));
         float fill =
-            (ext->total_weight_g > 0) ? ext->remaining_weight_g / ext->total_weight_g : 0.75f;
+            (ext->total_weight_g > 0) ? ext->remaining_weight_g / ext->total_weight_g : 1.0f;
         ui_spool_canvas_set_fill_level(external_spool_canvas_, fill);
 
         // Update labels with material info
@@ -955,11 +966,20 @@ void FilamentPanel::update_external_spool_from_state() {
             lv_label_set_text(external_spool_material_label_, mat_text.c_str());
         }
         if (external_spool_color_label_) {
+            // Build second line: color name + remaining weight in grams
+            std::string detail;
             if (!ext->color_name.empty()) {
-                lv_label_set_text(external_spool_color_label_, ext->color_name.c_str());
-            } else {
-                lv_label_set_text(external_spool_color_label_, "");
+                detail = ext->color_name;
             }
+            if (ext->remaining_weight_g > 0) {
+                char weight_str[16];
+                snprintf(weight_str, sizeof(weight_str), "%.0fg", ext->remaining_weight_g);
+                if (!detail.empty()) {
+                    detail += " · ";
+                }
+                detail += weight_str;
+            }
+            lv_label_set_text(external_spool_color_label_, detail.c_str());
         }
     } else {
         // No spool assigned - show muted empty spool
