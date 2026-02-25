@@ -466,6 +466,23 @@ sudo usermod -aG input $USER
 
 ---
 
+### Touch Input is Inaccurate
+
+If taps are landing in the wrong place on screen:
+
+1. **Recalibrate:** Go to **Settings > System > Touch Calibration**
+2. **If the option isn't visible:** Your screen may not normally need calibration. SSH in and run:
+   ```bash
+   helix-screen --calibrate-touch
+   ```
+3. **If the screen is too broken to navigate:** SSH in and either:
+   - Run `helix-screen --calibrate-touch`, or
+   - Edit your config file: set `"force_calibration": true` in the `input` section and restart HelixScreen
+
+See the full [Touch Calibration Guide](guide/touch-calibration.md) for details.
+
+---
+
 ### Touch is offset from visual elements
 
 **Symptoms:**

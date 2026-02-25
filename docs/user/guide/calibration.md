@@ -2,6 +2,8 @@
 
 HelixScreen provides built-in tools for the most common Klipper calibration tasks.
 
+> **Looking for touchscreen calibration?** See the [Touch Calibration Guide](touch-calibration.md).
+
 ---
 
 ## Bed Mesh
