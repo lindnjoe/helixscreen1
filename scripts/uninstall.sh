@@ -243,7 +243,7 @@ KLIPPER_USER=""
 KLIPPER_HOME=""
 
 # Detect platform
-# Returns: "ad5m", "k1", "pi", "pi32", or "unsupported"
+# Returns: "ad5m", "ad5x", "k1", "pi", "pi32", or "unsupported"
 detect_platform() {
     local arch kernel
     arch=$(uname -m)
@@ -254,6 +254,15 @@ detect_platform() {
         # AD5M has a specific kernel identifier
         if echo "$kernel" | grep -q "ad5m\|5.4.61"; then
             echo "ad5m"
+            return
+        fi
+    fi
+
+    # Check for FlashForge AD5X (MIPS with /usr/data and FlashForge indicators)
+    # AD5X uses Ingenic X2600 (MIPS), has /usr/prog/ and /usr/data/ layout
+    if [ "$arch" = "mips" ]; then
+        if [ -d "/usr/data" ] && [ -d "/usr/prog" ]; then
+            echo "ad5x"
             return
         fi
     fi
@@ -581,6 +590,13 @@ set_install_paths() {
                 log_info "Install directory: ${INSTALL_DIR}"
                 ;;
         esac
+    elif [ "$platform" = "ad5x" ]; then
+        # FlashForge AD5X - uses ZMOD, /usr/data structure
+        INSTALL_DIR="/usr/data/helixscreen"
+        INIT_SCRIPT_DEST="/etc/init.d/S80helixscreen"
+        PREVIOUS_UI_SCRIPT="/etc/init.d/S80guppyscreen"
+        log_info "Platform: FlashForge AD5X (ZMOD)"
+        log_info "Install directory: ${INSTALL_DIR}"
     elif [ "$platform" = "k1" ]; then
         # Creality K1 series - uses /usr/data structure
         case "$firmware" in
@@ -673,7 +689,7 @@ SUDO=""
 check_permissions() {
     local platform=$1
 
-    if [ "$platform" = "ad5m" ] || [ "$platform" = "k1" ]; then
+    if [ "$platform" = "ad5m" ] || [ "$platform" = "ad5x" ] || [ "$platform" = "k1" ]; then
         if [ "$(id -u)" != "0" ]; then
             log_error "Installation on $platform requires root privileges."
             log_error "Please run: sudo $0 $*"
@@ -704,8 +720,8 @@ install_permission_rules() {
     local platform=$1
     local helix_user="${KLIPPER_USER:-root}"
 
-    # Skip for platforms that run as root (AD5M, K1) or if user is root
-    if [ "$platform" = "ad5m" ] || [ "$platform" = "k1" ] || [ "$helix_user" = "root" ]; then
+    # Skip for platforms that run as root (AD5M, AD5X, K1) or if user is root
+    if [ "$platform" = "ad5m" ] || [ "$platform" = "ad5x" ] || [ "$platform" = "k1" ] || [ "$helix_user" = "root" ]; then
         log_info "Skipping permission rules (running as root)"
         return 0
     fi
@@ -873,7 +889,7 @@ check_disk_space() {
 
     # Get available space in MB
     local available_mb
-    if [ "$platform" = "ad5m" ] || [ "$platform" = "k1" ]; then
+    if [ "$platform" = "ad5m" ] || [ "$platform" = "ad5x" ] || [ "$platform" = "k1" ]; then
         # BusyBox df output format: blocks are in KB by default
         available_mb=$(df "$check_dir" 2>/dev/null | tail -1 | awk '{print int($4/1024)}')
     else
@@ -920,7 +936,7 @@ check_klipper_ecosystem() {
 
     # Only relevant for embedded platforms with local Klipper
     case "$platform" in
-        ad5m|k1) ;;
+        ad5m|ad5x|k1) ;;
         *) return 0 ;;
     esac
 
