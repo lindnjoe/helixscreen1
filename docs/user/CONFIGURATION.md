@@ -333,7 +333,8 @@ Located in the `input` section:
   "input": {
     "scroll_throw": 25,
     "scroll_limit": 10,
-    "touch_device": ""
+    "touch_device": "",
+    "force_calibration": false
   }
 }
 ```
@@ -355,6 +356,11 @@ Located in the `input` section:
 **Default:** `""` (auto-detect)
 **Example:** `"/dev/input/event1"`
 **Description:** Override touch/pointer input device. Leave empty for auto-detection. Auto-detection finds touch or pointer capable devices.
+
+### `force_calibration`
+**Type:** boolean
+**Default:** `false`
+**Description:** Force touch calibration on next startup, even if the device doesn't normally require it. After successful calibration, this flag is automatically cleared. Useful when touch input is inaccurate but HelixScreen doesn't show the calibration option in Settings.
 
 ---
 
@@ -1270,7 +1276,8 @@ Environment="HELIX_TOUCH_DEVICE=/dev/input/event0"
   "input": {
     "scroll_throw": 25,
     "scroll_limit": 10,
-    "touch_device": ""
+    "touch_device": "",
+    "force_calibration": false
   },
 
   "output": {
