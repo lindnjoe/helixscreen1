@@ -17,17 +17,14 @@
 
 #include <set>
 
-namespace {
-const bool s_registered = [] {
-    helix::register_widget_factory("power", []() {
-        auto* api = helix::PanelWidgetManager::instance().shared_resource<MoonrakerAPI>();
-        return std::make_unique<helix::PowerWidget>(api);
-    });
-    return true;
-}();
-} // namespace
-
 namespace helix {
+
+void register_power_widget() {
+    register_widget_factory("power", []() {
+        auto* api = PanelWidgetManager::instance().shared_resource<MoonrakerAPI>();
+        return std::make_unique<PowerWidget>(api);
+    });
+}
 
 PowerWidget::PowerWidget(MoonrakerAPI* api) : api_(api) {}
 
@@ -183,7 +180,7 @@ static PowerWidget* find_power_widget_ancestor(lv_obj_t* target) {
 
 void PowerWidget::power_toggle_cb(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[PowerWidget] power_toggle_cb");
-    auto* self = find_power_widget_ancestor(static_cast<lv_obj_t*>(lv_event_get_target(e)));
+    auto* self = find_power_widget_ancestor(static_cast<lv_obj_t*>(lv_event_get_current_target(e)));
     if (self) {
         self->handle_power_toggle();
     } else {
@@ -194,7 +191,7 @@ void PowerWidget::power_toggle_cb(lv_event_t* e) {
 
 void PowerWidget::power_long_press_cb(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[PowerWidget] power_long_press_cb");
-    auto* self = find_power_widget_ancestor(static_cast<lv_obj_t*>(lv_event_get_target(e)));
+    auto* self = find_power_widget_ancestor(static_cast<lv_obj_t*>(lv_event_get_current_target(e)));
     if (self) {
         self->handle_power_long_press();
     } else {

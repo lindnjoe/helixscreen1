@@ -34,6 +34,9 @@ void PanelWidgetManager::init_widget_subjects() {
         return;
     }
 
+    // Register all widget factories explicitly (avoids SIOF from file-scope statics)
+    init_widget_registrations();
+
     for (const auto& def : get_all_widget_defs()) {
         if (def.init_subjects) {
             spdlog::debug("[PanelWidgetManager] Initializing subjects for widget '{}'", def.id);

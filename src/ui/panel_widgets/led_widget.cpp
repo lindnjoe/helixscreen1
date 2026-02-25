@@ -24,18 +24,15 @@
 
 #include <algorithm>
 
-namespace {
-const bool s_registered = [] {
-    helix::register_widget_factory("led", []() {
-        auto& ps = get_printer_state();
-        auto* api = helix::PanelWidgetManager::instance().shared_resource<MoonrakerAPI>();
-        return std::make_unique<helix::LedWidget>(ps, api);
-    });
-    return true;
-}();
-} // namespace
-
 namespace helix {
+
+void register_led_widget() {
+    register_widget_factory("led", []() {
+        auto& ps = get_printer_state();
+        auto* api = PanelWidgetManager::instance().shared_resource<MoonrakerAPI>();
+        return std::make_unique<LedWidget>(ps, api);
+    });
+}
 
 LedWidget::LedWidget(PrinterState& printer_state, MoonrakerAPI* api)
     : printer_state_(printer_state), api_(api) {}
@@ -254,15 +251,8 @@ void LedWidget::on_led_state_changed(int state) {
 
 void LedWidget::light_toggle_cb(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[LedWidget] light_toggle_cb");
-    auto* target = static_cast<lv_obj_t*>(lv_event_get_target(e));
+    auto* target = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
     auto* self = static_cast<LedWidget*>(lv_obj_get_user_data(target));
-    if (!self) {
-        lv_obj_t* parent = lv_obj_get_parent(target);
-        while (parent && !self) {
-            self = static_cast<LedWidget*>(lv_obj_get_user_data(parent));
-            parent = lv_obj_get_parent(parent);
-        }
-    }
     if (self) {
         self->handle_light_toggle();
     } else {
@@ -273,15 +263,8 @@ void LedWidget::light_toggle_cb(lv_event_t* e) {
 
 void LedWidget::light_long_press_cb(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[LedWidget] light_long_press_cb");
-    auto* target = static_cast<lv_obj_t*>(lv_event_get_target(e));
+    auto* target = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
     auto* self = static_cast<LedWidget*>(lv_obj_get_user_data(target));
-    if (!self) {
-        lv_obj_t* parent = lv_obj_get_parent(target);
-        while (parent && !self) {
-            self = static_cast<LedWidget*>(lv_obj_get_user_data(parent));
-            parent = lv_obj_get_parent(parent);
-        }
-    }
     if (self) {
         self->handle_light_long_press();
     } else {

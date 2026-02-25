@@ -10,7 +10,19 @@
 
 namespace helix {
 
+// Forward declarations — widget registration functions (defined in each widget .cpp)
+void register_fan_stack_widget();
+void register_temperature_widget();
+void register_temp_stack_widget();
+void register_power_widget();
+void register_network_widget();
+void register_led_widget();
+void register_thermistor_widget();
+void register_favorite_macro_widgets();
+
 // Vector order defines the default display order on the home panel.
+// NOTE: Factories are registered at runtime via init_widget_registrations(),
+// NOT during static initialization. Do not add file-scope self-registration.
 // clang-format off
 static std::vector<PanelWidgetDef> s_widget_defs = {
     {"power",            "Power",            "power_cycle",      "Moonraker power device controls",              "Power",            "power_device_count"},
@@ -64,6 +76,25 @@ void register_widget_subjects(std::string_view id, SubjectInitFn init_fn) {
         }
     }
     spdlog::warn("[PanelWidgetRegistry] Subject init registration failed: '{}' not found", id);
+}
+
+void init_widget_registrations() {
+    static bool initialized = false;
+    if (initialized) {
+        return;
+    }
+    initialized = true;
+
+    register_power_widget();
+    register_network_widget();
+    register_temperature_widget();
+    register_temp_stack_widget();
+    register_led_widget();
+    register_fan_stack_widget();
+    register_thermistor_widget();
+    register_favorite_macro_widgets();
+
+    spdlog::debug("[PanelWidgetRegistry] All widget factories registered");
 }
 
 } // namespace helix

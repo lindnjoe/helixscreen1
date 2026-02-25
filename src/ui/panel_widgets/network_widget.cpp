@@ -58,14 +58,12 @@ static void network_widget_init_subjects() {
     spdlog::debug("[NetworkWidget] Subjects initialized (icon_state + label)");
 }
 
-namespace {
-const bool s_registered = [] {
-    helix::register_widget_factory("network",
-                                   []() { return std::make_unique<helix::NetworkWidget>(); });
-    helix::register_widget_subjects("network", network_widget_init_subjects);
-    return true;
-}();
-} // namespace
+namespace helix {
+void register_network_widget() {
+    register_widget_factory("network", []() { return std::make_unique<NetworkWidget>(); });
+    register_widget_subjects("network", network_widget_init_subjects);
+}
+} // namespace helix
 
 using namespace helix;
 
@@ -284,19 +282,8 @@ void NetworkWidget::signal_poll_timer_cb(lv_timer_t* timer) {
 void NetworkWidget::network_clicked_cb(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[NetworkWidget] network_clicked_cb");
 
-    // Recover NetworkWidget instance from the widget's user_data
-    auto* target = static_cast<lv_obj_t*>(lv_event_get_target(e));
-    // Walk up to find the widget root that has user_data set
+    auto* target = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
     auto* self = static_cast<NetworkWidget*>(lv_obj_get_user_data(target));
-    if (!self) {
-        // Walk up parent chain to find the widget object with user_data
-        lv_obj_t* parent = lv_obj_get_parent(target);
-        while (parent && !self) {
-            self = static_cast<NetworkWidget*>(lv_obj_get_user_data(parent));
-            parent = lv_obj_get_parent(parent);
-        }
-    }
-
     if (self) {
         self->handle_network_clicked();
     } else {

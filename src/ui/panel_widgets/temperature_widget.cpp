@@ -18,16 +18,15 @@
 
 #include <spdlog/spdlog.h>
 
-namespace {
-const bool s_registered = [] {
-    helix::register_widget_factory("temperature", []() {
+namespace helix {
+void register_temperature_widget() {
+    register_widget_factory("temperature", []() {
         auto& ps = get_printer_state();
-        auto* tcp = helix::PanelWidgetManager::instance().shared_resource<TempControlPanel>();
-        return std::make_unique<helix::TemperatureWidget>(ps, tcp);
+        auto* tcp = PanelWidgetManager::instance().shared_resource<TempControlPanel>();
+        return std::make_unique<TemperatureWidget>(ps, tcp);
     });
-    return true;
-}();
-} // namespace
+}
+} // namespace helix
 
 using namespace helix;
 using helix::ui::temperature::centi_to_degrees;
@@ -153,15 +152,8 @@ void TemperatureWidget::handle_temp_clicked() {
 
 void TemperatureWidget::temp_clicked_cb(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[TemperatureWidget] temp_clicked_cb");
-    auto* target = static_cast<lv_obj_t*>(lv_event_get_target(e));
+    auto* target = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
     auto* self = static_cast<TemperatureWidget*>(lv_obj_get_user_data(target));
-    if (!self) {
-        lv_obj_t* parent = lv_obj_get_parent(target);
-        while (parent && !self) {
-            self = static_cast<TemperatureWidget*>(lv_obj_get_user_data(parent));
-            parent = lv_obj_get_parent(parent);
-        }
-    }
     if (self) {
         self->handle_temp_clicked();
     } else {

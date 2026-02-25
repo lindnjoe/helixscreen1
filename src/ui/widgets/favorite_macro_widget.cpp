@@ -24,17 +24,18 @@
 #include <regex>
 #include <set>
 
-namespace {
-const bool s_registered = [] {
-    helix::register_widget_factory("favorite_macro_1", []() {
-        return std::make_unique<helix::FavoriteMacroWidget>("favorite_macro_1");
+namespace helix {
+void register_favorite_macro_widgets() {
+    register_widget_factory("favorite_macro_1", []() {
+        return std::make_unique<FavoriteMacroWidget>("favorite_macro_1");
     });
-    helix::register_widget_factory("favorite_macro_2", []() {
-        return std::make_unique<helix::FavoriteMacroWidget>("favorite_macro_2");
+    register_widget_factory("favorite_macro_2", []() {
+        return std::make_unique<FavoriteMacroWidget>("favorite_macro_2");
     });
-    return true;
-}();
+}
+} // namespace helix
 
+namespace {
 // File-local helper: get the shared PanelWidgetConfig instance
 helix::PanelWidgetConfig& get_widget_config_ref() {
     static helix::PanelWidgetConfig config("home", *helix::Config::get_instance());

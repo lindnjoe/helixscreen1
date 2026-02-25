@@ -22,16 +22,17 @@
 
 #include <spdlog/spdlog.h>
 
-namespace {
-const bool s_registered = [] {
-    helix::register_widget_factory("temp_stack", []() {
+namespace helix {
+void register_temp_stack_widget() {
+    register_widget_factory("temp_stack", []() {
         auto& ps = get_printer_state();
-        auto* tcp = helix::PanelWidgetManager::instance().shared_resource<TempControlPanel>();
-        return std::make_unique<helix::TempStackWidget>(ps, tcp);
+        auto* tcp = PanelWidgetManager::instance().shared_resource<TempControlPanel>();
+        return std::make_unique<TempStackWidget>(ps, tcp);
     });
-    return true;
-}();
+}
+} // namespace helix
 
+namespace {
 // File-local helper: get the shared PanelWidgetConfig instance for home panel
 helix::PanelWidgetConfig& get_widget_config_ref() {
     static helix::PanelWidgetConfig config("home", *helix::Config::get_instance());

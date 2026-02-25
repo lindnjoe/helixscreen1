@@ -46,14 +46,6 @@ static void add_long_press_recursive(lv_obj_t* obj, lv_event_cb_t cb, void* user
     }
 }
 
-const bool s_registered = [] {
-    helix::register_widget_factory("fan_stack", []() {
-        auto& ps = get_printer_state();
-        return std::make_unique<helix::FanStackWidget>(ps);
-    });
-    return true;
-}();
-
 // File-local helper: get the shared PanelWidgetConfig instance for home panel
 helix::PanelWidgetConfig& get_widget_config_ref() {
     static helix::PanelWidgetConfig config("home", *helix::Config::get_instance());
@@ -61,6 +53,15 @@ helix::PanelWidgetConfig& get_widget_config_ref() {
     return config;
 }
 } // namespace
+
+namespace helix {
+void register_fan_stack_widget() {
+    register_widget_factory("fan_stack", []() {
+        auto& ps = get_printer_state();
+        return std::make_unique<FanStackWidget>(ps);
+    });
+}
+} // namespace helix
 
 using namespace helix;
 
@@ -93,7 +94,6 @@ void FanStackWidget::attach(lv_obj_t* widget_obj, lv_obj_t* parent_screen) {
     parent_screen_ = parent_screen;
     *alive_ = true;
     lv_obj_set_user_data(widget_obj_, this);
-
     if (is_carousel_mode()) {
         attach_carousel(widget_obj);
     } else {
@@ -583,15 +583,8 @@ void FanStackWidget::handle_clicked() {
 
 void FanStackWidget::on_fan_stack_clicked(lv_event_t* e) {
     LVGL_SAFE_EVENT_CB_BEGIN("[FanStackWidget] on_fan_stack_clicked");
-    auto* target = static_cast<lv_obj_t*>(lv_event_get_target(e));
+    auto* target = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
     auto* self = static_cast<FanStackWidget*>(lv_obj_get_user_data(target));
-    if (!self) {
-        lv_obj_t* parent = lv_obj_get_parent(target);
-        while (parent && !self) {
-            self = static_cast<FanStackWidget*>(lv_obj_get_user_data(parent));
-            parent = lv_obj_get_parent(parent);
-        }
-    }
     if (self) {
         self->handle_clicked();
     } else {

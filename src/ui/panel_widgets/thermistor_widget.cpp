@@ -21,15 +21,14 @@
 
 #include <cstring>
 
-namespace {
-const bool s_registered = [] {
-    helix::register_widget_factory("thermistor", []() {
+namespace helix {
+void register_thermistor_widget() {
+    register_widget_factory("thermistor", []() {
         auto& ps = get_printer_state();
-        return std::make_unique<helix::ThermistorWidget>(ps);
+        return std::make_unique<ThermistorWidget>(ps);
     });
-    return true;
-}();
-} // namespace
+}
+} // namespace helix
 
 using namespace helix;
 using helix::ui::temperature::centi_to_degrees_f;

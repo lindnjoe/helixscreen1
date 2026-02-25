@@ -33,5 +33,8 @@ const PanelWidgetDef* find_widget_def(std::string_view id);
 size_t widget_def_count();
 void register_widget_factory(std::string_view id, WidgetFactory factory);
 void register_widget_subjects(std::string_view id, SubjectInitFn init_fn);
+// Internal — called once from PanelWidgetManager::init_widget_subjects().
+// Do not call directly; widget factories require runtime context (singletons, shared resources).
+void init_widget_registrations();
 
 } // namespace helix
