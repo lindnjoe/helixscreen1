@@ -956,7 +956,7 @@ translations:
   Tap anywhere if this text is right-side up: 'Appuyez n''importe où si ce texte est à l''endroit'
   Tap anywhere to begin: 'Appuyez n''importe où pour commencer'
   Tap anywhere to begin calibration: 'Appuyez n''importe où pour démarrer la calibration'
-  Tap the crosshair (point %1$d of 3) \xe2\x80\x94 touch %2$d of %3$d: 'Appuyez sur la cible (point %1$d sur 3) \xe2\x80\x94 touche %2$d sur %3$d'
+  Tap the crosshair (point %1$d of 3) \xe2\x80\x94 touch %2$d of %3$d: 'Appuyez sur la cible (point %1$d sur 3) \xe2\x80\x94 appui %2$d sur %3$d'
   Tap to assign: 'Appuyez pour assigner'
   Tap to show keyboard...: Appuyez pour afficher le clavier...
   Target Temperature: Température cible
@@ -1026,7 +1026,7 @@ translations:
   Touch anywhere to test calibration: Touchez n'importe où pour tester la calibration
   Touch anywhere to verify accuracy: 'Touchez n''importe où pour vérifier la précision'
   Touch screen to wake from sleep: Touchez l'écran pour sortir de veille
-  Touch the target (point %1$d of 3) \xe2\x80\x94 touch %2$d of %3$d: 'Touchez la cible (point %1$d sur 3) \xe2\x80\x94 touche %2$d sur %3$d'
+  Touch the target (point %1$d of 3) \xe2\x80\x94 touch %2$d of %3$d: 'Touchez la cible (point %1$d sur 3) \xe2\x80\x94 appui %2$d sur %3$d'
   Travels: Déplacements
   'Troubleshooting:': 'Dépannage :'
   Tune: Régler

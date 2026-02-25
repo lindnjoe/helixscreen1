@@ -1376,9 +1376,10 @@ static const char* de_singulars[] = {
     "Oben",                                       // 1015="Top"
     "Gesamte Drucke",                             // 1016="Total Prints"
     "Touch-Kalibrierung",                         // 1017="Touch Calibration"
-    "Tippen Sie irgendwo, um die Kalibrierung zu testen", // 1018="Touch anywhere to test
-                                                          // calibration"
-    "Zum Überprüfen irgendwo berühren",   // 1019="Touch anywhere to verify accuracy"
+    "Tippen Sie irgendwo, um die Kalibrierung zu testen",      // 1018="Touch anywhere to test
+                                                               // calibration"
+    "Berühren Sie irgendwo, um die Genauigkeit zu überprüfen", // 1019="Touch anywhere to verify
+                                                               // accuracy"
     "Touchscreen berühren zum Aufwecken", // 1020="Touch screen to wake from sleep"
     "Ziel berühren (Punkt %1$d von 3) \\xe2\\x80\\x94 Berührung %2$d von %3$d", // 1021="Touch the
                                                                                 // target (point
@@ -5883,13 +5884,13 @@ static const char* fr_singulars[] = {
                                                           // right-side up"
     "Appuyez n'importe où pour commencer",                // 952="Tap anywhere to begin"
     "Appuyez n'importe où pour démarrer la calibration",  // 953="Tap anywhere to begin calibration"
-    "Appuyez sur la cible (point %1$d sur 3) \\xe2\\x80\\x94 touche %2$d sur %3$d", // 954="Tap the
-                                                                                    // crosshair
-                                                                                    // (point %1$d
-                                                                                    // of 3)
-                                                                                    // \xe2\x80\x94
-                                                                                    // touch %2$d of
-                                                                                    // %3$d"
+    "Appuyez sur la cible (point %1$d sur 3) \\xe2\\x80\\x94 appui %2$d sur %3$d", // 954="Tap the
+                                                                                   // crosshair
+                                                                                   // (point %1$d of
+                                                                                   // 3)
+                                                                                   // \xe2\x80\x94
+                                                                                   // touch %2$d of
+                                                                                   // %3$d"
     "Appuyez pour assigner",               // 955="Tap to assign"
     "Appuyez pour afficher le clavier...", // 956="Tap to show keyboard..."
     "Température cible",                   // 957="Target Temperature"
@@ -6075,13 +6076,12 @@ static const char* fr_singulars[] = {
     "Touchez n'importe où pour tester la calibration", // 1018="Touch anywhere to test calibration"
     "Touchez n'importe où pour vérifier la précision", // 1019="Touch anywhere to verify accuracy"
     "Touchez l'écran pour sortir de veille",           // 1020="Touch screen to wake from sleep"
-    "Touchez la cible (point %1$d sur 3) \\xe2\\x80\\x94 touche %2$d sur %3$d", // 1021="Touch the
-                                                                                // target (point
-                                                                                // %1$d of 3)
-                                                                                // \xe2\x80\x94
-                                                                                // touch %2$d of
-                                                                                // %3$d"
-    "Déplacements",                                                             // 1022="Travels"
+    "Touchez la cible (point %1$d sur 3) \\xe2\\x80\\x94 appui %2$d sur %3$d", // 1021="Touch the
+                                                                               // target (point %1$d
+                                                                               // of 3) \xe2\x80\x94
+                                                                               // touch %2$d of
+                                                                               // %3$d"
+    "Déplacements",                                                            // 1022="Travels"
     "Dépannage :",                                                       // 1023="Troubleshooting:"
     "Régler",                                                            // 1024="Tune"
     "Réglez à la température à laquelle vous imprimez le plus souvent.", // 1025="Tune at the
@@ -12176,24 +12176,24 @@ static const char* ru_singulars[] = {
     "Таймлапс",                                               // 1000="Timelapse"
     "Таймлапс доступен",                                      // 1001="Timelapse Available"
     "Настройки таймлапса",                                    // 1002="Timelapse Settings"
-    "Плагин таймлапса успешно установлен!",     // 1003="Timelapse plugin installed successfully!"
-    "Плагин таймлапса установлен!",             // 1004="Timelapse plugin installed!"
-    "Плагин таймлапса уже установлен!",         // 1005="Timelapse plugin is already installed!"
-    "Плагин таймлапса установлен!",             // 1006="Timelapse plugin is installed!"
-    "Таймлапс успешно отрендерен",              // 1007="Timelapse rendered successfully"
-    "Совет:",                                   // 1008="Tip:"
-    "Переключить",                              // 1009="Toggle"
-    "Переключение (без отслеживания)",          // 1010="Toggle (fire-and-forget)"
-    "Переключить функцию",                      // 1011="Toggle Feature"
-    "Включение и сортировка виджетов статуса",  // 1012="Toggle and reorder status widgets"
-    "Инструмент",                               // 1013="Tool"
-    "Сменщик инструментов",                     // 1014="Tool Changer"
-    "Сверху",                                   // 1015="Top"
-    "Всего печатей",                            // 1016="Total Prints"
-    "Калибровка касания",                       // 1017="Touch Calibration"
-    "Коснитесь экрана для проверки калибровки", // 1018="Touch anywhere to test calibration"
-    "Коснитесь в любом месте для проверки точности", // 1019="Touch anywhere to verify accuracy"
-    "Коснитесь экрана для выхода из сна",            // 1020="Touch screen to wake from sleep"
+    "Плагин таймлапса успешно установлен!",    // 1003="Timelapse plugin installed successfully!"
+    "Плагин таймлапса установлен!",            // 1004="Timelapse plugin installed!"
+    "Плагин таймлапса уже установлен!",        // 1005="Timelapse plugin is already installed!"
+    "Плагин таймлапса установлен!",            // 1006="Timelapse plugin is installed!"
+    "Таймлапс успешно отрендерен",             // 1007="Timelapse rendered successfully"
+    "Совет:",                                  // 1008="Tip:"
+    "Переключить",                             // 1009="Toggle"
+    "Переключение (без отслеживания)",         // 1010="Toggle (fire-and-forget)"
+    "Переключить функцию",                     // 1011="Toggle Feature"
+    "Включение и сортировка виджетов статуса", // 1012="Toggle and reorder status widgets"
+    "Инструмент",                              // 1013="Tool"
+    "Сменщик инструментов",                    // 1014="Tool Changer"
+    "Сверху",                                  // 1015="Top"
+    "Всего печатей",                           // 1016="Total Prints"
+    "Калибровка касания",                      // 1017="Touch Calibration"
+    "Коснитесь в любом месте для проверки калибровки", // 1018="Touch anywhere to test calibration"
+    "Коснитесь в любом месте для проверки точности",   // 1019="Touch anywhere to verify accuracy"
+    "Коснитесь экрана для выхода из сна",              // 1020="Touch screen to wake from sleep"
     "Коснитесь цели (точка %1$d из 3) \\xe2\\x80\\x94 касание %2$d из %3$d", // 1021="Touch the
                                                                              // target (point %1$d
                                                                              // of 3) \xe2\x80\x94
