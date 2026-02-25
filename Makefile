@@ -495,7 +495,7 @@ ifneq ($(CROSS_COMPILE),)
         LDFLAGS := -L/usr/lib/$(TARGET_TRIPLE) $(LIBHV_LIBS) $(FMT_LIBS) $(WPA_CLIENT_LIB) $(LIBNL_LIBS) $(SYSTEMD_LIBS) -ldl -lz -lm -lpthread
     endif
     ifeq ($(ENABLE_SSL),yes)
-        ifneq (,$(filter pi pi32,$(PLATFORM_TARGET)))
+        ifneq (,$(filter pi pi-fbdev pi32 pi32-fbdev,$(PLATFORM_TARGET)))
             # Pi: static-link OpenSSL to avoid libssl soname mismatch across Debian versions
             # (Bullseye has libssl.so.1.1, Bookworm has libssl.so.3)
             LDFLAGS += -Wl,-Bstatic -lssl -lcrypto -Wl,-Bdynamic
