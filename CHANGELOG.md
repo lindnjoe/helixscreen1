@@ -7,11 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.13.2] - 2026-02-25
 
+### Added
+- FlashForge AD5X platform support (#203)
+- Touch calibration CLI flag (`--calibrate-touch`) and `input.force_calibration` config option
+- Touch calibration standalone user guide
+- Improved touch calibration UX with tap-to-begin, progress counting, and flash feedback
+
 ### Fixed
 - Touch input on fbdev devices no longer applies a redundant rotation transform (#186)
 - Shutdown sequence hardened against use-after-free crashes
 - DRM device configuration now validates before use and falls back to auto-detection on failure
 - Diagnostic logging added for DRM initialization failures and startup platform info
+- Alive guards and lifecycle safety added to 5 crash-prone components
+- WebSocket disconnected before clearing app globals to prevent spurious shutdown errors
+- TemperatureSensorManager shutdown crash prevented with alive guard
+- Happy Hare MMU slot data now received via mmu object subscription (#214)
+- Splash screen skipped on DRM-only systems to prevent master contention
+- Telemetry queue file writes now atomic to prevent empty file on interrupted save
+- DRM rotation patch includes header declaration (fixes Pi cross-compilation)
+- Launcher e2e tests mock system commands to avoid hitting dev machine
 
 ## [0.13.1] - 2026-02-25
 
