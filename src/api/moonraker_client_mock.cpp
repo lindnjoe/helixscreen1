@@ -285,7 +285,9 @@ void MoonrakerClientMock::populate_capabilities() {
     mock_objects.push_back("timelapse"); // Moonraker-Timelapse plugin
 
     // MMU/AMS system - Happy Hare uses "mmu" object name
-    mock_objects.push_back("mmu");
+    if (mmu_enabled_) {
+        mock_objects.push_back("mmu");
+    }
 
     // Probe sensor (HELIX_MOCK_PROBE_TYPE: cartographer, tap, bltouch, beacon, klicky, standard,
     // none)
