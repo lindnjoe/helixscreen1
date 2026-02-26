@@ -430,6 +430,13 @@ void FanStackWidget::bind_carousel_fans() {
             dial->set_read_only(true);
         }
 
+        // Wire icon click to open fan control overlay
+        dial->set_on_icon_clicked([weak_alive, this](const std::string& /*fan_id*/) {
+            if (weak_alive.expired())
+                return;
+            handle_clicked();
+        });
+
         // Wire speed change callback only for controllable fans
         if (fan.is_controllable) {
             std::string object_name = fan.object_name;
