@@ -252,7 +252,8 @@ static void apply_slot_status(AmsSlotData* data, int status_int) {
         badge_bg = theme_manager_get_color("danger");
         break;
     case SlotStatus::EMPTY:
-        show_badge = false;
+        // Always show badge so all physical gates are visible (gray for empty)
+        badge_bg = theme_manager_get_color("ams_badge_bg");
         break;
     case SlotStatus::UNKNOWN:
     default:
