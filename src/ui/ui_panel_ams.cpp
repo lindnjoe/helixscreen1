@@ -740,14 +740,14 @@ void AmsPanel::setup_bypass_spool() {
     int32_t bypass_x = canvas_x + (int32_t)(canvas_w * BYPASS_X_RATIO);
     int32_t bypass_merge_y = canvas_y + (int32_t)(canvas_h * BYPASS_MERGE_Y_RATIO);
 
-    // Spool goes BELOW the "Bypass" label (which is canvas-drawn above bypass_merge_y).
-    // Place spool top edge at bypass_merge_y so it sits just under the label.
+    // Center spool vertically on the bypass merge line (horizontal filament path)
     lv_obj_update_layout(bypass_spool_box_);
     int32_t box_w = lv_obj_get_width(bypass_spool_box_);
-    lv_obj_set_pos(bypass_spool_box_, bypass_x - box_w / 2, bypass_merge_y);
+    int32_t box_h = lv_obj_get_height(bypass_spool_box_);
+    lv_obj_set_pos(bypass_spool_box_, bypass_x - box_w / 2, bypass_merge_y - box_h / 2);
 
-    spdlog::debug("[{}] Bypass spool: box_w={} at ({},{}), merge_y={}", get_name(), box_w,
-                  bypass_x - box_w / 2, bypass_merge_y, bypass_merge_y);
+    spdlog::debug("[{}] Bypass spool: {}x{} at ({},{}), merge_y={}", get_name(), box_w, box_h,
+                  bypass_x - box_w / 2, bypass_merge_y - box_h / 2, bypass_merge_y);
 }
 
 void AmsPanel::update_bypass_spool_from_state() {
