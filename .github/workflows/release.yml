@@ -496,25 +496,37 @@ jobs:
     - name: Flatten symbol files
       run: |
         mkdir -p symbol-files
+        # upload-artifact@v4 strips the least-common-ancestor directory from
+        # multi-path uploads, so the internal structure varies:
+        #   - pi/pi32 (drm+fbdev): LCA=build/ → artifact has <platform>/bin/...
+        #   - single-dir platforms: LCA=build/<platform>/bin/ → artifact has files at root
+        # Use find to locate files regardless of nesting depth.
         for dir in artifacts/symbols-*/; do
           platform=$(basename "$dir" | sed 's/symbols-//')
-          # DRM symbols (build/<platform>/bin/)
-          if [ -f "${dir}build/${platform}/bin/helix-screen.sym" ]; then
-            cp "${dir}build/${platform}/bin/helix-screen.sym" "symbol-files/${platform}.sym"
-          elif [ -f "${dir}helix-screen.sym" ]; then
-            cp "${dir}helix-screen.sym" "symbol-files/${platform}.sym"
+          echo "Processing $platform (contents: $(find "$dir" -name '*.sym' -o -name '*.debug' | wc -l) files)"
+
+          # DRM symbols — search for helix-screen.sym NOT in a -fbdev path
+          sym=$(find "$dir" -name 'helix-screen.sym' -not -path '*-fbdev*' | head -1)
+          if [ -n "$sym" ]; then
+            cp "$sym" "symbol-files/${platform}.sym"
+          else
+            echo "  WARNING: No DRM .sym found for $platform"
           fi
-          if [ -f "${dir}build/${platform}/bin/helix-screen.debug" ]; then
-            cp "${dir}build/${platform}/bin/helix-screen.debug" "symbol-files/${platform}.debug"
-          elif [ -f "${dir}helix-screen.debug" ]; then
-            cp "${dir}helix-screen.debug" "symbol-files/${platform}.debug"
+
+          dbg=$(find "$dir" -name 'helix-screen.debug' -not -path '*-fbdev*' | head -1)
+          if [ -n "$dbg" ]; then
+            cp "$dbg" "symbol-files/${platform}.debug"
           fi
-          # fbdev symbols (build/<platform>-fbdev/bin/) — Pi only
-          if [ -f "${dir}build/${platform}-fbdev/bin/helix-screen.sym" ]; then
-            cp "${dir}build/${platform}-fbdev/bin/helix-screen.sym" "symbol-files/${platform}-fbdev.sym"
+
+          # fbdev symbols (Pi only) — search in -fbdev path
+          sym_fb=$(find "$dir" -name 'helix-screen.sym' -path '*-fbdev*' | head -1)
+          if [ -n "$sym_fb" ]; then
+            cp "$sym_fb" "symbol-files/${platform}-fbdev.sym"
           fi
-          if [ -f "${dir}build/${platform}-fbdev/bin/helix-screen.debug" ]; then
-            cp "${dir}build/${platform}-fbdev/bin/helix-screen.debug" "symbol-files/${platform}-fbdev.debug"
+
+          dbg_fb=$(find "$dir" -name 'helix-screen.debug' -path '*-fbdev*' | head -1)
+          if [ -n "$dbg_fb" ]; then
+            cp "$dbg_fb" "symbol-files/${platform}-fbdev.debug"
           fi
         done
         echo "Symbol files:"
