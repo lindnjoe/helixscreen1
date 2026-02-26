@@ -273,9 +273,6 @@ void AmsOperationSidebar::cleanup() {
     step_progress_ = nullptr;
     step_progress_container_ = nullptr;
 
-    // Reset dryer card
-    dryer_card_.reset();
-
     // Reset ALL observers unconditionally. Keeping extruder_temp_observer_ alive
     // across panel switches is unsafe — the sidebar may be destroyed while the
     // observer still holds a raw pointer to it.
@@ -284,6 +281,11 @@ void AmsOperationSidebar::cleanup() {
     bypass_spool_observer_.reset();
     color_observer_.reset();
     extruder_temp_observer_.reset();
+
+    // Reset dryer card AFTER observers — dryer_card_ may have its own observers
+    // that reference widget pointers; resetting it before our observers could
+    // trigger callbacks on already-null widget pointers.
+    dryer_card_.reset();
 
     // Clear all pending state
     pending_bypass_enable_ = false;

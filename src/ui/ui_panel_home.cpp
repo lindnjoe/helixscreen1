@@ -936,6 +936,9 @@ void HomePanel::ensure_led_observers() {
 }
 
 void HomePanel::on_led_state_changed(int state) {
+    if (!subjects_initialized_)
+        return;
+
     auto& led_ctrl = helix::led::LedController::instance();
     if (led_ctrl.light_state_trackable()) {
         light_on_ = (state != 0);
@@ -1028,25 +1031,32 @@ void HomePanel::flash_light_icon() {
 }
 
 void HomePanel::on_extruder_temp_changed(int temp_centi) {
+    // Cache the value unconditionally for when subjects/widgets are ready
+    cached_extruder_temp_ = temp_centi;
+
+    if (!subjects_initialized_)
+        return;
+
     int temp_deg = centi_to_degrees(temp_centi);
 
     // Format temperature for display and update the string subject
-    // Guard: Observer callback fires during constructor before init_subjects()
     helix::ui::temperature::format_temperature(temp_deg, temp_buffer_, sizeof(temp_buffer_));
-    if (subjects_initialized_) {
-        lv_subject_copy_string(&temp_subject_, temp_buffer_);
-    }
+    lv_subject_copy_string(&temp_subject_, temp_buffer_);
 
-    // Update cached value and animator (animator expects centidegrees)
-    cached_extruder_temp_ = temp_centi;
+    // Update animator (expects centidegrees)
     update_temp_icon_animation();
 
     spdlog::trace("[{}] Extruder temperature updated: {}°C", get_name(), temp_deg);
 }
 
 void HomePanel::on_extruder_target_changed(int target_centi) {
-    // Animator expects centidegrees
+    // Cache the value unconditionally for when subjects/widgets are ready
     cached_extruder_target_ = target_centi;
+
+    if (!subjects_initialized_)
+        return;
+
+    // Animator expects centidegrees
     update_temp_icon_animation();
     spdlog::trace("[{}] Extruder target updated: {}°C", get_name(), centi_to_degrees(target_centi));
 }
@@ -1110,7 +1120,7 @@ void HomePanel::reload_from_config() {
 }
 
 void HomePanel::refresh_printer_image() {
-    if (!panel_)
+    if (!subjects_initialized_ || !panel_)
         return;
 
     // Free old snapshot — image source is about to change
@@ -1443,7 +1453,7 @@ void HomePanel::update_ams_indicator(int /* slot_count */) {
 // ============================================================================
 
 void HomePanel::on_print_thumbnail_path_changed(const char* path) {
-    if (!print_card_active_thumb_) {
+    if (!subjects_initialized_ || !print_card_active_thumb_) {
         return;
     }
 
@@ -1478,8 +1488,8 @@ void HomePanel::on_print_thumbnail_path_changed(const char* path) {
 }
 
 void HomePanel::on_print_state_changed(PrintJobState state) {
-    if (!print_card_thumb_ || !print_card_label_) {
-        return; // Widgets not found (shouldn't happen after setup)
+    if (!subjects_initialized_ || !print_card_thumb_ || !print_card_label_) {
+        return;
     }
 
     bool is_active = (state == PrintJobState::PRINTING || state == PrintJobState::PAUSED);
@@ -1494,6 +1504,9 @@ void HomePanel::on_print_state_changed(PrintJobState state) {
 }
 
 void HomePanel::on_print_progress_or_time_changed() {
+    if (!subjects_initialized_)
+        return;
+
     update_print_card_from_state();
 }
 

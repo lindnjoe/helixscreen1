@@ -506,7 +506,13 @@ jobs:
           echo "Processing $platform (contents: $(find "$dir" -name '*.sym' -o -name '*.debug' | wc -l) files)"
 
           # DRM symbols — search for helix-screen.sym NOT in a -fbdev path
-          sym=$(find "$dir" -name 'helix-screen.sym' -not -path '*-fbdev*' | head -1)
+          matches=$(find "$dir" -name 'helix-screen.sym' -not -path '*-fbdev*')
+          count=$(echo "$matches" | grep -c . || true)
+          if [ "$count" -gt 1 ]; then
+            echo "  WARNING: Multiple DRM .sym files found for $platform"
+            echo "$matches"
+          fi
+          sym=$(echo "$matches" | head -1)
           if [ -n "$sym" ]; then
             cp "$sym" "symbol-files/${platform}.sym"
           else
@@ -529,8 +535,15 @@ jobs:
             cp "$dbg_fb" "symbol-files/${platform}-fbdev.debug"
           fi
         done
-        echo "Symbol files:"
-        ls -lh symbol-files/ || echo "No symbol files found"
+
+        # Validate that at least one .sym file was produced
+        sym_count=$(find symbol-files -name '*.sym' 2>/dev/null | wc -l)
+        echo "Symbol files ($sym_count .sym files):"
+        ls -lh symbol-files/
+        if [ "$sym_count" -eq 0 ]; then
+          echo "ERROR: No .sym files were produced — symbol extraction failed"
+          exit 1
+        fi
 
     - name: Extract version from tag
       id: version
