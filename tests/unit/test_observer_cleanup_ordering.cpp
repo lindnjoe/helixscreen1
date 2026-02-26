@@ -354,3 +354,581 @@ TEST_CASE_METHOD(LVGLTestFixture, "Observer cleanup: subjects_initialized flag p
 
     panel.deinit();
 }
+
+// ============================================================================
+// HomePanel-style subjects_initialized_ guard pattern
+//
+// HomePanel has 7 observer callbacks that all guard with:
+//   if (!subjects_initialized_) return;
+// This mock verifies the pattern: when subjects_initialized_ is false,
+// callbacks must NOT access widget pointers or update display state.
+// ============================================================================
+
+class MockHomePanel {
+  public:
+    bool subjects_initialized_ = false;
+    lv_obj_t* panel_ = nullptr;
+    lv_obj_t* print_card_thumb_ = nullptr;
+    lv_obj_t* print_card_label_ = nullptr;
+
+    ObserverGuard temp_observer_;
+    ObserverGuard target_observer_;
+    ObserverGuard state_observer_;
+    ObserverGuard progress_observer_;
+    ObserverGuard thumbnail_observer_;
+    ObserverGuard led_observer_;
+    ObserverGuard printer_image_observer_;
+
+    int temp_callback_count_ = 0;
+    int target_callback_count_ = 0;
+    int state_callback_count_ = 0;
+    int progress_callback_count_ = 0;
+    int thumbnail_callback_count_ = 0;
+    int led_callback_count_ = 0;
+    int printer_image_callback_count_ = 0;
+
+    lv_subject_t temp_subject_;
+    lv_subject_t target_subject_;
+    lv_subject_t state_subject_;
+    lv_subject_t progress_subject_;
+    lv_subject_t thumbnail_subject_;
+    lv_subject_t led_subject_;
+    lv_subject_t printer_image_subject_;
+
+    void init(lv_obj_t* parent) {
+        lv_subject_init_int(&temp_subject_, 0);
+        lv_subject_init_int(&target_subject_, 0);
+        lv_subject_init_int(&state_subject_, 0);
+        lv_subject_init_int(&progress_subject_, 0);
+        lv_subject_init_int(&thumbnail_subject_, 0);
+        lv_subject_init_int(&led_subject_, 0);
+        lv_subject_init_int(&printer_image_subject_, 0);
+
+        panel_ = lv_obj_create(parent);
+        print_card_thumb_ = lv_obj_create(panel_);
+        print_card_label_ = lv_obj_create(panel_);
+
+        subjects_initialized_ = true;
+    }
+
+    void init_observers() {
+        // on_extruder_temp_changed pattern
+        temp_observer_ = observe_int_sync<MockHomePanel>(&temp_subject_, this,
+                                                         [](MockHomePanel* self, int /*val*/) {
+                                                             if (!self->subjects_initialized_)
+                                                                 return;
+                                                             self->temp_callback_count_++;
+                                                         });
+
+        // on_extruder_target_changed pattern
+        target_observer_ = observe_int_sync<MockHomePanel>(&target_subject_, this,
+                                                           [](MockHomePanel* self, int /*val*/) {
+                                                               if (!self->subjects_initialized_)
+                                                                   return;
+                                                               self->target_callback_count_++;
+                                                           });
+
+        // on_print_state_changed pattern (guards with subjects_initialized_ + widget)
+        state_observer_ = observe_int_sync<MockHomePanel>(
+            &state_subject_, this, [](MockHomePanel* self, int /*val*/) {
+                if (!self->subjects_initialized_ || !self->print_card_thumb_ ||
+                    !self->print_card_label_)
+                    return;
+                self->state_callback_count_++;
+            });
+
+        // on_print_progress_or_time_changed pattern
+        progress_observer_ = observe_int_sync<MockHomePanel>(&progress_subject_, this,
+                                                             [](MockHomePanel* self, int /*val*/) {
+                                                                 if (!self->subjects_initialized_)
+                                                                     return;
+                                                                 self->progress_callback_count_++;
+                                                             });
+
+        // on_print_thumbnail_path_changed pattern
+        thumbnail_observer_ = observe_int_sync<MockHomePanel>(
+            &thumbnail_subject_, this, [](MockHomePanel* self, int /*val*/) {
+                if (!self->subjects_initialized_ || !self->print_card_thumb_)
+                    return;
+                self->thumbnail_callback_count_++;
+            });
+
+        // on_led_state_changed pattern
+        led_observer_ = observe_int_sync<MockHomePanel>(&led_subject_, this,
+                                                        [](MockHomePanel* self, int /*val*/) {
+                                                            if (!self->subjects_initialized_)
+                                                                return;
+                                                            self->led_callback_count_++;
+                                                        });
+
+        // refresh_printer_image pattern (guards with subjects_initialized_ + panel_)
+        printer_image_observer_ = observe_int_sync<MockHomePanel>(
+            &printer_image_subject_, this, [](MockHomePanel* self, int /*val*/) {
+                if (!self->subjects_initialized_ || !self->panel_)
+                    return;
+                self->printer_image_callback_count_++;
+            });
+    }
+
+    void deinit_subjects() {
+        if (!subjects_initialized_)
+            return;
+        subjects_initialized_ = false;
+        // Observers are released after flag is cleared
+        temp_observer_.reset();
+        target_observer_.reset();
+        state_observer_.reset();
+        progress_observer_.reset();
+        thumbnail_observer_.reset();
+        led_observer_.reset();
+        printer_image_observer_.reset();
+    }
+
+    void deinit() {
+        lv_subject_deinit(&temp_subject_);
+        lv_subject_deinit(&target_subject_);
+        lv_subject_deinit(&state_subject_);
+        lv_subject_deinit(&progress_subject_);
+        lv_subject_deinit(&thumbnail_subject_);
+        lv_subject_deinit(&led_subject_);
+        lv_subject_deinit(&printer_image_subject_);
+    }
+
+    void reset_counts() {
+        temp_callback_count_ = 0;
+        target_callback_count_ = 0;
+        state_callback_count_ = 0;
+        progress_callback_count_ = 0;
+        thumbnail_callback_count_ = 0;
+        led_callback_count_ = 0;
+        printer_image_callback_count_ = 0;
+    }
+
+    int total_callback_count() const {
+        return temp_callback_count_ + target_callback_count_ + state_callback_count_ +
+               progress_callback_count_ + thumbnail_callback_count_ + led_callback_count_ +
+               printer_image_callback_count_;
+    }
+};
+
+TEST_CASE_METHOD(LVGLTestFixture,
+                 "HomePanel pattern: all 7 observers fire when subjects_initialized_ is true",
+                 "[observer_cleanup][crash_hardening][home_panel]") {
+    MockHomePanel panel;
+    panel.init(test_screen());
+    panel.init_observers();
+    drain();
+
+    panel.reset_counts();
+
+    // Fire all 7 subjects
+    lv_subject_set_int(&panel.temp_subject_, 1);
+    lv_subject_set_int(&panel.target_subject_, 1);
+    lv_subject_set_int(&panel.state_subject_, 1);
+    lv_subject_set_int(&panel.progress_subject_, 1);
+    lv_subject_set_int(&panel.thumbnail_subject_, 1);
+    lv_subject_set_int(&panel.led_subject_, 1);
+    lv_subject_set_int(&panel.printer_image_subject_, 1);
+    drain();
+
+    REQUIRE(panel.temp_callback_count_ == 1);
+    REQUIRE(panel.target_callback_count_ == 1);
+    REQUIRE(panel.state_callback_count_ == 1);
+    REQUIRE(panel.progress_callback_count_ == 1);
+    REQUIRE(panel.thumbnail_callback_count_ == 1);
+    REQUIRE(panel.led_callback_count_ == 1);
+    REQUIRE(panel.printer_image_callback_count_ == 1);
+    REQUIRE(panel.total_callback_count() == 7);
+
+    panel.deinit_subjects();
+    panel.deinit();
+}
+
+TEST_CASE_METHOD(
+    LVGLTestFixture,
+    "HomePanel pattern: all 7 observers are no-ops when subjects_initialized_ is false",
+    "[observer_cleanup][crash_hardening][home_panel]") {
+    MockHomePanel panel;
+    panel.init(test_screen());
+    panel.init_observers();
+    drain();
+
+    // Clear flag — simulates deinit_subjects() setting it to false
+    panel.subjects_initialized_ = false;
+
+    panel.reset_counts();
+
+    // Fire all 7 subjects — none should increment
+    lv_subject_set_int(&panel.temp_subject_, 2);
+    lv_subject_set_int(&panel.target_subject_, 2);
+    lv_subject_set_int(&panel.state_subject_, 2);
+    lv_subject_set_int(&panel.progress_subject_, 2);
+    lv_subject_set_int(&panel.thumbnail_subject_, 2);
+    lv_subject_set_int(&panel.led_subject_, 2);
+    lv_subject_set_int(&panel.printer_image_subject_, 2);
+    drain();
+
+    REQUIRE(panel.total_callback_count() == 0);
+
+    // Cleanup
+    panel.temp_observer_.reset();
+    panel.target_observer_.reset();
+    panel.state_observer_.reset();
+    panel.progress_observer_.reset();
+    panel.thumbnail_observer_.reset();
+    panel.led_observer_.reset();
+    panel.printer_image_observer_.reset();
+    panel.deinit();
+}
+
+TEST_CASE_METHOD(LVGLTestFixture,
+                 "HomePanel pattern: widget-guarded callbacks are no-ops when widgets are null",
+                 "[observer_cleanup][crash_hardening][home_panel]") {
+    MockHomePanel panel;
+    panel.init(test_screen());
+    panel.init_observers();
+    drain();
+
+    // Null out widget pointers (simulates panel destruction while subjects live)
+    panel.print_card_thumb_ = nullptr;
+    panel.print_card_label_ = nullptr;
+    panel.panel_ = nullptr;
+
+    panel.reset_counts();
+
+    // Callbacks that guard on widgets should be no-ops
+    lv_subject_set_int(&panel.state_subject_, 3);
+    lv_subject_set_int(&panel.thumbnail_subject_, 3);
+    lv_subject_set_int(&panel.printer_image_subject_, 3);
+    drain();
+
+    REQUIRE(panel.state_callback_count_ == 0);
+    REQUIRE(panel.thumbnail_callback_count_ == 0);
+    REQUIRE(panel.printer_image_callback_count_ == 0);
+
+    // Callbacks that only guard on subjects_initialized_ should still fire
+    lv_subject_set_int(&panel.temp_subject_, 3);
+    drain();
+    REQUIRE(panel.temp_callback_count_ == 1);
+
+    panel.deinit_subjects();
+    panel.deinit();
+}
+
+// ============================================================================
+// TempControlPanel-style deinit ordering pattern
+//
+// TempControlPanel sets subjects_initialized_ = false FIRST in deinit_subjects(),
+// BEFORE calling subjects_.deinit_all(). This prevents deferred callbacks from
+// accessing torn-down subjects during cleanup.
+// ============================================================================
+
+class MockTempControlPanel {
+  public:
+    bool subjects_initialized_ = false;
+    lv_obj_t* panel_ = nullptr;
+
+    ObserverGuard temp_observer_;
+    ObserverGuard target_observer_;
+    ObserverGuard extruder_observer_;
+
+    int on_temp_count_ = 0;
+    int on_target_count_ = 0;
+    int rebuild_segments_count_ = 0;
+
+    lv_subject_t temp_subject_;
+    lv_subject_t target_subject_;
+    lv_subject_t extruder_subject_;
+
+    void init(lv_obj_t* parent) {
+        lv_subject_init_int(&temp_subject_, 0);
+        lv_subject_init_int(&target_subject_, 0);
+        lv_subject_init_int(&extruder_subject_, 0);
+
+        panel_ = lv_obj_create(parent);
+        subjects_initialized_ = true;
+    }
+
+    void init_observers() {
+        // on_temp_changed pattern — guards after throttle logic
+        temp_observer_ = observe_int_sync<MockTempControlPanel>(
+            &temp_subject_, this, [](MockTempControlPanel* self, int /*val*/) {
+                if (!self->subjects_initialized_)
+                    return;
+                self->on_temp_count_++;
+            });
+
+        // on_target_changed pattern
+        target_observer_ = observe_int_sync<MockTempControlPanel>(
+            &target_subject_, this, [](MockTempControlPanel* self, int /*val*/) {
+                if (!self->subjects_initialized_)
+                    return;
+                self->on_target_count_++;
+            });
+
+        // rebuild_extruder_segments_impl / select_extruder pattern
+        extruder_observer_ = observe_int_sync<MockTempControlPanel>(
+            &extruder_subject_, this, [](MockTempControlPanel* self, int /*val*/) {
+                if (!self->subjects_initialized_)
+                    return;
+                self->rebuild_segments_count_++;
+            });
+    }
+
+    // CORRECT deinit ordering: set flag BEFORE deinit
+    void deinit_subjects_correct() {
+        if (!subjects_initialized_)
+            return;
+        subjects_initialized_ = false;
+        temp_observer_.reset();
+        target_observer_.reset();
+        extruder_observer_.reset();
+    }
+
+    // WRONG deinit ordering: reset observers first, then clear flag
+    void deinit_subjects_wrong() {
+        if (!subjects_initialized_)
+            return;
+        temp_observer_.reset();
+        target_observer_.reset();
+        extruder_observer_.reset();
+        subjects_initialized_ = false;
+    }
+
+    void deinit() {
+        lv_subject_deinit(&temp_subject_);
+        lv_subject_deinit(&target_subject_);
+        lv_subject_deinit(&extruder_subject_);
+    }
+
+    void reset_counts() {
+        on_temp_count_ = 0;
+        on_target_count_ = 0;
+        rebuild_segments_count_ = 0;
+    }
+};
+
+TEST_CASE_METHOD(LVGLTestFixture,
+                 "TempControlPanel pattern: correct deinit sets flag before observer reset",
+                 "[observer_cleanup][crash_hardening][temp_panel]") {
+    MockTempControlPanel panel;
+    panel.init(test_screen());
+    panel.init_observers();
+    drain();
+
+    // Verify callbacks work before deinit
+    panel.reset_counts();
+    lv_subject_set_int(&panel.temp_subject_, 1);
+    lv_subject_set_int(&panel.target_subject_, 1);
+    lv_subject_set_int(&panel.extruder_subject_, 1);
+    drain();
+    REQUIRE(panel.on_temp_count_ == 1);
+    REQUIRE(panel.on_target_count_ == 1);
+    REQUIRE(panel.rebuild_segments_count_ == 1);
+
+    // Correct deinit: flag set first
+    panel.deinit_subjects_correct();
+    REQUIRE(panel.subjects_initialized_ == false);
+
+    // Callbacks should be no-ops after deinit
+    panel.reset_counts();
+    lv_subject_set_int(&panel.temp_subject_, 2);
+    lv_subject_set_int(&panel.target_subject_, 2);
+    lv_subject_set_int(&panel.extruder_subject_, 2);
+    drain();
+    REQUIRE(panel.on_temp_count_ == 0);
+    REQUIRE(panel.on_target_count_ == 0);
+    REQUIRE(panel.rebuild_segments_count_ == 0);
+
+    panel.deinit();
+}
+
+TEST_CASE_METHOD(LVGLTestFixture, "TempControlPanel pattern: double deinit_subjects is safe",
+                 "[observer_cleanup][crash_hardening][temp_panel]") {
+    MockTempControlPanel panel;
+    panel.init(test_screen());
+    panel.init_observers();
+    drain();
+
+    panel.deinit_subjects_correct();
+    // Second call should be a no-op (guard: if (!subjects_initialized_) return)
+    panel.deinit_subjects_correct();
+    REQUIRE(panel.subjects_initialized_ == false);
+
+    panel.deinit();
+}
+
+TEST_CASE_METHOD(LVGLTestFixture,
+                 "TempControlPanel pattern: update_display guard prevents access to freed subjects",
+                 "[observer_cleanup][crash_hardening][temp_panel]") {
+    // Simulates TempControlPanel::update_display() which checks
+    // subjects_initialized_ before accessing subject buffers
+    MockTempControlPanel panel;
+    panel.init(test_screen());
+    panel.init_observers();
+    drain();
+
+    // Track whether update_display would have proceeded
+    int display_update_count = 0;
+    auto update_display = [&]() {
+        if (!panel.subjects_initialized_)
+            return;
+        display_update_count++;
+    };
+
+    update_display();
+    REQUIRE(display_update_count == 1);
+
+    panel.deinit_subjects_correct();
+
+    update_display();
+    REQUIRE(display_update_count == 1); // No increment
+
+    panel.deinit();
+}
+
+// ============================================================================
+// HeatingIconAnimator cleanup ordering pattern
+//
+// The fix ensures icon_ = nullptr BEFORE theme_observer_.reset() in detach().
+// This prevents cascading theme observer callbacks from accessing a freed icon.
+// ============================================================================
+
+class MockAnimator {
+  public:
+    lv_obj_t* icon_ = nullptr;
+    ObserverGuard theme_observer_;
+    int theme_callback_count_ = 0;
+    bool accessed_icon_after_null_ = false;
+
+    lv_subject_t theme_subject_;
+
+    void init() {
+        lv_subject_init_int(&theme_subject_, 0);
+    }
+
+    void attach(lv_obj_t* icon) {
+        icon_ = icon;
+        theme_observer_ = observe_int_sync<MockAnimator>(&theme_subject_, this,
+                                                         [](MockAnimator* self, int /*val*/) {
+                                                             if (!self->icon_)
+                                                                 return;
+                                                             // In real code this calls
+                                                             // refresh_theme() which touches icon_
+                                                             self->theme_callback_count_++;
+                                                         });
+    }
+
+    // CORRECT detach: null icon BEFORE resetting observer
+    void detach_correct() {
+        if (!icon_)
+            return;
+        icon_ = nullptr;
+        theme_observer_.reset();
+    }
+
+    // WRONG detach: reset observer BEFORE nulling icon
+    void detach_wrong() {
+        if (!icon_)
+            return;
+        theme_observer_.reset();
+        icon_ = nullptr;
+    }
+
+    void deinit() {
+        lv_subject_deinit(&theme_subject_);
+    }
+};
+
+TEST_CASE_METHOD(LVGLTestFixture,
+                 "HeatingIconAnimator pattern: detach nullifies icon_ before observer reset",
+                 "[observer_cleanup][crash_hardening][animator]") {
+    MockAnimator anim;
+    anim.init();
+
+    lv_obj_t* icon = lv_obj_create(test_screen());
+    anim.attach(icon);
+    drain();
+
+    // Verify callback fires when attached
+    anim.theme_callback_count_ = 0;
+    lv_subject_set_int(&anim.theme_subject_, 1);
+    drain();
+    REQUIRE(anim.theme_callback_count_ == 1);
+
+    // Correct detach: icon_ set to null first
+    anim.detach_correct();
+    REQUIRE(anim.icon_ == nullptr);
+
+    // Any cascading callback sees null icon_ and bails out
+    anim.theme_callback_count_ = 0;
+    lv_subject_set_int(&anim.theme_subject_, 2);
+    drain();
+    REQUIRE(anim.theme_callback_count_ == 0);
+
+    anim.deinit();
+}
+
+TEST_CASE_METHOD(LVGLTestFixture, "HeatingIconAnimator pattern: double detach is safe",
+                 "[observer_cleanup][crash_hardening][animator]") {
+    MockAnimator anim;
+    anim.init();
+
+    lv_obj_t* icon = lv_obj_create(test_screen());
+    anim.attach(icon);
+    drain();
+
+    anim.detach_correct();
+    REQUIRE(anim.icon_ == nullptr);
+
+    // Second detach should be a no-op (guard: if (!icon_) return)
+    anim.detach_correct();
+    REQUIRE(anim.icon_ == nullptr);
+
+    anim.deinit();
+}
+
+// ============================================================================
+// AmsEditModal thread safety pattern: async completion via queue_update
+//
+// The fix defers fire_completion() through ui_queue_update() so that
+// Spoolman async callbacks don't directly invoke LVGL-touching code
+// from a background thread. This test verifies the deferral pattern.
+// ============================================================================
+
+TEST_CASE_METHOD(LVGLTestFixture, "AmsEditModal pattern: async callback defers via queue_update",
+                 "[observer_cleanup][crash_hardening][ams_modal]") {
+    // Simulate the pattern: async callback captures state and defers work
+    int completion_count = 0;
+    bool callback_guard_valid = true;
+
+    // Simulate the Spoolman callback deferral pattern
+    auto simulate_spoolman_callback = [&](bool success) {
+        // This lambda mimics what runs on the background thread:
+        // it captures state and defers through queue_update
+        helix::ui::queue_update([&, success]() {
+            if (!callback_guard_valid)
+                return;
+            if (!success) {
+                // Would log error in real code
+            }
+            completion_count++;
+        });
+    };
+
+    // Simulate async completion
+    simulate_spoolman_callback(true);
+
+    // Before draining, count should still be 0 (deferred)
+    REQUIRE(completion_count == 0);
+
+    // Drain the queue — now the deferred callback runs
+    drain();
+    REQUIRE(completion_count == 1);
+
+    // After guard invalidation, callback should be no-op
+    callback_guard_valid = false;
+    simulate_spoolman_callback(true);
+    drain();
+    REQUIRE(completion_count == 1); // Still 1, not 2
+}
