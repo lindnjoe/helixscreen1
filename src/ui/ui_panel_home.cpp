@@ -268,7 +268,7 @@ void HomePanel::setup(lv_obj_t* panel, lv_obj_t* parent_screen) {
     }
 
     // Load printer image from config (if available)
-    reload_from_config();
+    apply_printer_config();
 
     // Check initial AMS state and show indicator if AMS is already available
     // (The observer may have fired before panel_ was set during init_subjects)
@@ -536,18 +536,13 @@ void HomePanel::handle_ams_clicked() {
     }
 }
 
-void HomePanel::reload_from_config() {
+void HomePanel::apply_printer_config() {
     using helix::ui::observe_int_sync;
 
     Config* config = Config::get_instance();
     if (!config) {
-        spdlog::warn("[{}] reload_from_config: Config not available", get_name());
+        spdlog::warn("[{}] apply_printer_config: Config not available", get_name());
         return;
-    }
-
-    // Delegate LED config reload to LedWidget via generic dispatch
-    for (auto& w : active_widgets_) {
-        w->reload_from_config();
     }
 
     // Update printer type in PrinterState (triggers capability cache refresh)

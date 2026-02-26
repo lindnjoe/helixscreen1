@@ -6,6 +6,7 @@
 #include <atomic>
 #include <cstdint>
 #include <functional>
+#include <lvgl.h>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -421,6 +422,12 @@ class LedController {
     }
     void set_selected_strips(const std::vector<std::string>& strips);
 
+    /// Version subject bumped on discover_from_hardware() and set_selected_strips().
+    /// UI widgets observe this to rebind when LED config changes.
+    lv_subject_t* get_led_config_version_subject() {
+        return &led_config_version_;
+    }
+
     [[nodiscard]] uint32_t last_color() const {
         return last_color_;
     }
@@ -474,7 +481,9 @@ class LedController {
     std::vector<LedMacroInfo> configured_macros_;
     std::vector<std::string> discovered_led_macros_; // Raw macro names from hardware
     bool led_on_at_start_ = false;
-    bool light_on_ = false; // Internal light state for abstract API
+    bool light_on_ = false;             // Internal light state for abstract API
+    lv_subject_t led_config_version_{}; // Bumped on discover/config changes
+    bool version_subject_initialized_ = false;
 
     // Default color presets
     static constexpr uint32_t DEFAULT_COLOR_PRESETS[] = {0xFFFFFF, 0xFFD700, 0xFF6B35, 0x4FC3F7,

@@ -48,8 +48,8 @@ class HomePanel : public PanelBase {
     /// Rebuild the widget list from current PanelWidgetConfig
     void populate_widgets();
 
-    /// Reload printer image, type/host overlay, and delegate to widgets
-    void reload_from_config();
+    /// Apply printer-level config: type, image, and host overlay
+    void apply_printer_config();
 
     /// Re-check printer image setting and update the home panel image widget
     void refresh_printer_image();
