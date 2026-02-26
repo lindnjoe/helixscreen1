@@ -35,6 +35,13 @@ static void log_fatal(const char* msg) {
 // destruction, and other fatal C++ runtime errors. Logs what we can before
 // the default terminate handler calls abort() (which triggers crash_handler).
 static void terminate_handler() {
+    // Guard against re-entrance (e.g. exception::what() throws)
+    static bool entered = false;
+    if (entered) {
+        abort();
+    }
+    entered = true;
+
     // Check if there's a current exception we can inspect
     if (auto eptr = std::current_exception()) {
         try {

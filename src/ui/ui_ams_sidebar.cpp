@@ -289,6 +289,7 @@ void AmsOperationSidebar::cleanup() {
     pending_bypass_enable_ = false;
     pending_load_slot_ = -1;
     pending_load_target_temp_ = 0;
+    ui_initiated_heat_ = false;
     prev_ams_action_ = AmsAction::IDLE;
 
     spdlog::debug("[AmsSidebar] Cleaned up");

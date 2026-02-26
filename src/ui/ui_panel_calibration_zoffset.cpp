@@ -306,6 +306,11 @@ void ZOffsetCalibrationPanel::cleanup() {
     // Cancel any pending operation timeout
     operation_guard_.end();
 
+    // Unregister from NavigationManager while overlay_root_ is still valid
+    if (overlay_root_) {
+        NavigationManager::instance().unregister_overlay_instance(overlay_root_);
+    }
+
     // Nullify widget pointers BEFORE resetting observers — any cascading
     // observer callbacks during teardown will see null and bail out.
     saved_z_offset_display_ = nullptr;
@@ -317,11 +322,6 @@ void ZOffsetCalibrationPanel::cleanup() {
     manual_probe_active_observer_.reset();
     manual_probe_z_observer_.reset();
     bed_temp_observer_.reset();
-
-    // Unregister from NavigationManager before cleaning up
-    if (overlay_root_) {
-        NavigationManager::instance().unregister_overlay_instance(overlay_root_);
-    }
 
     // Call base class to set cleanup_called_ flag
     OverlayBase::cleanup();

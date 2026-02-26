@@ -169,9 +169,13 @@ bool DisplayManager::init(const Config& config) {
         m_backend.reset();
         m_backend = DisplayBackend::create(DisplayBackendType::FBDEV);
         if (m_backend && m_backend->is_available()) {
+            if (config.splash_active) {
+                m_backend->set_splash_active(true);
+            }
             m_display = m_backend->create_display(m_width, m_height);
             if (m_display) {
-                spdlog::info("[DisplayManager] Fbdev fallback succeeded");
+                spdlog::info("[DisplayManager] Fbdev fallback succeeded at {}x{}", m_width,
+                             m_height);
             }
         }
     }
