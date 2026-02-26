@@ -1333,6 +1333,10 @@ void UpdateChecker::do_install(const std::string& tarball_path) {
 
     spdlog::info("[UpdateChecker] Update installed successfully!");
 
+    // Write update success flag for telemetry (picked up on next boot)
+    TelemetryManager::write_update_success_flag("config", version, HELIX_VERSION,
+                                                get_platform_key());
+
     report_download_status(DownloadStatus::Complete, 100,
                            "v" + version + " installed! Restarting...");
 
