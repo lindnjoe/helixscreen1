@@ -15,6 +15,7 @@
 #include <lvgl.h>
 
 // System includes for device access checks
+#include <algorithm>
 #include <climits>
 #include <cstring>
 #include <dirent.h>
@@ -94,7 +95,6 @@ bool has_touch_capabilities(int event_num, helix::AbsCapabilities* caps_out = nu
     return result.has_single_touch || result.has_multitouch;
 }
 
-// is_known_touchscreen_name() is now in touch_calibration.h (helix::is_known_touchscreen_name)
 using helix::is_known_touchscreen_name;
 
 /**
@@ -202,6 +202,11 @@ void calibrated_read_cb(lv_indev_t* indev, lv_indev_data_t* data) {
         data->point.x = transformed.x;
         data->point.y = transformed.y;
     }
+
+    // Jitter filter: suppress small coordinate changes while finger is pressed.
+    // Prevents noisy touch controllers (e.g., Goodix GT9xx) from generating
+    // enough movement to trigger LVGL's scroll detection on stationary taps.
+    ctx->jitter.apply(data->state, data->point.x, data->point.y);
 }
 
 } // anonymous namespace
@@ -465,6 +470,21 @@ lv_indev_t* DisplayBackendFbdev::create_input_pointer() {
         spdlog::info("[Fbdev Backend] No stored affine calibration found");
     }
 
+    // Load jitter filter threshold from config (pixels, default 15 for noisy
+    // touch controllers like Goodix GT9xx). Set to 0 to disable.
+    int jitter_threshold = 15;
+    if (auto* cfg = helix::Config::get_instance()) {
+        jitter_threshold = cfg->get<int>("/input/jitter_threshold", 15);
+    }
+    const char* env_jitter = std::getenv("HELIX_TOUCH_JITTER");
+    if (env_jitter) {
+        jitter_threshold = std::atoi(env_jitter);
+    }
+    jitter_threshold = std::clamp(jitter_threshold, 0, 200);
+    if (jitter_threshold > 0) {
+        spdlog::info("[Fbdev Backend] Touch jitter filter: {}px dead zone", jitter_threshold);
+    }
+
     // Always install the calibrated read callback — it handles both rotation
     // transform and affine calibration independently. Without this, rotation
     // transform wouldn't be applied on devices that don't need affine cal.
@@ -472,6 +492,7 @@ lv_indev_t* DisplayBackendFbdev::create_input_pointer() {
     calibration_context_.original_read_cb = lv_indev_get_read_cb(touch_);
     calibration_context_.screen_width = screen_width_;
     calibration_context_.screen_height = screen_height_;
+    calibration_context_.jitter.threshold_sq = jitter_threshold * jitter_threshold;
 
     lv_indev_set_user_data(touch_, &calibration_context_);
     lv_indev_set_read_cb(touch_, calibrated_read_cb);

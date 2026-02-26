@@ -7,7 +7,7 @@ This document provides a comprehensive reference for all environment variables u
 | Category | Count | Prefix |
 |----------|-------|--------|
 | [Display & Backend](#display--backend-configuration) | 10 | `HELIX_` |
-| [Touch Calibration](#touch-calibration) | 5 | `HELIX_TOUCH_*` |
+| [Touch Calibration](#touch-calibration) | 6 | `HELIX_TOUCH_*` |
 | [G-Code Viewer](#g-code-viewer) | 3 | `HELIX_` |
 | [Bed Mesh](#bed-mesh) | 1 | `HELIX_` |
 | [Mock & Testing](#mock--testing) | 14 | `HELIX_MOCK_*` |
@@ -295,6 +295,27 @@ screen_y = d * touch_x + e * touch_y + f
 The calibration wizard is automatically presented during first-run setup on framebuffer devices. It can also be triggered manually from Settings.
 
 **Note:** There are no environment variable overrides for affine calibration. Edit the config file directly or use the calibration wizard.
+
+### Touch Jitter Filter
+
+Suppresses small coordinate jitter from noisy touch controllers (e.g., Goodix GT9xx) that would otherwise cause stationary taps to be misinterpreted as scroll/swipe gestures.
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `HELIX_TOUCH_JITTER` | Dead-zone threshold in pixels. Coordinate changes within this distance are suppressed. | `15` |
+
+**How it works:** When a finger is pressed, the filter records the initial position. Subsequent coordinate reports within the dead zone are snapped back to the last stable position. Once movement exceeds the threshold, the new position becomes the anchor. On release, the last stable position is reported.
+
+**Config file equivalent:** `/input/jitter_threshold` (integer, default `15`, set to `0` to disable)
+
+**Example:**
+```bash
+# Increase threshold for a very noisy touchscreen
+HELIX_TOUCH_JITTER=25 ./build/bin/helix-screen
+
+# Disable the jitter filter entirely
+HELIX_TOUCH_JITTER=0 ./build/bin/helix-screen
+```
 
 ---
 

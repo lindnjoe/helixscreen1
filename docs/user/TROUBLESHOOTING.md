@@ -466,6 +466,35 @@ sudo usermod -aG input $USER
 
 ---
 
+### Taps Register as Swipes
+
+**Symptoms:**
+- Tapping buttons doesn't work — the screen scrolls instead
+- Most or all taps are interpreted as swipe/scroll gestures
+- Buttons only work when tapped very quickly and precisely
+
+**Cause:** Noisy touch controller (common with Goodix GT9xx and similar capacitive controllers) reports jittery coordinates even when the finger is stationary. The small coordinate changes exceed LVGL's scroll detection threshold.
+
+**Solution:** HelixScreen includes a jitter filter (enabled by default, 15px dead zone) that suppresses this noise. If taps still register as swipes, increase the threshold:
+
+```json
+// /opt/helixscreen/config/helixconfig.json
+{
+  "input": {
+    "jitter_threshold": 25
+  }
+}
+```
+
+Or test temporarily with an environment variable:
+```bash
+HELIX_TOUCH_JITTER=25 helix-screen
+```
+
+Set to `0` to disable the filter if it interferes with intentional touch gestures.
+
+---
+
 ### Touch Input is Inaccurate
 
 If taps are landing in the wrong place on screen:

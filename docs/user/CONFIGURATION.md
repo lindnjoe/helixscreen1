@@ -333,6 +333,7 @@ Located in the `input` section:
   "input": {
     "scroll_throw": 25,
     "scroll_limit": 10,
+    "jitter_threshold": 15,
     "touch_device": "",
     "force_calibration": false
   }
@@ -356,6 +357,12 @@ Located in the `input` section:
 **Default:** `""` (auto-detect)
 **Example:** `"/dev/input/event1"`
 **Description:** Override touch/pointer input device. Leave empty for auto-detection. Auto-detection finds touch or pointer capable devices.
+
+### `jitter_threshold`
+**Type:** integer
+**Default:** `15`
+**Range:** `0` - `200`
+**Description:** Touch jitter filter dead zone in pixels. Suppresses small coordinate jitter from noisy touch controllers (e.g., Goodix GT9xx) that would cause taps to be misread as swipes. Set to `0` to disable. Can also be overridden with the `HELIX_TOUCH_JITTER` environment variable.
 
 ### `force_calibration`
 **Type:** boolean
