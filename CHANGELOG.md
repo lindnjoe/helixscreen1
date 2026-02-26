@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ELF architecture validation uses platform key instead of uname
 - Updated Ender 5 Max printer image
 - Installer preserves user files in `printer_database.d` during upgrades
+- AMS flow animation no longer runs infinitely, fixing 50%+ CPU usage on AMS panel
 
 ### Changed
 - XML event callbacks registered at startup instead of widget attach time
