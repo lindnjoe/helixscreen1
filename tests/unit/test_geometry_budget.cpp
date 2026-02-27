@@ -67,3 +67,53 @@ TEST_CASE("Budget: 0 available memory returns 0", "[gcode][budget]") {
     size_t budget = mgr.calculate_budget(0);
     REQUIRE(budget == 0);
 }
+
+// Tier selection tests
+TEST_CASE("Budget: tier selection - small file gets Tier 1", "[gcode][budget]") {
+    GeometryBudgetManager mgr;
+    auto config = mgr.select_tier(50000, 256 * 1024 * 1024);
+    REQUIRE(config.tier == 1);
+    REQUIRE(config.tube_sides == 16);
+    REQUIRE(config.include_travels == true);
+}
+
+TEST_CASE("Budget: tier selection - medium file gets Tier 2", "[gcode][budget]") {
+    GeometryBudgetManager mgr;
+    auto config = mgr.select_tier(200000, 100 * 1024 * 1024);
+    REQUIRE(config.tier == 2);
+    REQUIRE(config.tube_sides == 8);
+}
+
+TEST_CASE("Budget: tier selection - large file gets Tier 3", "[gcode][budget]") {
+    GeometryBudgetManager mgr;
+    auto config = mgr.select_tier(500000, 75 * 1024 * 1024);
+    REQUIRE(config.tier == 3);
+    REQUIRE(config.tube_sides == 4);
+    REQUIRE(config.include_travels == false);
+    REQUIRE(config.simplification_tolerance > 0.1f);
+}
+
+TEST_CASE("Budget: tier selection - massive file gets Tier 4", "[gcode][budget]") {
+    GeometryBudgetManager mgr;
+    auto config = mgr.select_tier(2000000, 75 * 1024 * 1024);
+    REQUIRE(config.tier == 4);
+    REQUIRE(config.tube_sides == 0);
+}
+
+TEST_CASE("Budget: tier selection - tiny budget forces Tier 4", "[gcode][budget]") {
+    GeometryBudgetManager mgr;
+    auto config = mgr.select_tier(50000, 10 * 1024 * 1024);
+    REQUIRE(config.tier >= 3);
+}
+
+TEST_CASE("Budget: tier selection - 0 segments gets Tier 1", "[gcode][budget]") {
+    GeometryBudgetManager mgr;
+    auto config = mgr.select_tier(0, 256 * 1024 * 1024);
+    REQUIRE(config.tier == 1);
+}
+
+TEST_CASE("Budget: tier 5 for zero budget", "[gcode][budget]") {
+    GeometryBudgetManager mgr;
+    auto config = mgr.select_tier(100000, 0);
+    REQUIRE(config.tier == 5);
+}

@@ -46,5 +46,73 @@ bool GeometryBudgetManager::is_system_memory_critical() const {
     return read_system_available_kb() < CRITICAL_MEMORY_KB;
 }
 
+GeometryBudgetManager::BudgetConfig GeometryBudgetManager::select_tier(size_t segment_count,
+                                                                       size_t budget_bytes) const {
+    if (budget_bytes == 0) {
+        spdlog::info("[GeometryBudget] Zero budget — thumbnail only (tier 5)");
+        return {.tier = 5,
+                .tube_sides = 0,
+                .simplification_tolerance = 0.0f,
+                .include_travels = false,
+                .budget_bytes = 0};
+    }
+    if (segment_count == 0) {
+        return {.tier = 1,
+                .tube_sides = 16,
+                .simplification_tolerance = 0.01f,
+                .include_travels = true,
+                .budget_bytes = budget_bytes};
+    }
+
+    size_t est_n16 = segment_count * BYTES_PER_SEG_N16;
+    size_t est_n8 = segment_count * BYTES_PER_SEG_N8;
+    size_t est_n4 = segment_count * BYTES_PER_SEG_N4;
+
+    if (est_n16 < budget_bytes) {
+        spdlog::info("[GeometryBudget] Tier 1 (full): est {}MB / {}MB budget",
+                     est_n16 / (1024 * 1024), budget_bytes / (1024 * 1024));
+        return {.tier = 1,
+                .tube_sides = 16,
+                .simplification_tolerance = 0.01f,
+                .include_travels = true,
+                .budget_bytes = budget_bytes};
+    }
+    if (est_n8 < budget_bytes) {
+        spdlog::info("[GeometryBudget] Tier 2 (medium): est {}MB / {}MB budget",
+                     est_n8 / (1024 * 1024), budget_bytes / (1024 * 1024));
+        return {.tier = 2,
+                .tube_sides = 8,
+                .simplification_tolerance = 0.05f,
+                .include_travels = true,
+                .budget_bytes = budget_bytes};
+    }
+    if (est_n4 < budget_bytes) {
+        spdlog::info("[GeometryBudget] Tier 3 (low): est {}MB / {}MB budget",
+                     est_n4 / (1024 * 1024), budget_bytes / (1024 * 1024));
+        return {.tier = 3,
+                .tube_sides = 4,
+                .simplification_tolerance = 0.5f,
+                .include_travels = false,
+                .budget_bytes = budget_bytes};
+    }
+    if (est_n4 < budget_bytes * 2) {
+        spdlog::info("[GeometryBudget] Tier 3 (aggressive): est {}MB / {}MB budget",
+                     est_n4 / (1024 * 1024), budget_bytes / (1024 * 1024));
+        return {.tier = 3,
+                .tube_sides = 4,
+                .simplification_tolerance = 1.0f,
+                .include_travels = false,
+                .budget_bytes = budget_bytes};
+    }
+
+    spdlog::info("[GeometryBudget] Tier 4 (2D fallback): est {}MB exceeds {}MB budget",
+                 est_n4 / (1024 * 1024), budget_bytes / (1024 * 1024));
+    return {.tier = 4,
+            .tube_sides = 0,
+            .simplification_tolerance = 0.0f,
+            .include_travels = false,
+            .budget_bytes = budget_bytes};
+}
+
 } // namespace gcode
 } // namespace helix
