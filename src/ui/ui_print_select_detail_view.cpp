@@ -208,9 +208,15 @@ lv_obj_t* PrintSelectDetailView::create(lv_obj_t* parent_screen) {
                           ui_gcode_viewer_is_using_2d_mode(gcode_viewer_) ? "2D" : "3D");
         } else {
             int render_mode_val = DisplaySettingsManager::instance().get_gcode_render_mode();
-            auto render_mode = static_cast<helix::GcodeViewerRenderMode>(render_mode_val);
-            ui_gcode_viewer_set_render_mode(gcode_viewer_, render_mode);
-            spdlog::debug("[DetailView] Set G-code render mode: {} (settings)", render_mode_val);
+            if (render_mode_val == 3) {
+                // Thumbnail Only mode - skip render mode setup, viewer won't be used
+                spdlog::debug("[DetailView] G-code render mode: Thumbnail Only (settings)");
+            } else {
+                auto render_mode = static_cast<helix::GcodeViewerRenderMode>(render_mode_val);
+                ui_gcode_viewer_set_render_mode(gcode_viewer_, render_mode);
+                spdlog::debug("[DetailView] Set G-code render mode: {} (settings)",
+                              render_mode_val);
+            }
         }
 
         // Vertical offset to match thumbnail positioning
@@ -661,6 +667,14 @@ void PrintSelectDetailView::load_gcode_for_preview() {
 
     // Show loading spinner over thumbnail
     lv_subject_set_int(&detail_gcode_loading_, 1);
+
+    // Check "Thumbnail Only" render mode - skip all gcode downloading/parsing
+    if (DisplaySettingsManager::instance().get_gcode_render_mode() == 3) {
+        spdlog::info("[DetailView] G-code render mode is Thumbnail Only - skipping G-code load");
+        lv_subject_set_int(&detail_gcode_loading_, 0);
+        show_gcode_viewer(false);
+        return;
+    }
 
     // Check config option to disable 3D rendering entirely
     auto* cfg = Config::get_instance();

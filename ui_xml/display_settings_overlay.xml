@@ -75,7 +75,7 @@
                               label="G-code Preview" label_tag="G-code Preview" icon="printer_3d"
                               description="Choose rendering mode for G-code visualization"
                               description_tag="Choose rendering mode for G-code visualization"
-                              options="Auto&#10;3D View&#10;2D Layers" callback="on_gcode_mode_changed"/>
+                              options="Auto&#10;3D View&#10;2D Layers&#10;Thumbnail Only" callback="on_gcode_mode_changed"/>
       </lv_obj>
       <!-- ================================================================== -->
       <!-- DISPLAY DIM -->
