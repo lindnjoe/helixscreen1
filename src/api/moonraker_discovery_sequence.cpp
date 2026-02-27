@@ -370,6 +370,19 @@ void MoonrakerDiscoverySequence::continue_discovery_objects() {
                                 hardware_.set_os_version(os_name);
                                 spdlog::debug("[Moonraker Client] OS version: {}", os_name);
                             }
+
+                            // Extract CPU architecture from cpu_info.processor
+                            if (sys_response.contains("result") &&
+                                sys_response["result"].contains("system_info") &&
+                                sys_response["result"]["system_info"].contains("cpu_info") &&
+                                sys_response["result"]["system_info"]["cpu_info"].contains(
+                                    "processor")) {
+                                std::string cpu_arch =
+                                    sys_response["result"]["system_info"]["cpu_info"]["processor"]
+                                        .get<std::string>();
+                                hardware_.set_cpu_arch(cpu_arch);
+                                spdlog::debug("[Moonraker Client] CPU architecture: {}", cpu_arch);
+                            }
                         },
                         [](const MoonrakerError& err) {
                             spdlog::debug("[Moonraker Client] machine.system_info query "

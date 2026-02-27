@@ -12,7 +12,9 @@
     "led_match": "Match against LED/neopixel object names",
     "mcu_match": "Match against MCU chip type or serial pattern",
     "build_volume_range": "Match against bed_mesh dimensions",
-    "macro_match": "Match against G-code macro names (gcode_macro objects)"
+    "macro_match": "Match against G-code macro names (gcode_macro objects)",
+    "tool_count": "Count of extruder tools (tool_count_1, tool_count_2, tool_count_4)",
+    "cpu_arch_match": "Match against host CPU architecture string"
   },
   "printers": [
     {
@@ -247,6 +249,20 @@
           "pattern": "corexy",
           "confidence": 30,
           "reason": "CoreXY kinematics"
+        },
+        {
+          "type": "tool_count",
+          "field": "heaters",
+          "pattern": "tool_count_4",
+          "confidence": 85,
+          "reason": "4-extruder IFS tool changer"
+        },
+        {
+          "type": "cpu_arch_match",
+          "field": "cpu_arch",
+          "pattern": "mips",
+          "confidence": 70,
+          "reason": "MIPS host architecture (Ingenic X2600)"
         }
       ]
     },

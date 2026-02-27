@@ -481,6 +481,7 @@ class PrinterDiscovery {
         software_version_.clear();
         moonraker_version_.clear();
         os_version_.clear();
+        cpu_arch_.clear();
         kinematics_.clear();
         build_volume_ = BuildVolume{};
         mcu_.clear();
@@ -882,6 +883,17 @@ class PrinterDiscovery {
     }
 
     /**
+     * @brief Set host CPU architecture from machine.system_info
+     */
+    void set_cpu_arch(const std::string& cpu_arch) {
+        cpu_arch_ = cpu_arch;
+    }
+
+    [[nodiscard]] const std::string& cpu_arch() const {
+        return cpu_arch_;
+    }
+
+    /**
      * @brief Set MCU version strings (name→version pairs)
      * e.g., {"mcu", "v0.12.0-108-..."}, {"mcu EBBCan", "v0.12.0-..."}
      */
@@ -1002,6 +1014,7 @@ class PrinterDiscovery {
     std::string software_version_;
     std::string moonraker_version_;
     std::string os_version_;
+    std::string cpu_arch_;
     std::string kinematics_;
     BuildVolume build_volume_;
     std::string mcu_;
