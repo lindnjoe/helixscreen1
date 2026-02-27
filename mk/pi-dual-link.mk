@@ -152,6 +152,7 @@ LVGL_DRM_DRIVER_OBJS := \
 DRM_DISPLAY_APP_OBJS := \
     $(OBJ_DIR)/api/display_backend.o \
     $(OBJ_DIR)/api/display_backend_drm.o \
+    $(OBJ_DIR)/api/drm_rotation_strategy.o \
     $(OBJ_DIR)/api/display_backend_fbdev.o \
     $(OBJ_DIR)/ui/touch_calibration.o
 
