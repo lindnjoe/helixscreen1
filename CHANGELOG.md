@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Shutdown and reboot widget with modal confirmation dialog
 - Speed and flow rate increment buttons replace sliders for precise control (#219)
 - Lemontron, Sovol SV08 Max, and Sovol Zero added to printer database
+- FlashForge Adventurer 5X support with independent platform toolchain (#203)
 
 ### Fixed
 - UI freeze during 3D geometry VBO upload eliminated
