@@ -117,8 +117,12 @@ DRM_DISPLAY_APP_OBJS := \
     $(OBJ_DIR)/api/display_backend_fbdev.o \
     $(OBJ_DIR)/ui/touch_calibration.o
 
-# All common app objects (everything except display backends and crash reporter)
-FBDEV_APP_OBJS := $(filter-out $(DRM_DISPLAY_APP_OBJS) $(DRM_CRASH_OBJ),$(APP_OBJS))
+# Objects that reference GLES symbols — must be excluded from fbdev link
+GLES_APP_OBJS := \
+    $(OBJ_DIR)/rendering/gcode_gles_renderer.o
+
+# All common app objects (everything except display backends, crash reporter, and GLES)
+FBDEV_APP_OBJS := $(filter-out $(DRM_DISPLAY_APP_OBJS) $(DRM_CRASH_OBJ) $(GLES_APP_OBJS),$(APP_OBJS))
 FBDEV_LVGL_OBJS := $(filter-out $(LVGL_DRM_DRIVER_OBJS),$(LVGL_OBJS))
 
 # =============================================================================
