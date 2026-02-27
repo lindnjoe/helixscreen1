@@ -883,3 +883,78 @@ TEST_CASE("Geometry Builder: BuildStats - statistics tracking", "[gcode][geometr
     REQUIRE(stats.simplification_ratio >= 0.0f);
     REQUIRE(stats.simplification_ratio <= 1.0f);
 }
+
+// ============================================================================
+// Budget integration tests
+// ============================================================================
+
+TEST_CASE("GeometryBuilder: respects tube_sides from BudgetConfig", "[gcode][budget][builder]") {
+    // Create a small test gcode with non-collinear segments to prevent merging
+    ParsedGCodeFile gcode;
+    Layer layer;
+    layer.z_height = 0.2f;
+    for (int i = 0; i < 100; ++i) {
+        ToolpathSegment seg;
+        float x = static_cast<float>(i);
+        float y = (i % 2 == 0) ? 0.0f : 1.0f; // Zig-zag to prevent merging
+        seg.start = {x, y, 0.2f};
+        seg.end = {x + 1.0f, (i % 2 == 0) ? 1.0f : 0.0f, 0.2f};
+        seg.is_extrusion = true;
+        seg.width = 0.4f;
+        layer.segments.push_back(seg);
+    }
+    gcode.layers.push_back(std::move(layer));
+    gcode.total_segments = 100;
+    gcode.global_bounding_box.expand({0, 0, 0});
+    gcode.global_bounding_box.expand({101, 2, 1});
+
+    SimplificationOptions opts;
+    opts.enable_merging = false; // Ensure all segments are processed
+
+    GeometryBuilder builder;
+    // Build with default (uses config tube_sides)
+    auto geom_default = builder.build(gcode, opts);
+    size_t verts_default = geom_default.vertices.size();
+
+    // Build with budget config forcing tube_sides=4
+    GeometryBuilder builder4;
+    builder4.set_budget_tube_sides(4);
+    auto geom_4 = builder4.build(gcode, opts);
+    size_t verts_4 = geom_4.vertices.size();
+
+    // N=4 should produce fewer or equal vertices than default
+    REQUIRE(verts_4 <= verts_default);
+}
+
+TEST_CASE("GeometryBuilder: budget abort returns with flag set", "[gcode][budget][builder]") {
+    // Create gcode with enough non-collinear segments to exceed a tiny budget.
+    // Zig-zag pattern prevents simplification from merging segments.
+    ParsedGCodeFile gcode;
+    Layer layer;
+    layer.z_height = 0.2f;
+    for (int i = 0; i < 10000; ++i) {
+        ToolpathSegment seg;
+        float x = static_cast<float>(i) * 0.5f;
+        float y = (i % 2 == 0) ? 0.0f : 1.0f; // Zig-zag to prevent merging
+        seg.start = {x, y, 0.2f};
+        seg.end = {x + 0.5f, (i % 2 == 0) ? 1.0f : 0.0f, 0.2f};
+        seg.is_extrusion = true;
+        seg.width = 0.4f;
+        layer.segments.push_back(seg);
+    }
+    gcode.layers.push_back(std::move(layer));
+    gcode.total_segments = 10000;
+    gcode.global_bounding_box.expand({0, 0, 0});
+    gcode.global_bounding_box.expand({5001, 2, 1});
+
+    GeometryBuilder builder;
+    builder.set_budget_tube_sides(4);
+    builder.set_budget_limit(1024); // 1KB budget — impossibly small
+
+    SimplificationOptions opts;
+    opts.enable_merging = false; // Ensure all segments are processed
+    auto geom = builder.build(gcode, opts);
+
+    // Build should have aborted
+    REQUIRE(builder.was_budget_exceeded());
+}

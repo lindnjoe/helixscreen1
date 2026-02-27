@@ -8,6 +8,7 @@
 #include "ui_utils.h"
 
 #include "config.h"
+#include "geometry_budget_manager.h"
 
 #include <spdlog/spdlog.h>
 
@@ -366,6 +367,13 @@ RibbonGeometry GeometryBuilder::build(const ParsedGCodeFile& gcode,
 
     RibbonGeometry geometry;
     stats_ = {}; // Reset statistics
+    budget_exceeded_ = false;
+
+    // Apply budget tube_sides override if set
+    if (budget_tube_sides_ > 0) {
+        tube_sides_ = budget_tube_sides_;
+        spdlog::info("[GCode::Builder] Budget override: tube_sides={}", tube_sides_);
+    }
 
     // Validate and apply options
     SimplificationOptions validated_opts = options;
@@ -454,6 +462,8 @@ RibbonGeometry GeometryBuilder::build(const ParsedGCodeFile& gcode,
     // Initialize per-layer bounding boxes for frustum culling
     geometry.layer_bboxes.resize(gcode.layers.size());
 
+    size_t segments_since_budget_check = 0;
+
     for (size_t i = 0; i < simplified.size(); ++i) {
         const auto& segment = simplified[i];
 
@@ -463,6 +473,34 @@ RibbonGeometry GeometryBuilder::build(const ParsedGCodeFile& gcode,
         // TODO: Make this configurable if we want to visualize travel paths
         if (!segment.is_extrusion) {
             continue;
+        }
+
+        // Progressive budget check
+        if (budget_limit_bytes_ > 0) {
+            segments_since_budget_check++;
+            if (segments_since_budget_check >= GeometryBudgetManager::CHECK_INTERVAL_SEGMENTS) {
+                segments_since_budget_check = 0;
+                size_t current_mem = geometry.memory_usage();
+                float threshold = static_cast<float>(budget_limit_bytes_) *
+                                  GeometryBudgetManager::BUDGET_THRESHOLD;
+                if (static_cast<float>(current_mem) > threshold) {
+                    spdlog::warn("[GCode::Builder] Budget exceeded: {}MB / {}MB at segment {}/{}",
+                                 current_mem / (1024 * 1024), budget_limit_bytes_ / (1024 * 1024),
+                                 i, simplified.size());
+                    budget_exceeded_ = true;
+                    break;
+                }
+
+                // System memory check (less frequent, only at CHECK_INTERVAL boundaries)
+                if (i > 0 && i % GeometryBudgetManager::SYSTEM_CHECK_INTERVAL_SEGMENTS == 0) {
+                    GeometryBudgetManager budget_mgr;
+                    if (budget_mgr.is_system_memory_critical()) {
+                        spdlog::error("[GCode::Builder] System memory critical — aborting build");
+                        budget_exceeded_ = true;
+                        break;
+                    }
+                }
+            }
         }
 
         // Use source layer index stamped during segment collection
